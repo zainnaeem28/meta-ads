@@ -1,0 +1,994 @@
+[
+ {
+  "frame": "SCREEN-005--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--empty--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--empty--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--no-results--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--no-results--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--error--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--error--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--delete-confirm--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--delete-confirm--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--deleted--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--deleted--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--drafts--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--drafts--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--key-missing--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--key-missing--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--menu-open--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-005--menu-open--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--step-1--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--step-1--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--step-3--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--step-3--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--step-4--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--step-4--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--validation-error--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--validation-error--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--uploading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--uploading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--upload-rejected--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--upload-rejected--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--saving--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--saving--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--generating--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--generating--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--conflict--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--conflict--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--key-missing--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--key-missing--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--cap-reached--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--cap-reached--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--session-expired--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--session-expired--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--failed--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--failed--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--accept-blocked--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--accept-blocked--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--clear-reason--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--clear-reason--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--accepted--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--accepted--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--regenerate-confirm--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--regenerate-confirm--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--key-missing--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-007--key-missing--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--blocked--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--blocked--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--failures--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--failures--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--qc-review--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--qc-review--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--out-of-date--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--out-of-date--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--key-disabled--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--key-disabled--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--cap-reached--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-008--cap-reached--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--no-clips--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--no-clips--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--selecting--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--selecting--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--qc-confirm--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--qc-confirm--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--assembling--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--assembling--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--failed--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--failed--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--out-of-date--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--out-of-date--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--empty--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--empty--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--add-dialog--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--add-dialog--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--testing--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--testing--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--validation-error--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--validation-error--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--rate-limited--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--rate-limited--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--step-up--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--step-up--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--saved--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--saved--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--untested--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--untested--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--replace-warning--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--replace-warning--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--delete-confirm--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--delete-confirm--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--disabled--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-010--disabled--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--error--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--error--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--session-expired--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--session-expired--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--invalid--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-001--invalid--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--not-linked--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--not-linked--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--request-pending--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--request-pending--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--suspended--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--suspended--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--removed--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--removed--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--invite-invalid--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-002--invite-invalid--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-003--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-003--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-003--error--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-003--error--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-003--challenge--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-003--challenge--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-004--route-404--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-004--route-404--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-004--unavailable--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-004--unavailable--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--default--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--loading--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--error--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--error--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--error--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--only-you--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--only-you--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--only-you--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--invite-dialog--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--invite-dialog--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--invite-dialog--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--suspend-confirm--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--suspend-confirm--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--suspend-confirm--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--remove-confirm--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--remove-confirm--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--remove-confirm--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--last-admin--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--last-admin--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--last-admin--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--erasures--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--erasures--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--erasures--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--menu-open--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--menu-open--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-011--menu-open--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--default--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--requests--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--requests--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--requests--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--requests-off--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--requests-off--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--requests-off--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--empty--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--empty--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--empty--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--loading--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--invite-error--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--invite-error--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--invite-error--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--resent--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--resent--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-012--resent--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--default--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--open-refused--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--open-refused--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--open-refused--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--saved--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--saved--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--saved--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--loading--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-013--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--default--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--empty--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--empty--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--empty--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--loading--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--acknowledged--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--acknowledged--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-014--acknowledged--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--default--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--default--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--loading--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--loading--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--loading--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--empty--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--empty--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--empty--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--error--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--error--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--error--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--window-too-large--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--window-too-large--768",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-015--window-too-large--1440",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-01--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-01--default--390",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-02--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-02--default--390",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-03--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-03--default--390",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-04--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-04--default--390",
+  "violations": []
+ }
+]

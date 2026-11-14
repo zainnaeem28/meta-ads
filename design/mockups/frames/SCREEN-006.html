@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New brief · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="operator" data-nav="new" data-role="user">
+<!-- SCREEN-006 New brief wizard. Pattern: form/wizard. FLOW-01, FLOW-02. REQ-005, 006, 007, 019 (cap), 014 (missing key). API-020..025, 030, 031, 035, 036 -->
+<main>
+  <div class="page-header">
+    <div class="titles">
+      <h1>New brief</h1>
+      <p class="desc">Four short steps. Your answers save as you go, so you can leave and come back.</p>
+    </div>
+    <div class="actions"><span class="row ui muted" role="status" data-when="default step-1 step-3 step-4 uploading upload-rejected validation-error conflict key-missing cap-reached session-expired"><i data-icon="circle-check" class="sm"></i>Draft saved just now</span><span class="row ui muted" role="status" data-when="saving"><span class="spinner" aria-hidden="true"></span>Saving draft…</span></div>
+  </div>
+
+  <ol class="stepper" data-steps="Format|Product|Audience and direction|Concept and script" data-step-map="default:2,step-1:1,step-3:3,step-4:4,validation-error:2,uploading:2,upload-rejected:2,saving:2,generating:4,conflict:2,session-expired:2,key-missing:4,cap-reached:4"></ol>
+
+  <div class="grid-12">
+    <div class="col-8 stack">
+
+      <div class="alert alert-warning" role="alert" data-when="conflict" hidden><i data-icon="triangle-alert"></i><div class="body"><span class="title">This draft was changed in another tab</span><span>Your last change was not saved so nothing was overwritten. Reload to see the latest version, then repeat your change.</span><div class="actions"><button class="btn btn-outline sm"><i data-icon="refresh-cw" class="sm"></i>Reload latest version</button></div></div></div>
+
+      <!-- STEP 1 Format -->
+      <section class="card" data-when="step-1" hidden aria-labelledby="s1">
+        <div class="card-header"><div><h2 id="s1">Choose the format</h2><div class="sub">Step 1 of 4</div></div></div>
+        <div class="card-body stack-lg">
+          <fieldset class="field bare"><legend class="label">Ad style</legend>
+            <div class="radio-cards" role="radiogroup" aria-label="Ad style">
+              <div class="radio-card" role="radio" aria-checked="true" tabindex="0"><span class="dot"></span><div><div class="t">UGC ad</div><div class="d">Creator-style video, 15 to 60 seconds.</div></div></div>
+              <div class="radio-card" role="radio" aria-checked="false" aria-disabled="true"><span class="dot"></span><div><div class="t">Animated</div><div class="d">Not available in this release.</div></div></div>
+            </div></fieldset>
+          <fieldset class="field bare"><legend class="label">How do you want to start?</legend>
+            <div class="radio-cards" role="radiogroup" aria-label="Intake mode">
+              <div class="radio-card" role="radio" aria-checked="true" tabindex="0"><span class="dot"></span><div><div class="t">Describe the idea</div><div class="d">Write a concept. ShrooMap drafts the script and shots.</div></div></div>
+              <div class="radio-card" role="radio" aria-checked="false" tabindex="-1"><span class="dot"></span><div><div class="t">Paste a script</div><div class="d">Bring your own dialogue. It is still checked against the brand rules.</div></div></div>
+            </div></fieldset>
+        </div>
+        <div class="card-footer"><button class="btn btn-ghost">Start over</button><button class="btn btn-primary">Next: Product<i data-icon="arrow-right" class="sm"></i></button></div>
+      </section>
+
+      <!-- STEP 2 Product (default and its issue states) -->
+      <section class="card" data-when="default uploading upload-rejected validation-error saving conflict session-expired" hidden aria-labelledby="s2">
+        <div class="card-header"><div><h2 id="s2">Tell us about the product</h2><div class="sub">Step 2 of 4</div></div></div>
+        <div class="card-body stack-lg">
+          <div class="alert alert-destructive" role="alert" data-when="validation-error" hidden><i data-icon="circle-alert"></i><div class="body"><span class="title">Fix 2 things to continue</span><ul><li><a href="#name">Product name is required</a></li><li><a href="#desc">Product description is required</a></li></ul></div></div>
+          <div class="field"><label for="name">Product name <span class="req">(required)</span></label>
+            <input id="name" class="input" type="text" value="Morning Focus Blend" data-when="default uploading upload-rejected saving conflict session-expired" aria-describedby="name-h">
+            <input id="name-e" class="input" type="text" value="" aria-invalid="true" aria-describedby="name-err" data-when="validation-error" hidden>
+            <div class="error" id="name-err" data-when="validation-error" hidden><i data-icon="circle-alert" class="sm"></i>Enter the product name.</div>
+            <div class="help" id="name-h">Up to 200 characters.</div></div>
+          <div class="field"><label for="desc">Product description <span class="req">(required)</span></label>
+            <textarea id="desc" class="textarea" data-when="default uploading upload-rejected saving conflict session-expired">Lion's Mane and Cordyceps capsules for a steady start to the day. 60 capsules, vegan, third-party tested. Taken with breakfast.</textarea>
+            <textarea id="desc-e" class="textarea" aria-invalid="true" aria-describedby="desc-err" data-when="validation-error" hidden></textarea>
+            <div class="error" id="desc-err" data-when="validation-error" hidden><i data-icon="circle-alert" class="sm"></i>Describe the product so the script can feature it.</div>
+            <div class="counter">124 / 2000</div></div>
+          <div class="field"><span class="label">Product image <span class="req">(optional)</span></span>
+            <div class="upload-item" data-when="default saving conflict session-expired" hidden><div class="thumb"><img src="../assets/img/product-bottle.svg" alt="Uploaded product photo: amber bottle with a green label" width="56" height="56"></div><div class="grow"><div class="ui strong">morning-focus-bottle.jpg</div><div class="ui muted">2.4 MB · JPEG · location data removed</div></div><span class="badge badge-success"><i data-icon="circle-check"></i>Ready</span><button class="btn btn-ghost icon sm" aria-label="Remove image"><i data-icon="trash-2" class="sm"></i></button></div>
+            <div class="upload-item" data-when="uploading" hidden><div class="thumb"><span class="skel sq-56"></span></div><div class="grow"><div class="ui strong">morning-focus-bottle.jpg</div><div class="progress" role="progressbar" aria-label="Processing image" aria-valuetext="Processing"><i class="w-60"></i></div><div class="ui muted" role="status">Processing: checking the file and removing location data</div></div><span class="badge badge-info"><span class="spinner" aria-hidden="true"></span>Processing</span></div>
+            <div class="upload-item rejected" data-when="upload-rejected" hidden role="alert"><div class="thumb"><span class="empty-thumb"><i data-icon="file-warning"></i></span></div><div class="grow"><div class="ui strong">label-proof.pdf</div><div class="ui text-destructive">This file type is not supported. Use JPEG, PNG, WebP or GIF up to 10 MB.</div></div><span class="badge badge-destructive"><i data-icon="circle-x"></i>Rejected</span><button class="btn btn-outline sm">Choose another</button></div>
+            <div class="dropzone" data-when="upload-rejected validation-error" hidden><i data-icon="upload" class="lg"></i><div><strong>Drop an image here</strong> or <button class="btn btn-outline sm">Choose file</button></div><div class="muted">JPEG, PNG, WebP or GIF · up to 10 MB</div></div>
+            <p class="help">Only upload images you have the right to use. If a person appears, make sure you have their permission. ShrooMap describes the product only and never guesses anything about a person.</p></div>
+        </div>
+        <div class="card-footer"><button class="btn btn-outline"><i data-icon="arrow-left" class="sm"></i>Back</button><button class="btn btn-primary" data-when="default uploading upload-rejected validation-error conflict session-expired" hidden>Next: Audience and direction<i data-icon="arrow-right" class="sm"></i></button><button class="btn btn-primary" aria-busy="true" aria-disabled="true" data-when="saving" hidden><span class="spinner" aria-hidden="true"></span>Saving…</button></div>
+      </section>
+
+      <!-- STEP 3 Audience and direction -->
+      <section class="card" data-when="step-3" hidden aria-labelledby="s3">
+        <div class="card-header"><div><h2 id="s3">Audience and direction</h2><div class="sub">Step 3 of 4</div></div></div>
+        <div class="card-body stack-lg">
+          <div class="form-grid">
+            <div class="field"><label for="age-min">Age from</label><input id="age-min" class="input num" type="number" value="35"></div>
+            <div class="field"><label for="age-max">Age to</label><input id="age-max" class="input num" type="number" value="52"></div>
+            <div class="field"><label for="gender">Gender</label><select id="gender" class="select"><option>Any</option></select></div>
+            <div class="field"><label for="interests">Interests</label><input id="interests" class="input" type="text" value="morning routines, nootropics, trail running"><div class="help">Separate with commas.</div></div>
+          </div>
+          <fieldset class="field bare"><legend class="label">Goal</legend>
+            <div class="radio-cards" role="radiogroup" aria-label="Goal">
+              <div class="radio-card" role="radio" aria-checked="false" tabindex="-1"><span class="dot"></span><div><div class="t">Awareness</div></div></div>
+              <div class="radio-card" role="radio" aria-checked="true" tabindex="0"><span class="dot"></span><div><div class="t">Conversion</div></div></div>
+              <div class="radio-card" role="radio" aria-checked="false" tabindex="-1"><span class="dot"></span><div><div class="t">Retention</div></div></div>
+            </div></fieldset>
+          <div class="form-grid">
+            <div class="field"><label for="tone">Tone</label><select id="tone" class="select"><option>Calm and grounded</option></select><div class="help">Review guidance for the brand approver, not a pass or fail test.</div></div>
+            <div class="field"><span class="label" id="segl">Segments</span><div class="seg" role="group" aria-labelledby="segl"><button aria-pressed="false">1</button><button aria-pressed="false">2</button><button aria-pressed="true">3</button><button aria-pressed="false">4</button></div><div class="help tabular">3 segments × 15 s = 45 s total</div></div>
+          </div>
+        </div>
+        <div class="card-footer"><button class="btn btn-outline"><i data-icon="arrow-left" class="sm"></i>Back</button><button class="btn btn-primary">Next: Concept and script<i data-icon="arrow-right" class="sm"></i></button></div>
+      </section>
+
+      <!-- STEP 4 Concept and script -->
+      <section class="card" data-when="step-4 generating key-missing cap-reached" hidden aria-labelledby="s4">
+        <div class="card-header"><div><h2 id="s4">Concept</h2><div class="sub">Step 4 of 4</div></div></div>
+        <div class="card-body stack-lg">
+          <div class="alert alert-warning" role="alert" data-when="key-missing" hidden><i data-icon="key-round"></i><div class="body"><span class="title">Add your OpenAI key to generate the brief</span><span>Brief generation runs on your own OpenAI account. Nothing is charged to anyone else, and your answers stay saved.</span><div class="actions"><a class="btn btn-primary sm" href="SCREEN-010.html">Add OpenAI key</a></div></div></div>
+          <div class="alert alert-destructive" role="alert" data-when="cap-reached" hidden><i data-icon="circle-alert"></i><div class="body"><span class="title">Daily spend limit reached</span><span>You have reached your US$50 daily limit. The limit counts estimated cost from the configured price table, so it can differ slightly from your provider's bill. It resets at midnight UTC. Your draft is saved.</span></div></div>
+          <div class="field"><label for="concept">Concept <span class="req">(required)</span></label>
+            <textarea id="concept" class="textarea tall">A morning routine told by a trail runner: coffee, quiet light in the kitchen, then the two capsules before heading out. Show the bottle on the counter and in hand. End on the free 2-minute quiz.</textarea>
+            <div class="counter">208 / 4000</div></div>
+          <dl class="kv" aria-label="Summary of your choices"><dt>Product</dt><dd>Morning Focus Blend</dd><dt>Audience</dt><dd>Any gender, 35 to 52, morning routines, nootropics, trail running</dd><dt>Direction</dt><dd>Conversion, calm and grounded, 3 segments (45 s)</dd><dt>Image</dt><dd>morning-focus-bottle.jpg</dd></dl>
+          <div class="alert alert-info"><i data-icon="info"></i><div class="body"><span>This step uses your OpenAI key. The call is billed to your account. The brief is checked against the brand rules before you see it.</span></div></div>
+        </div>
+        <div class="card-footer"><button class="btn btn-outline"><i data-icon="arrow-left" class="sm"></i>Back</button>
+          <button class="btn btn-primary" data-when="step-4" hidden><i data-icon="send" class="sm"></i>Generate brief</button>
+          <button class="btn btn-primary" aria-busy="true" aria-disabled="true" data-when="generating" hidden><span class="spinner" aria-hidden="true"></span>Generating brief…</button>
+          <button class="btn btn-primary" aria-disabled="true" disabled data-when="key-missing cap-reached" hidden><i data-icon="send" class="sm"></i>Generate brief</button></div>
+      </section>
+
+      <div class="alert alert-info" role="status" data-when="generating" hidden><i data-icon="loader-circle"></i><div class="body"><span class="title">Your brief is being generated</span><span>This usually takes under a minute. You can leave this page; the brief appears in Campaigns when it is ready.</span></div></div>
+    </div>
+
+    <aside class="col-4 stack" aria-label="Summary">
+      <div class="card hide-phone"><div class="card-body stack">
+        <h2>What happens next</h2>
+        <ol class="stack-sm ui">
+          <li class="row"><span class="badge badge-primary">1</span>You review and edit the brief.</li>
+          <li class="row"><span class="badge badge-primary">2</span>You generate one clip per segment.</li>
+          <li class="row"><span class="badge badge-primary">3</span>You assemble and download the final ad.</li>
+        </ol>
+        <p class="ui muted">Costs are billed to your own OpenAI and WaveSpeed accounts, with your daily and monthly limits applied.</p>
+      </div></div>
+      <div class="card"><div class="card-body stack-sm">
+        <h3>Your provider keys</h3>
+        <div class="row-between ui"><span>OpenAI</span><span class="badge badge-success" data-when="default step-1 step-3 step-4 uploading upload-rejected validation-error saving generating conflict cap-reached" hidden><i data-icon="circle-check"></i>Ready</span><span class="badge badge-warning" data-when="key-missing" hidden><i data-icon="triangle-alert"></i>Missing</span></div>
+        <div class="row-between ui"><span>WaveSpeed</span><span class="badge badge-success"><i data-icon="circle-check"></i>Ready</span></div>
+      </div></div>
+    </aside>
+  </div>
+</main>
+
+<div class="scrim" data-when="session-expired" hidden>
+  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="se-t"><div class="dialog-head"><h2 id="se-t">Your session has ended</h2></div><div class="dialog-body"><p>Sign in again to continue. Everything you entered is saved, and you will return to step 2 of this draft.</p></div><div class="dialog-foot"><button class="btn btn-primary">Sign in again</button></div></div>
+</div>
+</body>
+</html>

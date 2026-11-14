@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clips · Morning Focus Blend · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="operator" data-nav="campaigns" data-role="user">
+<!-- SCREEN-008 Campaign workspace: Clips and audio QC. Pattern: job list. FLOW-03. REQ-009, 010, 019 (caps), 014/018 (keys). API-060..064 -->
+<main>
+  <div data-ws data-tab="clips" data-name="Morning Focus Blend" data-brief="success|Accepted" data-clips="info|1 of 3" data-final-disabled="true" data-when="default failures qc-review out-of-date key-disabled cap-reached">
+    <div class="ws-actions"><button class="btn btn-outline"><i data-icon="rotate-ccw" class="sm"></i>Generate remaining clips</button></div>
+  </div>
+  <div data-ws data-tab="clips" data-name="Morning Focus Blend" data-brief="success|Accepted" data-clips="Loading" data-final-disabled="true" data-when="loading"><div class="ws-actions"></div></div>
+  <div data-ws data-tab="clips" data-name="Morning Focus Blend" data-brief="warning|Needs review" data-clips-disabled="true" data-final-disabled="true" data-when="blocked"><div class="ws-actions"></div></div>
+
+  <div class="alert alert-destructive" role="alert" data-when="key-disabled" hidden><i data-icon="key-round"></i><div class="body"><span class="title">Your WaveSpeed key was disabled</span><span>It failed authentication 5 times in a row, so ShrooMap stopped using it. No new clips can be generated until you replace the key. Clips already made are unaffected.</span><div class="actions"><a class="btn btn-primary sm" href="SCREEN-010.html">Replace WaveSpeed key</a></div></div></div>
+  <div class="alert alert-destructive" role="alert" data-when="cap-reached" hidden><i data-icon="circle-alert"></i><div class="body"><span class="title">Daily spend limit reached</span><span>This clip would take you past your US$50 daily limit. Limits use estimated cost from the configured price table, so they can differ slightly from your WaveSpeed bill. Try again after midnight UTC.</span></div></div>
+  <div class="alert alert-warning" role="status" data-when="out-of-date" hidden><i data-icon="triangle-alert"></i><div class="body"><span class="title">Segment 2 changed after its clip was made</span><span>The clip no longer matches the brief. Regenerate it, then re-assemble the final ad.</span></div></div>
+
+  <!-- blocked -->
+  <div class="card" data-when="blocked" hidden><div class="empty"><div class="glyph"><i data-icon="file-text" class="lg"></i></div><h2>Accept the brief before generating clips</h2><p>Clips are made from the accepted segment prompts. Review the brief and resolve any open checks first.</p><a class="btn btn-primary" href="SCREEN-007.html">Go to the brief</a></div></div>
+
+  <!-- loading -->
+  <div class="stack" data-when="loading" hidden aria-busy="true">
+    <div class="job-card"><span class="skel h-tall"></span><div class="stack"><span class="skel h-lg w-50"></span><span class="skel w-full"></span><span class="skel w-75"></span><span class="skel w-25"></span></div></div>
+    <div class="job-card"><span class="skel h-tall"></span><div class="stack"><span class="skel h-lg w-50"></span><span class="skel w-full"></span><span class="skel w-75"></span><span class="skel w-25"></span></div></div>
+  </div>
+
+  <div class="stack" data-when="default failures qc-review out-of-date key-disabled cap-reached" hidden>
+
+    <!-- segment 1 -->
+    <article class="job-card" aria-labelledby="j1">
+      <div class="clip"><img src="../assets/img/clip-poster.svg" alt="Clip 1 preview frame: a person holding a supplement bottle in a kitchen" width="200" height="300"><span class="dur">0:15</span></div>
+      <div class="info">
+        <div class="head"><h3 id="j1">Segment 1 · 0:00 to 0:15</h3><span class="badge badge-success"><i data-icon="circle-check"></i>Completed</span></div>
+        <p class="ui muted">"I am not a morning person, so I keep my routine simple: coffee, quiet light, and two capsules of Morning Focus Blend…"</p>
+        <div class="qc passed"><i data-icon="circle-check" class="text-success"></i><div><strong>Audio check: passed</strong><div>Speech matches the script.</div></div></div>
+        <div class="row"><button class="btn btn-outline sm"><i data-icon="play" class="sm"></i>Preview</button><button class="btn btn-ghost sm">Regenerate</button><button class="btn btn-ghost sm"><i data-icon="audio-lines" class="sm"></i>Re-run audio check</button></div>
+      </div>
+    </article>
+
+    <!-- segment 2 -->
+    <article class="job-card" aria-labelledby="j2">
+      <div class="clip placeholder"><i data-icon="loader-circle" class="lg" data-when="default key-disabled cap-reached" hidden></i><i data-icon="triangle-alert" class="lg" data-when="out-of-date" hidden></i><i data-icon="file-video" class="lg" data-when="failures qc-review" hidden></i></div>
+      <div class="info">
+        <div class="head"><h3 id="j2">Segment 2 · 0:15 to 0:30</h3>
+          <span class="badge badge-info" data-when="default key-disabled cap-reached" hidden><span class="spinner" aria-hidden="true"></span>Processing</span>
+          <span class="badge badge-warning" data-when="out-of-date" hidden><i data-icon="clock"></i>Out of date</span>
+          <span class="badge badge-destructive" data-when="failures" hidden><i data-icon="circle-x"></i>Failed</span>
+          <span class="badge badge-success" data-when="qc-review" hidden><i data-icon="circle-check"></i>Completed</span></div>
+        <p class="ui muted">"By midday my to-do list gets loud. I keep the bottle in my bag next to my trail shoes…"</p>
+        <div data-when="default key-disabled cap-reached" hidden class="stack-sm"><div class="progress" role="progressbar" aria-label="Clip 2 progress" aria-valuetext="Processing, started 2 minutes ago"><i class="w-60"></i></div><div class="ui muted" role="status">Processing at WaveSpeed · started 2 minutes ago. You can leave this page; it keeps running.</div></div>
+        <div data-when="out-of-date" hidden class="stack-sm"><div class="alert alert-warning"><i data-icon="triangle-alert"></i><div class="body"><span>The brief text for this segment changed after this clip was generated. The old clip is kept until a new one completes.</span></div></div><div class="row"><button class="btn btn-primary sm"><i data-icon="rotate-ccw" class="sm"></i>Regenerate clip</button><button class="btn btn-ghost sm"><i data-icon="play" class="sm"></i>Preview old clip</button></div></div>
+        <div data-when="failures" hidden class="stack-sm"><div class="alert alert-destructive"><i data-icon="circle-x"></i><div class="body"><span class="title">Failed: temporary provider problem</span><span>WaveSpeed did not respond in time. Nothing is retried automatically. Your credit is only used if the provider reports the clip as made.</span></div></div><div class="row"><button class="btn btn-primary sm"><i data-icon="rotate-ccw" class="sm"></i>Retry</button></div></div>
+        <div data-when="qc-review" hidden class="stack-sm"><div class="qc failed"><i data-icon="circle-alert" class="text-destructive"></i><div><strong>Audio check: failed</strong><div>The speech does not match the script. Heard: "…this blend helps my afternoons…". Expected: "…I keep the bottle in my bag…".</div></div></div><div class="row"><button class="btn btn-outline sm"><i data-icon="play" class="sm"></i>Preview</button><button class="btn btn-outline sm"><i data-icon="audio-lines" class="sm"></i>Re-run audio check</button><button class="btn btn-ghost sm">Regenerate</button></div><button class="btn btn-ghost sm" aria-expanded="false"><i data-icon="history" class="sm"></i>Earlier check results (1)</button></div>
+      </div>
+    </article>
+
+    <!-- segment 3 -->
+    <article class="job-card" aria-labelledby="j3">
+      <div class="clip placeholder"><i data-icon="file-video" class="lg"></i></div>
+      <div class="info">
+        <div class="head"><h3 id="j3">Segment 3 · 0:30 to 0:45</h3>
+          <span class="badge badge-destructive" data-when="default key-disabled cap-reached out-of-date" hidden><i data-icon="circle-x"></i>Failed</span>
+          <span class="badge badge-destructive" data-when="failures" hidden><i data-icon="circle-x"></i>Failed</span>
+          <span class="badge badge-success" data-when="qc-review" hidden><i data-icon="circle-check"></i>Completed</span></div>
+        <p class="ui muted">"Everyone's mornings look different, and that is the point… Take the free 2-minute quiz."</p>
+        <div data-when="default out-of-date" hidden class="stack-sm"><div class="alert alert-destructive"><i data-icon="circle-x"></i><div class="body"><span class="title">Failed: credit or configuration</span><span>WaveSpeed reports your account is out of credit. Add credit in your WaveSpeed account, then retry. This is your own account, so ShrooMap cannot fix it for you.</span></div></div><div class="row"><button class="btn btn-primary sm"><i data-icon="rotate-ccw" class="sm"></i>Retry</button><a class="btn btn-ghost sm" href="SCREEN-010.html">Check provider keys</a></div></div>
+        <div data-when="failures" hidden class="stack-sm"><div class="alert alert-destructive"><i data-icon="circle-help"></i><div class="body"><span class="title">Failed: outcome unknown</span><span>ShrooMap restarted after sending this clip to WaveSpeed but before its job number was saved. Check your WaveSpeed account for a clip made around 14:32. This job is not sent again automatically, to avoid charging you twice.</span></div></div><div class="row"><button class="btn btn-outline sm"><i data-icon="rotate-ccw" class="sm"></i>Retry as a new clip</button></div></div>
+        <div data-when="key-disabled cap-reached" hidden class="stack-sm"><div class="alert alert-destructive"><i data-icon="circle-x"></i><div class="body"><span class="title">Failed: temporary provider problem</span><span>WaveSpeed did not respond in time.</span></div></div><div class="row"><button class="btn btn-primary sm" aria-disabled="true" disabled><i data-icon="rotate-ccw" class="sm"></i>Retry</button><span class="ui muted">Retry is unavailable until the issue above is resolved.</span></div></div>
+        <div data-when="qc-review" hidden class="stack-sm"><div class="qc skipped"><i data-icon="triangle-alert" class="text-warning"></i><div><strong>Audio check: skipped</strong><div>The check could not run because your OpenAI key has no credit. Re-run it after adding credit.</div></div></div><div class="row"><button class="btn btn-outline sm"><i data-icon="play" class="sm"></i>Preview</button><button class="btn btn-outline sm"><i data-icon="audio-lines" class="sm"></i>Re-run audio check</button></div></div>
+      </div>
+    </article>
+
+    <div class="card"><div class="card-body row-between"><div class="ui"><strong>1 of 3 clips ready.</strong> <span class="muted">You can assemble the final ad with the clips you have.</span></div><a class="btn btn-primary" href="SCREEN-009.html">Choose clips for the final ad<i data-icon="arrow-right" class="sm"></i></a></div></div>
+  </div>
+</main>
+</body>
+</html>

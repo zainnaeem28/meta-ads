@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Invitations and requests · Administration · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="admin" data-nav="invites" data-role="admin" data-alerts="2">
+<!-- SCREEN-012 Invitations and access requests. Pattern: tabbed data tables. FLOW-12. REQ-003. API-110..117, 002 -->
+<main data-width="wide">
+<div class="page-header"><div class="titles"><h1>Invitations and requests</h1><p class="desc">Invite people, or approve people who asked for access.</p></div><div class="actions"><button class="btn btn-primary"><i data-icon="mail-plus" class="sm"></i>Invite person</button></div></div>
+<div class="tabs" role="tablist"><a class="tab" role="tab" href="#" aria-selected="true" data-when="default loading invite-error empty resent">Invitations <span class="badge">3</span></a><a class="tab" role="tab" href="#" aria-selected="false" data-when="default loading invite-error empty resent">Access requests <span class="badge">2</span></a><a class="tab" role="tab" href="#" aria-selected="false" data-when="requests requests-off">Invitations <span class="badge">3</span></a><a class="tab" role="tab" href="#" aria-selected="true" data-when="requests requests-off">Access requests <span class="badge">2</span></a></div>
+<div class="toast-region" data-when="resent" hidden><div class="toast" role="status"><i data-icon="circle-check"></i><div><strong>Invitation sent again.</strong><br>The 7-day period starts over.</div></div></div>
+<section class="card" data-when="default resent invite-error" hidden><div class="table-wrap"><table class="table stack-phone"><thead><tr><th>Email</th><th>State</th><th>Invited by</th><th>Expires</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
+<tr><td data-label="Email"><span class="strong">sam.okafor@shroomap.example</span></td><td data-label="State"><span class="badge badge-info"><i data-icon="mail"></i>Invited</span></td><td data-label="Invited by">You</td><td data-label="Expires">in 6 days</td><td class="actions-cell"><button class="btn btn-outline sm">Resend</button> <button class="btn btn-ghost sm">Revoke</button></td></tr>
+<tr><td data-label="Email"><span class="strong">lena.brandt@shroomap.example</span></td><td data-label="State"><span class="badge badge-warning"><i data-icon="clock"></i>Expired</span></td><td data-label="Invited by">You</td><td data-label="Expires">9 days ago</td><td class="actions-cell"><button class="btn btn-outline sm">Invite again</button></td></tr>
+<tr><td data-label="Email"><span class="strong">omar.haddad@shroomap.example</span></td><td data-label="State"><span class="badge badge-warning"><i data-icon="triangle-alert"></i>Email not delivered</span></td><td data-label="Invited by">Dana W.</td><td data-label="Expires">in 5 days</td><td class="actions-cell"><button class="btn btn-outline sm">Resend</button> <button class="btn btn-ghost sm">Revoke</button></td></tr>
+</tbody></table></div></section>
+<section class="card" data-when="empty" hidden><div class="empty"><div class="glyph"><i data-icon="mail-plus" class="lg"></i></div><h2>No invitations yet</h2><p>Invite the people who should use ShrooMap. They get a single-use link that works for 7 days.</p><button class="btn btn-primary">Invite person</button></div></section>
+<section class="card" data-when="loading" hidden aria-busy="true"><div class="card-body stack"><span class="skel h-lg w-25"></span><span class="skel w-full"></span><span class="skel w-full"></span></div></section>
+<section class="card" data-when="requests" hidden><div class="table-wrap"><table class="table stack-phone"><thead><tr><th>Email</th><th>Note</th><th>Asked</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
+<tr><td data-label="Email"><span class="strong">nina.castellano@shroomap.example</span></td><td data-label="Note">Social team, spring launch</td><td data-label="Asked">Today</td><td class="actions-cell"><button class="btn btn-primary sm"><i data-icon="check" class="sm"></i>Approve</button> <button class="btn btn-outline sm">Decline</button></td></tr>
+<tr><td data-label="Email"><span class="strong">j.mbeki@shroomap.example</span></td><td data-label="Note">No note</td><td data-label="Asked">Yesterday</td><td class="actions-cell"><button class="btn btn-primary sm"><i data-icon="check" class="sm"></i>Approve</button> <button class="btn btn-outline sm">Decline</button></td></tr></tbody></table></div></section>
+<section class="card" data-when="requests-off" hidden><div class="empty"><div class="glyph"><i data-icon="lock" class="lg"></i></div><h2>The request-access form is off</h2><p>People cannot ask for access from the sign-in page. Invite them instead. Turning the form on is a deployment setting.</p></div></section>
+</main>
+<div class="scrim" data-when="invite-error" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="iv"><div class="dialog-head"><h2 id="iv">Invite a person</h2></div><div class="dialog-body"><div class="field"><label for="ie">Email address</label><input id="ie" class="input" type="email" value="sam@gmail.com" aria-invalid="true" aria-describedby="ie-e"><div class="error" id="ie-e"><i data-icon="circle-alert" class="sm"></i>Only addresses at the allowed company domains can be invited.</div></div></div><div class="dialog-foot"><button class="btn btn-outline">Cancel</button><button class="btn btn-primary">Send invitation</button></div></div></div>
+</body>
+</html>
