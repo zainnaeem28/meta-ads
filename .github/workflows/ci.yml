@@ -237,10 +237,10 @@ jobs:
             docker exec ci-pg createdb -U postgres "smoke_$n"
             dir="$RUNNER_TEMP/ci-env-$n"
             bash docker/smoke/make-env.sh "$dir" "172.17.0.1:5432/smoke_$n"
-            CI_ENV_DIR="$dir" docker compose -f docker/compose.ci.yml -p "smoke-ci-$n" up -d --wait --wait-timeout 240
-            CI_ENV_DIR="$dir" docker compose -f docker/compose.ci.yml -p "smoke-ci-$n" ps | tee "reports/container/compose-ci-$n-ps.txt"
+            CI_IMAGE_API=shroomap-api:smoke CI_IMAGE_WORKER=shroomap-worker:smoke CI_IMAGE_WEB=shroomap-web:smoke CI_ENV_DIR="$dir" docker compose -f docker/compose.ci.yml -p "smoke-ci-$n" up -d --wait --wait-timeout 240
+            CI_IMAGE_API=shroomap-api:smoke CI_IMAGE_WORKER=shroomap-worker:smoke CI_IMAGE_WEB=shroomap-web:smoke CI_ENV_DIR="$dir" docker compose -f docker/compose.ci.yml -p "smoke-ci-$n" ps | tee "reports/container/compose-ci-$n-ps.txt"
           done
-          for n in a b; do CI_ENV_DIR="$RUNNER_TEMP/ci-env-$n" docker compose -f docker/compose.ci.yml -p "smoke-ci-$n" down -v; done
+          for n in a b; do CI_IMAGE_API=shroomap-api:smoke CI_IMAGE_WORKER=shroomap-worker:smoke CI_IMAGE_WEB=shroomap-web:smoke CI_ENV_DIR="$RUNNER_TEMP/ci-env-$n" docker compose -f docker/compose.ci.yml -p "smoke-ci-$n" down -v; done
           docker rm -f ci-pg
       - name: Upload reports
         if: always()
