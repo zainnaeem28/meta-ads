@@ -34,6 +34,24 @@
       }
     ]
   },
+  "customRules": {
+    "owner": "TASK-115 (SECURITY-DESIGN section 14), reviewed by the Security Reviewer",
+    "semgrep": {
+      "file": "config/semgrep/shroomap-security.yml",
+      "ids": [
+        "shroomap.key-custody.no-withdecryptedkey-outside-worker",
+        "shroomap.egress.no-raw-http-outside-platform-egress",
+        "shroomap.sql.no-interpolated-identifiers",
+        "shroomap.process.no-shell-string-spawn",
+        "shroomap.key-custody.no-unprojected-provider-keys-select"
+      ]
+    },
+    "gitleaks": {
+      "file": "config/gitleaks.toml",
+      "ids": ["openai-key-shaped", "wavespeed-key-prefixed", "wavespeed-key-assigned"]
+    },
+    "keyCustodyOverride": "failOn.pathClasses[name=key-custody]: Medium is promoted to High until dispositioned"
+  },
   "dispositions": { "maxDays": 90, "neverDismiss": ["critical"] },
   "nonBlocking": { "owner": "DevOps Engineer", "dueDays": 30 },
   "coverage": {

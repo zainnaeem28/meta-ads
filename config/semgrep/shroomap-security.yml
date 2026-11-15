@@ -1,0 +1,110 @@
+# Custom Semgrep rules for the key-custody, identity, egress and media-signing paths
+# (SECURITY-DESIGN section 14, QUALITY-RELEASE-PLAN section 5.1). Rule ids are listed in config/quality-policy.json.
+# The worker is the only process allowed to unseal a provider key; the API process may only seal.
+rules:
+  - id: shroomap.key-custody.no-withdecryptedkey-outside-worker
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: withDecryptedKey is the unseal entry point; only the worker and the provider-keys infrastructure may use it
+    metadata: { section: SECURITY-DESIGN 14, threat: T-01 }
+    paths:
+      exclude:
+        - '**/modules/provider-keys/infrastructure/**'
+        - '**/bootstrap/worker*'
+        - '**/worker/**'
+        - '**/*.test.ts'
+        - '**/*.spec.ts'
+    pattern-either:
+      - pattern: withDecryptedKey(...)
+      - pattern: $X.withDecryptedKey(...)
+      - pattern: import { ..., withDecryptedKey, ... } from '...'
+
+  - id: shroomap.egress.no-raw-http-outside-platform-egress
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Outbound HTTP must go through platform/egress (allow-listed hosts, timeouts, redaction); no raw fetch or HTTP client
+    metadata: { section: SECURITY-DESIGN 14, threat: T-04 }
+    paths:
+      exclude:
+        - '**/platform/egress/**'
+        - '**/*.test.ts'
+        - '**/*.spec.ts'
+        - '**/tools/**'
+    pattern-either:
+      - pattern: fetch(...)
+      - pattern: globalThis.fetch(...)
+      - pattern: $HTTP.request(...)
+      - pattern: new XMLHttpRequest(...)
+      - pattern: axios(...)
+      - pattern: axios.$M(...)
+      - pattern-regex: "from\\s+['\"](node:)?https?['\"]|from\\s+['\"](undici|node-fetch|axios|got)['\"]"
+
+  - id: shroomap.sql.no-interpolated-identifiers
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: SQL text is built from literals and bound parameters only; never interpolate or concatenate values or identifiers
+    metadata: { section: SECURITY-DESIGN 14, threat: T-06 }
+    paths:
+      include:
+        - '**/apps/**'
+        - '**/packages/**'
+      exclude:
+        - '**/*.test.ts'
+        - '**/*.spec.ts'
+    pattern-either:
+      - pattern: $DB.query(`...${$X}...`, ...)
+      - pattern: $DB.query($A + $B, ...)
+      - pattern: $DB.unsafe(...)
+      - pattern: sql.raw(`...${$X}...`)
+      - pattern: sql.raw($A + $B)
+      - pattern: sql.raw($X)
+
+  - id: shroomap.process.no-shell-string-spawn
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Spawn a fixed argv with execFile or spawn and no shell; never run a command string through a shell
+    metadata: { section: SECURITY-DESIGN 14, threat: T-07 }
+    paths:
+      include:
+        - '**/apps/**'
+        - '**/packages/**'
+      exclude:
+        - '**/*.test.ts'
+        - '**/*.spec.ts'
+    pattern-either:
+      - pattern: '$F(..., { ..., shell: true, ... })'
+      - pattern: "$F(..., { ..., shell: '...', ... })"
+      - pattern: execSync(...)
+      - patterns:
+          - pattern-either:
+              - pattern: $CP.exec(...)
+              - pattern: $CP.execSync(...)
+          - metavariable-regex:
+              metavariable: $CP
+              regex: ^(cp|child_process|childProcess|proc)$
+      - patterns:
+          - pattern: exec(...)
+          - pattern-inside: |
+              import { ..., exec, ... } from '$MOD'
+              ...
+          - metavariable-regex:
+              metavariable: $MOD
+              regex: ^(node:)?child_process$
+
+  - id: shroomap.key-custody.no-unprojected-provider-keys-select
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Select named non-secret columns from provider_keys; never select the whole row, which includes sealed key material
+    metadata: { section: SECURITY-DESIGN 14, threat: T-01 }
+    paths:
+      exclude:
+        - '**/modules/provider-keys/infrastructure/**'
+        - '**/bootstrap/worker*'
+        - '**/worker/**'
+        - '**/*.test.ts'
+    pattern-either:
+      - pattern: $DB.select().from(providerKeys)
+      - pattern: $DB.select().from(providerKeys).$REST(...)
+      - pattern: $Q.selectAll('provider_keys')
+      - pattern-regex: '(?i)select\s+(\*|[a-z_]+\.\*)\s+from\s+"?provider_keys'
+      - pattern-regex: '(?i)returning\s+\*[^;]*provider_keys|provider_keys[^;]*returning\s+\*'

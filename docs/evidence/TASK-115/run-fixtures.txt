@@ -1,0 +1,42 @@
+PASS  semgrep rules parse and run without errors                     5 rule(s), 0 error(s)
+PASS  positive fixture is blocked: positive/apps/api/src/modules/media/spawn.ts expected process.no-shell-string-spawn, found ['process.no-shell-string-spawn']
+PASS  positive fixture is blocked: positive/apps/api/src/modules/media/run.ts expected process.no-shell-string-spawn, found ['process.no-shell-string-spawn']
+PASS  positive fixture is blocked: positive/apps/api/src/modules/render/client.ts expected egress.no-raw-http-outside-platform-egress, found ['egress.no-raw-http-outside-platform-egress']
+PASS  positive fixture is blocked: positive/apps/api/src/modules/render/call.ts expected egress.no-raw-http-outside-platform-egress, found ['egress.no-raw-http-outside-platform-egress']
+PASS  positive fixture is blocked: positive/apps/api/src/modules/keys/raw.ts expected key-custody.no-unprojected-provider-keys-select, found ['key-custody.no-unprojected-provider-keys-select']
+PASS  positive fixture is blocked: positive/apps/api/src/modules/keys/list.ts expected key-custody.no-unprojected-provider-keys-select, found ['key-custody.no-unprojected-provider-keys-select']
+PASS  positive fixture is blocked: positive/apps/api/src/modules/keys/use-key.ts expected key-custody.no-withdecryptedkey-outside-worker, found ['key-custody.no-withdecryptedkey-outside-worker']
+PASS  positive fixture is blocked: positive/apps/api/src/modules/shrooms/concat.ts expected sql.no-interpolated-identifiers, found ['sql.no-interpolated-identifiers']
+PASS  positive fixture is blocked: positive/apps/api/src/modules/shrooms/repo.ts expected sql.no-interpolated-identifiers, found ['sql.no-interpolated-identifiers']
+PASS  negative fixture passes: negative/apps/api/src/platform/egress/client.ts findings: none
+PASS  negative fixture passes: negative/apps/api/src/modules/media/run.ts findings: none
+PASS  negative fixture passes: negative/apps/api/src/modules/keys/sql.ts findings: none
+PASS  negative fixture passes: negative/apps/api/src/modules/keys/list.ts findings: none
+PASS  negative fixture passes: negative/apps/api/src/modules/shrooms/repo.ts findings: none
+PASS  negative fixture passes: negative/apps/api/src/bootstrap/worker.module.ts findings: none
+PASS  rule has a positive fixture: key-custody.no-withdecryptedkey-outside-worker 
+PASS  rule has a positive fixture: egress.no-raw-http-outside-platform-egress 
+PASS  rule has a positive fixture: sql.no-interpolated-identifiers   
+PASS  rule has a positive fixture: process.no-shell-string-spawn     
+PASS  rule has a positive fixture: key-custody.no-unprojected-provider-keys-select 
+PASS  rule has a negative fixture: key-custody.no-withdecryptedkey-outside-worker bootstrap/worker
+PASS  rule has a negative fixture: egress.no-raw-http-outside-platform-egress platform/egress
+PASS  rule has a negative fixture: sql.no-interpolated-identifiers   shrooms/repo
+PASS  rule has a negative fixture: process.no-shell-string-spawn     media/run
+PASS  rule has a negative fixture: key-custody.no-unprojected-provider-keys-select keys/list
+PASS  sast wrapper blocks the positive fixtures                      exit 1
+PASS  sast wrapper passes the negative fixtures                      exit 0
+PASS  stub fixture keys are not flagged                              wrapper exit 0
+PASS  canary secret in a commit is blocked                           wrapper exit 1, finding read from reports/secrets.sarif by the policy evaluator
+PASS  canary secret removed from the tree but present in history is blocked wrapper exit 1, finding read from reports/secrets.sarif by the policy evaluator
+PASS  custom pattern fires on the openai canary: openai-key-shaped   
+PASS  custom pattern fires on the wavespeed canary: wavespeed-key-prefixed 
+PASS  canary secret in a built bundle is blocked                     bundle-scan exit 1
+PASS  clean built bundle passes                                      bundle-scan exit 0
+PASS  canary value is redacted in reports and logs                   
+PASS  SAST of the tree with the custom rules is clean                exit 0
+PASS  secret scan of the ticket range with the custom patterns is clean exit 0
+PASS  full-history secret scan is clean                              exit 0
+NOTE  no built web bundle at apps/web/.next; the bundle scan of the real build runs after pnpm build (DO-ci)
+push protection: GAP (security_and_analysis is not returned to this token (needs admin or security-manager access on the repository))
+== 39 checks, 0 failed
