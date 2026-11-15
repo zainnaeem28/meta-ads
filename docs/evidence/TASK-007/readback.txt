@@ -1,0 +1,43 @@
+## Read-back
+repository: zainnaeem28/meta-ads (private=True, owner type=User)
+commit: 40382035d3435f81a929db8c4ebf6232dd65b47c
+
+PASS default-branch: default_branch=dev (required: dev)
+PASS actions-token-readonly: default_workflow_permissions=read can_approve_pull_request_reviews=False
+GAP ruleset-main: rulesets API: Upgrade to GitHub Pro or make this repository public to enable this feature.
+    owner: owner DOP-OI-2 (GitHub Pro, owner-only purchase)
+    compensating control: Paperclip review stages + submit-check reports + quality-gate job (blocks a release workflow, not a push); ruleset JSON committed in .github/rulesets/ and applied with --apply-rulesets after the upgrade
+GAP ruleset-dev: rulesets API: Upgrade to GitHub Pro or make this repository public to enable this feature.
+    owner: owner DOP-OI-2 (GitHub Pro, owner-only purchase)
+    compensating control: Paperclip review stages + submit-check reports + quality-gate job (blocks a release workflow, not a push); ruleset JSON committed in .github/rulesets/ and applied with --apply-rulesets after the upgrade
+GAP ruleset-release-tags: rulesets API: Upgrade to GitHub Pro or make this repository public to enable this feature.
+    owner: owner DOP-OI-2 (GitHub Pro, owner-only purchase)
+    compensating control: Paperclip review stages + submit-check reports + quality-gate job (blocks a release workflow, not a push); ruleset JSON committed in .github/rulesets/ and applied with --apply-rulesets after the upgrade
+GAP branch-protection-main: Upgrade to GitHub Pro or make this repository public to enable this feature.
+    owner: owner DOP-OI-2
+    compensating control: same as rulesets
+GAP branch-protection-dev: Upgrade to GitHub Pro or make this repository public to enable this feature.
+    owner: owner DOP-OI-2
+    compensating control: same as rulesets
+GAP dev-integrator-only-push: bypass actors need an organization; user-owned repository (DOP-OI-2c)
+    owner: owner DOP-OI-2c
+    compensating control: process control: only the Integrator pushes dev (WORKFLOW Branches)
+GAP shared-identity: one managed token for every agent; GitHub cannot tell author from Integrator (DOP-OI-2b)
+    owner: owner DOP-OI-2b
+    compensating control: Paperclip task ownership and reviews; no claim of separation of duties
+GAP environments: total_count=0 (private repository, Free plan: cannot be created)
+    owner: owner DOP-OI-2
+    compensating control: no deploy credential in GitHub; release executor option S (DEVOPS-PLAN 3.4)
+GAP fork-pr-approval: API: Validation Failed Fork PR approval is not allowed for private repositories.
+    owner: owner DOP-OI-2c
+    compensating control: no fork-triggered workflows exist: ci.yml triggers are pull_request/push on main/workflow_dispatch only, no pull_request_target
+GAP allow-forking-off: allow_forking=true; setting changeable only on organization-owned private repositories (422 observed)
+    owner: owner DOP-OI-2c
+    compensating control: single collaborator today; no outside collaborator is added; fork-PR rule above
+PASS no-deploy-credentials: repository secrets=none; deploy-like=none
+PASS workflows-reference-no-secrets: non-GITHUB_TOKEN secret references=none
+BLOCKED unauthorized-push-main: TC-OPS-06 not attempted: no ruleset or branch protection on main exists on this plan, so a push would succeed and mutate main, and a rejected non-fast-forward push would prove nothing about protection
+    owner: owner DOP-OI-2
+    compensating control: rerun with --probe-push after --apply-rulesets and a read-back of ruleset-main
+
+summary: pass=4 gap=10 blocked=1 fail=0
