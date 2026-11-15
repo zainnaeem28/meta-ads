@@ -1,0 +1,6 @@
+TASK-008 image digests: NOT RECORDED. No image was built in this run.
+Reason: the DevOps sandbox has no Docker daemon, no docker/podman/buildah binary and no unprivileged user namespaces
+(`unshare -U` -> Operation not permitted), so `docker build` cannot run here.
+`scripts/ci/container-scan.sh` rebuilds every target, runs the smoke test, scans each exact image ID with Trivy and
+overwrites this file with the real image IDs and the second-build comparison. Run it where a Docker daemon exists
+(the hosted pipeline or an Integrator host with Docker).

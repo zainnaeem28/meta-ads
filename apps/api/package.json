@@ -9,7 +9,8 @@
     "start": "node dist/main.api.js",
     "lint": "eslint src",
     "test:unit": "vitest run --config vitest.config.ts --coverage",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:startup-config": "vitest run --config vitest.config.ts src/platform/config/schema.test.ts src/platform/config/example-env.test.ts; rc=$?; mkdir -p ../../reports/config && cp reports/config/junit.xml ../../reports/config/junit.xml; exit $rc"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1169.0",

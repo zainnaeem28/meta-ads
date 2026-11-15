@@ -1,0 +1,59 @@
+# Local development stack (RUN-GUIDE): `docker compose -f docker/compose.dev.yml up`.
+# Starts PostgreSQL, MinIO (with the app and ledger buckets), the provider stubs and a mail stub from the defaults
+# below alone: no external account, database URL or credential. Override any value through .env.example copies or the
+# environment. Tests do not use this PostgreSQL; they use the shared test PostgreSQL.
+name: ${COMPOSE_PROJECT_NAME:-shroomap-dev}
+
+services:
+  postgres:
+    image: postgres:17-alpine@sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shroomap-local}
+      POSTGRES_DB: ${POSTGRES_DB:-shroomap_dev}
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-shroomap-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-shroomap-local-secret}
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes: ["miniodata:/data"]
+
+  minio-init:
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    depends_on:
+      minio: { condition: service_started }
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-shroomap-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-shroomap-local-secret}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do sleep 1; done && mc mb --ignore-existing local/app local/ledger
+    restart: "no"
+
+  stubs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.stubs
+    ports: ["127.0.0.1:${STUB_PORT:-8089}:8089"]
+
+  mail:
+    image: axllent/mailpit:v1.27.8@sha256:6abc8e633df15eaf785cfcf38bae48e66f64beecdc03121e249d0f9ec15f0707
+    ports:
+      - "127.0.0.1:${MAIL_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAIL_UI_PORT:-8025}:8025"
+
+volumes:
+  pgdata:
+  miniodata:
