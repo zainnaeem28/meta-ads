@@ -1,0 +1,80 @@
+# TASK-014 adapter evidence (69b9bd4 + working tree, 2026-11-15T22:29:02Z)
+
+## release.yml: actionlint and validate.sh
+actionlint: clean
+1.7.12
+actionlint: 2 file(s) clean
+validate.sh: workflow policy clean (2 file(s))
+
+## Real entry point, no credentials: release-with-recovery.sh without a host adapter
+release: deployment-ready-not-deployed: no host adapter configured; owner adds RENDER_API_KEY, the Render service ids, PAPERCLIP_G3_READER_TOKEN and the environment's secrets (docs/ops/secrets.md)
+exit=0
+{
+  "status": "deployment-ready-not-deployed",
+  "detail": "no host adapter configured; owner adds RENDER_API_KEY, the Render service ids, PAPERCLIP_G3_READER_TOKEN and the environment's secrets (docs/ops/secrets.md)",
+  "environment": "staging",
+  "sourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "runId": "1",
+  "adapter": "none",
+  "steps": []
+}
+
+## Adapter contract and end-to-end tests (render.test.ts, observe.test.ts)
+ ✓ test/observe.test.ts > observe.sh > passes a healthy window and reads the metrics with the token 60ms
+ ✓ test/render.test.ts > render.sh: configuration > stops as deployment-ready, not deployed, and lists the missing names 8ms
+ ✓ test/render.test.ts > render.sh: configuration > rejects a missing and an unknown operation 14ms
+ ✓ test/render.test.ts > render.sh: deploy by digest > deploys the digest, sends the key as a bearer token and waits until live 74ms
+ ✓ test/render.test.ts > render.sh: deploy by digest > never puts the key in output 63ms
+ ✓ test/render.test.ts > render.sh: deploy by digest > detects a failed deploy 35ms
+ ✓ test/render.test.ts > render.sh: deploy by digest > refuses a live deploy that runs another image 56ms
+ ✓ test/render.test.ts > render.sh: deploy by digest > fails a deploy that is not live in time 30ms
+ ✓ test/render.test.ts > render.sh: deploy by digest > refuses anything that is not a full digest 10ms
+ ✓ test/render.test.ts > render.sh: deploy by digest > fails when Render answers without a deploy id, with an error, or not at all 49ms
+ ✓ test/render.test.ts > render.sh: deploy by digest > sets the worker shutdown delay before it deploys 76ms
+ ✓ test/render.test.ts > render.sh: deploy by digest > uses the default worker shutdown delay 72ms
+ ✓ test/render.test.ts > render.sh: rollback to the previous digest > redeploys a digest the service has run before 90ms
+ ✓ test/render.test.ts > render.sh: rollback to the previous digest > refuses a target that is not in the host history, without deploying 21ms
+ ✓ test/render.test.ts > render.sh: rollback to the previous digest > refuses a rollback target that is not a digest 9ms
+ ✓ test/render.test.ts > render.sh: migration jobs > points the migrate service at the approved api digest, then runs db:migrate 133ms
+ ✓ test/render.test.ts > render.sh: migration jobs > runs jobs:migrate and then the reference seed 72ms
+ ✓ test/render.test.ts > render.sh: migration jobs > takes the commands from the environment 87ms
+ ✓ test/render.test.ts > render.sh: migration jobs > needs the backup id 9ms
+ ✓ test/render.test.ts > render.sh: migration jobs > stops on a failed job and does not run the seed 40ms
+ ✓ test/render.test.ts > render.sh: migration jobs > fails a job that does not finish in time 28ms
+ ✓ test/render.test.ts > render.sh: migration jobs > fails when Render starts a job without an id 17ms
+ ✓ test/render.test.ts > render.sh: backup, schema read and smoke > takes an on-demand backup and prints its id 30ms
+ ✓ test/render.test.ts > render.sh: backup, schema read and smoke > passes the backup gate for a backup younger than 24 hours 19ms
+ ✓ test/render.test.ts > render.sh: backup, schema read and smoke > fails the backup gate for an old backup, an empty list and a custom limit 50ms
+ ✓ test/render.test.ts > render.sh: backup, schema read and smoke > reads the live state of all four services 71ms
+ ✓ test/render.test.ts > render.sh: backup, schema read and smoke > passes the smoke check, retrying until the api is ready 23ms
+ ✓ test/render.test.ts > render.sh: backup, schema read and smoke > fails the smoke check when the api or the web stays unhealthy 33ms
+ ✓ test/render.test.ts > render.sh: alert, observe and record > alerts to stderr without a webhook and posts to one when set 45ms
+ ✓ test/render.test.ts > render.sh: alert, observe and record > runs the observation window through observe.sh 49ms
+ ✓ test/render.test.ts > render.sh: alert, observe and record > writes the release record entry from the result and the G3 record 20ms
+ ✓ test/render.test.ts > release-with-recovery.sh with the render adapter (real entry point) > migrates, deploys api, worker and web by digest, smokes, observes and records 631ms
+ ✓ test/observe.test.ts > observe.sh > keeps probing for the whole window 2155ms
+ ✓ test/observe.test.ts > observe.sh > needs the api url, the token and the tools 9ms
+ ✓ test/render.test.ts > release-with-recovery.sh with the render adapter (real entry point) > recovers to the previous digests when the smoke check fails, newest layer first 781ms
+ ✓ test/render.test.ts > release-with-recovery.sh with the render adapter (real entry point) > keeps the old application when the migration job fails 208ms
+ ✓ test/observe.test.ts > observe.sh > aborts after three failed readiness probes in a row, not after two 756ms
+ ✓ test/observe.test.ts > observe.sh > aborts on a 5xx ratio over 2% with at least 100 requests 24ms
+ ✓ test/observe.test.ts > observe.sh > does not abort on a single failed request in a small sample 28ms
+ ✓ test/observe.test.ts > observe.sh > aborts when p95 is over twice the baseline with at least 200 requests 102ms
+ ✓ test/observe.test.ts > observe.sh > refuses to judge p95 without a baseline 23ms
+ ✓ test/observe.test.ts > observe.sh > aborts on stuck jobs, a KEK unseal failure and a silent worker 93ms
+ ✓ test/observe.test.ts > observe.sh > aborts when the metrics cannot be read, because the window cannot be judged 16ms
+ ✓ test/render.test.ts > release-with-recovery.sh with the render adapter (real entry point) > aborts the observation window and rolls back on a 5xx spike 1125ms
+ ✓ test/render.test.ts > release-with-recovery.sh with the render adapter (real entry point) > fails when the backup gate finds no recent backup, before anything changes 213ms
+ ✓ test/render.test.ts > release-with-recovery.sh with the render adapter (real entry point) > refuses to reach Render without the approval record 98ms
+ ✓ test/render.test.ts > release-with-recovery.sh with the render adapter (real entry point) > stops as deployment-ready, not deployed, when the host adapter is not configured 63ms
+ Test Files  2 passed (2)
+      Tests  47 passed (47)
+
+## Coverage (full test:render run, reports/release/lcov.info)
+scripts/ci/verify-release-approval.sh lines 64/65 branches 25/30
+scripts/ci/release-with-recovery.sh lines 88/92 branches 39/44
+scripts/ci/hosts/stub.sh lines 20/20 branches 8/8
+scripts/ci/hosts/render.sh lines 99/115 branches 37/40
+scripts/ci/observe.sh lines 27/30 branches 22/24
+
+Full suite: 112 tests passed.
