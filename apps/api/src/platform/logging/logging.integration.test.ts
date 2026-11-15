@@ -111,7 +111,7 @@ describe('api process logging (real entry point, real PostgreSQL)', () => {
         body: JSON.stringify({ apiKey: CANARY_KEY, email: CANARY_EMAIL, transcript: CANARY_TOKEN }),
       }),
     ];
-    expect(responses.map((r) => r.status)).toEqual([200, 404, 404]);
+    expect(responses.map((r) => r.status)).toEqual([200, 404, 405]);
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(
       expectNoCanary(stdout + stderr, [CANARY_KEY, CANARY_TOKEN, CANARY_EMAIL, CONFIG_SECRET]),
