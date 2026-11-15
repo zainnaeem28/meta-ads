@@ -196,6 +196,9 @@ importers:
 
   packages/contracts:
     dependencies:
+      '@tanstack/react-query':
+        specifier: 5.107.1
+        version: 5.107.1(@types/react@19.3.0)(react@19.3.1)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -206,6 +209,12 @@ importers:
       '@types/js-yaml':
         specifier: 4.0.9
         version: 4.0.9
+      '@types/react':
+        specifier: 19.3.0
+        version: 19.3.0
+      '@vitest/coverage-v8':
+        specifier: 5.1.0
+        version: 5.1.0(vitest@5.1.0)
       ajv:
         specifier: 8.20.0
         version: 8.20.0
@@ -224,6 +233,12 @@ importers:
       orval:
         specifier: 8.48.0
         version: 8.48.0(@tanstack/react-query@5.107.1(@types/react@19.3.0)(react@19.3.1))(msw@3.0.6(@types/node@26.6.6)(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(prettier@3.10.1)(zod@4.6.7)
+      react:
+        specifier: 19.3.1
+        version: 19.3.1
+      vitest:
+        specifier: 5.1.0
+        version: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(msw@3.0.6(@types/node@26.6.6)(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/ui:
     dependencies:

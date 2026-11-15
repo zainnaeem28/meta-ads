@@ -1,0 +1,487 @@
+# SHARED-BOUNDARIES — ShrooMap AI UGC Ad Director — v6
+
+Task: AIU-12 `[SDLC:shared-boundaries]`. Author: Solution Architect (agent `f8413144`). Date: 2026-11-14. Reviewer: Solution Architect Reviewer (this task's review stage; for v6, the review stage of task AIU-200). Status: **v6 = v5 (rev `96738dd7`) plus the internal metrics operations API-902 and API-903, auth scope M, the metrics-reader identity and TB-15 (task AIU-200, G2 gate finding G2-SAR-H2; decision TD-D41 in the AIU-13 `decision-log`). v6 changes only the header, §5 (scopes, range note, two rows), §7 (identity row, TB-15), §9 (AIU-15, AIU-16, AIU-17 rows), §10 and the ledger. No table, module, layer, error code or existing operation changes.** The v5 status follows unchanged: **v5 = v4.1 (rev `950b5bd4`) plus the AIU-57 review round 1 fixes SAR-SB4-01..04 (§1 bucket note, §7.1 B and C, §7.1 E, §9, §10, ledger; decisions SB-D22..SB-D25 in the AIU-57 `decision-log`), round 1 resubmission.** The v4.1 status follows unchanged: **v4.1 = v4 (AIU-57, backup identity, rev `a82325aa`) plus the AIU-13 technical-design changes from its review round 1 (SAR-TD-L7 text fixes and the `provider_completed_at` column for SAR-TD-M1); the AIU-13 v3 delta itself was accepted in that round.** The v4 status follows unchanged: **v4, boundary change under §8 for the backup identity (task AIU-57, finding SAR-DOP-06 from the AIU-16 DEVOPS-PLAN review), round 0.** v3 (rev `fc24aa6e`) is the base. v4 changes only §0 (three input rows), §7 (new §7.1 and the identity table), §9 (AIU-16, AIU-17 and AIU-15 rows), §10 and the revision ledger. Everything else is v3 unchanged. The v4 decisions are SB-D18..SB-D21 in the AIU-57 `decision-log`. This is an AI deliverable, not human approval.
+
+**What this is.** These are the stable boundaries that the Stage 2 lanes plan against in parallel: modules and their layers, who owns each table, who owns each API operation, the error codes, the trust boundaries and identities, the shared single-writer files, and the revision register. The lanes are AIU-13 technical design, AIU-14 UX, AIU-15 QA, AIU-16 DevOps and AIU-17 security design. The order is ERD → modules → API (§3 → §4 → §5). Each layer uses only the one before it.
+
+**What this is not.** It is not the full data dictionary, OpenAPI file, configuration registry or failure contracts. AIU-13 writes those inside these boundaries. Nothing here authorizes scaffolding, installs, migrations or code; that waits for G2.
+
+## 0. Revision register (inputs)
+
+| Ref | Document | Revision | sha256 | Status |
+| --- | --- | --- | --- | --- |
+| ARCH-G1 | AIU-11:architecture (G1 overview v3.1) | `20cd6634-4dc3-42c8-9c23-f76909effa2b` | `86b1cfe28fbef9cac8f918a2c8c2da0b9b04572ff32eb461f5797781f5c83c2d` | **Frozen at G1** (AIU-11 PASS, 2026-11-14, autonomous). Same bytes as AIU-8 rev `5a1182af`. This closes SAR-G1-L1 for the register; AIU-13 updates the header text in its next `architecture` revision |
+| PRD | AIU-11:prd (PRD rev 2) | `c3220ab0-4585-4687-bf9a-66fc6bf8b6c5` | `0648b82d3b30dbdc8b7275e58c9cdf39b69cda885f8fa1d84932e8c2fa75a8c9` | Frozen at G1. Same bytes as AIU-6 rev `2e93b228` |
+| G1 | AIU-11 gate decision | comment by Solution Architect Reviewer, 2026-11-14T22:30Z | — | PASS. Unlocks detailed design only |
+| SEC-DS | AIU-9:discovery-security | `fa6cbfbb-efd4-4aa8-9afd-a3fecadaf1af` | `700afc7a…866f6` (as cited in ARCH-G1 §0) | Input to AIU-17 |
+| DEVOPS-PLAN | AIU-16:devops-plan (v2) | `5dca5063-7a13-4cc2-bb4a-5db1fe787708` | `a48673dabc7b6657919075fdd3ef5d510fff58ea29ad261de1f22ef1870e13a7` | Input to v4 (§5.1 `backup` row, §8, §10.3, §10.4). Finding SAR-DOP-06 |
+| SEC-D | AIU-17:security-design (v2, rev 3) | `ee5e5f0b-d16d-4251-b031-523de8d08e71` | `13afab0f7f0a0577ab885deb4422e46af0191807e7711328e2670e24c30a1c8c` | Input to v4 (§9.3A KC-1, §10.8 erasure ledger and token C, §17.3 proposals) |
+| TD | AIU-13:architecture (v4) | `9c0c9495-8296-4890-972e-f96a1ccf1142` | `aa9c65ab882c79ab22d2124132f38bd98b52ffd906b4dbdda69f0d686c4263ac` | Input to v4 (ADR-009 no RLS, §2.10 roles, schemas `public` and `pgboss` owned by `app_migrator`, §2.11 backup) |
+| Repo | `github.com/zainnaeem28/meta-ads` | `60d08cd` (README only) | — | Greenfield. This task branch has no commits |
+
+Hashes were re-checked in this run with `doc_tool.py fetch` for ARCH-G1 and PRD. Everything else is cited from ARCH-G1 §0.
+
+**G1 fix list carried forward.** SAR-G1-L1: frozen status recorded above, header text changed in AIU-13. SAR-G1-L2: AIU-13. SAR-G1-L3: decided here in **SB-D9** (§3.4), because `usage_events` is a shared table. POR-G1-L1 and L2 (PRD §14 rows, intake refresh) belong to the PM and Intake, not to this task. They are listed again in the AIU-12 completion comment for the Orchestrator.
+
+## 1. Frozen platform decisions (from ARCH-G1; changing one reopens G1 scope)
+
+| Item | Frozen value | ARCH-G1 ref |
+| --- | --- | --- |
+| Topology | One modular monolith `apps/api` (NestJS 11 + Fastify) run as two processes, **api** and **worker**, plus `apps/web` (Next.js App Router). One PostgreSQL. One private R2 bucket per environment | §1, §3.2, ADR-001 |
+| Durable work | pg-boss in PostgreSQL. A paid provider call is submitted at most once (§5.4). No Redis, broker, WebSocket or SSE | ADR-003, ADR-007 |
+| ORM and migration owner | Drizzle + drizzle-kit. **The only migration owner is `apps/api/src/database`.** The release migration step also installs and upgrades the pg-boss schema under `app_migrator` | §3.2, SAR-02 |
+| Contract source of truth | `packages/contracts/openapi.yaml`. TS types and Zod schemas are generated from it, never hand-edited | §3.3, §6 |
+| Identity | Clerk behind `IdentityPort`. Roles and status live in our `users` table and are read on every request | ADR-002, TB-1 |
+| Key custody | Asymmetric KEK. The api seals and the worker unseals (`withDecryptedKey` exists only in the worker composition root) | ADR-004, TB-7 |
+| Assembly | FFmpeg in the worker behind `AssemblyPort`. Shotstack is off unless the owner chooses it (OD-08) | ADR-006 |
+| Frontend stack | Default stack (`frontend-stack.md`), pnpm workspaces | §3.2 |
+
+**Reading of "one private R2 bucket per environment" (v5, SB-D22).** The frozen item means one **application media** bucket per environment (`app`, the bucket the api and worker serve media from). The `backup` bucket (ARCH-G1 §2.11 already plans separate backup storage) and the `erasure-ledger` bucket (SEC-D §10.8, classed by SEC-D §17.3 as a §8 row 2 change) are non-application stores registered under §8 row 2 in §7 and §7.1. They add no product behaviour, vendor or user-facing data flow, so G1 scope is not reopened. Adding a second application media bucket would still reopen G1.
+
+## 2. Repository and shared single-writer resources
+
+| Path | What it holds | Single owner (design) | Writer lane after G2 | Change rule |
+| --- | --- | --- | --- | --- |
+| `apps/web/` | Next.js routes, screens, typed client use | UI/UX (screens), Solution Architect (API use) | Frontend | Screen tickets use only the `API-` IDs they name (§5) |
+| `apps/api/src/modules/<module>/` | One folder per module in §4 | Solution Architect | Backend | A ticket writes only inside its module folder, except for the shared files below |
+| `apps/api/src/platform/<name>/` | `db`, `jobs`, `egress`, `config`, `logging`, `rate-limit`, `idempotency`, `ops-cli` | Solution Architect | Backend (foundation tickets) | Same |
+| `apps/api/src/database/schema/<module>.ts` | Drizzle schema, **one file per owning module** | Solution Architect (ERD, §3) | Backend: the ticket of the owning module | A module's tables change only in its own file |
+| `apps/api/src/database/migrations/` | drizzle-kit generated SQL | Solution Architect | Backend, **serialized**. The Delivery Planner reserves a number range per ticket | Never edit an applied migration. One head |
+| `packages/contracts/openapi.yaml` | REST contract (§5) | Solution Architect (AIU-13 writes the file) | Backend, through contract tickets, **serialized** | An operation is added only inside its module's ID range (§5). Changing the meaning of an operation is a boundary change (§8) |
+| `packages/contracts/error-codes.ts` (generated) | Error code registry (§6) | Solution Architect | Generated from OpenAPI | New codes go through §8 |
+| `packages/ui/` and the token file | Design tokens and shared primitives | UI/UX | Frontend, **serialized** | Token lint applies |
+| `pnpm-lock.yaml`, root `package.json` | Dependencies | Solution Architect (approved list in AIU-13) | DevOps foundation ticket first, then serialized | New dependency = AIU-13 approved list or a standing decision |
+| `scripts/ci/`, CI workflow files, Dockerfiles, IaC | Pipeline and images | DevOps (AIU-16) | DevOps | DevOps Reviewer |
+| `config/price-table.json` | Provider price table (SB-D10) | Solution Architect | Backend (usage) | Changed by a reviewed PR; loaded by the release seed |
+
+## 3. Data boundaries (ERD → ownership)
+
+### 3.1 Rules
+
+1. **One owner per table.** Only the owning module's repositories write its table. Other modules call the owner's public service (§4). Reads across modules also go through the owner's service. There are no cross-module joins in repository code; the only exception is a read-only query the owner exposes as a public method.
+2. **Foreign keys point down the layer graph (§4.1).** A child table may reference a parent owned by the same module or by a module in a lower layer. The child's owner declares the foreign key and its delete rule. A module never references a table in a higher layer. Where a higher layer needs to link to a lower row, the higher-layer row holds the FK (for example `drafts.product_media_id` → `media_objects`).
+3. **Delete behaviour.** User-owned rows cascade from `users` (account removal, erasure step 5 hard-deletes the `users` row, §3.4 SB-D12) and campaign-owned rows cascade from `campaigns` (campaign hard delete). Personal data with no FK to `users` (`invitations`, `access_requests` addressed to the subject) is erased explicitly by identity in the same step (SB-D12). A cascade declared by a child's owner is how that owner consents to the delete. **History tables have no foreign keys** (`usage_events`, `audit_events`, `key_events`, `claim_events`, `admin_alerts`): they hold plain UUID columns and outlive their subjects (ARCH-G1 §5.5, SAR3-03).
+4. **Authorization column.** Every user-owned table that an API operation addresses by its own ID or lists has `owner_id uuid not null`. Every list index leads with `owner_id`. Every repository method takes `owner_id` from the actor context (ARCH-G1 §7.1). **Exemption:** `brief_segments` and `assembly_clips` have no `owner_id`. They are child rows reached only through an owner-checked parent in the same module (`briefs`, `assembly_jobs`), by a same-module join, and no operation addresses them by their own ID. `claim_issues` carries `owner_id` because API-054 addresses it directly.
+5. **Identity and time.** UUIDv7 primary keys, generated by the application. `timestamptz` in UTC. `created_at` and `updated_at` on every mutable table. Optimistic `version int` on `drafts`, `briefs` and `users` (409 on a mismatch).
+6. **States are CHECK constraints** with the exact values below. Changing a state set is a boundary change (§8).
+7. **No soft-delete flags.** `campaigns.state = 'deleting'` is the only hidden state, and it lasts only while a deletion run is active (CR-02).
+
+### 3.2 ERD (ownership shown by prefix)
+
+```mermaid
+erDiagram
+  USERS ||--o{ INVITATIONS : "invited_by"
+  USERS ||--o{ PROVIDER_KEYS : owns
+  USERS ||--o{ MEDIA_OBJECTS : owns
+  USERS ||--|| STORAGE_USAGE : has
+  USERS ||--o{ DRAFTS : owns
+  USERS ||--o{ CAMPAIGNS : owns
+  USERS ||--o{ SPEND_RESERVATIONS : reserves
+  USERS ||--o{ DELETION_RUNS : "subject (account)"
+  MEDIA_OBJECTS |o--o{ DRAFTS : "product image"
+  MEDIA_OBJECTS |o--o{ CAMPAIGNS : "product image"
+  DRAFTS |o--o| CAMPAIGNS : "submitted as"
+  CAMPAIGNS ||--o| BRIEFS : has
+  CAMPAIGNS ||--o{ BRIEF_JOBS : "brief generation"
+  MEDIA_OBJECTS ||--o{ BRIEF_JOBS : "image analysis"
+  BRIEFS ||--|{ BRIEF_SEGMENTS : "1..4"
+  BRIEFS ||--o{ CLAIM_ISSUES : flags
+  BRIEF_SEGMENTS ||--o{ VIDEO_JOBS : generates
+  VIDEO_JOBS ||--o{ QC_RUNS : "history"
+  CAMPAIGNS ||--o{ ASSEMBLY_JOBS : assembles
+  ASSEMBLY_JOBS ||--|{ ASSEMBLY_CLIPS : "ordered 1..4"
+  VIDEO_JOBS ||--o{ ASSEMBLY_CLIPS : "used in"
+  CAMPAIGNS ||--o{ THUMBSTOPPER_JOBS : has
+```
+
+Tables with no foreign key (history, settings, platform) are not drawn: `audit_events`, `admin_alerts`, `key_events`, `claim_events`, `usage_events`, `access_requests`, `platform_settings`, `rate_limit_buckets`, `idempotency_records`, `price_table`, `brand_rules`, and the pg-boss schema.
+
+### 3.3 Table ownership and boundary columns
+
+Columns listed are the ones other lanes depend on (keys, foreign keys, states, uniqueness, classification). AIU-13 adds the full data dictionary without changing these.
+
+| Table | Owner module | Key and boundary columns | FK / delete rule | States (CHECK) | Key unique / index | Data class |
+| --- | --- | --- | --- | --- | --- | --- |
+| `users` | identity | `id`, `idp_subject`, `email`, `role`, `status`, `version` | — | role `user\|admin`; status `active\|suspended\|removed` (`removed` lasts from removal until erasure step 5 hard-deletes the row, SB-D12) | unique `idp_subject`; unique `lower(email)` | Personal (email: admin screen only). Erased at step 5 |
+| `invitations` | identity | `id`, `email`, `invited_by`, `state`, `send_state`, `expires_at`, `idp_invitation_id` (v3: replaces `token_hash`; the identity provider issues and verifies the invitation ticket) | `invited_by` → users, SET NULL | `invited\|accepted\|expired\|revoked` | partial unique `lower(email)` where `state='invited'`; index `lower(email)`; unique `idp_invitation_id` | Personal. Rows addressed to a removed subject are deleted at step 5 (SB-D12) |
+| `access_requests` | identity | `id`, `idp_subject`, `email`, `state`, `decided_by` (plain uuid) | none (requester has no `users` row yet) | `pending\|approved\|declined` | partial unique `idp_subject` where `pending`; index `lower(email)` | Personal. The subject's rows (by `idp_subject` or `lower(email)`) are deleted at step 5 (SB-D12) |
+| `platform_settings` | identity | single row: `signup_mode`, `first_admin_seeded_at`, `open_mode_verification_id`. The request-form switch is configuration, not a column (SB-D15) | — | signup_mode `invited_only\|open` | single-row CHECK | Config |
+| `audit_events` | audit | `id`, `at`, `actor_id`, `action`, `object_type`, `object_id`, `outcome`, `request_id` | **none** | outcome `allowed\|denied\|failed` | index `(at)`, `(actor_id, at)` | IDs only. Runtime roles: INSERT and SELECT only |
+| `admin_alerts` | audit | `id`, `kind`, `subject_user_id`, `raised_at`, `acknowledged_by`, `acknowledged_at` | **none** | — | index `(acknowledged_at nulls first, raised_at)` | IDs only |
+| `rate_limit_buckets` | platform/rate-limit | `scope`, `subject`, `window_start`, `count` | none | — | PK `(scope, subject, window_start)` | IDs only |
+| `idempotency_records` | platform/idempotency | `owner_id`, `key`, `operation_id`, `request_hash`, `resource_type`, `resource_id`, `expires_at` | none | — | PK `(owner_id, operation_id, key)` | IDs only; 24 h expiry (SB-D7) |
+| `provider_keys` | provider-keys | `id`, `owner_id`, `provider`, `status`, `version`, `ciphertext`, `wrapped_dek`, `kek_version`, `nonce`, `last4`, `fingerprint`, `consecutive_auth_failures` | owner → users CASCADE | provider `openai\|wavespeed`; status `active\|untested\|disabled` | unique `(owner_id, provider)` | **Secret** (ciphertext). Never returned by any API |
+| `key_events` | provider-keys | `id`, `owner_id`, `provider`, `key_id`, `kind`, `at` | **none** | kind: AIU-13 enumerates it | index `(owner_id, at)` | IDs only |
+| `media_objects` | media | `id`, `owner_id`, `kind`, `state`, `storage_key`, `bytes`, `content_type`, `campaign_id` (plain uuid, no FK), `attached_at`, `reject_reason` | owner → users CASCADE | kind `upload\|clip\|final\|thumbstopper`; state `processing\|ready\|rejected` | unique `storage_key`; index `(owner_id, created_at)`; index `(created_at) where kind='upload' and attached_at is null` (TTL sweep) | Personal (likeness) |
+| `storage_usage` | media | `owner_id`, `bytes_used` | owner → users CASCADE | — | PK `owner_id` | Aggregate |
+| `drafts` | campaigns | `id`, `owner_id`, `version`, `step`, input fields (REQ-005), `product_media_id`, `campaign_id` | owner → users CASCADE; `product_media_id` → media_objects SET NULL; `campaign_id` → campaigns CASCADE | — (`campaign_id` set = submitted) | unique `campaign_id`; index `(owner_id, updated_at, id)` | Personal (campaign inputs) |
+| `campaigns` | campaigns | `id`, `owner_id`, `state`, `product_name`, `product_description`, `product_media_id`, `updated_at` | owner → users CASCADE; `product_media_id` → media_objects SET NULL | `active\|deleting` | index `(owner_id, updated_at, id)`; trigram GIN on `product_name`, `product_description` | Personal |
+| `brand_rules` | brief | rule set rows, `version` | none | — | — | Config (seeded) |
+| `brief_jobs` | brief | provider-job columns (§3.5), `kind`, `campaign_id`, `media_id`, `result` | `campaign_id` → campaigns CASCADE; `media_id` → media_objects CASCADE | job states (§3.5); kind `brief_generation\|image_analysis` | partial unique reuse hash (§3.5) | Personal (derived text) |
+| `briefs` | brief | `id`, `campaign_id`, `owner_id`, `state`, `version`, `accepted_at` | `campaign_id` → campaigns CASCADE | `generating\|draft\|accepted\|failed` | unique `campaign_id` | Personal (brief text) |
+| `brief_segments` | brief | `id`, `brief_id`, `position`, `state`, `revision`, `dialogue`, `prompt` | → briefs CASCADE | `active\|retired` | unique `(brief_id, position)`, position 1..4 | Personal. Stable rows, updated in place (SB-D11) |
+| `claim_issues` | brief | `id`, `owner_id`, `brief_id`, `segment_id`, `rule_id`, `class`, `resolution`, `cleared_by`, `clear_reason` | → briefs CASCADE | class `high_risk\|other`; resolution `open\|closed_by_edit\|cleared_with_reason` | index `(brief_id) where resolution='open'` | Personal |
+| `claim_events` | brief | `id`, `owner_id`, `brief_id`, `issue_id`, `class`, `outcome`, `at` | **none** | outcome `raised\|closed_by_edit\|cleared_with_reason` | index `(at)` | IDs only |
+| `video_jobs` | production | provider-job columns (§3.5), `segment_id`, `segment_revision`, `campaign_id`, `output_media_id` | `segment_id` → brief_segments **NO ACTION** (checked at statement end: a direct segment delete with jobs fails; the campaign cascade deletes both, SB-D11); `campaign_id` → campaigns CASCADE; `output_media_id` → media_objects SET NULL | job states (§3.5) | partial unique reuse hash; index `(owner_id, state)` for the running limit | Personal (likeness output) |
+| `qc_runs` | production | provider-job columns (§3.5), `video_job_id`, `qc_state`, `reason` | → video_jobs CASCADE | job states; qc_state `pending\|passed\|failed\|skipped` | index `(video_job_id, created_at)` | Personal (transcript) |
+| `assembly_jobs` | production | `id`, `owner_id`, `campaign_id`, `state`, `reuse_hash`, `output_media_id`, `render_day` (out of date is derived at read, not stored, SB-D11) | → campaigns CASCADE; `output_media_id` → media_objects SET NULL | `pending\|queued\|fetching\|rendering\|saving\|done\|failed` | partial unique `(campaign_id, reuse_hash)` where state <> 'failed'; index `(owner_id, render_day)` | Personal |
+| `assembly_clips` | production | `assembly_job_id`, `position`, `video_job_id` | → assembly_jobs CASCADE; → video_jobs NO ACTION (checked at statement end, so a campaign cascade deletes both) | — | PK `(assembly_job_id, position)` | IDs |
+| `thumbstopper_jobs` | production | provider-job columns (§3.5), `campaign_id`, `output_media_id` | → campaigns CASCADE; `output_media_id` → media_objects SET NULL | job states | partial unique reuse hash | Personal |
+| `usage_events` | usage | `id`, `owner_id`, `provider`, `operation`, `job_type`, `job_id`, `call_seq`, `outcome`, `estimated_cost_usd`, `cost_basis`, `latency_ms`, `at` | **none** | outcome `succeeded\|failed\|rejected\|unconfirmed`; cost_basis `estimate\|zero_rejected\|unconfirmed_estimate` (SB-D9) | unique `(job_type, job_id, call_seq)`; index `(owner_id, at)` | IDs and counts only |
+| `spend_reservations` | usage | `id`, `owner_id`, `job_type`, `job_id`, `estimated_cost_usd`, `created_at` | owner → users CASCADE | — | unique `(job_type, job_id)`; index `owner_id` | IDs |
+| `price_table` | usage | `provider`, `operation`, `unit`, `unit_price_usd`, `effective_from` | none | — | PK `(provider, operation, effective_from)` | Config (seeded, SB-D10) |
+| `deletion_runs` | lifecycle | `id`, `kind`, `subject_id`, `owner_id`, `step`, `state`, `attempts`, `remaining_objects`, `updated_at` | none (its subject is hard-deleted while the run keeps the record) | kind `campaign\|account`; state `running\|completed\|stuck` | unique `(kind, subject_id)` | IDs only |
+| pg-boss schema | platform/jobs | pg-boss internal | — | — | — | Job payloads: IDs only |
+
+`spend_caps` from the ARCH-G1 sketch is **dropped**. Caps are configuration (SB-D10).
+
+### 3.4 Decisions settled at the data boundary
+
+- **SB-D1 Draft → campaign.** Submitting a draft creates the campaign and sets `drafts.campaign_id`, in one transaction, under the unique index. A second submit returns the same campaign (REQ-005 "no second generation"). The Drafts tab lists drafts with `campaign_id is null`. The draft row is deleted with its campaign (CASCADE). A submitted draft is frozen (SB-D13).
+- **SB-D2 Media ownership and lifetime.** Every stored R2 object has one `media_objects` row: uploads, clips, finals and thumbstoppers. That makes the storage quota one sum. Uploads are stored at `u/{userId}/media/{mediaId}`. Outputs are stored at `u/{userId}/c/{campaignId}/…`. `campaign_id` is a plain UUID because `media` sits below `campaigns`. An upload becomes attached when a draft references it (`media.attach(mediaId)`); on draft submit, `media.attach(mediaId, campaignId)` also sets its `campaign_id`. An upload belongs to one draft or campaign only; attaching it to a second one is refused (409 `state_conflict`). An upload left **unattached for 24 hours** (configurable `MEDIA_UNATTACHED_TTL`) is deleted by the media sweep. Campaign deletion deletes the campaign's media rows by `campaign_id` and its product image, then sweeps the campaign prefix, in the order fixed by SB-D17.
+- **SB-D3 Lifecycle orchestration module.** Campaign deletion, suspend, reinstate, account removal and erasure move from `campaigns` and `identity` into a top-layer `lifecycle` module (§4). This removes the cycle in the ARCH-G1 §4 graph: `campaigns.deleteCampaign` needed `production`, and `production` depends on `campaigns`. `identity` keeps users, the actor context and `assertAdminInvariant()`. `lifecycle` calls them.
+- **SB-D4 Provider job tables.** Each owning module keeps its own job table (`brief_jobs`, `video_jobs`, `qc_runs`, `thumbstopper_jobs`) with the shared column contract in §3.5. `platform/jobs` supplies the at-most-once state machine over that contract (ARCH-G1 §5.4). A single shared jobs table was rejected, because it would split each job's domain fields from its state.
+- **SB-D9 Usage event for every provider call (closes SAR-G1-L3).** Every provider call writes exactly one `usage_events` row, unique per `(job_type, job_id, call_seq)`, in the same transaction that replaces the reservation. A success records the estimate (`cost_basis='estimate'`). A **definitive, unbilled rejection** records `outcome='rejected'` at **zero cost** (`cost_basis='zero_rejected'`). That covers a 4xx with no task ID and no accepted work, including 401 and 429; it still counts for the REQ-021 report. An unknown outcome (orphaned `submitting`, or cancelled while `submitting`) records the estimate as `unconfirmed`. A later provider response confirms that row, and an insert on conflict does nothing. A 5xx or a timeout after the request was sent is an unknown outcome, not a rejection.
+- **SB-D10 Caps and price table are configuration.** The spend caps (`SPEND_CAP_DAILY_USD`, `SPEND_CAP_MONTHLY_USD`, OI-CAPS) are configuration, as are the other thresholds. No per-user override exists and the PRD asks for none. The price table is a versioned file in the repository, `config/price-table.json`, loaded into `price_table` by the release seed and changed by a reviewed PR. This meets REQ-019 and REQ-021 ("configured price table") without an admin editing surface the PRD does not ask for.
+- **SB-D11 Brief segment identity and the out-of-date contract (fixes SAR-SB-H1).** (a) `brief_segments` rows are **stable**: one row per `(brief_id, position)`, inserted when a position first appears in a generated brief, **updated in place** by edit (API-051) and regenerate (API-053), and deleted only by the `briefs` cascade from a campaign hard delete. If a regenerate returns fewer segments, the extra positions become `state='retired'` (text cleared, revision incremented); a later regenerate that needs them again sets them back to `active`. `video_jobs.segment_id` is NO ACTION, so the database itself refuses any other delete of a segment that has jobs, and no paid clip, QC run or assembly clip is ever lost to a segment rewrite. (b) **Boundary column:** `brief_segments.revision int not null default 1`, incremented in the same transaction whenever the segment's `prompt`, `dialogue` or `state` changes. Production calls `brief.segmentForProduction(campaignId, position)` → `{segmentId, revision, state, prompt, dialogue}` when it creates a video job and stores `video_jobs.segment_revision`. A video job is **out of date** when `video_jobs.segment_revision < brief_segments.revision`, computed at read by production through `brief.segmentRevisions(campaignId)` → `[{position, segmentId, revision, state}]`. Nothing in `brief` writes a production table. An assembly is out of date (REQ-011) when any of its clips is out of date, or when a newer `completed` video job exists for a clip's segment; API-071 and API-061 return these derived flags. The reuse hash includes the prompt text (ARCH-G1 §5.3), so a changed segment never reuses an old job. (c) **Brief state on change:** an edit or a regenerate of an `accepted` brief moves it back to `draft` (`accepted_at` cleared) in the same transaction, and the claim rules re-run. New segment jobs (API-060) need `accepted` and otherwise return 422 `brief_not_accepted`, so only reviewed copy reaches production (REQ-008). Jobs already running or completed are not cancelled; they continue and are shown out of date. Edit and accept while the brief is `generating` return 409 `state_conflict`. A regenerate moves the brief to `generating`, then to `draft` on success or `failed` on failure. Whichever happens, existing segment rows keep their text until the new result is written.
+- **SB-D12 Account erasure (fixes SAR-SB-M1).** Erasure step 5 (ARCH-G1 §5.3) **hard-deletes the `users` row**. There is no tombstone. In one transaction, `lifecycle` reads the subject's `email` and `idp_subject`, calls `identity.eraseSubjectRecords(userId)`, then deletes the user. That call deletes `invitations` where `lower(email)` matches, and `access_requests` where `idp_subject` or `lower(email)` matches. The `users` delete then cascades to every user-owned table (rule 3). `invitations.invited_by` on rows the subject sent as an admin is SET NULL; those rows hold the invitee's data, not the subject's. From removal until step 5 the row exists with `status='removed'`, and API-100 shows it with its erasure step. After step 5 the account appears only in `deletion_runs` (IDs only), which `lifecycle` exposes through API-105. Audit, usage, key and claim events keep the user ID as plain UUIDs (rule 3, OI-RET).
+- **SB-D13 Submitted drafts are frozen (fixes SAR-SB-M3).** For a draft with `campaign_id` set, API-023 (PATCH) and API-025 (DELETE) return 409 `state_conflict`. API-024 returns the same campaign and brief job as the first submit (the idempotent replay, with or without an Idempotency-Key). API-022 returns the draft read-only with its `campaign_id`. A submitted draft's product image is deleted only through the campaign deletion path (SB-D17). API-025 on an unsubmitted draft deletes the draft and its product image, which by SB-D2 belongs to that draft alone.
+- **SB-D17 Output media references and deletion order (fixes SAR-SB-M2).** `video_jobs.output_media_id`, `assembly_jobs.output_media_id` and `thumbstopper_jobs.output_media_id` → `media_objects` **SET NULL**, the same rule as `drafts`/`campaigns.product_media_id`. **Campaign deletion order** (`lifecycle`): (1) API transaction: `campaigns.markDeleting()`, `brief.cancelForCampaign()` and `production.cancelForCampaign()` (non-terminal jobs → `cancelled`), enqueue the deletion run; (2) worker: `media.deleteForCampaign(campaignId)` deletes R2 objects by `storage_key`, then their `media_objects` rows in batches (a row is deleted only after its object is gone, so a retry finds what is left; SET NULL clears output references); (3) worker: `media.sweepPrefix(u/{userId}/c/{campaignId}/)` verification count; (4) worker: `campaigns.hardDelete()` cascades drafts, briefs, segments, claim issues, every job table and assembly clips in one statement. **Account erasure** steps 3–5 follow the same pattern: R2 prefix removal, verification, then the `users` delete (SB-D12) cascades the rows.
+- **SB-D15 Request-access form switch (fixes SAR-SB-L5).** Whether the public request-access form is on is configuration, `ACCESS_REQUEST_FORM_ENABLED` (boolean, default `false`, the least exposed choice), set by the deployer through the configuration registry and changed by a reviewed release. It is not a `platform_settings` column and has no write API, the same pattern as SB-D10. API-120 shows it read-only. When it is `false`, API-002 returns 404 and no pending request is recorded.
+
+### 3.5 Provider-job column contract (shared by SB-D4 tables)
+
+`id`, `owner_id`, `state`, `cause_class`, `cause_message`, `reuse_hash`, `key_id` (plain uuid), `key_version`, `submitting_at`, `provider_task_id`, `next_poll_at`, `deadline_at`, `provider_completed_at` (v4.1), `created_at`, `updated_at`.
+
+- `deadline_at` bounds the provider's work only. Once the provider reports completion, `provider_completed_at` is set (state stays `processing` while the output is copied) and the deadline no longer applies; the free copy has its own window (AIU-13 `architecture` §5.5, `PROVIDER_OUTPUT_COPY_WINDOW_HOURS`).
+
+- States: `pending | submitting | submitted | processing | completed | failed | cancelled`. Synchronous OpenAI calls skip `submitted` and `processing` (ARCH-G1 §5.3).
+- User labels: `pending` → pending (or "queued" when the running limit holds it); `submitting`, `submitted` → created; `processing`; `completed`; `failed` and `cancelled` → failed with a cause.
+- Cause classes: `temporary | configuration | credit | provider_timeout | key_replaced | key_deleted | reference_unreachable | output_unreachable | outcome_unknown | cancelled_campaign_deleted | cancelled_account_suspended | cancelled_account_removed`.
+- Reuse: a partial unique index on `(owner_id, reuse_hash)` over states not in `failed` and `cancelled`; the hash covers the job type and its parent IDs (v3: `brief_jobs` has two parent kinds). `assembly_jobs` keeps `(campaign_id, reuse_hash)`.
+- States move forward only. A failed or cancelled row is never revived; Retry inserts a new row.
+
+## 4. Module boundaries
+
+### 4.1 Layers (imports only point down or across within platform)
+
+| Layer | Modules | May depend on |
+| --- | --- | --- |
+| L0 platform | `platform/db`, `platform/config`, `platform/logging`, `platform/jobs`, `platform/egress`, `platform/rate-limit`, `platform/idempotency` | each other only, acyclic |
+| L1 | `audit` | L0 |
+| L2 | `identity` | L0, `audit` |
+| L3 | `provider-keys`, `media`, `usage` | L0–L2 |
+| L4 | `campaigns` | L0–L3 (`media`) |
+| L5 | `brief` | L0–L4 (`campaigns`, `media`, `provider-keys`, `usage`) |
+| L6 | `production` | L0–L5 (`brief`, `campaigns`, `media`, `provider-keys`, `usage`) |
+| L7 | `lifecycle`, `reporting` | L0–L6 |
+| L8 | `platform/ops-cli` (no HTTP) | any public service |
+
+Every module may read the actor context from `identity`. Forbidden: any import that points up; any import of another module's `domain`, `infrastructure` or repository files (only its `index.ts` public service is importable); `withDecryptedKey` from any api-process file. These are enforced by dependency-cruiser rules and negative probes that AIU-13 specifies.
+
+```mermaid
+flowchart BT
+  P[L0 platform: db, config, logging, jobs, egress, rate-limit, idempotency]
+  AU[L1 audit] --> P
+  ID[L2 identity] --> AU
+  K[L3 provider-keys] --> ID
+  M[L3 media] --> ID
+  U[L3 usage] --> AU
+  C[L4 campaigns] --> M
+  B[L5 brief] --> C
+  B --> K
+  B --> U
+  PR[L6 production] --> B
+  PR --> K
+  PR --> U
+  PR --> M
+  LC[L7 lifecycle] --> PR
+  LC --> ID
+  RP[L7 reporting] --> U
+  RP --> B
+  OPS[L8 ops-cli] --> LC
+  OPS --> K
+```
+
+### 4.2 Module catalog
+
+| Module | Owns tables | Public service (in-process) | Ports (adapter) | Process |
+| --- | --- | --- | --- | --- |
+| audit | `audit_events`, `admin_alerts` | `record()`, `raiseAlert(kind, subjectUserId)`, `listAlerts()`, `acknowledge()` | — | both |
+| identity | `users`, `invitations`, `access_requests`, `platform_settings` | `actorContext()`, `requireRole()`, `requireRecentAuth()`, `requireMfa()`, `linkOnFirstToken()` (first admin), `invite/resend/revoke`, `approve/decline`, `setRole()`, `setStatus()` (lifecycle only), `assertAdminInvariant()`, `setSignupMode()`, `listUsers()`, `eraseSubjectRecords(userId)` and `deleteUser(userId)` (lifecycle only, SB-D12) | `IdentityPort` → Clerk | api; worker (`IdentityPort` erasure steps only) |
+| provider-keys | `provider_keys`, `key_events` | `storeKey()`, `deleteKey()`, `deleteAllForOwner()`, `keyStatus()`, `inFlightJobCount()` (counts via `production` and `brief` read ports injected at bootstrap, so no import points up), `disableAll()`; worker-only `withDecryptedKey()`, `recordAuthResult()` | `KeyWrapPort`, `ProviderProbePort` | both (unseal only in worker) |
+| media | `media_objects`, `storage_usage` | `upload()`, `attach()`, `registerObject()`, `signedUrl(purpose)`, `deleteObjects(ids)`, `deleteForCampaign(campaignId)` (objects first, then rows, SB-D17), `sweepPrefix()`, `quota()`; worker `sanitizeUpload`, `unattachedSweep` | `StoragePort` → R2, `ImageSanitizePort` | both |
+| usage | `usage_events`, `spend_reservations`, `price_table` | `reserve()`, `record()`, `release()`, `convertUnconfirmed()`, `checkCap()`, `checkAbuseThresholds()`, `aggregate(window)` | — | both |
+| campaigns | `drafts`, `campaigns` | drafts CRUD, `submitDraft()` (SB-D1), `deleteDraft()`, `list/search()`, `get()`, `assertOwner()`, `isActive()`, `markDeleting()` and `hardDelete()` (lifecycle only) | — | api; worker reads `isActive()` |
+| brief | `brief_jobs`, `briefs`, `brief_segments`, `claim_issues`, `claim_events`, `brand_rules` | `requestGeneration()`, `regenerate()`, `edit()`, `clearIssue()`, `accept()`, `requestImageAnalysis()`, `segmentForProduction(campaignId, position)`, `segmentRevisions(campaignId)` (SB-D11), `cancelForCampaign()`, `cancelForOwner()`, `claimCounts(window)` | `TextAIPort` → OpenAI | both |
+| production | `video_jobs`, `qc_runs`, `assembly_jobs`, `assembly_clips`, `thumbstopper_jobs` | `generateSegment()` (stores `segment_revision`), `retry()`, `rerunQc()`, `assemble()`, out-of-date flags derived at read (SB-D11), `generateThumbstopper()`, `cancelForCampaign()`, `cancelForOwner()`, `inFlightForKey()`, `jobStats(window)` | `VideoGenPort`, `TranscribePort`, `AssemblyPort`, `ImageGenPort` | both |
+| lifecycle | `deletion_runs` | `deleteCampaign()`, `suspend()`, `reinstate()`, `removeAccount()` (typed confirmation), `erasureStatus()` (API-105); deletion and erasure order per SB-D17 and SB-D12; worker handlers for deletion and erasure steps | — (uses `IdentityPort` through identity) | both |
+| reporting | — (read-only) | `usageReport(window)` from `usage.aggregate`, `production.jobStats`, `brief.claimCounts` | — | api |
+| platform/jobs | pg-boss schema | `enqueue()`, `schedulePoll()`, `claimWithUserLimit()`, `recoverySweep()`, at-most-once helper over §3.5 | — | both |
+| platform/egress | — | `fetch(provider, request)` | — | both |
+| platform/rate-limit | `rate_limit_buckets` | `consume(scope, subject, limit, window)` | — | api |
+| platform/idempotency | `idempotency_records` | `withIdempotency(operationId, key, fn)` | — | api |
+| platform/ops-cli | — | `first-admin:reopen`, `keys:disable-all`, `kek:rewrap` | — | deployer shell |
+
+**Transaction boundaries.** One transaction per use case, owned by the calling application service. A use case that spans modules (for example `lifecycle.deleteCampaign`) passes its transaction handle to the owners' public methods, and each owner writes only its own tables. No network call runs inside a transaction that holds an advisory lock (ARCH-G1 §5.4). The advisory lock keys `admin-invariant`, `recovery-sweep`, `spend:{ownerId}` and `run:{ownerId}` are owned by `identity`, `platform/jobs`, `usage` and `platform/jobs` respectively.
+
+### 4.3 PRD slices → modules (for the Delivery Planner)
+
+| Slice (PRD §13) | Modules first built |
+| --- | --- |
+| S0 | platform/*, audit, identity, provider-keys, usage (caps with a stub provider), lifecycle (suspend, reinstate, remove), media (quota, signed URLs), health |
+| S1 | campaigns (drafts, history, search), media (upload, sanitize), brief (image analysis), lifecycle (campaign deletion) |
+| S2 | brief (generation, edit, claims, accept) |
+| S3 | production (segments, QC) |
+| S4 | production (assembly) |
+| S5 | reporting |
+| S6 | production (thumbstopper); REQ-030 in web only |
+
+## 5. Interface boundaries (API operation ownership)
+
+REST under `/api/v1`, with the envelope, pagination and status codes of ARCH-G1 §6. Each module owns an **ID range**. AIU-13 writes the schemas and may add operations only inside the owner's range. Screen tickets (AIU-14) and test cases (AIU-15) refer to these IDs.
+
+Auth scopes: **U** = active user, own records only. **U+RA** = U plus recent auth and MFA per `MFA_REQUIRED_FOR`. **A** = admin plus MFA plus recent auth. **T** = verified token with no `users` row yet. **Pub** = no auth. **M** (v6) = the deployment's `METRICS_TOKEN` as a Bearer token, no user session; a missing or wrong token, or a deployment without `METRICS_TOKEN`, is 404 `not_found` with the same body as an unknown path (never 401 or 403); a session token is never accepted for M and the metrics token is never accepted anywhere else (TD-D41).
+
+| Range | Owner |
+| --- | --- |
+| API-001–009 | identity (self) |
+| API-010–019 | provider-keys |
+| API-020–029 | campaigns (drafts) |
+| API-030–039 | media; brief owns API-035–036 |
+| API-040–049 | campaigns (history); lifecycle owns API-042 |
+| API-050–059 | brief |
+| API-060–069 | production (segments, QC) |
+| API-070–079 | production (assembly, thumbstopper) |
+| API-100–109 | lifecycle and identity (admin users) |
+| API-110–124 | identity (admin) |
+| API-125–129 | audit (admin) |
+| API-130–139 | reporting |
+| API-900–909 | platform (health; internal metrics, v6) |
+
+| ID | Method and path | Owner | Scope | REQ | Notes |
+| --- | --- | --- | --- | --- | --- |
+| API-001 | `GET /me` | identity | U (and T: returns `not_linked`) | REQ-001..004 | Role, MFA state, key-disabled banner flags |
+| API-002 | `POST /access-requests` | identity | T | REQ-003 | Only when `ACCESS_REQUEST_FORM_ENABLED` is true (SB-D15); otherwise 404 `not_found`. Rate limited |
+| API-010 | `GET /me/provider-keys` | provider-keys | U | REQ-014..018 | Status, last-4, fingerprint, dates, in-flight job count per provider. Never a key |
+| API-011 | `PUT /me/provider-keys/{provider}` | provider-keys | U+RA | REQ-014, 015, 017 | 5 per 10 min (429). Probe through TB-5a |
+| API-012 | `DELETE /me/provider-keys/{provider}` | provider-keys | U+RA | REQ-018 | Fails in-flight jobs clean |
+| API-013 | `GET /me/key-events` | provider-keys | U | REQ-019 | Cursor |
+| API-020 | `GET /drafts` | campaigns | U | REQ-005, 012 | Cursor |
+| API-021 | `POST /drafts` | campaigns | U | REQ-005 | |
+| API-022 | `GET /drafts/{id}` | campaigns | U | REQ-005 | A submitted draft is returned read-only with `campaign_id` (SB-D13) |
+| API-023 | `PATCH /drafts/{id}` | campaigns | U | REQ-005 | `If-Match: version` → 409. Submitted draft → 409 `state_conflict` (SB-D13) |
+| API-024 | `POST /drafts/{id}/submit` | campaigns | U | REQ-005, 007 | **Job-creating** (SB-D14). 202 with campaign and brief job (SB-D1). A resubmit returns the same campaign (SB-D13) |
+| API-025 | `DELETE /drafts/{id}` | campaigns | U | REQ-013 | Unsubmitted only: deletes the draft and its product image (`media.deleteObjects`). Submitted draft → 409 `state_conflict` (SB-D13) |
+| API-030 | `POST /media` | media | U | REQ-006, 020 | Multipart, 10 MiB, magic bytes, quota → `processing` |
+| API-031 | `GET /media/{id}` | media | U | REQ-006 | State and reject reason |
+| API-032 | `GET /media/{id}/url` | media | U | REQ-011, 020 | Browser signed URL, 5 min default |
+| API-035 | `POST /media/{id}/analysis` | brief | U | REQ-006 | **Job-creating** (SB-D14). Image-analysis job. Media must be `ready` |
+| API-036 | `GET /media/{id}/analysis` | brief | U | REQ-006 | Job state and product description |
+| API-040 | `GET /campaigns` | campaigns | U | REQ-012 | `q`, `filter=all\|processing\|completed\|failed`, cursor. Hides `deleting` |
+| API-041 | `GET /campaigns/{id}` | campaigns | U | REQ-012 | Summary with job states |
+| API-042 | `DELETE /campaigns/{id}` | lifecycle | U | REQ-013 | 202. Goes to `deleting` at once |
+| API-050 | `GET /campaigns/{id}/brief` | brief | U | REQ-007, 008 | Brief, segments (position, state, revision), open issues, generation state |
+| API-051 | `PATCH /campaigns/{id}/brief` | brief | U | REQ-008 | `If-Match`. Updates segments in place, bumps the revision of changed segments, re-runs the claim rules; `accepted` → `draft` (SB-D11). 409 `state_conflict` while `generating` |
+| API-052 | `POST /campaigns/{id}/brief/accept` | brief | U | REQ-008 | 422 `open_claim_issues`. 409 `state_conflict` unless `draft` |
+| API-053 | `POST /campaigns/{id}/brief/regenerate` | brief | U | REQ-007 | **Job-creating** (SB-D14). Replaces edits in place; `accepted` → `generating` (SB-D11) |
+| API-054 | `POST /claim-issues/{id}/clear` | brief | U | REQ-008 | Reason required. 422 `claim_not_clearable` |
+| API-060 | `POST /campaigns/{id}/segments/{n}/jobs` | production | U | REQ-009 | **Job-creating** (SB-D14). Reuse or create (202). Brief must be `accepted` and segment `active`, else 422 `brief_not_accepted` |
+| API-061 | `GET /campaigns/{id}/video-jobs` | production | U | REQ-009, 010 | Latest job and QC per segment, with the derived out-of-date flag (SB-D11) |
+| API-062 | `GET /video-jobs/{id}` | production | U | REQ-009 | Polled every 3 s while non-terminal |
+| API-063 | `POST /video-jobs/{id}/retry` | production | U | REQ-009 | **Job-creating** (SB-D14). New row |
+| API-064 | `POST /video-jobs/{id}/qc` | production | U | REQ-010 | **Job-creating** (SB-D14). Re-run QC (paid transcribe call) |
+| API-070 | `POST /campaigns/{id}/assemblies` | production | U | REQ-011 | **Job-creating** (SB-D14). Ordered clip IDs, confirmations. 422 `assembly_daily_limit`, `clip_not_completed` |
+| API-071 | `GET /assemblies/{id}` | production | U | REQ-011 | State, derived out-of-date flag (SB-D11), output media ID |
+| API-075 | `POST /campaigns/{id}/thumbstopper` | production | U | REQ-022 | **Job-creating** (SB-D14) |
+| API-076 | `GET /campaigns/{id}/thumbstopper` | production | U | REQ-022 | |
+| API-100 | `GET /admin/users` | identity | A | REQ-003, 026 | Email shown here only. Lists `active`, `suspended` and `removed` (until step 5) accounts. Erasure progress comes from API-105 (SB-D12) |
+| API-101 | `POST /admin/users/{id}/suspend` | lifecycle | A | REQ-026, PRD §3.3 | 422 `self_action`, `last_admin` |
+| API-102 | `POST /admin/users/{id}/reinstate` | lifecycle | A | PRD §3.3 | |
+| API-103 | `POST /admin/users/{id}/remove` | lifecycle | A | REQ-026, PRD §3.3 | Typed confirmation. 422 `confirmation_mismatch` |
+| API-104 | `PUT /admin/users/{id}/role` | identity | A | REQ-026 | Alert to the other admins |
+| API-105 | `GET /admin/erasures` | lifecycle | A | PRD §3.3, REQ-013 | Account deletion runs: user ID, step, state (`running\|completed\|stuck`), remaining objects. IDs only (SB-D12) |
+| API-110 | `GET /admin/invitations` | identity | A | REQ-003 | |
+| API-111 | `POST /admin/invitations` | identity | A | REQ-003 | 422 `invite_domain_not_allowed`. Same response for an existing account |
+| API-112 | `POST /admin/invitations/{id}/resend` | identity | A | REQ-003 | |
+| API-113 | `POST /admin/invitations/{id}/revoke` | identity | A | REQ-003 | |
+| API-115 | `GET /admin/access-requests` | identity | A | REQ-003 | |
+| API-116 | `POST /admin/access-requests/{id}/approve` | identity | A | REQ-003 | |
+| API-117 | `POST /admin/access-requests/{id}/decline` | identity | A | REQ-003 | |
+| API-120 | `GET /admin/settings` | identity | A | REQ-003, 004 | Signup mode; request-form flag and MFA scope, read-only from configuration (SB-D15) |
+| API-121 | `PUT /admin/settings/signup-mode` | identity | A | REQ-003 | 422 `signup_open_prerequisites` |
+| API-125 | `GET /admin/alerts` | audit | A | REQ-013, 019 | |
+| API-126 | `POST /admin/alerts/{id}/acknowledge` | audit | A | REQ-019 | |
+| API-130 | `GET /admin/usage-report` | reporting | A | REQ-021 | `from`, `to`. 422 `report_window_too_large` |
+| API-131 | `GET /admin/usage-report.csv` | reporting | A | REQ-021 (Could) | Audit-logged. Optional; the ID is reserved |
+| API-900 | `GET /health/live` | platform | Pub | DEPLOYMENT | |
+| API-901 | `GET /health/ready` | platform | Pub (no detail) | DEPLOYMENT | api process only: DB, config, not draining. The worker has no inbound port; its liveness is an in-process watchdog (AIU-13 TD-D13, ADR-012) |
+| API-902 | `GET /internal/metrics` | platform | M | DEPLOYMENT, NFR-04 | v6. api process only. Prometheus text exposition of the api's metrics registry, bounded labels, no user or record IDs. Served at the root like API-900/901; exempt from rate limits; not audit-logged |
+| API-903 | `GET /internal/metrics/window` | platform | M | DEPLOYMENT, NFR-04 | v6. api process only. In-memory 10- and 15-minute request, 5xx and p95 summary plus pool wait and dropped telemetry, read by the `monitor` cron and the release observation step (DEVOPS-PLAN §11.4, §14.4) |
+
+**SB-D14 One rule for every job-creating operation (fixes SAR-SB-L4).** The job-creating operations are API-024, 035, 053, 060, 063, 064, 070 and 075. Each one: (1) requires an `Idempotency-Key` header (400 `validation_failed` if missing; 409 `idempotency_key_reused` on a different body; SB-D7); (2) applies the reuse hash, returning the matching job with no new spend; (3) for paid provider work, meaning every operation except API-070 under the default FFmpeg assembly, checks under the owner's spend lock, in this order: the provider key for that job type (422 `key_missing` or `key_disabled`), then the spend cap (422 `spend_cap_reached`), then reserves the estimate (ARCH-G1 §5.3); (4) API-070 checks `assembly_daily_limit` instead, and the cap as well if Shotstack is chosen (OD-08); (5) is rate limited per owner (429 `rate_limited`); (6) is never refused for the running limit: the job waits as `pending` (shown as "queued"). AIU-13 writes this once as a shared OpenAPI component and reuses it.
+
+Web-only behaviour with no API: REQ-029 (404 page and home redirect) and REQ-030 (copy prompts from API-050 data).
+
+## 6. Error code registry (owner = module that raises it)
+
+Statuses follow ARCH-G1 §6 and AIU-13 `architecture` §3 (envelope `{success, data|error, metaData}`, error `details[]`): 400 validation; 401 no valid session; 403 for a refusal by role, step-up (SB-D6), link state (`not_linked`) or account state (SB-D16), on any route, and a 403 on an admin route also writes an audit event; 404 for missing or foreign records (BR-22); 405; 409; 413; 415; 422; 429; 500; 503. Each code has one status and one owner. AIU-13 adds the `details[]` paths and messages, and new codes go through §8.
+
+| Code | Status | Owner | Code | Status | Owner |
+| --- | --- | --- | --- | --- | --- |
+| `validation_failed` | 400 | platform | `key_missing` | 422 | provider-keys |
+| `unauthenticated` | 401 | identity | `key_disabled` | 422 | provider-keys |
+| `not_linked` | 403 | identity | `key_invalid` | 422 | provider-keys |
+| `forbidden_role` | 403 | identity | `recent_auth_required` | 403 | identity |
+| `mfa_required` | 403 | identity | `not_found` | 404 | platform |
+| `version_conflict` | 409 | platform | `state_conflict` | 409 | owning module |
+| `idempotency_key_reused` | 409 | platform/idempotency | `payload_too_large` | 413 | media |
+| `unsupported_media_type` | 415 | media | `storage_quota_reached` | 422 | media |
+| `media_not_ready` | 422 | media | `open_claim_issues` | 422 | brief |
+| `claim_not_clearable` | 422 | brief | `brief_not_accepted` | 422 | brief |
+| `spend_cap_reached` | 422 | usage | `assembly_daily_limit` | 422 | production |
+| `clip_not_completed` | 422 | production | `last_admin` | 422 | identity |
+| `self_action` | 422 | identity | `confirmation_mismatch` | 422 | lifecycle |
+| `invite_domain_not_allowed` | 422 | identity | `signup_open_prerequisites` | 422 | identity |
+| `report_window_too_large` | 422 | reporting | `rate_limited` | 429 | platform/rate-limit |
+| `account_suspended` | 403 | identity | `account_removed` | 403 | identity |
+| `internal_error` (v3) | 500 | platform | `service_unavailable` (v3) | 503 | platform |
+| `method_not_allowed` (v3) | 405 | platform | `qc_confirmation_required` (v3) | 422 | production |
+
+New against ARCH-G1 §6 (SB-D5, SB-D16): `account_suspended`, `account_removed`, `not_linked`, `recent_auth_required`, `mfa_required`, `key_invalid`, `media_not_ready`, `brief_not_accepted`, `idempotency_key_reused`, plus the generic `validation_failed`, `not_found`, `version_conflict` and `state_conflict`. Each one names a refusal ARCH-G1 already describes. **SB-D16 (fixes SAR-SB-M4):** a request from a `suspended` user returns 403 `account_suspended`, and from a `removed` user 403 `account_removed`, from the next request on (TB-1). They are two codes so that UX can say "contact an administrator" for a reversible suspension without saying it for removal. After step 5 there is no `users` row, so the token gets 403 `not_linked` (or 401 once the identity-provider user is deleted). **SB-D6:** recent-auth and MFA refusals are **403** with a code, not 401, so the client can tell "sign in again" (401) apart from "step up" (403 `recent_auth_required` or `mfa_required`).
+
+## 7. Trust and identity boundaries (baseline for AIU-16 and AIU-17)
+
+The trust boundaries TB-1..TB-11 (ARCH-G1 §5.2) and the identity inventory (ARCH-G1 §7.5) are **frozen as the boundary baseline**. AIU-17 owns the threat model and controls inside them. A new boundary, a new identity or a wider scope for an existing one is a boundary change (§8). Three additions follow from §3–§5:
+
+| Item | Boundary decision |
+| --- | --- |
+| DB roles | `app_api` and `app_worker`: DML on app tables and the pg-boss schema, no DDL, INSERT and SELECT only on `audit_events`. `app_migrator`: DDL at release only. `app_api` has **no SELECT on `provider_keys.ciphertext` and `wrapped_dek`** beyond what writing needs. AIU-13 decides whether column grants are enough or a separate write path is needed. This is a narrowing, not a new identity |
+| T (token, not linked) scope | Only API-001 and API-002. Every other route returns 403 `not_linked` |
+| Data classes | §3.3 "Data class" column: Secret (key ciphertext), Personal (email, likeness, campaign and brief text, transcripts), IDs only (history), Config. AIU-17 maps personal-data handling per class. Only Secret and Personal data are covered by erasure: user-owned rows by the `users` cascade at step 5, the subject's `invitations` and `access_requests` by `identity.eraseSubjectRecords` in the same step, and the `users` row itself by hard delete (SB-D12). IDs-only history (`audit_events`, `usage_events`, `key_events`, `claim_events`, `admin_alerts`, `deletion_runs`, `access_requests.decided_by`) is kept under OI-RET |
+
+**Identity inventory: ARCH-G1 §7.5 plus the v4 additions.** ARCH-G1 is frozen, so its text is not edited; this table is the current inventory and AIU-13 carries the new rows into its identity inventory (`ARCHITECTURE.md` §7.3) in its next revision.
+
+| Identity | Source | Scope (summary; detail in §7.1) | Credentials it holds (names only) |
+| --- | --- | --- | --- |
+| User, Admin, CI pipeline, User's provider key, Shotstack | ARCH-G1 §7.5 | Unchanged | Unchanged |
+| API process | ARCH-G1 §7.5, narrowed above | DML on app and pg-boss tables (no SELECT on key ciphertext columns); seal-only KEK; R2 token A | Unchanged. **No** access to the erasure-ledger bucket or the backup bucket |
+| Worker process | ARCH-G1 §7.5 + **v4** | As before, plus **write-once and read on the erasure-ledger bucket with token C** | Unchanged plus `R2_LEDGER_ACCESS_KEY_ID` / `R2_LEDGER_SECRET_ACCESS_KEY` (token C) |
+| Migration runner | ARCH-G1 §7.5 | DDL at release; **also issues the `app_backup` grants and default privileges (§7.1)** | Unchanged |
+| Deployer (ops-cli) | ARCH-G1 §7.5 | Unchanged. Restore is an operator procedure (DEVOPS-PLAN §10.3), not a capability of the backup identity | Unchanged |
+| **Backup service** | **v4 (new)** | Read-only dump of the database; read the app and ledger buckets; write the backup bucket. §7.1 | `BACKUP_DATABASE_URL` (`app_backup`), `R2_BACKUP_SOURCE_*`, `R2_BACKUP_SINK_*`, `BACKUP_AGE_RECIPIENT`, `HEARTBEAT_URL_BACKUP` |
+| **Metrics reader** | **v6 (new, TD-D41)** | The `monitor` cron service (DEVOPS-PLAN §5.1, §11.4) and the release observation step (`observe.sh`, DEVOPS-PLAN §14.4). Scope M: API-902 and API-903 only. No database, no bucket, no user data; it reads counts, durations and timestamps only | `METRICS_TOKEN`; the `monitor` service also holds the Sentry DSN and `HEARTBEAT_URL_MONITOR` (DevOps). The api holds `METRICS_TOKEN` to compare. Never on the backup service (§7.1 D list) |
+
+New trust boundaries in v4 (they extend ARCH-G1 §5.2; TB-1..TB-11 are unchanged):
+
+| ID | Boundary | Control | Failure behaviour |
+| --- | --- | --- | --- |
+| TB-12 | Backup service → PostgreSQL | Role `app_backup`, read-only (§7.1), private network, TLS as for the other roles (AIU-13 §2.10) | Dump fails, heartbeat missed, ALR-6 after 26 h. No effect on api or worker |
+| TB-13 | Backup service → R2 (app and ledger buckets read, backup bucket write) | Two bucket-scoped tokens, `R2_BACKUP_SOURCE_*` (read only) and `R2_BACKUP_SINK_*` (backup bucket only); backup bucket lock (§7.1) | Copy fails, heartbeat missed, ALR-6. The source buckets cannot be changed through this boundary |
+| TB-14 | Worker → erasure-ledger bucket | Token C, worker only, ledger bucket only; bucket lock makes each object write-once (SEC-D §10.8) | Erasure step does not start until its ledger object is written (SEC-D §10.8 "at the start"); the step retries |
+| TB-15 (v6) | Metrics reader → api (API-902/903, over the private network from `monitor`, over TLS at the public edge from the release executor) | Scope M: `METRICS_TOKEN` compared in constant time on SHA-256 digests, at least 32 random bytes; refusal is 404 `not_found` (no oracle); responses carry aggregates only; exempt from rate limits (a 256-bit token cannot be guessed) | Wrong or missing token: 404 and a `warn` log line with route template and outcome only (never the header). Reader cannot read: ALR-9 "telemetry missing"; no effect on users |
+
+### 7.1 Backup identity (v4, SB-D18..SB-D21; v5 fixes SB-D22..SB-D25)
+
+The backup identity is everything the daily `backup` cron service (DEVOPS-PLAN §5.1, §10.3) uses. It exists to produce an independent logical dump and a media and ledger copy. It reads everything, so it is scoped so that it can **read and add copies, and nothing else**: it cannot change application data, cannot destroy a backup inside the retention window, and cannot open the key ciphertext it copies.
+
+**A. Service and image.**
+
+| Item | Boundary decision |
+| --- | --- |
+| Service name | `backup`: Render cron job, one per environment, daily, **no inbound port**, egress only to the environment's PostgreSQL (private network), the R2 endpoint and the heartbeat host |
+| Image | Only the `backup` target of `docker/Dockerfile` (PostgreSQL client of the server's major version, `age`, an S3 client, the copy script). **No application code**: no `apps/api` modules, no `ops-cli`, no unsealer, no Drizzle, no pg-boss. It never runs the `api`, `worker` or `web` image, and no other service runs the `backup` image |
+| Media handling | Byte copy only. It never decodes, transcodes or parses an object (consistent with SEC-D SR-01) and copies only the `u/` prefix (sanitized media), never `q/` (quarantine) or `smoke/` |
+| Connections | One database connection per run (`pg_dump` without `-j`); role connection limit 2 (§B) |
+| Schedule rule | It does not run while a release migration runs (`pg_dump` takes ACCESS SHARE locks). The release job's own pre-migration backup (DEVOPS-PLAN §10.1) is the host's on-demand backup or a release-step dump, not this service |
+
+**B. PostgreSQL role `app_backup`.**
+
+| Attribute or grant | Value | Why |
+| --- | --- | --- |
+| Role attributes | `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 2` | Least privilege. No replication: a logical dump does not need it |
+| Membership | **Member of no role.** In particular not of `app_api`, `app_worker`, `app_migrator`, the host's admin role or any predefined role (`pg_read_all_data`, `pg_write_all_data`, `pg_monitor`, `pg_read_server_files`, `pg_execute_server_program`, `pg_signal_backend`). **Members of `app_backup`:** only the host admin role that created it, and only with the grant PostgreSQL 16+ makes automatically for a non-superuser `CREATEROLE` creator, held as `ADMIN OPTION` with `INHERIT FALSE` and `SET FALSE` (`createrole_self_grant` left empty). No other role is a member, and no member may inherit or `SET ROLE` to it | A membership would inherit write or DDL rights or reach the server file system. Explicit grants are reviewable and limited to two schemas (SB-D19). The admin-only grant lets the host admin rotate the password and drop the role without gaining its read rights; revoking it on a managed host would lose that ability (SB-D25) |
+| Session defaults | `ALTER ROLE app_backup SET default_transaction_read_only = on`; `idle_in_transaction_session_timeout` and `statement_timeout` sized to the dump (DevOps records the values at DO-05, like the other roles) | A second guard if a grant is ever too wide |
+| Database | `CONNECT` on the application database, granted by the host admin at DO-11 (`app_migrator` may not own the database, so M0001 does not grant it). PostgreSQL gives `PUBLIC` `CONNECT` on every database by default; where the host allows, DevOps revokes `CONNECT FROM PUBLIC` on the environment's other databases at DO-11, and otherwise records that `app_backup` can connect to them but holds no grant there | Connecting to another database exposes only its catalog, because every object grant is in the application database (SB-D25) |
+| Schemas | `USAGE` on `public` and `pgboss` only. No `CREATE` on any schema | Schemas from AIU-13 §2.10. pg-boss state is part of the restore (queued jobs) |
+| Tables | `SELECT` on every table in `public` and `pgboss`, **all columns, including `provider_keys.ciphertext`, `nonce` and `wrapped_dek`** | The dump must be complete for the restore to work. Ciphertext is useless without a `KEK_V{n}` private key, which this identity never holds (§D, T-01, KC-1) |
+| Sequences | `SELECT` on every sequence in both schemas (`pg_dump` reads `last_value`). No `USAGE` or `UPDATE` | — |
+| Future objects | `ALTER DEFAULT PRIVILEGES FOR ROLE app_migrator IN SCHEMA public, pgboss GRANT SELECT ON TABLES TO app_backup` and the same `ON SEQUENCES` | New tables are dumped without a manual step. Default privileges cover **only objects `app_migrator` creates**, so the rule below is part of this boundary |
+| pg-boss DDL (v5, SB-D24) | **All pg-boss DDL runs under `app_migrator` in the release step `jobs:migrate`:** the schema install and upgrade **and `createQueue` for every queue** (pg-boss 10+ creates per-queue tables or partitions in `pgboss`). The queue list is in code and `jobs:migrate` creates any missing queue. The api and worker start pg-boss with schema migration off and never call `createQueue`; they have no `CREATE` on `pgboss`, so an attempt fails closed at startup instead of creating a table `app_backup` cannot read | Otherwise a queue created at runtime by `app_worker` or `app_api` gets no `SELECT` for `app_backup`, `pg_dump` fails with "permission denied", and nobody learns of it until ALR-6 after 26 h. AIU-13 records this in its pg-boss and `jobs:migrate` design |
+| Refused (tested) | INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER on any table; any DDL; `SET ROLE` to any role; `COPY ... TO PROGRAM` or to a server file; `pg_terminate_backend` | Grants test in the migration ticket (§E) |
+| Row-level security | **Not needed and not granted (`NOBYPASSRLS`)**. ADR-009 adopts no RLS, so `pg_dump` (which sets `row_security = off`) reads every row | If RLS is ever adopted (SEC-D §7 conditions), `pg_dump` under this role fails instead of producing an incomplete dump; giving `app_backup` `BYPASSRLS` is then a §8 boundary change decided with that RLS change, never a silent addition |
+| Who creates it | The role is created per environment at provisioning (DO-11) by the host's admin user; the password is generated there and stored only in the `backup` service environment. The grants and default privileges are issued by `app_migrator` in migration **M0001** (platform), so the migration history records them | One migration owner (§1). The role exists before M0001 runs; the migration fails closed if it is missing |
+| Env var | `BACKUP_DATABASE_URL` (not `DATABASE_URL`, so no app code path can pick it up), TLS as AIU-13 §2.10 | — |
+
+**C. R2 tokens and buckets.** Cloudflare R2 API tokens take one permission level per token (Object Read only or Object Read & Write) and scope to buckets, not prefixes or verbs (SEC-D R-3, VERIFY at DO-07 against the account). "Read the app bucket, write the backup bucket" therefore needs **two tokens**, and "no delete, no overwrite" is enforced by the **backup bucket's lock rules**, not by the token (SB-D20).
+
+| Item | Boundary decision |
+| --- | --- |
+| Buckets per environment | `app` (existing, prefixes `q/`, `u/`, `smoke/`), `erasure-ledger` (new, SEC-D §10.8, SB-D21), `backup` (new). Actual names are DevOps's (DOP-OI-5); each is in the environment's own account scope, so a staging token cannot reach production |
+| `R2_BACKUP_SOURCE_ACCESS_KEY_ID` / `R2_BACKUP_SOURCE_SECRET_ACCESS_KEY` | **Object Read only**, scoped to that environment's `app` and `erasure-ledger` buckets. Cannot put, delete or change any object there |
+| `R2_BACKUP_SINK_ACCESS_KEY_ID` / `R2_BACKUP_SINK_SECRET_ACCESS_KEY` | **Object Read & Write**, scoped to that environment's `backup` bucket **only**. No access to `app` or `erasure-ledger`. Not an Admin token, so it cannot change the bucket's lock or lifecycle rules |
+| Backup bucket layout | `db/<yyyy-mm-dd>/<ulid>.dump.age` (age-encrypted custom-format dump); `media/<source key>/<source etag>` (content-addressed, so a changed source object is a new key and nothing is overwritten); `manifests/<yyyy-mm-dd>.json` (key, etag, owner id, `deletedAt`); `media-deleted/<yyyy-mm-dd>/<source key>/<source etag>` (v5: copy of a deleted source's media, dated when the deletion was detected); `ledger/<source key>` (ledger mirror) |
+| No overwrite | Every write uses a new key and a conditional put (`If-None-Match: *`, VERIFY R2 support at DO-07). The bucket lock below also refuses an overwrite inside the retention |
+| How the lock works | An R2 age-based lock rule counts from the moment **the object was uploaded**, not from any date the service records (such as a manifest `deletedAt`). After that age the sink token, which has Object Read & Write, can delete the object. An indefinite rule refuses deletes until an Admin removes the rule. Rules can target a prefix. All lock rules are set by the owner's Admin credential at provisioning, never by the service (VERIFY at DO-07: prefix rules, indefinite retention, and that an in-bucket copy is a new upload for the lock) |
+| Lock rules (v5, SB-D23) | (1) **`ledger/`: indefinite retention.** Ledger mirrors can never be deleted with the sink token; changing that is an OI-RET decision that an Admin applies. (2) **Whole bucket: age `BACKUP_RETENTION_DAYS`** (default 30), which covers `db/`, `manifests/`, `media/` and `media-deleted/` |
+| Delayed delete of media (v5, SB-D23) | When the manifest shows that a source object was deleted, the next run makes a **server-side copy** of its `media/<source key>/<source etag>` copy to `media-deleted/<deletion-detected date>/<source key>/<source etag>`. That is a new upload, so its lock clock starts at deletion and the only remaining copy is protected for the full `BACKUP_RETENTION_DAYS`. Only after a HEAD confirms the new object (same size and etag) does the service delete the old `media/` copy. **This is the only delete the service performs.** It never deletes in `db/`, `manifests/`, `media-deleted/` or `ledger/` |
+| Expiry | Lifecycle rules (Admin-configured, not the service) expire `db/`, `manifests/` and `media-deleted/` after `BACKUP_RETENTION_DAYS` + 1 days. No lifecycle rule on `media/` (live copies, removed only by the step above) or `ledger/` |
+| Residual (recorded, for Cybersecurity) | A stolen sink token can delete: (a) a `media/` copy uploaded more than `BACKUP_RETENTION_DAYS` ago. If its source still exists, the source is untouched (no write on `app`) and the next run re-copies it. If its source was deleted **after the last successful run**, that copy is the only copy until the next run moves it to `media-deleted/`, so the exposure window is the time between the source's deletion and the next successful run (normally under 24 h; longer only while runs fail, which raises ALR-6 at 26 h); (b) `db/`, `manifests/` or `media-deleted/` objects older than `BACKUP_RETENTION_DAYS`, which lifecycle expires within one more day anyway. It **cannot** delete or overwrite any object younger than `BACKUP_RETENTION_DAYS`, any `media-deleted/` copy within `BACKUP_RETENTION_DAYS` of its source's deletion being detected, or any `ledger/` object. Residual (a) is routed through the Orchestrator to Cybersecurity (AIU-17) to accept or tighten; it is not accepted by this document |
+| If the lock is unavailable | If DO-07 finds R2 bucket locks unavailable on the account, "no delete inside retention" is not met: DevOps records it as a blocking finding against DO-07 and routes it to Cybersecurity through the Orchestrator. It is never accepted silently |
+
+**D. What the backup identity must never hold or reach.** None of these may be in the `backup` service environment, image, build arguments or logs, and a startup check in the backup script refuses to run if any of their names is set (DO-07 test):
+
+- any `KEK_V{n}` private key, `KEK_PRIVATE_KEYS`, a sealed KEK copy or a KEK custody location (KC-1.2: custody locations must not be readable with backup credentials);
+- the **age private key** (it holds only the public recipient `BACKUP_AGE_RECIPIENT`; the private key is escrowed under DEVOPS-PLAN §10.4, so the identity can write backups it cannot read back);
+- the `app_api`, `app_worker` or `app_migrator` credentials (`DATABASE_URL`, `MIGRATION_DATABASE_URL`) or the host admin database credential;
+- R2 token A (`R2_ACCESS_KEY_ID` of the api), token B (worker), token C (ledger writer), or any R2 Admin token;
+- signing and session secrets: `CLERK_SECRET_KEY`, `HMAC_PEPPER`, `CURSOR_SIGNING_KEY`, `RATE_LIMIT_IP_KEY`, `METRICS_TOKEN`, any provider or Shotstack key;
+- deployment credentials: `RENDER_API_KEY`, `GHCR_PULL_TOKEN`, `SENTRY_AUTH_TOKEN`, GitHub tokens.
+
+It may hold only: `BACKUP_DATABASE_URL`, `R2_BACKUP_SOURCE_*`, `R2_BACKUP_SINK_*`, `BACKUP_AGE_RECIPIENT`, `HEARTBEAT_URL_BACKUP`, and non-secret config (`R2_ENDPOINT`, the three bucket names, `BACKUP_RETENTION_DAYS`). Custodians of the KEK copies are not holders of these credentials (KC-1.2).
+
+**E. Tests that follow (owners in §9).** Grants test (AIU-13 migration ticket M0001, QA traceability): `app_backup` can `SELECT` every table including `provider_keys.ciphertext`; every write, DDL, `SET ROLE`, server-file and program `COPY` is refused; `pg_has_role('app_backup', r, 'MEMBER')` is false for every other role; `pg_auth_members` for `app_backup` has exactly one row, the creating admin role, with `admin_option` true and `inherit_option` and `set_option` false (PostgreSQL 16+); a table added by a later migration is readable without a new grant; **a queue created the way the release step creates it (`jobs:migrate` under `app_migrator`), followed by a `pg_dump` as `app_backup`, succeeds**; `createQueue` and pg-boss schema migration as `app_worker` and `app_api` are refused; `pg_dump` with `--enable-row-security` off completes. R2 test (DO-07): source token cannot put or delete in `app` or `erasure-ledger`, and cannot reach `backup`; sink token cannot reach `app` or `erasure-ledger`; delete and overwrite of a fresh `backup` object are refused; delete of a `ledger/` object of any age is refused (indefinite rule); a server-side copy into `media-deleted/` gets a fresh lock clock; a forbidden variable name stops the service. Restore drill (DEVOPS-PLAN §10.3) restores from these artifacts with the escrowed age key, which proves the identity's output is usable while it cannot read it.
+
+Process placement: api serves every `API-` operation. The worker runs every provider handler, sanitizing, FFmpeg, deletion and erasure steps. It has no inbound port. The api never holds the KEK private key.
+
+## 8. Change control for these boundaries
+
+| Change | Who decides | Process |
+| --- | --- | --- |
+| New column or index in a module's own table, a new operation inside the module's API range, a new enumerated `key_events.kind` | Solution Architect in AIU-13 (detail) | Part of the AIU-13 review. After G2, the standing-decision list if it covers it |
+| New table, a table changing owner, a new cross-module FK, a state-set change, a module layer change, a new error code, a changed operation meaning or scope, a new trust boundary or identity | Solution Architect | New `shared-boundaries` revision, reviewed by the Solution Architect Reviewer. Affected lanes are listed in the revision and told through the Orchestrator. Downstream reviews of affected content reopen |
+| Anything that changes G1 product behaviour, cost, vendors, or the trust or privacy model | Per WORKFLOW (PM, Cybersecurity, owner register) | Returns to G1-level review |
+
+## 9. Lane handoff (what each lane may rely on)
+
+| Lane | Relies on | Must not change |
+| --- | --- | --- |
+| AIU-13 technical design (Solution Architect) | Everything here. **v5:** all pg-boss DDL including `createQueue` for every queue runs under `app_migrator` in `jobs:migrate`; api and worker run pg-boss with migration off (§7.1 B, SB-D24); the grants test cases of §7.1 E in the M0001 ticket. Writes the full ERD dictionary, OpenAPI for the §5 IDs, the configuration registry (including `MEDIA_UNATTACHED_TTL`, `SPEND_CAP_*`, `IDEMPOTENCY_TTL`, `ACCESS_REQUEST_FORM_ENABLED`), the shared job-creating component (SB-D14), failure contracts, ADRs, SAR-G1-L2 | §3 ownership, §4 layers, §5 owners and ranges, §6 statuses, without §8 |
+| AIU-14 UX | §5 operations and scopes, §3.5 user job labels and causes, §3.3 states, the out-of-date and brief re-accept behaviour (SB-D11), §6 codes (one message per code), the admin email rule (API-100 only) | Invents no API or state; asks the Solution Architect through the Orchestrator |
+| AIU-15 QA | §5 IDs for test traceability (**v6:** API-902/903 and scope M: 404 without or with a wrong token, 200 with it, a session token refused, TC-ERR-03 method set includes the two paths); §6 codes and statuses; §3.3 states and constraints (including the NO ACTION segment guard and SET NULL output references); SB-D11..SB-D17 behaviour; §4.1 forbidden imports (negative probes); §7 role and scope matrix, including the `app_backup` grants test and the token checks of §7.1 E (v4) | — |
+| AIU-16 DevOps | §1 topology (api, worker, web; no inbound to worker); §2 shared files and the migration owner; §7 DB roles; **§7.1 backup identity names and scopes (v4)**; API-900/901; **v6:** API-902/903 at the root paths DEVOPS-PLAN §11 already uses, the metrics-reader identity and TB-15 (no DEVOPS-PLAN change needed); the release seed for `price_table` and `brand_rules` | §7.1 names, grants and token scopes without §8. v4 requires these DEVOPS-PLAN changes: `R2_BACKUP_TOKEN_*` becomes `R2_BACKUP_SOURCE_*` and `R2_BACKUP_SINK_*`; `BACKUP_DATABASE_URL`; the erasure ledger moves from the app bucket and token B to the `erasure-ledger` bucket and token C (§7, SB-D21); bucket lock and lifecycle on `backup` (v5: indefinite rule on `ledger/`, whole-bucket age rule, `media-deleted/` delayed delete, lifecycle on `db/`, `manifests/`, `media-deleted/` only); the forbidden-variable check; `CONNECT` grant and the `PUBLIC` revoke at DO-11 (§7.1 B) |
+| AIU-17 security design | §7 boundaries, identities and data classes; §3.3 classification; SB-D6; **v6:** the metrics-reader identity and TB-15 (aggregates only, no personal data); TB-12..TB-14 and §7.1 (v4), which register SEC-D §10.8's ledger bucket and token C as proposed in SEC-D §17.3. **v5:** decide on the sink-token residual (a) in §7.1 C (accept or tighten) | Boundaries without §8 |
+
+## 10. Review readiness
+
+- **Consistency with ARCH-G1:** every ARCH-G1 §4 table is placed in §3.3, except `spend_caps` (dropped, SB-D10). `qc_results` is renamed `qc_runs`, and `thumbstoppers` is `thumbstopper_jobs` with the job contract (SB-D4). Every ARCH-G1 §6 resource group maps to §5 IDs. The module graph is acyclic (§4.1); the ARCH-G1 cycle is resolved by SB-D3.
+- **Consistency with the PRD:** the states in §3.3 and §3.5 match PRD §3.2, §7 and REQ-006/009/010/011/014/018. The PRD's account state `requested` is an `access_requests` row, not a `users` status (SB-D8). Every live REQ has at least one §5 operation or a web-only note.
+- **Decisions:** SB-D1..SB-D17, recorded in this task's `decision-log`. v4: SB-D18..SB-D21, recorded in the AIU-57 `decision-log`.
+- **v4 consistency:** the backup identity matches DEVOPS-PLAN §5.1 and §10.3 in purpose (read-only dump role, read app bucket, write backup bucket, `backup` cron, no inbound) and narrows it (two tokens instead of one, no-delete by bucket lock, no role membership, explicit forbidden list). It meets SEC-D KC-1.2 (backup credentials cannot read custody locations or KEK copies) and T-01 (no KEK in the backup path). The ledger follows SEC-D §10.8 (separate bucket, token C), which DEVOPS-PLAN v2 §10.3 does not yet follow; that is listed for the DevOps correction in §9.
+- **v5 fixes (AIU-57 review round 1):** SAR-SB4-01 (§7.1 C lock described as upload-age based; `ledger/` indefinite rule; `media-deleted/` copy so the lock clock starts at deletion; residual restated in full), SAR-SB4-02 (§1 bucket reading, SB-D22), SAR-SB4-03 (pg-boss DDL under `app_migrator`, queue-then-dump test, SB-D24), SAR-SB4-04 (PG16+ admin-only membership and `CONNECT` at DO-11, SB-D25). Nothing outside the header, §1 note, §7.1 B, C, E, §9, §10 and the ledger changed.
+- **Not in v4 (still unregistered SEC-D §17.3 proposals):** the media sandbox child process and the `app_retention` role with its purge job. They need their own §8 revision; the AIU-57 completion comment routes them to the Orchestrator.
+- **Not run:** no code, schema or migration (pre-G2). No vendor or price check.
+- **v6 (AIU-200):** closes AIU-13 TD-D33 by TD-D41. API-902 and API-903 are inside the platform range (§8 row 1) but add scope M, an identity and TB-15 (§8 row 2), so this is a reviewed revision. The two paths, `METRICS_TOKEN` and the reader services are the ones DEVOPS-PLAN §11.1 and §11.4 (rev `b8ee2bd4`) already use, so its text needs no change. AIU-13 carries them into OpenAPI design.4, the registry (§6), the identity inventory (§7.3) and the contract check.
+- **Open blockers:** none.
+
+## Revision ledger
+
+| Date | Revision | Change | By |
+| --- | --- | --- | --- |
+| 2026-11-15 | v6 | AIU-200 (G2 gate finding G2-SAR-H2, decision TD-D41 in the AIU-13 `decision-log`): API-902 `GET /internal/metrics` and API-903 `GET /internal/metrics/window` (platform, scope M); scope M defined (metrics token, 404 refusal); metrics-reader identity; TB-15. No table, module, layer, error code or existing operation change. Affected lanes: AIU-13 (OpenAPI design.4, registry, identity inventory, contract check), AIU-15 (TC-ERR-03, TC-OPS, TC-ALR, TC-AUT-09/TC-OPS-08 counts 55 → 57), AIU-16 (none: already uses these names), AIU-17 (identity and TB-15 noted), AIU-19 (TASK-061, TASK-010, TASK-023 and traceability) | Solution Architect |
+| 2026-11-14 | v1 | First shared boundaries from G1 (ARCH-G1 `20cd6634`, PRD `c3220ab0`). Round 0 submission | Solution Architect |
+| 2026-11-14 | v3 | Boundary delta from AIU-13 (decision TD-D4 in AIU-13 `decision-log`): codes `internal_error` 500, `service_unavailable` 503, `method_not_allowed` 405 (platform) and `qc_confirmation_required` 422 (production); `invitations.token_hash` → `idp_invitation_id` (+ `send_state`); envelope `details[]`; reuse index `(owner_id, reuse_hash)`. No owner, FK direction, layer or state-set change. Affected lanes: AIU-14 (messages), AIU-15 (tests), AIU-17 (invitation column) | Solution Architect |
+| 2026-11-14 | v5 | AIU-57 review round 1 fixes on top of v4.1. **SAR-SB4-01:** §7.1 C states that R2 age locks count from upload; adds an indefinite lock rule on `ledger/` and a `media-deleted/` server-side copy so a deleted source's only copy is locked from deletion; the service's only delete is the old `media/` copy after that copy is confirmed; residual restated and routed to Cybersecurity (SB-D23, SB-D20 reason updated). **SAR-SB4-02:** §1 note: the frozen bucket item means the one application media bucket; `backup` and `erasure-ledger` are §8 row 2 stores (SB-D22). **SAR-SB4-03:** all pg-boss DDL including `createQueue` runs under `app_migrator` in `jobs:migrate`; queue-then-dump test (SB-D24). **SAR-SB4-04:** PG16+ creator membership held admin-only (`INHERIT FALSE`, `SET FALSE`) and tested; `CONNECT` granted by the admin at DO-11, "only" removed (SB-D25). No table, module, API or error code change. Affected lanes: AIU-13 (pg-boss queue creation, M0001 tests), AIU-16 (DO-07 lock rules and lifecycle, DO-11 grants), AIU-15 (tests), AIU-17 (residual) | Solution Architect |
+| 2026-11-14 | v4.1 | AIU-13 review round 1, on top of v4: **SAR-TD-L7** §6 intro says `details[]` (not `fields[]`) and lists 405/500/503; API-901 note no longer mentions a worker job loop (TD-D13). **SAR-TD-M1** provider-job column contract (§3.5) gains `provider_completed_at`, and `deadline_at` stops applying once it is set (AIU-13 TD-D25). No owner, FK direction, layer or state-set change. The v4 backup identity is unchanged; AIU-13 `architecture` v4.1 carries its identities (§2.10, §7.3). Affected lanes: AIU-15 (timeout and copy tests), AIU-16 (registry key) | Solution Architect |
+| 2026-11-14 | v4 | Boundary change for the backup identity (AIU-57, SAR-DOP-06). New §7.1: service `backup` and its image, role `app_backup` (read-only, no membership, `NOBYPASSRLS`, grants in M0001), tokens `R2_BACKUP_SOURCE_*` (read `app` and `erasure-ledger`) and `R2_BACKUP_SINK_*` (`backup` only, no delete or overwrite inside retention by bucket lock), the never-hold list. §7 identity table extends ARCH-G1 §7.5; TB-12..TB-14; the erasure-ledger bucket and worker token C from SEC-D §10.8 are registered (SB-D21). No table, module, API or error code change. Affected lanes: AIU-16 (DEVOPS-PLAN §5.1, §8, §10.3, DO-07, DO-11), AIU-13 (M0001 grants, identity inventory, configuration registry), AIU-15 (grants and token tests), AIU-17 (TB-12..TB-14, residual in §7.1 C) | Solution Architect |
+| 2026-11-14 | v2 | Round 1 fixes. **H1:** stable segments, `brief_segments.state`/`revision`, `video_jobs.segment_revision`, segment FK NO ACTION, derived out-of-date (stored `assembly_jobs.out_of_date` dropped), `accepted` → `draft` on change (SB-D11). **M1:** step 5 hard-deletes `users`, subject's invitations and access requests erased, API-105 (SB-D12). **M2:** `output_media_id` SET NULL, deletion order (SB-D17). **M3:** submitted drafts frozen (SB-D13). **M4:** `account_suspended`, `account_removed` (SB-D16). **L1:** §6 intro. **L2:** `claim_issues.owner_id`, rule 4 exemption. **L3:** TTL index on `created_at`. **L4:** one job-creating rule (SB-D14). **L5:** request form is configuration (SB-D15). Affected lanes: AIU-13, AIU-14, AIU-15, AIU-17 | Solution Architect |

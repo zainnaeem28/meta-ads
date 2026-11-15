@@ -1,0 +1,35 @@
+SB operations: 57; openapi operations: 57; job-creating: API-024,API-035,API-053,API-060,API-063,API-064,API-070,API-075
+registry codes: 36; enum: 36; 405 shape: MethodNotAllowed; metrics-token (M) operations: API-902,API-903
+response schemas validated with samples: 37/37; negative checks: 9
+0 problems
+contract-check: 57 operations, 36 = 36 codes, 37/37 schemas, 0 problems
+negative probe removed-code: exit 1 as required (2 problem(s))
+negative probe extra-response: exit 1 as required (1 problem(s))
+validating openapi.yaml...
+openapi.yaml: validated in 79ms
+
+Woohoo! Your API description is valid. 🎉
+3 problems are explicitly ignored.
+
+
+drift check: generated output reproducible
+
+> @shroomap/contracts@0.0.0 typecheck <repo>/packages/contracts
+> tsc -p tsconfig.json --noEmit
+
+
+> @shroomap/contracts@0.0.0 test <repo>/packages/contracts
+> vitest run --config vitest.config.ts --coverage
+
+
+ RUN  v5.1.0 <repo>/packages/contracts
+      Coverage enabled with v8
+
+ ✓ test/exports.test.ts (5 tests) 34ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  20:37:07
+   Duration  536ms (import 60%, transform 26%, tests 9%, worker 4%)
+
+JUNIT report written to <repo>/apps/api/reports/contracts/junit.xml
