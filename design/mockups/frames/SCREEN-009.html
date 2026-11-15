@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Final ad · Evening Calm Gummies · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="operator" data-nav="campaigns" data-role="user">
+<!-- SCREEN-009 Campaign workspace: Final ad (assembly, download, thumbstopper). Pattern: detail + job. FLOW-04. REQ-010 (QC confirm), 011, 022. API-061, 070, 071, 075, 076, 032 -->
+<main>
+  <div data-ws data-tab="final" data-name="Evening Calm Gummies" data-meta="4 segments · 60 s" data-brief="success|Accepted" data-clips="success|4 of 4" data-final="success|Ready" data-when="default out-of-date"><div class="ws-actions"></div></div>
+  <div data-ws data-tab="final" data-name="Evening Calm Gummies" data-meta="4 segments · 60 s" data-brief="success|Accepted" data-clips="success|4 of 4" data-final="Choose clips" data-when="selecting qc-confirm no-clips failed assembling loading"><div class="ws-actions"></div></div>
+
+  <div class="alert alert-warning" role="status" data-when="out-of-date" hidden><i data-icon="triangle-alert"></i><div class="body"><span class="title">This final ad is out of date</span><span>Clip 3 was regenerated after this ad was made. Re-assemble to include the new clip. The current file stays available until then.</span><div class="actions"><button class="btn btn-primary sm"><i data-icon="layers" class="sm"></i>Re-assemble</button></div></div></div>
+
+  <div class="stack" data-when="loading" hidden aria-busy="true"><div class="card"><div class="card-body stack"><span class="skel h-lg w-50"></span><span class="skel h-tall w-25"></span><span class="skel w-75"></span></div></div></div>
+
+  <!-- final ready -->
+  <div class="grid-12" data-when="default out-of-date" hidden>
+    <section class="col-8 card" aria-labelledby="fin"><div class="card-header"><h2 id="fin">Final ad</h2><span class="badge badge-success"><i data-icon="circle-check"></i>Done</span></div>
+      <div class="card-body final-card">
+        <div class="player" role="img" aria-label="Final ad preview, 60 seconds, vertical video"><img src="../assets/img/clip-poster.svg" alt="" width="240" height="426"><i data-icon="play" class="lg"></i><div class="controls"><span>0:21</span><span class="bar"><i class="w-35"></i></span><span>1:00</span></div></div>
+        <div class="stack"><dl class="kv"><dt>Length</dt><dd>1:00 (4 clips)</dd><dt>Made</dt><dd>2 h ago</dd><dt>Size</dt><dd>38 MB · MP4</dd></dl>
+          <div class="row"><button class="btn btn-primary"><i data-icon="download" class="sm"></i>Download</button><button class="btn btn-outline"><i data-icon="layers" class="sm"></i>Re-assemble</button></div>
+          <p class="ui muted">The download link works for 5 minutes. If it has expired, choose Download again for a fresh one.</p></div>
+      </div></section>
+    <aside class="col-4 stack">
+      <section class="card" aria-labelledby="th"><div class="card-body stack"><div class="row-between"><h2 id="th">Thumbstopper</h2><span class="badge">Optional</span></div><p class="ui muted">A callout frame to use as the opening hook. Uses your OpenAI key.</p><div class="alert alert-info"><i data-icon="info"></i><div class="body"><span>Estimated cost is shown against your daily limit before it runs.</span></div></div><button class="btn btn-outline"><i data-icon="image" class="sm"></i>Generate thumbstopper</button></div></section>
+      <section class="card"><div class="card-body stack-sm"><h3>Clips used</h3><ol class="order-list"><li class="order-item"><span class="pos">1</span>Segment 1<span class="badge badge-success">QC passed</span></li><li class="order-item"><span class="pos">2</span>Segment 2<span class="badge badge-success">QC passed</span></li><li class="order-item"><span class="pos">3</span>Segment 3<span class="badge badge-warning">QC skipped</span></li><li class="order-item"><span class="pos">4</span>Segment 4<span class="badge badge-success">QC passed</span></li></ol></div></section>
+    </aside>
+  </div>
+
+  <!-- selecting / confirm / no clips -->
+  <section class="card" data-when="selecting qc-confirm" hidden aria-labelledby="sel"><div class="card-header"><div><h2 id="sel">Choose and order clips</h2><div class="sub">Only completed clips can be used. Move clips to change their order.</div></div></div>
+    <div class="card-body stack">
+      <ol class="order-list">
+        <li class="order-item"><span class="pos">1</span><input type="checkbox" checked aria-label="Use segment 1"><span class="grow">Segment 1 · 0:15</span><span class="badge badge-success"><i data-icon="circle-check"></i>QC passed</span><button class="btn btn-ghost icon sm" aria-label="Move segment 1 down"><i data-icon="chevron-down" class="sm"></i></button></li>
+        <li class="order-item"><span class="pos">2</span><input type="checkbox" checked aria-label="Use segment 2"><span class="grow">Segment 2 · 0:15</span><span class="badge badge-destructive"><i data-icon="circle-alert"></i>QC failed</span><span class="row"><button class="btn btn-ghost icon sm" aria-label="Move segment 2 up"><i data-icon="chevron-up" class="sm"></i></button><button class="btn btn-ghost icon sm" aria-label="Move segment 2 down"><i data-icon="chevron-down" class="sm"></i></button></span></li>
+        <li class="order-item"><span class="pos">3</span><input type="checkbox" checked aria-label="Use segment 3"><span class="grow">Segment 3 · 0:15</span><span class="badge badge-warning"><i data-icon="triangle-alert"></i>QC skipped</span><button class="btn btn-ghost icon sm" aria-label="Move segment 3 up"><i data-icon="chevron-up" class="sm"></i></button></li>
+      </ol>
+      <div class="alert alert-warning"><i data-icon="triangle-alert"></i><div class="body"><span>2 selected clips have a failed or skipped audio check. You will be asked to confirm before assembling.</span></div></div>
+    </div>
+    <div class="card-footer"><span class="ui muted grow">3 clips · 0:45</span><button class="btn btn-primary"><i data-icon="layers" class="sm"></i>Assemble final ad</button></div></section>
+  <section class="card" data-when="no-clips" hidden><div class="empty"><div class="glyph"><i data-icon="clapperboard" class="lg"></i></div><h2>No completed clips yet</h2><p>Generate at least one clip first. Completed clips appear here for you to choose and order.</p><a class="btn btn-primary" href="SCREEN-008.html">Go to clips</a></div></section>
+
+  <!-- assembling -->
+  <section class="card" data-when="assembling" hidden aria-live="polite"><div class="card-header"><h2>Assembling your final ad</h2><span class="badge badge-info"><span class="spinner" aria-hidden="true"></span>Rendering</span></div><div class="card-body stack"><ol class="stepper" data-steps="Queued|Fetching clips|Rendering|Saving" data-step-map="assembling:3"></ol><div class="progress" role="progressbar" aria-label="Assembly progress" aria-valuetext="Rendering"><i class="w-60"></i></div><p class="ui muted">This takes a minute or two. You can leave this page; the final ad appears here when it is done. Submitting the same clips again reuses this job.</p></div></section>
+
+  <!-- failed -->
+  <section class="card" data-when="failed" hidden><div class="empty error" role="alert"><div class="glyph"><i data-icon="circle-alert" class="lg"></i></div><h2>Assembly failed</h2><p>One selected clip could not be fetched from storage (segment 3). Regenerate that clip or leave it out, then assemble again.</p><div class="row"><button class="btn btn-primary"><i data-icon="layers" class="sm"></i>Assemble again</button><a class="btn btn-outline" href="SCREEN-008.html">Go to clips</a></div></div></section>
+</main>
+
+<div class="scrim" data-when="qc-confirm" hidden><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="qc-t"><div class="dialog-head"><h2 id="qc-t">Assemble with audio checks that did not pass?</h2></div>
+  <div class="dialog-body"><p>Segment 2 failed its audio check (speech did not match the script). Segment 3's check was skipped.</p><label class="choice"><input type="checkbox" checked><span>I have reviewed these clips and want to use them anyway. This confirmation is recorded.</span></label></div>
+  <div class="dialog-foot"><button class="btn btn-outline">Go back</button><button class="btn btn-primary">Assemble anyway</button></div></div></div>
+</body>
+</html>

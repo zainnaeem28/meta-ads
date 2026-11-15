@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brief · Morning Focus Blend · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="operator" data-nav="campaigns" data-role="user">
+<!-- SCREEN-007 Campaign workspace: Brief. Pattern: detail + editor. FLOW-02. REQ-007, 008, 030, 014. API-041, 050..054 -->
+<main>
+  <div data-ws data-tab="brief" data-name="Morning Focus Blend" data-brief="warning|Needs review" data-clips-disabled="true" data-final-disabled="true" data-when="default accept-blocked clear-reason regenerate-confirm key-missing">
+    <div class="ws-actions">
+      <button class="btn btn-outline" aria-disabled="true" disabled title="Available once the brief is accepted"><i data-icon="copy" class="sm"></i>Copy segment prompts</button>
+      <button class="btn btn-outline"><i data-icon="rotate-ccw" class="sm"></i>Regenerate brief</button>
+      <button class="btn btn-primary" aria-disabled="true" disabled><i data-icon="check" class="sm"></i>Accept brief</button>
+    </div>
+  </div>
+  <div data-ws data-tab="brief" data-name="Morning Focus Blend" data-brief="success|Accepted" data-clips="0 of 3" data-final-disabled="true" data-when="accepted">
+    <div class="ws-actions">
+      <button class="btn btn-outline"><i data-icon="copy" class="sm"></i>Copy segment prompts</button>
+      <button class="btn btn-outline"><i data-icon="rotate-ccw" class="sm"></i>Regenerate brief</button>
+      <a class="btn btn-primary" href="SCREEN-008.html">Continue to clips<i data-icon="arrow-right" class="sm"></i></a>
+    </div>
+  </div>
+  <div data-ws data-tab="brief" data-name="Morning Focus Blend" data-brief="info|Generating" data-clips-disabled="true" data-final-disabled="true" data-when="loading"><div class="ws-actions"></div></div>
+  <div data-ws data-tab="brief" data-name="Morning Focus Blend" data-brief="destructive|Generation failed" data-clips-disabled="true" data-final-disabled="true" data-when="failed"><div class="ws-actions"></div></div>
+
+  <div class="alert alert-destructive" role="alert" data-when="accept-blocked" hidden><i data-icon="circle-alert"></i><div class="body"><span class="title">The brief cannot be accepted yet</span><span>2 issues are still open, including 1 that must be fixed by editing the text. Resolve them, then accept.</span></div></div>
+  <div class="alert alert-warning" role="alert" data-when="key-missing" hidden><i data-icon="key-round"></i><div class="body"><span class="title">Regenerating needs your OpenAI key</span><span>Add your key to regenerate. You can keep editing this brief in the meantime.</span><div class="actions"><a class="btn btn-primary sm" href="SCREEN-010.html">Add OpenAI key</a></div></div></div>
+
+  <!-- generating -->
+  <div data-when="loading" hidden class="stack">
+    <div class="alert alert-info" role="status"><span class="spinner" aria-hidden="true"></span><div class="body"><span class="title">Generating your brief</span><span>This usually takes under a minute. You can leave this page and come back; it keeps running.</span></div></div>
+    <div class="card" aria-busy="true"><div class="card-body stack"><span class="skel h-lg w-50"></span><span class="skel w-full"></span><span class="skel w-75"></span><span class="skel h-xl w-full"></span><span class="skel h-xl w-full"></span></div></div>
+  </div>
+
+  <!-- failed -->
+  <div data-when="failed" hidden>
+    <div class="card"><div class="empty error" role="alert"><div class="glyph"><i data-icon="circle-alert" class="lg"></i></div><h2>The brief could not be generated</h2><p>Your OpenAI account reported that it is out of credit. Nothing was charged. Add credit at OpenAI, then try again. Your answers are saved.</p><div class="row"><button class="btn btn-primary"><i data-icon="rotate-ccw" class="sm"></i>Try again</button><a class="btn btn-outline" href="SCREEN-006.html">Edit answers</a></div></div></div>
+  </div>
+
+  <div class="grid-12" data-when="default accept-blocked clear-reason regenerate-confirm key-missing accepted" hidden>
+    <div class="col-8 stack">
+
+      <!-- issues -->
+      <section class="card" aria-labelledby="iss" data-when="default accept-blocked clear-reason regenerate-confirm key-missing" hidden>
+        <div class="card-header"><div><h2 id="iss">3 issues to resolve</h2><div class="sub">Brand checks ran on the generated text. Open issues block acceptance.</div></div><span class="badge badge-destructive"><i data-icon="circle-alert"></i>1 high risk</span></div>
+        <div class="card-body stack">
+          <div class="claim high"><i data-icon="shield-alert"></i><div class="grow stack-sm"><div class="row-between"><strong>Treatment or cure wording · Segment 2</strong><span class="badge badge-destructive">High risk</span></div><div>"…this blend <span class="quote">cures my afternoon anxiety</span>…" implies a treatment claim. Edit the text until this check no longer finds it. It cannot be cleared with a reason.</div><div class="actions"><a class="btn btn-outline sm" href="#seg2"><i data-icon="pencil" class="sm"></i>Edit segment 2</a></div></div></div>
+          <div class="claim other"><i data-icon="triangle-alert"></i><div class="grow stack-sm"><div class="row-between"><strong>Em dash in public copy · Segment 1</strong><span class="badge badge-warning">Other</span></div><div>Public copy must not contain em dashes. Edit the text, or clear this issue with a reason.</div>
+            <div class="actions row"><a class="btn btn-outline sm" href="#seg1"><i data-icon="pencil" class="sm"></i>Edit segment 1</a><button class="btn btn-outline sm" data-when="default accept-blocked regenerate-confirm key-missing" hidden>Clear with reason</button></div>
+            <div class="stack-sm" data-when="clear-reason" hidden><div class="field"><label for="reason">Reason for clearing <span class="req">(required, recorded with your name)</span></label><textarea id="reason" class="textarea">House style for this campaign allows a spoken pause here; the brand approver agreed in review.</textarea></div><div class="row"><button class="btn btn-primary sm">Clear issue</button><button class="btn btn-ghost sm">Cancel</button></div></div></div></div>
+          <div class="claim other"><i data-icon="triangle-alert"></i><div class="grow stack-sm"><div class="row-between"><strong>Under word target · Segment 3</strong><span class="badge badge-warning">Other</span></div><div>24 words. The target is 32 to 42 words for a 15-second segment.</div><div class="actions row"><a class="btn btn-outline sm" href="#seg3"><i data-icon="pencil" class="sm"></i>Edit segment 3</a><button class="btn btn-outline sm">Clear with reason</button></div></div></div>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="iss2" data-when="accepted" hidden>
+        <div class="card-body row"><i data-icon="circle-check" class="lg text-success"></i><div><h2 id="iss2">Brief accepted · all checks closed</h2><div class="ui muted">Segment prompts are ready for clip generation. Editing any segment reopens the brief for acceptance.</div></div></div>
+      </section>
+
+      <!-- segments -->
+      <section class="segment" id="seg1" aria-labelledby="sg1">
+        <div class="seg-head"><h3 id="sg1">Segment 1 · 0:00 to 0:15</h3><span class="row"><span class="badge badge-warning" data-when="default accept-blocked clear-reason regenerate-confirm key-missing" hidden><i data-icon="triangle-alert"></i>1 issue</span><span class="counter caption tabular">39 words · target 32 to 42</span></span></div>
+        <div class="seg-body">
+          <div class="field"><label for="d1">Dialogue</label><textarea id="d1" class="textarea" data-when="default accept-blocked clear-reason regenerate-confirm key-missing" hidden>I am not a morning person, so I keep my routine simple — coffee, quiet light, and two capsules of Morning Focus Blend on the counter. Nothing fancy, just a steady habit before I head out for my run.</textarea><textarea id="d1b" class="textarea" data-when="accepted" hidden>I am not a morning person, so I keep my routine simple: coffee, quiet light, and two capsules of Morning Focus Blend on the counter. Nothing fancy, just a steady habit before I head out for my run.</textarea></div>
+          <div class="field"><label for="p1">Visual prompt</label><textarea id="p1" class="textarea">Handheld vertical shot, soft window light in a small kitchen. A runner in a grey hoodie pours coffee, then takes the Morning Focus Blend bottle from the counter and holds it toward the camera at 0:06 for about 4 seconds. Natural, unpolished, no text overlays.</textarea><div class="help">The product appears on camera in this segment (0:06 to 0:10).</div></div>
+        </div>
+      </section>
+      <section class="segment" id="seg2" aria-labelledby="sg2">
+        <div class="seg-head"><h3 id="sg2">Segment 2 · 0:15 to 0:30</h3><span class="row"><span class="badge badge-destructive" data-when="default accept-blocked clear-reason regenerate-confirm key-missing" hidden><i data-icon="shield-alert"></i>High risk</span><span class="counter caption tabular">40 words · target 32 to 42</span></span></div>
+        <div class="seg-body">
+          <div class="field"><label for="d2">Dialogue</label>
+            <div class="dialogue-text dialogue-box" data-when="default accept-blocked clear-reason regenerate-confirm key-missing" hidden role="textbox" aria-readonly="true" aria-label="Dialogue with flagged text" tabindex="0">By midday my to-do list gets loud. This blend <mark class="flag">cures my afternoon anxiety</mark>, and I notice I think more clearly when I stay with it. The bottle lives in my bag, right next to my trail shoes and my water.</div>
+            <textarea id="d2" class="textarea" data-when="accepted" hidden>By midday my to-do list gets loud. I keep the bottle in my bag next to my trail shoes, and a steady routine helps me feel like I am starting each day on my own terms.</textarea></div>
+          <div class="field"><label for="p2">Visual prompt</label><textarea id="p2" class="textarea">Trail parking lot, mid-morning. The runner sits on a tailgate, opens the bag, and shows the bottle beside trail shoes and a water bottle at 0:20. Calm voice-over feel, warm natural light.</textarea></div>
+        </div>
+      </section>
+      <section class="segment" id="seg3" aria-labelledby="sg3">
+        <div class="seg-head"><h3 id="sg3">Segment 3 · 0:30 to 0:45</h3><span class="row"><span class="badge badge-warning" data-when="default accept-blocked clear-reason regenerate-confirm key-missing" hidden><i data-icon="triangle-alert"></i>1 issue</span><span class="counter caption tabular" data-when="default accept-blocked clear-reason regenerate-confirm key-missing" hidden><span class="text-warning strong">24 words</span> · target 32 to 42</span><span class="counter caption tabular" data-when="accepted" hidden>33 words · target 32 to 42</span></span></div>
+        <div class="seg-body">
+          <div class="field"><label for="d3">Dialogue</label><textarea id="d3" class="textarea" data-when="default accept-blocked clear-reason regenerate-confirm key-missing" hidden>Everyone's mornings look different. If you are curious what fits yours, there is a short way to find out. Take the free 2-minute quiz.</textarea><textarea id="d3b" class="textarea" data-when="accepted" hidden>Everyone's mornings look different, and that is the point. If you are curious what might fit yours, there is a short, friendly way to find out. Take the free 2-minute quiz.</textarea><div class="help">Closing call to action: "Take the free 2-minute quiz". Adults 21+.</div></div>
+          <div class="field"><label for="p3">Visual prompt</label><textarea id="p3" class="textarea">Close on the runner lacing shoes by the front door with the bottle on the shelf behind at 0:34. Hold on a relaxed smile, then cut to the quiz end card.</textarea></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="col-4 stack" aria-label="Campaign details">
+      <div class="card"><div class="card-body stack">
+        <h2>Campaign</h2>
+        <dl class="kv"><dt>Product</dt><dd>Morning Focus Blend</dd><dt>Audience</dt><dd>35 to 52, any gender</dd><dt>Goal</dt><dd>Conversion</dd><dt>Tone</dt><dd>Calm and grounded</dd><dt>Length</dt><dd>3 segments · 45 s</dd></dl>
+        <a href="SCREEN-006.html" class="ui">View intake answers</a>
+      </div></div>
+      <div class="card"><div class="card-body stack-sm">
+        <h3>Brand checks</h3>
+        <p class="ui muted">Treatment, cure and dosing wording cannot be cleared with a reason. Other checks can, with a recorded reason.</p>
+        <div class="row-between ui" data-when="default accept-blocked clear-reason regenerate-confirm key-missing" hidden><span>Open issues</span><span class="badge badge-destructive">3</span></div>
+        <div class="row-between ui" data-when="accepted" hidden><span>Open issues</span><span class="badge badge-success"><i data-icon="circle-check"></i>0</span></div>
+      </div></div>
+    </aside>
+  </div>
+</main>
+
+<div class="scrim" data-when="regenerate-confirm" hidden>
+  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="rg-t"><div class="dialog-head"><h2 id="rg-t">Regenerate the whole brief?</h2><button class="btn btn-ghost icon sm" aria-label="Close"><i data-icon="x" class="sm"></i></button></div>
+    <div class="dialog-body"><p>This replaces every segment, including your edits, with a new draft. Your edit history is not kept. It uses your OpenAI key.</p><p class="muted">Clips already generated stay in the campaign and are marked out of date where their segment changes.</p></div>
+    <div class="dialog-foot"><button class="btn btn-outline">Keep my edits</button><button class="btn btn-destructive">Regenerate and replace edits</button></div></div>
+</div>
+</body>
+</html>

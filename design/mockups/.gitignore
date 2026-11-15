@@ -1,0 +1,4 @@
+png/*.png
+png/*.html
+!png/UI-Mockups-Desktop.png
+!png/UI-Mockups-Mobile.png

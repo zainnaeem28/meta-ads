@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Settings · Administration · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="admin" data-nav="settings" data-role="admin" data-alerts="2">
+<!-- SCREEN-013 Settings (sign-up mode, read-only security configuration). Pattern: settings. FLOW-12. REQ-003, 004. API-120, 121 -->
+<main data-width="narrow">
+<div class="page-header"><div class="titles"><h1>Settings</h1><p class="desc">Platform-wide sign-up and security. Changes are recorded in the audit trail.</p></div></div>
+<div class="toast-region" data-when="saved" hidden><div class="toast" role="status"><i data-icon="circle-check"></i><div><strong>Sign-up mode saved.</strong></div></div></div>
+<div class="stack" data-when="loading" hidden aria-busy="true"><div class="card"><div class="card-body stack"><span class="skel h-lg w-25"></span><span class="skel w-75"></span><span class="skel h-lg w-full"></span></div></div></div>
+<div class="stack" data-when="default open-refused saved" hidden>
+<section class="card" aria-labelledby="su"><div class="card-header"><div><h2 id="su">Sign-up</h2><div class="sub">Who can create an account</div></div></div><div class="card-body stack-lg">
+<div class="alert alert-destructive" role="alert" data-when="open-refused" hidden><i data-icon="circle-alert"></i><div class="body"><span class="title">Open sign-up cannot be turned on yet</span><span>These must be in place first. Existing accounts are unaffected.</span><ul class="ui"><li>Email verification is enabled</li><li>Rate limiting and abuse limits are enabled</li><li>An independent verification record exists for both</li></ul></div></div>
+<fieldset class="field bare"><legend class="label">Sign-up mode</legend><div class="radio-cards" role="radiogroup"><div class="radio-card" role="radio" aria-checked="true" tabindex="0"><span class="dot"></span><div><div class="t">Invited only</div><div class="d">People join by invitation or after you approve a request. Recommended.</div></div></div><div class="radio-card" role="radio" aria-checked="false" tabindex="-1"><span class="dot"></span><div><div class="t">Open</div><div class="d">Anyone can create an account. Needs the safeguards below.</div></div></div></div></fieldset>
+<dl class="kv"><dt>Email verification</dt><dd><span class="badge badge-warning"><i data-icon="triangle-alert"></i>Not verified</span></dd><dt>Rate limiting and abuse limits</dt><dd><span class="badge badge-warning"><i data-icon="triangle-alert"></i>Not verified</span></dd><dt>Verification record</dt><dd><span class="badge">None</span></dd></dl></div>
+<div class="card-footer"><button class="btn btn-primary">Save sign-up mode</button></div></section>
+<section class="card" aria-labelledby="sc"><div class="card-header"><div><h2 id="sc">Security and access</h2><div class="sub">Set at deployment. Read-only here.</div></div><span class="badge"><i data-icon="lock"></i>Read-only</span></div><div class="card-body"><dl class="kv"><dt>Two-step verification required for</dt><dd>Everyone</dd><dt>Request-access form on sign-in page</dt><dd><span class="badge">Off</span></dd><dt>Invitation lifetime</dt><dd>7 days</dd></dl></div></section></div>
+</main>
+</body>
+</html>

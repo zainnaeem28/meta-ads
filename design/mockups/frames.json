@@ -1,0 +1,306 @@
+[
+ {
+  "id": "SCREEN-005",
+  "file": "frames/SCREEN-005.html",
+  "states": [
+   "default",
+   "loading",
+   "empty",
+   "no-results",
+   "error",
+   "delete-confirm",
+   "deleted",
+   "drafts",
+   "key-missing",
+   "menu-open"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-006",
+  "file": "frames/SCREEN-006.html",
+  "states": [
+   "default",
+   "step-1",
+   "step-3",
+   "step-4",
+   "validation-error",
+   "uploading",
+   "upload-rejected",
+   "saving",
+   "generating",
+   "conflict",
+   "key-missing",
+   "cap-reached",
+   "session-expired"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-007",
+  "file": "frames/SCREEN-007.html",
+  "states": [
+   "default",
+   "loading",
+   "failed",
+   "accept-blocked",
+   "clear-reason",
+   "accepted",
+   "regenerate-confirm",
+   "key-missing"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-008",
+  "file": "frames/SCREEN-008.html",
+  "states": [
+   "default",
+   "loading",
+   "blocked",
+   "failures",
+   "qc-review",
+   "out-of-date",
+   "key-disabled",
+   "cap-reached"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-009",
+  "file": "frames/SCREEN-009.html",
+  "states": [
+   "default",
+   "loading",
+   "no-clips",
+   "selecting",
+   "qc-confirm",
+   "assembling",
+   "failed",
+   "out-of-date"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-010",
+  "file": "frames/SCREEN-010.html",
+  "states": [
+   "default",
+   "loading",
+   "empty",
+   "add-dialog",
+   "testing",
+   "validation-error",
+   "rate-limited",
+   "step-up",
+   "saved",
+   "untested",
+   "replace-warning",
+   "delete-confirm",
+   "disabled"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-001",
+  "file": "frames/SCREEN-001.html",
+  "states": [
+   "default",
+   "loading",
+   "error",
+   "session-expired",
+   "invalid"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-002",
+  "file": "frames/SCREEN-002.html",
+  "states": [
+   "not-linked",
+   "request-pending",
+   "suspended",
+   "removed",
+   "invite-invalid"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-003",
+  "file": "frames/SCREEN-003.html",
+  "states": [
+   "default",
+   "error",
+   "challenge"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-004",
+  "file": "frames/SCREEN-004.html",
+  "states": [
+   "route-404",
+   "unavailable"
+  ],
+  "widths": [
+   390,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-011",
+  "file": "frames/SCREEN-011.html",
+  "states": [
+   "default",
+   "loading",
+   "error",
+   "only-you",
+   "invite-dialog",
+   "suspend-confirm",
+   "remove-confirm",
+   "last-admin",
+   "erasures",
+   "menu-open"
+  ],
+  "widths": [
+   390,
+   768,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-012",
+  "file": "frames/SCREEN-012.html",
+  "states": [
+   "default",
+   "requests",
+   "requests-off",
+   "empty",
+   "loading",
+   "invite-error",
+   "resent"
+  ],
+  "widths": [
+   390,
+   768,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-013",
+  "file": "frames/SCREEN-013.html",
+  "states": [
+   "default",
+   "open-refused",
+   "saved",
+   "loading"
+  ],
+  "widths": [
+   390,
+   768,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-014",
+  "file": "frames/SCREEN-014.html",
+  "states": [
+   "default",
+   "empty",
+   "loading",
+   "acknowledged"
+  ],
+  "widths": [
+   390,
+   768,
+   1440
+  ]
+ },
+ {
+  "id": "SCREEN-015",
+  "file": "frames/SCREEN-015.html",
+  "states": [
+   "default",
+   "loading",
+   "empty",
+   "error",
+   "window-too-large"
+  ],
+  "widths": [
+   390,
+   768,
+   1440
+  ]
+ },
+ {
+  "id": "CMP-SHEET-01",
+  "file": "frames/CMP-SHEET-01.html",
+  "states": [
+   "default"
+  ],
+  "widths": [
+   1440,
+   390
+  ]
+ },
+ {
+  "id": "CMP-SHEET-02",
+  "file": "frames/CMP-SHEET-02.html",
+  "states": [
+   "default"
+  ],
+  "widths": [
+   1440,
+   390
+  ]
+ },
+ {
+  "id": "CMP-SHEET-03",
+  "file": "frames/CMP-SHEET-03.html",
+  "states": [
+   "default"
+  ],
+  "widths": [
+   1440,
+   390
+  ]
+ },
+ {
+  "id": "CMP-SHEET-04",
+  "file": "frames/CMP-SHEET-04.html",
+  "states": [
+   "default"
+  ],
+  "widths": [
+   1440,
+   390
+  ]
+ }
+]
