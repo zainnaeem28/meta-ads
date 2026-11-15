@@ -9,17 +9,17 @@
   <script src="../assets/icons.js"></script><script src="../shell.js"></script>
 </head>
 <body data-portal="operator" data-nav="new" data-role="user">
-<!-- SCREEN-006 New brief wizard. Pattern: form/wizard. FLOW-01, FLOW-02. REQ-005, 006, 007, 019 (cap), 014 (missing key). API-020..025, 030, 031, 035, 036 -->
+<!-- SCREEN-006 New brief wizard (state details-summary: details[] summary, first 5 entries and "and n more", UI-UX 9.1 rule f). Pattern: form/wizard. FLOW-01, FLOW-02. REQ-005, 006, 007, 019 (cap), 014 (missing key). API-020..025, 030, 031, 035, 036 -->
 <main>
   <div class="page-header">
     <div class="titles">
       <h1>New brief</h1>
       <p class="desc">Four short steps. Your answers save as you go, so you can leave and come back.</p>
     </div>
-    <div class="actions"><span class="row ui muted" role="status" data-when="default step-1 step-3 step-4 uploading upload-rejected validation-error conflict key-missing cap-reached session-expired"><i data-icon="circle-check" class="sm"></i>Draft saved just now</span><span class="row ui muted" role="status" data-when="saving"><span class="spinner" aria-hidden="true"></span>Saving draft…</span></div>
+    <div class="actions"><span class="row ui muted" role="status" data-when="default step-1 step-3 step-4 uploading upload-rejected validation-error details-summary conflict key-missing cap-reached session-expired"><i data-icon="circle-check" class="sm"></i>Draft saved just now</span><span class="row ui muted" role="status" data-when="saving"><span class="spinner" aria-hidden="true"></span>Saving draft…</span></div>
   </div>
 
-  <ol class="stepper" data-steps="Format|Product|Audience and direction|Concept and script" data-step-map="default:2,step-1:1,step-3:3,step-4:4,validation-error:2,uploading:2,upload-rejected:2,saving:2,generating:4,conflict:2,session-expired:2,key-missing:4,cap-reached:4"></ol>
+  <ol class="stepper" data-steps="Format|Product|Audience and direction|Concept and script" data-step-map="default:2,step-1:1,step-3:3,step-4:4,validation-error:2,details-summary:2,uploading:2,upload-rejected:2,saving:2,generating:4,conflict:2,session-expired:2,key-missing:4,cap-reached:4"></ol>
 
   <div class="grid-12">
     <div class="col-8 stack">
@@ -45,28 +45,29 @@
       </section>
 
       <!-- STEP 2 Product (default and its issue states) -->
-      <section class="card" data-when="default uploading upload-rejected validation-error saving conflict session-expired" hidden aria-labelledby="s2">
+      <section class="card" data-when="default uploading upload-rejected validation-error details-summary saving conflict session-expired" hidden aria-labelledby="s2">
         <div class="card-header"><div><h2 id="s2">Tell us about the product</h2><div class="sub">Step 2 of 4</div></div></div>
         <div class="card-body stack-lg">
           <div class="alert alert-destructive" role="alert" data-when="validation-error" hidden><i data-icon="circle-alert"></i><div class="body"><span class="title">Fix 2 things to continue</span><ul><li><a href="#name">Product name is required</a></li><li><a href="#desc">Product description is required</a></li></ul></div></div>
+          <div class="alert alert-destructive" role="alert" data-when="details-summary" hidden><i data-icon="circle-alert"></i><div class="body"><span class="title">Fix 8 things to continue</span><ul><li><a href="#name-e">Product name: Enter the product name.</a></li><li><a href="#desc-e">Product description: Describe the product so the script can feature it.</a></li><li>Product image: This image is larger than 10 MB. Choose a smaller file.</li><li>Segment 1: The dialogue is longer than 15 seconds. Shorten it or move words to the next segment.</li><li>Segment 2: The call-out text contains a claim that cannot be made. Edit the text until the check passes.</li></ul><div class="actions"><button class="btn btn-ghost sm" aria-expanded="false" aria-controls="more-details"><i data-icon="chevron-down" class="sm"></i>and 3 more</button></div><ul id="more-details" hidden><li>Segment 3: The dialogue is longer than 15 seconds.</li><li>Segment 4: The dialogue is empty.</li><li>Segment 4: The shot description is required.</li></ul></div></div>
           <div class="field"><label for="name">Product name <span class="req">(required)</span></label>
             <input id="name" class="input" type="text" value="Morning Focus Blend" data-when="default uploading upload-rejected saving conflict session-expired" aria-describedby="name-h">
-            <input id="name-e" class="input" type="text" value="" aria-invalid="true" aria-describedby="name-err" data-when="validation-error" hidden>
-            <div class="error" id="name-err" data-when="validation-error" hidden><i data-icon="circle-alert" class="sm"></i>Enter the product name.</div>
+            <input id="name-e" class="input" type="text" value="" aria-invalid="true" aria-describedby="name-err" data-when="validation-error details-summary" hidden>
+            <div class="error" id="name-err" data-when="validation-error details-summary" hidden><i data-icon="circle-alert" class="sm"></i>Enter the product name.</div>
             <div class="help" id="name-h">Up to 200 characters.</div></div>
           <div class="field"><label for="desc">Product description <span class="req">(required)</span></label>
             <textarea id="desc" class="textarea" data-when="default uploading upload-rejected saving conflict session-expired">Lion's Mane and Cordyceps capsules for a steady start to the day. 60 capsules, vegan, third-party tested. Taken with breakfast.</textarea>
-            <textarea id="desc-e" class="textarea" aria-invalid="true" aria-describedby="desc-err" data-when="validation-error" hidden></textarea>
-            <div class="error" id="desc-err" data-when="validation-error" hidden><i data-icon="circle-alert" class="sm"></i>Describe the product so the script can feature it.</div>
+            <textarea id="desc-e" class="textarea" aria-invalid="true" aria-describedby="desc-err" data-when="validation-error details-summary" hidden></textarea>
+            <div class="error" id="desc-err" data-when="validation-error details-summary" hidden><i data-icon="circle-alert" class="sm"></i>Describe the product so the script can feature it.</div>
             <div class="counter">124 / 2000</div></div>
           <div class="field"><span class="label">Product image <span class="req">(optional)</span></span>
             <div class="upload-item" data-when="default saving conflict session-expired" hidden><div class="thumb"><img src="../assets/img/product-bottle.svg" alt="Uploaded product photo: amber bottle with a green label" width="56" height="56"></div><div class="grow"><div class="ui strong">morning-focus-bottle.jpg</div><div class="ui muted">2.4 MB · JPEG · location data removed</div></div><span class="badge badge-success"><i data-icon="circle-check"></i>Ready</span><button class="btn btn-ghost icon sm" aria-label="Remove image"><i data-icon="trash-2" class="sm"></i></button></div>
             <div class="upload-item" data-when="uploading" hidden><div class="thumb"><span class="skel sq-56"></span></div><div class="grow"><div class="ui strong">morning-focus-bottle.jpg</div><div class="progress" role="progressbar" aria-label="Processing image" aria-valuetext="Processing"><i class="w-60"></i></div><div class="ui muted" role="status">Processing: checking the file and removing location data</div></div><span class="badge badge-info"><span class="spinner" aria-hidden="true"></span>Processing</span></div>
             <div class="upload-item rejected" data-when="upload-rejected" hidden role="alert"><div class="thumb"><span class="empty-thumb"><i data-icon="file-warning"></i></span></div><div class="grow"><div class="ui strong">label-proof.pdf</div><div class="ui text-destructive">This file type is not supported. Use JPEG, PNG, WebP or GIF up to 10 MB.</div></div><span class="badge badge-destructive"><i data-icon="circle-x"></i>Rejected</span><button class="btn btn-outline sm">Choose another</button></div>
-            <div class="dropzone" data-when="upload-rejected validation-error" hidden><i data-icon="upload" class="lg"></i><div><strong>Drop an image here</strong> or <button class="btn btn-outline sm">Choose file</button></div><div class="muted">JPEG, PNG, WebP or GIF · up to 10 MB</div></div>
+            <div class="dropzone" data-when="upload-rejected validation-error details-summary" hidden><i data-icon="upload" class="lg"></i><div><strong>Drop an image here</strong> or <button class="btn btn-outline sm">Choose file</button></div><div class="muted">JPEG, PNG, WebP or GIF · up to 10 MB</div></div>
             <p class="help">Only upload images you have the right to use. If a person appears, make sure you have their permission. ShrooMap describes the product only and never guesses anything about a person.</p></div>
         </div>
-        <div class="card-footer"><button class="btn btn-outline"><i data-icon="arrow-left" class="sm"></i>Back</button><button class="btn btn-primary" data-when="default uploading upload-rejected validation-error conflict session-expired" hidden>Next: Audience and direction<i data-icon="arrow-right" class="sm"></i></button><button class="btn btn-primary" aria-busy="true" aria-disabled="true" data-when="saving" hidden><span class="spinner" aria-hidden="true"></span>Saving…</button></div>
+        <div class="card-footer"><button class="btn btn-outline"><i data-icon="arrow-left" class="sm"></i>Back</button><button class="btn btn-primary" data-when="default uploading upload-rejected validation-error details-summary conflict session-expired" hidden>Next: Audience and direction<i data-icon="arrow-right" class="sm"></i></button><button class="btn btn-primary" aria-busy="true" aria-disabled="true" data-when="saving" hidden><span class="spinner" aria-hidden="true"></span>Saving…</button></div>
       </section>
 
       <!-- STEP 3 Audience and direction -->
@@ -126,7 +127,7 @@
       </div></div>
       <div class="card"><div class="card-body stack-sm">
         <h3>Your provider keys</h3>
-        <div class="row-between ui"><span>OpenAI</span><span class="badge badge-success" data-when="default step-1 step-3 step-4 uploading upload-rejected validation-error saving generating conflict cap-reached" hidden><i data-icon="circle-check"></i>Ready</span><span class="badge badge-warning" data-when="key-missing" hidden><i data-icon="triangle-alert"></i>Missing</span></div>
+        <div class="row-between ui"><span>OpenAI</span><span class="badge badge-success" data-when="default step-1 step-3 step-4 uploading upload-rejected validation-error details-summary saving generating conflict cap-reached" hidden><i data-icon="circle-check"></i>Ready</span><span class="badge badge-warning" data-when="key-missing" hidden><i data-icon="triangle-alert"></i>Missing</span></div>
         <div class="row-between ui"><span>WaveSpeed</span><span class="badge badge-success"><i data-icon="circle-check"></i>Ready</span></div>
       </div></div>
     </aside>

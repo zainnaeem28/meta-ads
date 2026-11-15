@@ -8,14 +8,17 @@ const apiPort = Number(process.env.E2E_API_PORT ?? 4100);
 process.env.E2E_API_URL = `http://127.0.0.1:${apiPort}`;
 process.env.E2E_PROD_URL = `http://127.0.0.1:${prodPort}`;
 
+// Report folder of the ticket whose check is running (its submit_check flags name it).
+const reports = process.env.REPORT_DIR ?? 'reports/api-client';
+
 const next = (p: number) => `pnpm exec next start --hostname 127.0.0.1 --port ${p}`;
 
 // The built artifacts: `next start` for the web and the compiled api (pnpm build first).
 // Tests tagged @harness run in every browser project; the rest (CDP, font internals) run in chromium only.
 export default defineConfig({
   testDir: 'e2e',
-  outputDir: 'reports/brand/pw-output',
-  reporter: [['junit', { outputFile: 'reports/brand/e2e-junit.xml' }]],
+  outputDir: `${reports}/pw-output`,
+  reporter: [['junit', { outputFile: `${reports}/e2e-junit.xml` }]],
   // Linux CI is the baseline platform: one baseline per project, no platform suffix.
   snapshotPathTemplate: '{testDir}/__baselines__/{projectName}/{arg}{ext}',
   expect: { toHaveScreenshot: { ...SCREENSHOT } },
@@ -35,21 +38,30 @@ export default defineConfig({
   webServer: [
     {
       command: 'node ../api/dist/main.api.js',
-      env: apiEnv(apiPort),
+      env: { ...apiEnv(apiPort), WEB_ORIGIN: `http://127.0.0.1:${port}` },
       url: `http://127.0.0.1:${apiPort}/health/live`,
       reuseExistingServer: false,
       timeout: 60_000,
     },
     {
-      command: next(port),
-      env: { GALLERY_ENABLED: 'true', APP_ENV: 'test', WEB_ORIGIN: `http://127.0.0.1:${port}` },
+      // The e2e build bakes in the api origin (read by the root provider) and enables the test-only probe page.
+      command: `pnpm exec next build && ${next(port)}`,
+      env: {
+        GALLERY_ENABLED: 'true',
+        APP_ENV: 'test',
+        WEB_ORIGIN: `http://127.0.0.1:${port}`,
+        NEXT_PUBLIC_API_ORIGIN: process.env.E2E_API_URL,
+        NEXT_PUBLIC_E2E_PROBE: '1',
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: '',
+      },
       url: `http://127.0.0.1:${port}`,
       reuseExistingServer: false,
-      timeout: 60_000,
+      timeout: 240_000,
     },
     {
       // The same build run as a production deployment: the gallery must not exist there.
-      command: next(prodPort),
+      // Waits for the first server, whose command builds the shared .next artifact.
+      command: `until curl -sf http://127.0.0.1:${port} >/dev/null; do sleep 1; done; ${next(prodPort)}`,
       env: { GALLERY_ENABLED: 'true', APP_ENV: 'production' },
       url: `http://127.0.0.1:${prodPort}`,
       reuseExistingServer: false,

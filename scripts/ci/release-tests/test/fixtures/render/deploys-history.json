@@ -1,0 +1,10 @@
+[
+  {
+    "deploy": {
+      "id": "dep-prev",
+      "status": "deactivated",
+      "image": { "ref": "ghcr.io/o/shroomap/api", "sha": "__DIGEST__" }
+    },
+    "cursor": "c1"
+  }
+]

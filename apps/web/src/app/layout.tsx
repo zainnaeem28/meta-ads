@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { BRAND, pageTitle } from '@shroomap/ui/brand';
+import { AppProviders } from '../providers/app-providers';
 import './globals.css';
 
 // The absolute URLs of the social tags come from the origin configured per environment, read per request.
@@ -49,7 +50,9 @@ export const viewport: Viewport = { themeColor: BRAND.themeColor };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }
