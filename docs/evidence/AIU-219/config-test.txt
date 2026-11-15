@@ -1,0 +1,13 @@
+
+ RUN  v5.1.0 /paperclip/instances/default/projects/49d7702a-17ba-48f6-936a-6f2503a0a47e/1a1eae3f-76eb-4c97-b304-6407a3ae88d7/meta-ads/.paperclip/worktrees/feature/AIU-219-task-020-follow-up-platform-config-allow-http-r2_endpoint-and-storage_public_origin-outside-staging-prod/apps/api
+
+ ✓ src/platform/config/env-source.test.ts (9 tests) 8ms
+ ✓ src/platform/config/data-mode.test.ts (12 tests) 43ms
+ ✓ src/platform/config/schema.test.ts (122 tests | 9 skipped) 255ms
+
+ Test Files  3 passed (3)
+      Tests  134 passed | 9 skipped (143)
+   Start at  21:01:43
+   Duration  658ms (import 64%, tests 31%, transform 3%, worker 2%)
+
+JUNIT report written to /paperclip/instances/default/projects/49d7702a-17ba-48f6-936a-6f2503a0a47e/1a1eae3f-76eb-4c97-b304-6407a3ae88d7/meta-ads/.paperclip/worktrees/feature/AIU-219-task-020-follow-up-platform-config-allow-http-r2_endpoint-and-storage_public_origin-outside-staging-prod/apps/api/reports/config/junit.xml
