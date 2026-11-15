@@ -194,7 +194,7 @@ describe('role timeouts', () => {
 });
 
 describe('test database helper', () => {
-  it('creates a uniquely named database, applies nothing without a journal, and leaves nothing behind', async () => {
+  it('creates a uniquely named database, applies nothing when told not to (the real migrations need the provisioned roles), and leaves nothing behind', async () => {
     const names: string[] = [];
     await withTestDatabase(
       async (one) => {
@@ -206,11 +206,11 @@ describe('test database helper', () => {
             expect(await databaseExists(one.name)).toBe(true);
             expect(await databaseExists(two.name)).toBe(true);
           },
-          { label: 'task024' },
+          { label: 'task024', migrations: false },
         );
         expect(one.migrationsApplied).toBe(false);
       },
-      { label: 'task024' },
+      { label: 'task024', migrations: false },
     );
     for (const name of names) expect(await databaseExists(name)).toBe(false);
     expect(names.every((name) => /^t_task024_[0-9a-f]{12}$/.test(name))).toBe(true);
@@ -219,10 +219,13 @@ describe('test database helper', () => {
   it('drops the database when the work inside fails', async () => {
     let name = '';
     await expect(
-      withTestDatabase(async (one) => {
-        name = one.name;
-        throw new Error('test body failed');
-      }),
+      withTestDatabase(
+        async (one) => {
+          name = one.name;
+          throw new Error('test body failed');
+        },
+        { migrations: false },
+      ),
     ).rejects.toThrow('test body failed');
     expect(await databaseExists(name)).toBe(false);
   });

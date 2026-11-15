@@ -10,6 +10,7 @@ export default defineConfig({
   dialect: 'postgresql',
   schema: [
     './src/platform/db/schema.ts',
+    './src/database/schema/*.ts',
     './src/platform/*/schema.ts',
     './src/modules/*/infrastructure/schema.ts',
   ],
