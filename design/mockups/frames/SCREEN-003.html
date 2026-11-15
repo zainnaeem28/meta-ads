@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Set up two-step verification · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="auth">
+<!-- SCREEN-003 Two-step verification (enrol / challenge). Pattern: auth. REQ-004. Identity-provider component themed. -->
+<div class="auth"><aside class="auth-brand"><img src="../brand/shroomap-logo-dark.svg" alt="ShrooMap"><div class="stack-sm"><h1>AI UGC Ad Director</h1><p>Brief, generate and assemble brand-checked UGC video ads. For the ShrooMap team only.</p></div><p class="caption">Access is by invitation.</p></aside><main class="auth-panel"><div class="auth-card"><img class="logo-mobile" src="../brand/shroomap-logo-light.svg" alt="ShrooMap">
+<div class="stack-sm"><h1 class="ui-h" data-when="default error" hidden>Set up two-step verification</h1><h1 class="ui-h" data-when="challenge" hidden>Enter your verification code</h1><p class="muted ui" data-when="default error" hidden>Required for every account. You will not be able to use ShrooMap until it is set up.</p><p class="muted ui" data-when="challenge" hidden>Open your authenticator app and enter the 6-digit code.</p></div>
+<div class="idp-slot" data-when="default error" hidden><ol class="stack ui"><li class="row"><span class="badge badge-primary">1</span>Scan this code with an authenticator app.</li></ol><div class="qr" role="img" aria-label="QR code for authenticator setup"></div><p class="ui muted">Can't scan? Enter the setup key <span class="mono">K7QD 2MFR 9XNA</span> manually.</p>
+ <div class="field"><label for="c1">6-digit code</label><input id="c1" class="input num" inputmode="numeric" autocomplete="one-time-code" value="" data-when="default" hidden><input id="c1e" class="input num" inputmode="numeric" autocomplete="one-time-code" value="482 193" aria-invalid="true" aria-describedby="ce" data-when="error" hidden><div class="error" id="ce" data-when="error" hidden><i data-icon="circle-alert" class="sm"></i>That code is not right or has expired. Enter the current code.</div></div><button class="btn btn-primary">Verify and continue</button></div>
+<div class="idp-slot" data-when="challenge" hidden><div class="field"><label for="c2">6-digit code</label><input id="c2" class="input num" inputmode="numeric" autocomplete="one-time-code"></div><button class="btn btn-primary">Verify</button><a href="#">I lost my authenticator</a><p class="help ui muted">Recovery needs another second factor or an administrator to verify you. An email alone is not enough.</p></div>
+</div></main></div></body></html>

@@ -5,7 +5,9 @@
   "scripts": {
     "build": "next build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "next start"
+    "start": "next start",
+    "test:unit": "vitest run --config vitest.config.ts --coverage",
+    "test:e2e": "playwright test --config playwright.config.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "7.10.0",
@@ -29,6 +31,7 @@
     "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@vitest/coverage-v8": "5.1.0",
     "msw": "3.0.6",
     "typescript": "6.0.3",
     "vitest": "5.1.0"

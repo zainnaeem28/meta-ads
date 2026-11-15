@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Sign in · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="auth">
+<!-- SCREEN-001 Sign in. Pattern: auth. FLOW-05. REQ-002, 003, 004. Identity-provider component themed with tokens. -->
+<div class="auth"><aside class="auth-brand"><img src="../brand/shroomap-logo-dark.svg" alt="ShrooMap"><div class="stack-sm"><p class="ui-brand">AI UGC Ad Director</p><p>Brief, generate and assemble brand-checked UGC video ads. For the ShrooMap team only.</p></div><p class="caption">Access is by invitation.</p></aside><main class="auth-panel"><div class="auth-card"><img class="logo-mobile" src="../brand/shroomap-logo-light.svg" alt="ShrooMap">
+<div class="stack-sm"><h1 class="ui-h">Sign in</h1><p class="muted ui">Use the email address your administrator invited.</p></div>
+<div class="alert alert-info" role="status" data-when="session-expired" hidden><i data-icon="info"></i><div class="body"><span class="title">Your session ended</span><span>Sign in again to continue where you left off. Nothing you entered was lost.</span></div></div>
+<div class="alert alert-destructive" role="alert" data-when="error" hidden><i data-icon="circle-alert"></i><div class="body"><span class="title">Sign-in is unavailable right now</span><span>The sign-in service did not respond. Wait a moment and try again. If it keeps happening, tell your administrator.</span></div></div>
+<div class="idp-slot" data-when="default session-expired error invalid" hidden>
+ <div class="alert alert-destructive" role="alert" data-when="invalid" hidden><i data-icon="circle-alert"></i><div class="body"><span>That email and password do not match. Check them and try again.</span></div></div>
+ <div class="field"><label for="em">Email address</label><input id="em" class="input" type="email" autocomplete="username" value="" placeholder="name@company.com"></div>
+ <div class="field"><label for="pw">Password</label><input id="pw" class="input" type="password" autocomplete="current-password" placeholder="Your password"></div>
+ <button class="btn btn-primary" data-when="default session-expired error invalid" hidden>Continue</button>
+ <div class="divider">Sign-in is handled by our identity provider</div>
+</div>
+<div class="idp-slot" aria-busy="true" data-when="loading" hidden><span class="skel h-lg w-50"></span><span class="skel w-full"></span><span class="skel w-full"></span><span class="skel h-lg w-full"></span><p class="ui muted" role="status">Loading sign-in…</p></div>
+<p class="ui muted" data-when="default session-expired error invalid loading" hidden>No account? Accounts are created by invitation. <a href="SCREEN-002.html">Ask for access</a></p>
+</div></main></div></body></html>
