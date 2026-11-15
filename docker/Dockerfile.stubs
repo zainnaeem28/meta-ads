@@ -1,0 +1,12 @@
+# syntax=docker/dockerfile:1.7
+# Provider stubs for the dev and CI stacks (test tooling only, never shipped). Uses only the stub sources, which
+# import nothing from node_modules at runtime.
+FROM node:24.22.2-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
+WORKDIR /app
+COPY tools/provider-stubs/src tools/provider-stubs/src
+COPY docker/stubs docker/stubs
+USER node
+EXPOSE 8089
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+  CMD ["node", "-e", "require('net').connect(8089,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+CMD ["node", "docker/stubs/run.ts"]
