@@ -1,0 +1,27 @@
+{
+  "name": "shroomap",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=24.22.2 <27",
+    "pnpm": ">=10.34.9 <11"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --if-present typecheck && tsc -p tools/foundation-tests/tsconfig.json",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "build": "pnpm -r --if-present build",
+    "test:foundation": "vitest run --config tools/foundation-tests/vitest.config.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.6",
+    "dependency-cruiser": "18.7.2",
+    "eslint": "10.15.0",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.2",
+    "vitest": "5.1.0"
+  }
+}

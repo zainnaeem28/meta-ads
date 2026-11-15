@@ -1,0 +1,7 @@
+node_modules
+.next
+dist
+reports
+pnpm-lock.yaml
+docs/evidence
+next-env.d.ts

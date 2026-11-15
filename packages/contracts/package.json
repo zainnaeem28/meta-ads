@@ -1,0 +1,19 @@
+{
+  "name": "@shroomap/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.78.0",
+    "@types/js-yaml": "4.0.9",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "js-yaml": "4.3.2",
+    "openapi-sampler": "1.7.10",
+    "openapi-typescript": "7.13.0",
+    "orval": "8.48.0"
+  }
+}
