@@ -114,3 +114,7 @@ MIT 416, Apache-2.0 58, ISC 21, BSD-2-Clause 8, BSD-3-Clause 8, BlueOak-1.0.0 7,
 ## Real-entry-point run
 
 `CI=1 pnpm -w test:foundation` (5 tests, `tools/foundation-tests/foundation.test.ts`): frozen install and typecheck, built api answers `GET /health/live` with `{"status":"ok"}`, built web standalone server returns the route. JUnit: `reports/foundation/junit.xml`.
+
+## Secrets scan
+
+gitleaks 8.30.1 (release checksum verified) over the committed file set only (`git checkout-index` export): 0 findings. Scanning the working tree flags random preview keys in the gitignored `.next` build output; those are not committed.
