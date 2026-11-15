@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Provider keys · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="operator" data-nav="keys" data-role="user">
+<!-- SCREEN-010 Provider keys. Pattern: settings. FLOW-11. REQ-014..019. API-010..013, 001 -->
+<main data-width="narrow">
+  <div class="page-header"><div class="titles"><h1>Provider keys</h1><p class="desc">ShrooMap generates on your own OpenAI and WaveSpeed accounts. Keys are stored encrypted and can never be shown again, to you or anyone else.</p></div></div>
+
+  <div class="alert alert-success" role="status" data-when="saved" hidden><i data-icon="circle-check"></i><div class="body"><span class="title">WaveSpeed key saved</span><span>It ends in <span class="mono">…9fK2</span>. You will not be able to see the full key again. If you replace it later, remember to revoke the old one at WaveSpeed.</span></div></div>
+  <div class="alert alert-destructive" role="alert" data-when="disabled" hidden><i data-icon="triangle-alert"></i><div class="body"><span class="title">Your WaveSpeed key was disabled</span><span>It failed authentication 5 times in a row. Replace it to generate clips again. This notice stays until you do.</span></div></div>
+  <div class="alert alert-warning" role="status" data-when="empty" hidden><i data-icon="key-round"></i><div class="body"><span class="title">Add both keys to create ads</span><span>Briefs run on your OpenAI key and clips on your WaveSpeed key. Nothing is charged to anyone else.</span></div></div>
+
+  <div class="stack" data-when="loading" hidden aria-busy="true"><div class="card"><div class="card-body stack"><span class="skel h-lg w-25"></span><span class="skel w-75"></span><span class="skel w-50"></span></div></div><div class="card"><div class="card-body stack"><span class="skel h-lg w-25"></span><span class="skel w-75"></span></div></div></div>
+
+  <div class="stack" data-when="default empty disabled saved add-dialog testing validation-error rate-limited step-up replace-warning delete-confirm untested" hidden>
+    <!-- OpenAI -->
+    <section class="card" aria-labelledby="k1"><div class="card-body key-card">
+      <div class="stack-sm"><div class="row"><h2 id="k1">OpenAI</h2>
+        <span class="badge badge-success" data-when="default disabled saved add-dialog testing validation-error rate-limited step-up replace-warning delete-confirm untested" hidden><i data-icon="circle-check"></i>Active</span>
+        <span class="badge" data-when="empty" hidden>Not added</span></div>
+        <p class="ui muted">Used for briefs, script suggestions, image analysis and audio checks.</p>
+        <dl class="kv" data-when="default disabled saved add-dialog testing validation-error rate-limited step-up replace-warning delete-confirm untested" hidden><dt>Key</dt><dd><span class="fp">…7Q2d</span> <span class="muted">fingerprint 4f9a·1c07</span></dd><dt>Added</dt><dd>3 Nov 2026</dd><dt>Last used</dt><dd>12 min ago</dd><dt>Jobs running</dt><dd>1</dd></dl></div>
+      <div class="row"><button class="btn btn-outline" data-when="default disabled saved add-dialog testing validation-error rate-limited step-up replace-warning delete-confirm untested" hidden><i data-icon="refresh-cw" class="sm"></i>Replace key</button><button class="btn btn-destructive-outline" data-when="default disabled saved add-dialog testing validation-error rate-limited step-up replace-warning delete-confirm untested" hidden><i data-icon="trash-2" class="sm"></i>Delete</button><button class="btn btn-primary" data-when="empty" hidden><i data-icon="plus" class="sm"></i>Add OpenAI key</button></div>
+    </div></section>
+    <!-- WaveSpeed -->
+    <section class="card" aria-labelledby="k2"><div class="card-body key-card">
+      <div class="stack-sm"><div class="row"><h2 id="k2">WaveSpeed</h2>
+        <span class="badge badge-destructive" data-when="disabled" hidden><i data-icon="circle-x"></i>Disabled</span>
+        <span class="badge badge-success" data-when="saved" hidden><i data-icon="circle-check"></i>Active</span>
+        <span class="badge badge-warning" data-when="untested" hidden><i data-icon="clock"></i>Untested</span>
+        <span class="badge" data-when="default empty add-dialog testing validation-error rate-limited step-up replace-warning delete-confirm" hidden>Not added</span></div>
+        <p class="ui muted">Used to generate the video clips.</p>
+        <dl class="kv" data-when="disabled saved untested" hidden><dt>Key</dt><dd><span class="fp">…9fK2</span> <span class="muted">fingerprint b21e·88d0</span></dd><dt>Added</dt><dd data-when="saved untested" hidden>Just now</dd><dt data-when="disabled" hidden>Disabled</dt><dd data-when="disabled" hidden>Today, after 5 failed sign-ins to WaveSpeed</dd></dl>
+        <p class="ui muted" data-when="untested" hidden>WaveSpeed has no free way to test a key, so it is checked by your first clip. If that fails, the key is marked invalid.</p></div>
+      <div class="row"><button class="btn btn-primary" data-when="default add-dialog testing validation-error rate-limited step-up" hidden><i data-icon="plus" class="sm"></i>Add WaveSpeed key</button><button class="btn btn-primary" data-when="empty" hidden><i data-icon="plus" class="sm"></i>Add WaveSpeed key</button><button class="btn btn-primary" data-when="disabled" hidden><i data-icon="refresh-cw" class="sm"></i>Replace key</button><button class="btn btn-outline" data-when="saved untested" hidden>Replace key</button></div>
+    </div></section>
+
+    <section class="card" aria-labelledby="ev"><div class="card-header"><h2 id="ev">Key activity</h2><span class="ui muted">Never includes key values</span></div>
+      <ul class="timeline card-body tight"><li><i data-icon="circle-check" class="text-success"></i><span>OpenAI key added</span><span class="when">3 Nov, 09:14</span></li><li><i data-icon="circle-x" class="text-destructive"></i><span>WaveSpeed key test failed (authentication)</span><span class="when">12 Nov, 16:02</span></li><li><i data-icon="trash-2"></i><span>WaveSpeed key deleted</span><span class="when">12 Nov, 16:05</span></li></ul></section>
+
+    <div class="alert alert-info"><i data-icon="shield-check"></i><div class="body"><span class="title">How your keys are protected</span><span>Keys are encrypted on the server, used only for your own jobs, and never sent to your browser or visible to administrators. Adding, replacing or deleting a key needs a recent sign-in.</span></div></div>
+  </div>
+</main>
+
+<!-- add dialog family -->
+<div class="scrim" data-when="add-dialog testing validation-error rate-limited" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="ad-t"><div class="dialog-head"><h2 id="ad-t">Add WaveSpeed key</h2><button class="btn btn-ghost icon sm" aria-label="Close"><i data-icon="x" class="sm"></i></button></div>
+    <div class="dialog-body">
+      <div class="alert alert-destructive" role="alert" data-when="rate-limited" hidden><i data-icon="clock"></i><div class="body"><span>Too many attempts. You can try again in 7 minutes.</span></div></div>
+      <div class="field"><label for="key">WaveSpeed API key</label>
+        <input id="key" class="input key-input" type="password" autocomplete="off" value="" placeholder="Paste your key" data-when="add-dialog rate-limited" hidden>
+        <input id="key2" class="input key-input" type="password" autocomplete="off" value="••••••••••••••••••••" data-when="testing" hidden aria-busy="true" readonly>
+        <input id="key3" class="input key-input" type="password" autocomplete="off" value="••••••••••••••••••••" aria-invalid="true" aria-describedby="key-err" data-when="validation-error" hidden>
+        <div class="error" id="key-err" data-when="validation-error" hidden><i data-icon="circle-alert" class="sm"></i>WaveSpeed did not accept this key. Check that you copied the whole key from your WaveSpeed account.</div>
+        <div class="help">Pasting is fine. Spaces at the ends are removed. The key is tested once without being charged and then stored encrypted.</div></div>
+    </div>
+    <div class="dialog-foot"><button class="btn btn-outline">Cancel</button><button class="btn btn-primary" data-when="add-dialog validation-error" hidden>Test and save</button><button class="btn btn-primary" aria-busy="true" aria-disabled="true" data-when="testing" hidden><span class="spinner" aria-hidden="true"></span>Testing…</button><button class="btn btn-primary" aria-disabled="true" disabled data-when="rate-limited" hidden>Test and save</button></div></div>
+</div>
+<div class="scrim" data-when="step-up" hidden><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="su-t"><div class="dialog-head"><h2 id="su-t">Confirm it's you</h2></div><div class="dialog-body"><p>For your security, adding or changing a key needs a sign-in from the last 10 minutes. You will return here and can continue.</p></div><div class="dialog-foot"><button class="btn btn-outline">Cancel</button><button class="btn btn-primary"><i data-icon="lock" class="sm"></i>Sign in again</button></div></div></div>
+<div class="scrim" data-when="replace-warning" hidden><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="rp-t"><div class="dialog-head"><h2 id="rp-t">Replace OpenAI key?</h2></div><div class="dialog-body"><div class="alert alert-warning"><i data-icon="triangle-alert"></i><div class="body"><span>1 job is running on the current key. It will fail with "key replaced during the job". Credit it already used at OpenAI cannot be recovered.</span></div></div><div class="field"><label for="nk">New OpenAI API key</label><input id="nk" class="input key-input" type="password" autocomplete="off" placeholder="Paste your new key"><div class="help">The new key is tested first. If the test fails, your current key stays. Afterwards, revoke the old key at OpenAI.</div></div></div><div class="dialog-foot"><button class="btn btn-outline">Cancel</button><button class="btn btn-primary">Test and replace</button></div></div></div>
+<div class="scrim" data-when="delete-confirm" hidden><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dk-t"><div class="dialog-head"><h2 id="dk-t">Delete OpenAI key?</h2></div><div class="dialog-body"><p>The encrypted key is erased immediately. Jobs running on it fail cleanly. Backups age out on the normal schedule.</p><p class="muted">You will not be able to generate briefs until you add a key again.</p></div><div class="dialog-foot"><button class="btn btn-outline">Cancel</button><button class="btn btn-destructive"><i data-icon="trash-2" class="sm"></i>Delete key</button></div></div></div>
+</body>
+</html>

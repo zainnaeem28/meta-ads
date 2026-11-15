@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campaigns · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="operator" data-nav="campaigns" data-role="user">
+<!-- SCREEN-005 Campaigns (History + Drafts). Pattern: list with search, filters and paging. FLOW-06, FLOW-07, FLOW-10 (unavailable link target). REQ-012, 013. API-040, 020, 042 -->
+<main>
+  <div class="page-header">
+    <div class="titles">
+      <h1>Campaigns</h1>
+      <p class="desc">Your ad campaigns and drafts. Only you can see them.</p>
+    </div>
+    <div class="actions"><a class="btn btn-primary" href="SCREEN-006.html"><i data-icon="plus" class="sm"></i>New brief</a></div>
+  </div>
+
+  <div data-when="key-missing" hidden>
+    <div class="alert alert-warning" role="status"><i data-icon="triangle-alert"></i><div class="body"><span class="title">Add your provider keys to start generating</span><span>Brief generation needs your OpenAI key and clip generation needs your WaveSpeed key. Costs are billed to your own provider accounts.</span><div class="actions"><a class="btn btn-outline sm" href="SCREEN-010.html">Add provider keys</a></div></div></div>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Campaigns and drafts">
+    <a class="tab" role="tab" href="#" aria-selected="true" data-when="default loading empty no-results error delete-confirm deleted menu-open key-missing">History <span class="badge">24</span></a>
+    <a class="tab" role="tab" href="#" aria-selected="false" data-when="default loading empty no-results error delete-confirm deleted menu-open key-missing">Drafts <span class="badge">3</span></a>
+    <a class="tab" role="tab" href="#" aria-selected="false" data-when="drafts">History <span class="badge">24</span></a>
+    <a class="tab" role="tab" href="#" aria-selected="true" data-when="drafts">Drafts <span class="badge">3</span></a>
+  </div>
+
+  <div class="filter-bar" data-when="default loading no-results error delete-confirm deleted menu-open key-missing drafts">
+    <div class="field search"><label class="sr-only" for="q">Search campaigns by product name or description</label>
+      <div class="input-group"><i data-icon="search" class="sm"></i><input id="q" class="input" type="search" placeholder="Search by product name or description" data-when="default loading error delete-confirm deleted menu-open key-missing drafts"><input id="q2" class="input" type="search" value="reishi gummies" data-when="no-results"></div></div>
+    <div class="chips" role="group" aria-label="Filter by status" data-when="default loading error delete-confirm deleted menu-open key-missing no-results">
+      <button class="chip" aria-pressed="true">All</button><button class="chip" aria-pressed="false">Processing <span class="num">3</span></button><button class="chip" aria-pressed="false">Completed <span class="num">19</span></button><button class="chip" aria-pressed="false">Failed <span class="num">2</span></button>
+    </div>
+  </div>
+
+  <!-- default / delete-confirm / deleted / menu-open / key-missing -->
+  <section class="card" aria-label="Campaign history" data-when="default delete-confirm deleted menu-open key-missing">
+    <ul class="stack-rows">
+      <li class="campaign-row"><div class="poster" aria-hidden="true"><i data-icon="film"></i></div>
+        <div class="grow"><a class="name" href="SCREEN-007.html">Morning Focus Blend</a><div class="meta"><span>UGC ad</span><span>3 segments · 45 s</span><span>Updated 12 min ago</span></div></div>
+        <div class="row-actions row"><span class="badge badge-info"><span class="spinner" aria-hidden="true"></span>Clips: 2 of 3 generating</span><button class="btn btn-ghost icon sm" aria-label="Delete Morning Focus Blend"><i data-icon="trash-2" class="sm"></i></button></div></li>
+      <li class="campaign-row"><div class="poster" aria-hidden="true"><i data-icon="film"></i></div>
+        <div class="grow"><a class="name" href="SCREEN-009.html">Evening Calm Gummies</a><div class="meta"><span>UGC ad</span><span>4 segments · 60 s</span><span>Updated 2 h ago</span></div></div>
+        <div class="row-actions row"><span class="badge badge-success"><i data-icon="circle-check"></i>Final ready</span><button class="btn btn-ghost icon sm" aria-label="Delete Evening Calm Gummies"><i data-icon="trash-2" class="sm"></i></button></div></li>
+      <li class="campaign-row"><div class="poster" aria-hidden="true"><i data-icon="film"></i></div>
+        <div class="grow"><a class="name" href="SCREEN-008.html">Cordyceps Trail Mix, spring launch with the long working title the team keeps</a><div class="meta"><span>UGC ad</span><span>2 segments · 30 s</span><span>Updated yesterday</span></div></div>
+        <div class="row-actions row"><span class="badge badge-destructive"><i data-icon="circle-x"></i>Clip 2 failed: provider timeout</span><button class="btn btn-ghost icon sm" aria-label="Delete Cordyceps Trail Mix"><i data-icon="trash-2" class="sm"></i></button></div></li>
+      <li class="campaign-row"><div class="poster" aria-hidden="true"><i data-icon="film"></i></div>
+        <div class="grow"><a class="name" href="SCREEN-007.html">Reishi Night Tincture</a><div class="meta"><span>UGC ad</span><span>3 segments · 45 s</span><span>Updated yesterday</span></div></div>
+        <div class="row-actions row"><span class="badge badge-warning"><i data-icon="clock"></i>Brief ready to review</span><button class="btn btn-ghost icon sm" aria-label="Delete Reishi Night Tincture"><i data-icon="trash-2" class="sm"></i></button></div></li>
+      <li class="campaign-row"><div class="poster" aria-hidden="true"><i data-icon="film"></i></div>
+        <div class="grow"><a class="name" href="SCREEN-009.html">Daily Greens + Chaga</a><div class="meta"><span>UGC ad</span><span>1 segment · 15 s</span><span>Updated 3 days ago</span></div></div>
+        <div class="row-actions row"><span class="badge badge-success"><i data-icon="circle-check"></i>Final ready</span><button class="btn btn-ghost icon sm" aria-label="Delete Daily Greens + Chaga"><i data-icon="trash-2" class="sm"></i></button></div></li>
+    </ul>
+    <div class="table-foot"><span>10 campaigns per page</span><div class="pager"><button class="btn btn-outline sm" disabled><i data-icon="chevron-left" class="sm"></i>Previous</button><button class="btn btn-outline sm">Next<i data-icon="chevron-right" class="sm"></i></button></div></div>
+  </section>
+
+  <!-- drafts -->
+  <section class="card" aria-label="Drafts" data-when="drafts">
+    <ul class="stack-rows">
+      <li class="campaign-row"><div class="poster" aria-hidden="true"><i data-icon="file-text"></i></div>
+        <div class="grow"><a class="name" href="SCREEN-006.html">Lion's Mane Sampler Pack</a><div class="meta"><span>Step 3 of 4: Audience and direction</span><span>Saved 5 min ago</span></div></div>
+        <div class="row-actions row"><span class="badge">Draft</span><button class="btn btn-ghost icon sm" aria-label="Delete draft Lion's Mane Sampler Pack"><i data-icon="trash-2" class="sm"></i></button></div></li>
+      <li class="campaign-row"><div class="poster" aria-hidden="true"><i data-icon="file-text"></i></div>
+        <div class="grow"><a class="name" href="SCREEN-006.html">Untitled draft</a><div class="meta"><span>Step 1 of 4: Format</span><span>Saved yesterday</span></div></div>
+        <div class="row-actions row"><span class="badge">Draft</span><button class="btn btn-ghost icon sm" aria-label="Delete draft Untitled draft"><i data-icon="trash-2" class="sm"></i></button></div></li>
+      <li class="campaign-row"><div class="poster" aria-hidden="true"><i data-icon="file-text"></i></div>
+        <div class="grow"><a class="name" href="SCREEN-006.html">Chaga Chai Latte Mix</a><div class="meta"><span>Step 4 of 4: Concept and script</span><span>Saved 4 days ago</span></div></div>
+        <div class="row-actions row"><span class="badge">Draft</span><button class="btn btn-ghost icon sm" aria-label="Delete draft Chaga Chai Latte Mix"><i data-icon="trash-2" class="sm"></i></button></div></li>
+    </ul>
+  </section>
+
+  <!-- loading -->
+  <section class="card" aria-busy="true" aria-label="Loading campaigns" data-when="loading">
+    <ul class="stack-rows">
+      <li class="campaign-row"><span class="skel sq-56"></span><div class="stack-sm"><span class="skel w-50 h-lg"></span><span class="skel w-75"></span></div><span class="skel w-140"></span></li>
+      <li class="campaign-row"><span class="skel sq-56"></span><div class="stack-sm"><span class="skel w-50 h-lg"></span><span class="skel w-75"></span></div><span class="skel w-140"></span></li>
+      <li class="campaign-row"><span class="skel sq-56"></span><div class="stack-sm"><span class="skel w-50 h-lg"></span><span class="skel w-75"></span></div><span class="skel w-140"></span></li>
+      <li class="campaign-row"><span class="skel sq-56"></span><div class="stack-sm"><span class="skel w-50 h-lg"></span><span class="skel w-75"></span></div><span class="skel w-140"></span></li>
+    </ul>
+  </section>
+
+  <!-- empty -->
+  <section class="card" data-when="empty">
+    <div class="empty"><div class="glyph"><i data-icon="clapperboard" class="lg"></i></div><h2>No campaigns yet</h2><p>Start with a brief. Enter the product and audience, and ShrooMap drafts a brand-checked script you can turn into a video ad.</p><a class="btn btn-primary" href="SCREEN-006.html"><i data-icon="plus" class="sm"></i>New brief</a></div>
+  </section>
+
+  <!-- no results -->
+  <section class="card" data-when="no-results">
+    <div class="empty"><div class="glyph"><i data-icon="search" class="lg"></i></div><h2>No campaigns match "reishi gummies"</h2><p>Try a different product name or description, or clear the status filter.</p><button class="btn btn-outline">Clear search and filters</button></div>
+  </section>
+
+  <!-- error -->
+  <section class="card" data-when="error">
+    <div class="empty error" role="alert"><div class="glyph"><i data-icon="circle-alert" class="lg"></i></div><h2>Campaigns could not be loaded</h2><p>Something went wrong on our side. Your campaigns are safe. Try again in a moment.</p><button class="btn btn-outline"><i data-icon="refresh-cw" class="sm"></i>Try again</button></div>
+  </section>
+</main>
+
+<!-- delete confirmation (CMP-013) -->
+<div class="scrim" data-when="delete-confirm" hidden>
+  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d">
+    <div class="dialog-head"><h2 id="dlg-t">Delete "Reishi Night Tincture"?</h2><button class="btn btn-ghost icon sm" aria-label="Close"><i data-icon="x" class="sm"></i></button></div>
+    <div class="dialog-body" id="dlg-d">
+      <p>This removes the campaign for everyone, including its brief, 3 clips, any final video and the product image. Clips still generating are cancelled.</p>
+      <div class="alert alert-warning"><i data-icon="triangle-alert"></i><div class="body"><span>Credit already spent at WaveSpeed or OpenAI cannot be recovered. Copies held by those providers are removed only where they allow it.</span></div></div>
+      <p class="muted">This cannot be undone.</p>
+    </div>
+    <div class="dialog-foot"><button class="btn btn-outline">Cancel</button><button class="btn btn-destructive"><i data-icon="trash-2" class="sm"></i>Delete campaign</button></div>
+  </div>
+</div>
+
+<!-- success toast after deletion -->
+<div class="toast-region" data-when="deleted" hidden><div class="toast" role="status"><i data-icon="circle-check"></i><div><strong>Campaign deleted.</strong><br>Its media is being removed in the background.</div><button class="btn btn-ghost icon sm close" aria-label="Dismiss"><i data-icon="x" class="sm"></i></button></div></div>
+</body>
+</html>

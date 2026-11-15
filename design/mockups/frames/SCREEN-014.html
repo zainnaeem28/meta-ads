@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Alerts · Administration · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="admin" data-nav="alerts" data-role="admin" data-alerts="2">
+<!-- SCREEN-014 Alerts. Pattern: list with acknowledge. REQ-013, 019, 026. API-125, 126 -->
+<main data-width="wide">
+<div class="page-header"><div class="titles"><h1>Alerts</h1><p class="desc">Things that need an administrator. Alerts show user IDs only.</p></div></div>
+<div class="toast-region" data-when="acknowledged" hidden><div class="toast" role="status"><i data-icon="circle-check"></i><div><strong>Alert acknowledged.</strong></div></div></div>
+<section class="card" data-when="default acknowledged" hidden aria-label="Alerts"><ul class="stack-rows">
+<li class="stack-row"><i data-icon="circle-alert" class="text-destructive"></i><div class="grow stack-sm"><div class="row"><strong>Account erasure is stuck</strong><span class="badge badge-destructive">Needs action</span></div><div class="ui muted">u_c07e…9b30: 7 stored objects could not be removed after 6 attempts. It keeps retrying. Check storage access.</div><div class="caption muted">Today, 08:41</div></div><button class="btn btn-outline sm">Acknowledge</button></li>
+<li class="stack-row"><i data-icon="triangle-alert" class="text-warning"></i><div class="grow stack-sm"><div class="row"><strong>Unusual job volume</strong><span class="badge badge-warning">Check</span></div><div class="ui muted">u_8f3a…c21d created 24 provider jobs in 10 minutes (limit 20).</div><div class="caption muted">Today, 07:15</div></div><button class="btn btn-outline sm">Acknowledge</button></li>
+<li class="stack-row"><i data-icon="info" class="text-success"></i><div class="grow stack-sm"><div class="row"><strong>Administrator role granted</strong><span class="badge badge-info">Notice</span></div><div class="ui muted">Dana W. made u_41b9…07ae an administrator.</div><div class="caption muted">Yesterday, 17:02</div></div><span class="badge badge-success"><i data-icon="check"></i>Acknowledged</span></li>
+</ul></section>
+<section class="card" data-when="empty" hidden><div class="empty"><div class="glyph"><i data-icon="bell" class="lg"></i></div><h2>No alerts</h2><p>Stuck deletions, unusual usage and role changes appear here.</p></div></section>
+<section class="card" data-when="loading" hidden aria-busy="true"><div class="card-body stack"><span class="skel h-lg w-50"></span><span class="skel w-full"></span><span class="skel h-lg w-50"></span><span class="skel w-full"></span></div></section>
+</main>
+</body>
+</html>

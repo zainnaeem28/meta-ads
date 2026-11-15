@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Access · ShrooMap</title>
+  <link rel="icon" href="../brand/favicon.svg">
+  <link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css">
+  <script src="../assets/icons.js"></script><script src="../shell.js"></script>
+</head>
+<body data-portal="auth">
+<!-- SCREEN-002 Access unavailable: not linked / request pending / suspended / removed / invite invalid. Pattern: auth message. REQ-003, 026. API-001, 002 -->
+<div class="auth"><aside class="auth-brand"><img src="../brand/shroomap-logo-dark.svg" alt="ShrooMap"><div class="stack-sm"><h1>AI UGC Ad Director</h1><p>Brief, generate and assemble brand-checked UGC video ads. For the ShrooMap team only.</p></div><p class="caption">Access is by invitation.</p></aside><main class="auth-panel"><div class="auth-card"><img class="logo-mobile" src="../brand/shroomap-logo-light.svg" alt="ShrooMap">
+<div data-when="not-linked" hidden class="stack"><div class="stack-sm"><h1 class="ui-h">This account has no access yet</h1><p class="muted ui">Accounts are created by invitation or after an administrator approves a request.</p></div>
+ <div class="idp-slot"><div class="field"><label for="why">Tell your administrator who you are <span class="req">(optional)</span></label><textarea id="why" class="textarea">Marketing, social team. Working with Dana on the spring launch ads.</textarea><div class="help">Your email address from sign-in is sent with the request. Do not include passwords or keys.</div></div><button class="btn btn-primary">Request access</button></div><a href="SCREEN-001.html">Back to sign in</a></div>
+<div data-when="request-pending" hidden class="stack"><div class="empty"><div class="glyph"><i data-icon="clock" class="lg"></i></div><h1 class="ui-h">Request sent</h1><p>An administrator will review it. You will be able to sign in once it is approved. Nothing else is needed from you.</p><a class="btn btn-outline" href="SCREEN-001.html">Back to sign in</a></div></div>
+<div data-when="suspended" hidden class="stack"><div class="empty"><div class="glyph"><i data-icon="ban" class="lg"></i></div><h1 class="ui-h">This account is suspended</h1><p>Your work is kept and can be restored. Ask an administrator to reinstate your account.</p><a class="btn btn-outline" href="SCREEN-001.html">Back to sign in</a></div></div>
+<div data-when="removed" hidden class="stack"><div class="empty error"><div class="glyph"><i data-icon="user-x" class="lg"></i></div><h1 class="ui-h">This account has been removed</h1><p>It can no longer be used to sign in. If this is a mistake, ask an administrator to invite you again.</p><a class="btn btn-outline" href="SCREEN-001.html">Back to sign in</a></div></div>
+<div data-when="invite-invalid" hidden class="stack"><div class="empty"><div class="glyph"><i data-icon="mail" class="lg"></i></div><h1 class="ui-h">This invitation cannot be used</h1><p>It may have expired, been used already, or been withdrawn. Ask an administrator to send a new one.</p><a class="btn btn-outline" href="SCREEN-001.html">Back to sign in</a></div></div>
+</div></main></div></body></html>
