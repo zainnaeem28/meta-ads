@@ -38,7 +38,12 @@ export default defineConfig({
   webServer: [
     {
       command: 'node ../api/dist/main.api.js',
-      env: { ...apiEnv(apiPort), WEB_ORIGIN: `http://127.0.0.1:${port}` },
+      // E2E_DATABASE_URL points the api at the shared test database server when localhost has none.
+      env: {
+        ...apiEnv(apiPort),
+        WEB_ORIGIN: `http://127.0.0.1:${port}`,
+        ...(process.env.E2E_DATABASE_URL ? { DATABASE_URL: process.env.E2E_DATABASE_URL } : {}),
+      },
       url: `http://127.0.0.1:${apiPort}/health/live`,
       reuseExistingServer: false,
       timeout: 60_000,
