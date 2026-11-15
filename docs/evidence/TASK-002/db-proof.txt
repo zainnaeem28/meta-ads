@@ -1,0 +1,59 @@
+# TASK-002 db-proof: CI=1 pnpm --filter foundation-tests test:db
+# commit fc735613daaca04562e74f45fa2be0bc36759e87 on 2026-11-15T19:39:02Z
+> foundation-tests@0.0.0 test:db <repo>
+> vitest run --config vitest.config.ts
+ RUN  v5.1.0 <repo>
+stdout | db-roles.test.ts
+[db-proof] server PostgreSQL 17.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+[db-proof] pg_dump pg_dump (PostgreSQL) 17.12 (Debian 17.12-0+deb13u1) (<client>/pgc/usr/lib/postgresql/17/bin/pg_dump)
+[db-proof] database t002_d65e61b7, roles suffix d65e61b7
+stdout | db-roles.test.ts > roles as at provisioning (TC-BKP-03, TC-BKP-04) > TC-BKP-03: app_backup attributes, memberships and connection limit
+[db-proof] TC-BKP-03: third concurrent app_backup connection refused (53300)
+stdout | db-roles.test.ts > roles as at provisioning (TC-BKP-03, TC-BKP-04) > TC-BKP-04: only the creating admin holds a grant on app_backup (ADMIN, no INHERIT, no SET)
+[db-proof] TC-BKP-04: PostgreSQL 17; pg_auth_members row = {"member":"host_admin_d65e61b7","admin_option":true,"inherit_option":false,"set_option":false}; SET ROLE refused
+stdout | db-roles.test.ts > drizzle-kit migrate as app_migrator > applies the CLI-generated probe migrations and pre-creates the pgboss schema
+[db-proof] drizzle-kit migrate exit 0
+stdout | db-roles.test.ts > jobs:migrate as app_migrator (real entry point) > installs pg-boss 12 into pgboss and creates every catalogue queue
+[db-proof] jobs:migrate stdout: created queue probe-standard | created queue probe-partitioned | jobs:migrate done
+stdout | db-roles.test.ts > jobs:migrate as app_migrator (real entry point) > installs pg-boss 12 into pgboss and creates every catalogue queue
+[db-proof] pgboss tables after jobs:migrate: 14
+stdout | db-roles.test.ts > runtime roles with only USAGE and DML on pgboss (TC-BKP-08, post-install) > app_api can send and read queue state
+[db-proof] app_api: send (standard and partitioned queue) and getQueue ok
+stdout | db-roles.test.ts > runtime roles with only USAGE and DML on pgboss (TC-BKP-08, post-install) > app_worker can send, fetch, complete, schedule, and run supervision and maintenance
+[db-proof] app_worker: send/fetch/complete/schedule/supervise ok on both queues; warnings=[]
+stdout | db-roles.test.ts > runtime roles with only USAGE and DML on pgboss (TC-BKP-08, post-install) > a pg-boss migrate start as app_worker writes no DDL
+[db-proof] app_worker: migrate start on a current schema -> started (schema already current, nothing to migrate)
+stdout | db-roles.test.ts > runtime roles with only USAGE and DML on pgboss (TC-BKP-08, post-install) > a pg-boss migrate start as app_api writes no DDL
+[db-proof] app_api: migrate start on a current schema -> started (schema already current, nothing to migrate)
+stdout | db-roles.test.ts > runtime roles with only USAGE and DML on pgboss (TC-BKP-08, post-install) > GAP G-1: with the M0001 default privileges a plain (non-partitioned) createQueue by a runtime role is not refused
+[db-proof] GAP G-1 observed: app_worker created plain queue probe-runtime-plain-worker (one INSERT on pgboss.queue)
+stdout | db-roles.test.ts > runtime roles with only USAGE and DML on pgboss (TC-BKP-08, post-install) > GAP G-1: with the M0001 default privileges a plain (non-partitioned) createQueue by a runtime role is not refused
+[db-proof] GAP G-1 observed: app_api created plain queue probe-runtime-plain-api (one INSERT on pgboss.queue)
+stdout | db-roles.test.ts > runtime roles with only USAGE and DML on pgboss (TC-BKP-08, post-install) > candidate for M0001/jobs:migrate (recorded, not product code): REVOKE INSERT, DELETE on pgboss.queue from app_api and DELETE from app_worker
+[db-proof] candidate: app_api createQueue refused (plain and partitioned); app_worker keeps INSERT for the scheduler; runtime flows pass; warnings=[]
+stdout | db-roles.test.ts > runtime roles with only USAGE and DML on pgboss (TC-BKP-08, post-install) > a queue missing from the catalogue is detected by the runtime role (startup check basis)
+[db-proof] startup check basis: missing queue named = probe-added-later
+stdout | db-roles.test.ts > queue-then-dump (TC-BKP-07) > jobs:migrate creates a new queue and pg_dump as app_backup contains its table
+[db-proof] jobs:migrate created tables for the new queue: ja57575d93979125b7ff767dea37691588675e5f1e8b1b4c4bef4e480
+stdout | db-roles.test.ts > queue-then-dump (TC-BKP-07) > jobs:migrate creates a new queue and pg_dump as app_backup contains its table
+[db-proof] finding: app_backup reads drizzle.__drizzle_migrations -> 42501 permission denied for schema drizzle
+[db-proof] pg_dump as app_backup exit 0, 70612 bytes
+stdout | db-roles.test.ts > app_backup is read-only (TC-BKP-02, TC-BKP-05, TC-BKP-06) > TC-BKP-02: writes, DDL, SET ROLE, COPY, terminate and nextval are refused with no side effects
+[db-proof] TC-BKP-02: 25 statements refused with 42501; row counts and sequence unchanged {"items":1,"jobs":9,"seq":"1"}
+stdout | db-roles.test.ts > leftovers check > lists the run objects that the teardown must drop
+[db-proof] before teardown: 6 run objects present
+stdout | db-roles.test.ts
+[db-proof] teardown: leftovers after drop = []
+ ✓ db-roles.test.ts (23 tests) 3061ms
+   ✓ drizzle-kit migrate as app_migrator (1)
+     ✓ applies the CLI-generated probe migrations and pre-creates the pgboss schema 1256ms
+   ✓ jobs:migrate as app_migrator (real entry point) (1)
+     ✓ installs pg-boss 12 into pgboss and creates every catalogue queue 453ms
+   ✓ queue-then-dump (TC-BKP-07) (1)
+     ✓ jobs:migrate creates a new queue and pg_dump as app_backup contains its table 332ms
+ Test Files  1 passed (1)
+      Tests  23 passed (23)
+   Start at  19:39:02
+   Duration  3.24s (tests 97%, import 3%)
+JUNIT report written to <repo>
+exit 0
