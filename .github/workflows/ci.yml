@@ -1,0 +1,321 @@
+# Hosted CI (DEVOPS-PLAN 3.2, 4.2). Main events only: a pull request into main, a push to main, a manual run.
+# Branch names are literal (not the default-branch variable). No schedule, tag, pull_request_target or
+# workflow_run trigger. Every job blocks; quality-gate reads every report. scripts/ci/validate.sh enforces this.
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  CI: '1'
+  CI_SOURCE_SHA: ${{ github.sha }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pinned pnpm and the frozen dependency set
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          git diff --exit-code
+      - name: Lint, types, layers, contract
+        run: |
+          scripts/ci/lint.sh
+          scripts/ci/types.sh
+          scripts/ci/layers.sh
+          scripts/ci/contract.sh
+      - name: Workflow validation (actionlint, pinned actions, permissions, triggers)
+        run: scripts/ci/validate.sh
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports-validate
+          path: reports/
+          retention-days: 90
+          if-no-files-found: error
+
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: [validate]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pinned pnpm and the frozen dependency set
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          git diff --exit-code
+      - name: Unit suites with coverage
+        run: scripts/ci/unit.sh
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports-unit
+          path: reports/
+          retention-days: 90
+          if-no-files-found: error
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: [validate]
+    services:
+      test-db:
+        image: postgres:17.7@sha256:2006493727bd5277eece187319af1ef82b4cf82cf4fc1ed00da0775b646ac2a4
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pinned pnpm and the frozen dependency set
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          git diff --exit-code
+      - name: PostgreSQL 17 client for pg_dump
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-client-17
+      - name: API, worker and database suites on real PostgreSQL
+        env:
+          TEST_DATABASE_ADMIN_URL: postgres://postgres@localhost:5432/postgres
+        run: scripts/ci/integration.sh
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports-integration
+          path: reports/
+          retention-days: 90
+          if-no-files-found: error
+
+  security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: [validate]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pinned pnpm and the frozen dependency set
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          git diff --exit-code
+      - name: SAST, dependencies, secrets, configuration scan
+        run: |
+          rc=0
+          scripts/ci/sast.sh || rc=1
+          scripts/ci/deps.sh || rc=1
+          CI_SECRETS_FULL=1 scripts/ci/secrets.sh || rc=1
+          scripts/ci/iac.sh || rc=1
+          exit "$rc"
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports-security
+          path: reports/
+          retention-days: 90
+          if-no-files-found: error
+
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: [unit, integration, security]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pinned pnpm and the frozen dependency set
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          git diff --exit-code
+      - name: Production build
+        run: scripts/ci/build.sh
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports-build
+          path: reports/
+          retention-days: 90
+          if-no-files-found: error
+
+  container-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: [build]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pinned pnpm and the frozen dependency set
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          git diff --exit-code
+      - name: Image scan (not applicable until a Dockerfile exists)
+        run: scripts/ci/container.sh
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports-container-scan
+          path: reports/
+          retention-days: 90
+          if-no-files-found: error
+
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: [build]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pinned pnpm and the frozen dependency set
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          git diff --exit-code
+      - name: Browser journeys (not applicable until a Playwright config exists)
+        run: scripts/ci/e2e.sh
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports-e2e
+          path: reports/
+          retention-days: 90
+          if-no-files-found: error
+
+  dast-baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: [build]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: ZAP baseline needs a compose stack, which does not exist yet
+        run: |
+          if [ -e docker-compose.yml ] || [ -e compose.yaml ] || [ -d docker ]; then
+            echo "A compose stack exists but scripts/ci has no dast wrapper yet; add it (DEVOPS-PLAN 4.2)." >&2
+            exit 1
+          fi
+          echo "dast-baseline: not applicable: no compose stack yet"
+
+  quality-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    if: always()
+    needs: [validate, unit, integration, security, build, container-scan, e2e, dast-baseline]
+    permissions:
+      contents: read
+    steps:
+      - name: Every required job must have succeeded
+        env:
+          NEEDS: ${{ toJson(needs) }}
+        run: |
+          echo "$NEEDS" | python3 -I -c '
+          import json, sys
+          bad = {k: v["result"] for k, v in json.load(sys.stdin).items() if v["result"] != "success"}
+          if bad:
+              sys.exit("jobs not successful: %s" % bad)
+          '
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: reports-*
+          path: reports
+          merge-multiple: true
+      - name: Quality gate over every report
+        run: scripts/ci/quality-gate.sh --profile release
+      - name: Upload quality manifest
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: quality
+          path: reports/quality.json
+          retention-days: 90
+          if-no-files-found: error

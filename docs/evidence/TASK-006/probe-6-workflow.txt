@@ -1,0 +1,58 @@
+== real workflow: actionlint + validate.sh
+1.7.12
+actionlint: 1 file(s) clean
+validate.sh: workflow policy clean (1 file(s))
+exit 0
+-- unpinned
+actionlint: 1 file(s) clean
+validate.sh: 9 problem(s)
+  unpinned.yml:30: action actions/checkout@v4 is not pinned by a full commit SHA
+validate exit 1
+-- wider-perm
+actionlint: 1 file(s) clean
+validate.sh: 9 problem(s)
+  wider-perm.yml:28: permission contents: write is wider than the allow-list
+validate exit 1
+-- write-all
+actionlint: 1 file(s) clean
+validate.sh: 1 problem(s)
+  write-all.yml:17: permissions must be listed per scope, not read-all or write-all
+validate exit 1
+-- default-branch-var
+../../../../../../../../../../..default-branch-var.yml:8:21: character ' ' is invalid for branch and tag names. ref name cannot contain spaces, ~, ^, :, [, ?, *. see `man git-check-ref-format` for more details. note that regular expression is unavailable. note: filter pattern syntax is explained at https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet [glob]
+  |
+8 |     branches: [ "${{ github.event.repository.default_branch }}" ]
+validate exit 1
+-- schedule
+actionlint: 1 file(s) clean
+validate.sh: 1 problem(s)
+  schedule.yml:11: trigger schedule is forbidden
+validate exit 1
+-- tag
+actionlint: 1 file(s) clean
+validate.sh: 1 problem(s)
+  tag.yml:10: tag triggers are forbidden (main-only hosted CI)
+validate exit 1
+-- third-party
+actionlint: 1 file(s) clean
+validate.sh: 8 problem(s)
+  third-party.yml:52: action evil/upload is not on the allow-list (DEVOPS-PLAN 4.6)
+validate exit 1
+-- continue-on-error
+actionlint: 1 file(s) clean
+validate.sh: 3 problem(s)
+  continue-on-error.yml:27: continue-on-error is not allowed (every job blocks)
+validate exit 1
+-- removed required job (security): validate.sh
+actionlint: 1 file(s) clean
+validate.sh: 1 problem(s)
+  missing-job.yml:1: required job(s) missing: security
+validate exit 1
+-- removed required job (security): quality-gate (probe 6)
+FAIL workflow     required job(s) missing: security
+QUALITY GATE FAIL (profile ticket, commit 544b6f29b0a1)
+gate exit 1
+-- control: the real workflow in the same gate
+PASS workflow     9 jobs, all 9 required present, actions pinned
+QUALITY GATE PASS (profile ticket, commit 544b6f29b0a1)
+gate exit 0
