@@ -1,0 +1,54 @@
+# rescan.sh --dry-run (CI=1), real run on this tree
+== rescan: deps (dry-run) ==
+RESULT PASS: 0 blocking, 2 recorded, 0 dismissed, 0 tool failures
+RESULT PASS: 0 blocking, 2 recorded, 0 dismissed, 0 tool failures
+== rescan: sast (dry-run) ==
+RESULT PASS: 0 blocking, 0 recorded, 0 dismissed, 0 tool failures
+== rescan: secrets (dry-run) ==
+RESULT PASS: 0 blocking, 0 recorded, 0 dismissed, 0 tool failures
+== rescan: container (dry-run) ==
+== rescan: iac (dry-run) ==
+RESULT PASS: 0 blocking, 0 recorded, 0 dismissed, 0 tool failures
+rescan deps      pass           blocking=0 recorded=4 
+rescan sast      pass           blocking=0 recorded=0 
+rescan secrets   pass           blocking=0 recorded=0 
+rescan container not_applicable blocking=0 recorded=0 container: not applicable: no Dockerfile or docker/ folder yet
+rescan iac       pass           blocking=0 recorded=0 
+RESCAN PASS (dry-run)
+
+## junit
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites><testsuite name="rescan" tests="5" failures="1" skipped="1" errors="0">
+<testcase classname="rescan" name="deps"></testcase>
+<testcase classname="rescan" name="sast"></testcase>
+<testcase classname="rescan" name="secrets"><failure message="exit 1, 9 blocking"/></testcase>
+<testcase classname="rescan" name="container"><skipped message="container: not applicable: no Dockerfile or docker/ folder yet"/></testcase>
+<testcase classname="rescan" name="iac"></testcase>
+</testsuite></testsuites>
+
+# rescan.sh (full, whole git history) — fails as designed
+== rescan: deps (full) ==
+RESULT PASS: 0 blocking, 2 recorded, 0 dismissed, 0 tool failures
+RESULT PASS: 0 blocking, 2 recorded, 0 dismissed, 0 tool failures
+== rescan: sast (full) ==
+RESULT PASS: 0 blocking, 0 recorded, 0 dismissed, 0 tool failures
+== rescan: secrets (full) ==
+8:49PM INF 33 commits scanned.
+RESULT FAIL: 9 blocking, 0 recorded, 0 dismissed, 0 tool failures
+== rescan: container (full) ==
+== rescan: iac (full) ==
+RESULT PASS: 0 blocking, 0 recorded, 0 dismissed, 0 tool failures
+rescan deps      pass           blocking=0 recorded=4 
+rescan sast      pass           blocking=0 recorded=0 
+rescan secrets   fail           blocking=9 recorded=0 
+rescan container not_applicable blocking=0 recorded=0 container: not applicable: no Dockerfile or docker/ folder yet
+rescan iac       pass           blocking=0 recorded=0 
+RESCAN FAIL (full)
+
+## Finding from the full-history rescan (not a real secret; fix outside this ticket's paths)
+
+9 `openai-key-shaped` hits in docs/evidence/TASK-003, -004, -115. They are branch names such as
+branch names that contain "task-115" followed by a long slug: the substring the tail of "task-115-…" (an "sk-" followed by 32+ word characters) matches
+the rule regex because the rule in scripts/ci/gitleaks.toml has no left word boundary. Change request to the
+Orchestrator (owner TASK-115 / DO security config): anchor the regex (a leading non-alphanumeric class, RE2 has no
+lookbehind) and probe `task-…` text. Per-ticket checks (range secrets scan) pass.
