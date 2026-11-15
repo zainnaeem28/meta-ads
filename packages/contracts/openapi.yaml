@@ -1,0 +1,3029 @@
+openapi: 3.1.0
+info:
+  title: ShrooMap AI UGC Ad Director API
+  version: 1.0.0-design.5
+  license:
+    name: Proprietary (ShrooMap internal)
+    identifier: LicenseRef-Proprietary
+  summary: REST contract for apps/api (design revision, AIU-13). Source of truth for packages/contracts/openapi.yaml after G2.
+  description: |
+    Design artifact produced by AIU-13 (technical design). It implements the operation IDs, owners, scopes and
+    error codes frozen in AIU-12 `shared-boundaries` (rev 3561aefa, plus the v3 delta listed in ARCHITECTURE.md §3.9).
+    Nothing here authorizes implementation before G2.
+
+    Conventions (ARCHITECTURE.md §3):
+    - Every JSON response uses the envelope `{success, data, metaData}` or `{success:false, error, metaData}`.
+    - `metaData.requestId` equals the `X-Request-ID` response header. `metaData.timestamp` is the server's UTC time.
+    - Error `code` values are the lowercase snake_case registry codes (ADR-010). Clients branch on `code`, never on `message`.
+    - IDs are UUIDv7 strings. Instants are RFC 3339 UTC. Money is a decimal string with 4 fraction digits (USD).
+    - Lists use forward-only cursor pagination (`limit` 1..50, default 20; signed opaque `cursor`).
+    - `x-api-id` is the stable operation ID used by screens, tests and tickets. `x-owner` is the owning module.
+    - `x-scope`: U (active linked user, own records), U+RA (U plus recent auth and MFA), A (admin, MFA, recent auth),
+      T (verified token without a users row), Pub (no auth), M (metrics token: `Authorization: Bearer <METRICS_TOKEN>`,
+      no user session; TD-D41). An M operation answers a missing or wrong token, or a deployment without `METRICS_TOKEN`,
+      with 404 `not_found` and the same body as an unknown path, never 401 or 403, so the token check gives no oracle.
+    - Paths: user and admin operations are under `/api/v1`; the health probes (API-900, 901) and the internal metrics
+      operations (API-902, 903) override `servers` with `/` and are served at the root. Both groups are exempt from the
+      user and IP rate limits and are not counted in the metrics windows.
+    - `x-job-creating: true` marks the SB-D14 operations: Idempotency-Key required, reuse, key → cap → reserve, rate limit,
+      never refused for the running limit. A video job created while the owner already has RUNNING_JOBS_PER_USER jobs
+      running is accepted as 202 with the job `pending`; the worker claims it when the running count drops below the limit
+      (TD-D38). 429 `rate_limited` comes only from the job-creation rate limit; 422 only from caps, keys and rule checks.
+      If the price table has no row effective now for the provider operation whose estimate the call reserves, the call is
+      503 `service_unavailable` and nothing is created: no job, no reservation, no idempotency record, so the same key
+      works after the fix (TD-D39).
+    - `x-error-codes` lists every error code the operation may return in addition to the common ones
+      (`unauthenticated`, `not_linked`, `account_suspended`, `account_removed`, `mfa_required`, `rate_limited`,
+      `internal_error`, `service_unavailable`, `validation_failed` for malformed input, `method_not_allowed`).
+    - Every authenticated operation declares `400` (malformed path, query, header or body), `401`, `403`, `429`
+      (general limit, with `Retry-After`), `500` and `503` responses, so generated clients and per-status tests see them.
+      `405` is produced by the router for an unsupported method and is not repeated per operation; its shape is
+      `components.responses.MethodNotAllowed` (TD-D37).
+    - Order (TD-D34): the router decides first. A path template the contract declares, called with a method it does not
+      declare, is 405 `method_not_allowed` with an `Allow` header; a path no template matches is 404 `not_found`. Both are
+      decided from the path template only (never a record lookup) and before authentication, so they are the same with or
+      without a token and never 401. `Allow` lists the methods declared for that path template, plus `HEAD` when `GET` is
+      declared, never `OPTIONS`, upper case, in the order `GET, HEAD, POST, PUT, PATCH, DELETE`, joined by ", " (a path with
+      `GET` and `POST` → `Allow: GET, HEAD, POST`).
+    - Timeouts (TD-D40): one server-wide request timeout of 60 s. A request whose headers and body are not fully received
+      in time is answered 408 by the server and closed; that 408 is not enveloped. The timeout does not bound handler time:
+      a database statement or lock timeout is 503 `service_unavailable` (enveloped). A cut at the hosting edge is the edge's
+      502/504, not enveloped.
+    - Browser access (TD-D40): authentication is Bearer only and the API reads no cookies, so there is no CSRF check and no
+      CSRF status. CORS allows only the web origin (exact match). The API never refuses by origin: a preflight from another
+      origin gets 204 without `Access-Control-Allow-Origin`, and the browser blocks it; no response carries
+      `Access-Control-Allow-Origin: *`. A CORS refusal therefore has no status of its own.
+servers:
+  - url: /api/v1
+security:
+  - sessionBearer: []
+tags:
+  - name: identity
+    description: Account, linking, invitations, access requests, roles, signup mode
+  - name: provider-keys
+    description: User-supplied provider keys (write-only) and key events
+  - name: campaigns
+    description: Drafts and campaign history
+  - name: media
+    description: Uploads, media records and signed URLs
+  - name: brief
+    description: Image analysis, brief generation, edits, claim issues
+  - name: production
+    description: Segment clips, audio QC, assembly, thumbstopper
+  - name: lifecycle
+    description: Campaign deletion, suspend, reinstate, removal and erasure
+  - name: audit
+    description: Administrator alerts
+  - name: reporting
+    description: Admin usage and cost report
+  - name: platform
+    description: Health endpoints and internal metrics (API-900..903)
+
+paths:
+  /me:
+    get:
+      tags: [identity]
+      operationId: getMe
+      summary: Current account, link state, MFA state and key notices
+      description: |
+        Also accepts a verified token with no users row (scope T) and then returns `linkState: not_linked`.
+        The auth guard links the account on first verified token when a valid invitation, an approved access request,
+        the guarded open mode or the first-admin rule applies (FLOW-12). Linking is idempotent.
+      x-api-id: API-001
+      x-owner: identity
+      x-scope: U, T
+      x-error-codes: []
+      responses:
+        '200':
+          description: Account view
+          headers: { X-Request-ID: { $ref: '#/components/headers/XRequestId' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /access-requests:
+    post:
+      tags: [identity]
+      operationId: createAccessRequest
+      summary: Request access (only when ACCESS_REQUEST_FORM_ENABLED is true)
+      description: |
+        The requester's email and subject come from the verified token and the identity provider, never from the body.
+        The response is identical whether a request already exists, was declined, or was created (no enumeration).
+        When the form is disabled the route returns 404 `not_found`.
+      x-api-id: API-002
+      x-owner: identity
+      x-scope: T
+      x-error-codes: [not_found]
+      x-rate-limit: 3 per hour per subject; 20 per hour per client IP
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AccessRequestCreate' }
+      responses:
+        '202':
+          description: Request recorded or already pending
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessRequestAcceptedResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /me/provider-keys:
+    get:
+      tags: [provider-keys]
+      operationId: listMyProviderKeys
+      summary: Status of my provider keys (never the key)
+      x-api-id: API-010
+      x-owner: provider-keys
+      x-scope: U
+      x-error-codes: []
+      responses:
+        '200':
+          description: One entry per provider (openai, wavespeed), configured or not
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProviderKeyListResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /me/provider-keys/{provider}:
+    parameters:
+      - $ref: '#/components/parameters/Provider'
+    put:
+      tags: [provider-keys]
+      operationId: putMyProviderKey
+      summary: Add or replace my key for one provider (format check, non-billing probe, seal)
+      description: |
+        Requires recent authentication (RECENT_AUTH_MAX_AGE) and MFA per MFA_REQUIRED_FOR. Request body logging is off.
+        A probe 401 refuses the key (422 `key_invalid`) and stores nothing. A probe timeout, provider error, or a provider
+        without a non-billing call stores the key as `untested`. Replacement is atomic (version + 1); a failed replacement
+        leaves the old key unchanged. Jobs in flight on the replaced key fail with cause `key_replaced` (the screen warns
+        first using `inFlightJobCount` from API-010).
+      x-api-id: API-011
+      x-owner: provider-keys
+      x-scope: U+RA
+      x-error-codes: [recent_auth_required, key_invalid]
+      x-rate-limit: 5 attempts per account per 10 minutes (KEY_ENTRY_ATTEMPTS_PER_WINDOW); the sixth gets 429 and a key event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProviderKeyPut' }
+      responses:
+        '200':
+          description: Stored; returns status, hint and fingerprint only
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProviderKeyPutResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    delete:
+      tags: [provider-keys]
+      operationId: deleteMyProviderKey
+      summary: Hard-delete my key for one provider
+      description: Jobs in flight on the key fail with cause `key_deleted`. Writes a key event and an audit event.
+      x-api-id: API-012
+      x-owner: provider-keys
+      x-scope: U+RA
+      x-error-codes: [recent_auth_required, not_found]
+      responses:
+        '204':
+          description: Deleted (no body)
+          headers: { X-Request-ID: { $ref: '#/components/headers/XRequestId' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /me/key-events:
+    get:
+      tags: [provider-keys]
+      operationId: listMyKeyEvents
+      summary: My key-event trail (never values)
+      x-api-id: API-013
+      x-owner: provider-keys
+      x-scope: U
+      x-error-codes: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: provider
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ProviderName' }
+      responses:
+        '200':
+          description: Newest first, ordered by (at desc, id desc)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KeyEventPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /drafts:
+    get:
+      tags: [campaigns]
+      operationId: listDrafts
+      summary: My unsubmitted drafts (Drafts tab)
+      x-api-id: API-020
+      x-owner: campaigns
+      x-scope: U
+      x-error-codes: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Drafts with campaignId null, ordered by (updated_at desc, id desc)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DraftPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    post:
+      tags: [campaigns]
+      operationId: createDraft
+      summary: Start a new draft ("Start over" creates a fresh one)
+      x-api-id: API-021
+      x-owner: campaigns
+      x-scope: U
+      x-error-codes: [media_not_ready, state_conflict]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DraftWrite' }
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location: { $ref: '#/components/headers/Location' }
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DraftResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /drafts/{draftId}:
+    parameters:
+      - $ref: '#/components/parameters/DraftId'
+    get:
+      tags: [campaigns]
+      operationId: getDraft
+      summary: One draft (read-only with campaignId once submitted)
+      x-api-id: API-022
+      x-owner: campaigns
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Draft
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DraftResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    patch:
+      tags: [campaigns]
+      operationId: patchDraft
+      summary: Save a step (optimistic version in If-Match)
+      x-api-id: API-023
+      x-owner: campaigns
+      x-scope: U
+      x-error-codes: [not_found, version_conflict, state_conflict, media_not_ready]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DraftPatch' }
+      responses:
+        '200':
+          description: Saved
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DraftResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    delete:
+      tags: [campaigns]
+      operationId: deleteDraft
+      summary: Delete an unsubmitted draft and its product image
+      x-api-id: API-025
+      x-owner: campaigns
+      x-scope: U
+      x-error-codes: [not_found, state_conflict]
+      responses:
+        '204':
+          description: Deleted (no body)
+          headers: { X-Request-ID: { $ref: '#/components/headers/XRequestId' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /drafts/{draftId}/submit:
+    parameters:
+      - $ref: '#/components/parameters/DraftId'
+    post:
+      tags: [campaigns]
+      operationId: submitDraft
+      summary: Submit a complete draft; creates the campaign and the brief-generation job
+      description: |
+        One transaction: validate completeness, create the campaign, set drafts.campaign_id (unique), attach the product
+        image to the campaign, create the brief and the brief_generation job with its reservation, enqueue. A second
+        submit returns the same campaign and job (`reused: true`), with or without the same Idempotency-Key (SB-D1, SB-D13).
+      x-api-id: API-024
+      x-owner: campaigns
+      x-scope: U
+      x-job-creating: true
+      x-error-codes: [not_found, idempotency_key_reused, key_missing, key_disabled, spend_cap_reached, media_not_ready]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Campaign created (or replayed) and brief generation accepted
+          headers:
+            Location: { $ref: '#/components/headers/Location' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubmitDraftResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /media:
+    post:
+      tags: [media]
+      operationId: uploadMedia
+      summary: Upload a product image into quarantine (10 MiB, JPEG/PNG/WebP/GIF by magic bytes)
+      description: |
+        Size is checked before the body is read (Content-Length and a streaming cap). The quota is checked before storage.
+        The bytes go to `q/{userId}/{mediaId}`; the record starts in `processing` and the worker sanitizes it to `ready`
+        or `rejected`. The client file name is never used.
+      x-api-id: API-030
+      x-owner: media
+      x-scope: U
+      x-error-codes: [payload_too_large, unsupported_media_type, storage_quota_reached]
+      x-rate-limit: 30 uploads per account per 10 minutes
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  contentMediaType: application/octet-stream
+                  description: The image bytes (single part, at most MEDIA_MAX_UPLOAD_BYTES)
+      responses:
+        '201':
+          description: Accepted into quarantine, state processing
+          headers:
+            Location: { $ref: '#/components/headers/Location' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MediaResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /media/{mediaId}:
+    parameters:
+      - $ref: '#/components/parameters/MediaId'
+    get:
+      tags: [media]
+      operationId: getMedia
+      summary: Media record state and reject reason
+      x-api-id: API-031
+      x-owner: media
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Media record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MediaResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /media/{mediaId}/url:
+    parameters:
+      - $ref: '#/components/parameters/MediaId'
+    get:
+      tags: [media]
+      operationId: getMediaUrl
+      summary: Short-lived signed GET URL for one ready object (browser purpose)
+      description: Issued only after the ownership check. Life MEDIA_BROWSER_URL_TTL (default 300 s, allowed 300..900). Response is `Cache-Control no-store`.
+      x-api-id: API-032
+      x-owner: media
+      x-scope: U
+      x-error-codes: [not_found, media_not_ready]
+      responses:
+        '200':
+          description: Signed URL
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignedUrlResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /media/{mediaId}/analysis:
+    parameters:
+      - $ref: '#/components/parameters/MediaId'
+    post:
+      tags: [brief]
+      operationId: requestImageAnalysis
+      summary: Start (or reuse) a product-only image analysis job on a ready image
+      x-api-id: API-035
+      x-owner: brief
+      x-scope: U
+      x-job-creating: true
+      x-error-codes: [not_found, media_not_ready, idempotency_key_reused, key_missing, key_disabled, spend_cap_reached]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Job accepted or reused
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImageAnalysisResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    get:
+      tags: [brief]
+      operationId: getImageAnalysis
+      summary: Latest analysis job and product description for the image
+      x-api-id: API-036
+      x-owner: brief
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Latest analysis (job null when none was requested)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImageAnalysisResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /campaigns:
+    get:
+      tags: [campaigns]
+      operationId: listCampaigns
+      summary: History list with search and progress filter (hides deleting)
+      description: |
+        `q` matches product name or description, case-insensitive, literal (LIKE wildcards escaped), 2..100 characters.
+        Ordered by (updated_at desc, id desc). A campaign updated during traversal may move; the client de-duplicates by ID.
+      x-api-id: API-040
+      x-owner: campaigns
+      x-scope: U
+      x-error-codes: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: q
+          in: query
+          required: false
+          schema: { type: string, minLength: 2, maxLength: 100 }
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, processing, completed, failed]
+            default: all
+      responses:
+        '200':
+          description: Campaign summaries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CampaignPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /campaigns/{campaignId}:
+    parameters:
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [campaigns]
+      operationId: getCampaign
+      summary: Campaign summary with brief and job states
+      x-api-id: API-041
+      x-owner: campaigns
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Campaign detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CampaignResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    delete:
+      tags: [lifecycle]
+      operationId: deleteCampaign
+      summary: Delete my campaign (disappears at once; media removed by a retried background run)
+      description: |
+        One transaction: campaign → deleting, every non-terminal job of the campaign → cancelled (cause
+        `cancelled_campaign_deleted`; reservations released or converted), deletion run inserted and enqueued, audit event.
+        Repeating the call on a campaign already deleting returns 404 (it is invisible).
+      x-api-id: API-042
+      x-owner: lifecycle
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '202':
+          description: Deletion accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionAcceptedResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /campaigns/{campaignId}/brief:
+    parameters:
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [brief]
+      operationId: getBrief
+      summary: Brief, segments (position, state, revision), open issues and generation state
+      x-api-id: API-050
+      x-owner: brief
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Brief
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BriefResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    patch:
+      tags: [brief]
+      operationId: editBrief
+      summary: Edit segment dialogue and prompts in place; re-runs claim rules; accepted → draft
+      x-api-id: API-051
+      x-owner: brief
+      x-scope: U
+      x-error-codes: [not_found, version_conflict, state_conflict]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BriefPatch' }
+      responses:
+        '200':
+          description: Saved, with re-run issues and bumped segment revisions
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BriefResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /campaigns/{campaignId}/brief/accept:
+    parameters:
+      - $ref: '#/components/parameters/CampaignId'
+    post:
+      tags: [brief]
+      operationId: acceptBrief
+      summary: Accept a draft brief with no open claim issues
+      description: Accepting an already accepted brief at the same version returns 200 with the brief (idempotent).
+      x-api-id: API-052
+      x-owner: brief
+      x-scope: U
+      x-error-codes: [not_found, version_conflict, state_conflict, open_claim_issues]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: Accepted
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BriefResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /campaigns/{campaignId}/brief/regenerate:
+    parameters:
+      - $ref: '#/components/parameters/CampaignId'
+    post:
+      tags: [brief]
+      operationId: regenerateBrief
+      summary: Regenerate the brief (replaces edits in place on success)
+      x-api-id: API-053
+      x-owner: brief
+      x-scope: U
+      x-job-creating: true
+      x-error-codes: [not_found, state_conflict, idempotency_key_reused, key_missing, key_disabled, spend_cap_reached]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Generation job accepted or reused; brief moves to generating
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BriefJobResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /claim-issues/{issueId}/clear:
+    parameters:
+      - name: issueId
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Uuid' }
+    post:
+      tags: [brief]
+      operationId: clearClaimIssue
+      summary: Clear an other-class claim issue with a reason (refused for high_risk)
+      x-api-id: API-054
+      x-owner: brief
+      x-scope: U
+      x-error-codes: [not_found, state_conflict, claim_not_clearable]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClearClaimIssue' }
+      responses:
+        '200':
+          description: Cleared (clearing an already cleared issue returns it unchanged)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClaimIssueResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /campaigns/{campaignId}/segments/{position}/jobs:
+    parameters:
+      - $ref: '#/components/parameters/CampaignId'
+      - $ref: '#/components/parameters/SegmentPosition'
+    post:
+      tags: [production]
+      operationId: generateSegment
+      summary: Generate (or reuse) the clip for one segment of an accepted brief
+      description: |
+        Requires brief `accepted` and the segment `active`; otherwise 422 `brief_not_accepted` (message distinguishes a
+        retired segment). Uses the WaveSpeed key. Reuse by hash of (segment, prompt text, reference media IDs, options).
+        Never refused for the running limit: when the owner already has RUNNING_JOBS_PER_USER video jobs running, the job
+        is created and returned as 202 `pending` and is claimed when a running job ends (TD-D38).
+      x-api-id: API-060
+      x-owner: production
+      x-scope: U
+      x-job-creating: true
+      x-error-codes: [not_found, brief_not_accepted, idempotency_key_reused, key_missing, key_disabled, spend_cap_reached]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GenerateSegment' }
+      responses:
+        '202':
+          description: Job accepted or reused
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoJobResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /campaigns/{campaignId}/video-jobs:
+    parameters:
+      - $ref: '#/components/parameters/CampaignId'
+    get:
+      tags: [production]
+      operationId: listCampaignVideoJobs
+      summary: Latest job and latest QC per segment, with derived out-of-date flags
+      x-api-id: API-061
+      x-owner: production
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: One entry per active or retired segment position (1..4)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SegmentJobsResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /video-jobs/{videoJobId}:
+    parameters:
+      - $ref: '#/components/parameters/VideoJobId'
+    get:
+      tags: [production]
+      operationId: getVideoJob
+      summary: One video job with its QC history (polled every 3 s while non-terminal)
+      x-api-id: API-062
+      x-owner: production
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Video job
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoJobResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /video-jobs/{videoJobId}/retry:
+    parameters:
+      - $ref: '#/components/parameters/VideoJobId'
+    post:
+      tags: [production]
+      operationId: retryVideoJob
+      summary: Retry a failed or cancelled job (always a new row and a new reservation)
+      description: Only for a job in `failed` or `cancelled`; otherwise 409 `state_conflict`. Uses the segment's current revision and still needs the brief `accepted`.
+      x-api-id: API-063
+      x-owner: production
+      x-scope: U
+      x-job-creating: true
+      x-error-codes: [not_found, state_conflict, brief_not_accepted, idempotency_key_reused, key_missing, key_disabled, spend_cap_reached]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: New job accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoJobResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /video-jobs/{videoJobId}/qc:
+    parameters:
+      - $ref: '#/components/parameters/VideoJobId'
+    post:
+      tags: [production]
+      operationId: rerunQc
+      summary: Re-run audio QC on a completed clip (paid transcription; new qc_runs row, old kept)
+      x-api-id: API-064
+      x-owner: production
+      x-scope: U
+      x-job-creating: true
+      x-error-codes: [not_found, clip_not_completed, idempotency_key_reused, key_missing, key_disabled, spend_cap_reached]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: QC run accepted or reused (a non-terminal QC run for the job is reused)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QcRunResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /campaigns/{campaignId}/assemblies:
+    parameters:
+      - $ref: '#/components/parameters/CampaignId'
+    post:
+      tags: [production]
+      operationId: createAssembly
+      summary: Assemble chosen completed clips in order (reuse; daily render limit)
+      description: |
+        Every clip must be a `completed` video job of this campaign, else 422 `clip_not_completed` naming it. A clip whose
+        latest QC is `failed` or `skipped` must be listed in `confirmations.qcOverride`, else 422
+        `qc_confirmation_required` naming it; the confirmation is recorded (`qcOverrideConfirmed=true`). A clip whose latest
+        QC is `pending` needs no confirmation (QC never blocks assembly) and is stored with `qcOverrideConfirmed=false`
+        (TD-D36). A `qcOverride` ID that is not in `clips` is 400 `validation_failed` with `details[].path`
+        `confirmations.qcOverride[i]`, and nothing is created. A `qcOverride` ID for a clip whose latest QC is `passed` or
+        `pending` when the request commits is accepted and ignored: no confirmation is recorded and that clip's
+        `qcOverrideConfirmed` is false (TD-D35). QC state is read inside the create transaction. Only a new row counts toward
+        ASSEMBLY_RENDERS_PER_USER_PER_DAY (UTC day); the 21st gets 422 `assembly_daily_limit`.
+      x-api-id: API-070
+      x-owner: production
+      x-scope: U
+      x-job-creating: true
+      x-error-codes: [not_found, clip_not_completed, qc_confirmation_required, assembly_daily_limit, idempotency_key_reused, spend_cap_reached]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssemblyCreate' }
+      responses:
+        '202':
+          description: Assembly accepted or reused
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssemblyResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /assemblies/{assemblyId}:
+    parameters:
+      - name: assemblyId
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Uuid' }
+    get:
+      tags: [production]
+      operationId: getAssembly
+      summary: Assembly state, derived out-of-date flag and output media ID (download via API-032)
+      x-api-id: API-071
+      x-owner: production
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Assembly
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssemblyResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /campaigns/{campaignId}/thumbstopper:
+    parameters:
+      - $ref: '#/components/parameters/CampaignId'
+    post:
+      tags: [production]
+      operationId: generateThumbstopper
+      summary: Generate (or reuse) a thumbstopper callout image on the user's OpenAI key
+      x-api-id: API-075
+      x-owner: production
+      x-scope: U
+      x-job-creating: true
+      x-error-codes: [not_found, open_claim_issues, idempotency_key_reused, key_missing, key_disabled, spend_cap_reached]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ThumbstopperCreate' }
+      responses:
+        '202':
+          description: Job accepted or reused
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ThumbstopperResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    get:
+      tags: [production]
+      operationId: getThumbstopper
+      summary: Latest thumbstopper job of the campaign (data null when none)
+      x-api-id: API-076
+      x-owner: production
+      x-scope: U
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Latest thumbstopper
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ThumbstopperResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/users:
+    get:
+      tags: [identity]
+      operationId: adminListUsers
+      summary: Accounts with email (the only screen that shows email)
+      x-api-id: API-100
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/AccountStatus' }
+      responses:
+        '200':
+          description: Accounts ordered by (created_at desc, id desc)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/users/{userId}/suspend:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [lifecycle]
+      operationId: adminSuspendUser
+      summary: Suspend (reversible); cancels the user's non-terminal jobs
+      description: Suspending an already suspended account returns 200 unchanged.
+      x-api-id: API-101
+      x-owner: lifecycle
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, not_found, state_conflict, self_action, last_admin]
+      responses:
+        '200':
+          description: Suspended
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/users/{userId}/reinstate:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [lifecycle]
+      operationId: adminReinstateUser
+      summary: Reinstate a suspended account (cancelled jobs are not resumed)
+      x-api-id: API-102
+      x-owner: lifecycle
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, not_found, state_conflict, self_action]
+      responses:
+        '200':
+          description: Active again (reinstating an active account returns 200 unchanged)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/users/{userId}/remove:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [lifecycle]
+      operationId: adminRemoveUser
+      summary: Remove (irreversible) after typed confirmation of the account email
+      description: |
+        `confirmation` must equal the target's email (case-insensitive, trimmed), else 422 `confirmation_mismatch` and
+        nothing changes. One transaction: status removed, keys hard-deleted, campaigns deleting and their non-terminal jobs
+        cancelled, erasure run inserted and enqueued, audit event. Erasure progress: API-105.
+      x-api-id: API-103
+      x-owner: lifecycle
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, not_found, state_conflict, self_action, last_admin, confirmation_mismatch]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RemoveUser' }
+      responses:
+        '202':
+          description: Removal accepted; erasure runs in the background
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionAcceptedResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/users/{userId}/role:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    put:
+      tags: [identity]
+      operationId: adminSetRole
+      summary: Grant or revoke admin (audit event and alert to the other admins)
+      description: Setting the role the account already has returns 200 unchanged with no event.
+      x-api-id: API-104
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, not_found, state_conflict, self_action, last_admin, version_conflict]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetRole' }
+      responses:
+        '200':
+          description: Role set
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/erasures:
+    get:
+      tags: [lifecycle]
+      operationId: adminListErasures
+      summary: Account erasure runs (IDs only)
+      x-api-id: API-105
+      x-owner: lifecycle
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: state
+          in: query
+          required: false
+          schema: { type: string, enum: [running, completed, stuck] }
+      responses:
+        '200':
+          description: Runs ordered by (updated_at desc, id desc)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionRunPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/invitations:
+    get:
+      tags: [identity]
+      operationId: adminListInvitations
+      summary: Invitations (expired ones are shown as expired, computed at read and persisted by the sweep)
+      x-api-id: API-110
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: state
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/InvitationState' }
+      responses:
+        '200':
+          description: Invitations ordered by (created_at desc, id desc)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitationPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    post:
+      tags: [identity]
+      operationId: adminCreateInvitation
+      summary: Invite an email (same response for an already registered address)
+      description: |
+        Normalizes the email (trim, lower case). Refused with 422 `invite_domain_not_allowed` when INVITE_EMAIL_DOMAINS is
+        set and the domain is not listed. An existing pending invitation for the address is revoked and replaced.
+        A send failure leaves the invitation `invited` with `sendState: send_failed` (resend through API-112).
+      x-api-id: API-111
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, invite_domain_not_allowed]
+      x-rate-limit: 20 per admin per hour
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvitationCreate' }
+      responses:
+        '202':
+          description: Processed (identical for a fresh invite and an already registered address)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitationAcceptedResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/invitations/{invitationId}/resend:
+    parameters:
+      - $ref: '#/components/parameters/InvitationId'
+    post:
+      tags: [identity]
+      operationId: adminResendInvitation
+      summary: Resend an invited (not expired) invitation; the expiry restarts
+      description: |
+        Accepts an `invited` invitation in any send state (`pending`, `sent`, `send_failed`). A `pending` row whose
+        provider call never returned (crash between insert and the identity provider's answer) is recovered here: an
+        old provider invitation is revoked only when `idp_invitation_id` is set, then a new one is created
+        (ARCHITECTURE.md §5.1 invitation table). Anything other than `invited` → 409 `state_conflict`.
+      x-api-id: API-112
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, not_found, state_conflict]
+      x-rate-limit: shares the API-111 bucket
+      responses:
+        '200':
+          description: Resent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/invitations/{invitationId}/revoke:
+    parameters:
+      - $ref: '#/components/parameters/InvitationId'
+    post:
+      tags: [identity]
+      operationId: adminRevokeInvitation
+      summary: Revoke an invited invitation (revoking a revoked one returns it unchanged)
+      x-api-id: API-113
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, not_found, state_conflict]
+      responses:
+        '200':
+          description: Revoked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/access-requests:
+    get:
+      tags: [identity]
+      operationId: adminListAccessRequests
+      summary: Access requests
+      x-api-id: API-115
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: state
+          in: query
+          required: false
+          schema: { type: string, enum: [pending, approved, declined], default: pending }
+      responses:
+        '200':
+          description: Requests ordered by (created_at desc, id desc)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessRequestPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/access-requests/{accessRequestId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/AccessRequestId'
+    post:
+      tags: [identity]
+      operationId: adminApproveAccessRequest
+      summary: Approve a pending request; links the requester as an active user
+      x-api-id: API-116
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, not_found, state_conflict, invite_domain_not_allowed]
+      responses:
+        '200':
+          description: Approved (approving an approved request returns it unchanged)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessRequestResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/access-requests/{accessRequestId}/decline:
+    parameters:
+      - $ref: '#/components/parameters/AccessRequestId'
+    post:
+      tags: [identity]
+      operationId: adminDeclineAccessRequest
+      summary: Decline a pending request
+      x-api-id: API-117
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, not_found, state_conflict]
+      responses:
+        '200':
+          description: Declined (declining a declined request returns it unchanged)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessRequestResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/settings:
+    get:
+      tags: [identity]
+      operationId: adminGetSettings
+      summary: Signup mode (editable) and configuration values shown read-only
+      x-api-id: API-120
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required]
+      responses:
+        '200':
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SettingsResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/settings/signup-mode:
+    put:
+      tags: [identity]
+      operationId: adminSetSignupMode
+      summary: Set signup mode; flipping to open is refused until the PM-D6 prerequisites hold
+      x-api-id: API-121
+      x-owner: identity
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, signup_open_prerequisites]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetSignupMode' }
+      responses:
+        '200':
+          description: Saved (setting the current mode returns 200 unchanged with no event)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SettingsResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/alerts:
+    get:
+      tags: [audit]
+      operationId: adminListAlerts
+      summary: In-app administrator alerts, unacknowledged first
+      x-api-id: API-125
+      x-owner: audit
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: acknowledged
+          in: query
+          required: false
+          schema: { type: string, enum: ['true', 'false'] }
+      responses:
+        '200':
+          description: Alerts ordered by (acknowledged_at nulls first, raised_at desc, id desc)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AlertPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/alerts/{alertId}/acknowledge:
+    parameters:
+      - name: alertId
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Uuid' }
+    post:
+      tags: [audit]
+      operationId: adminAcknowledgeAlert
+      summary: Acknowledge an alert (idempotent; the first acknowledgement is kept)
+      x-api-id: API-126
+      x-owner: audit
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, not_found]
+      responses:
+        '200':
+          description: Acknowledged
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AlertResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/usage-report:
+    get:
+      tags: [reporting]
+      operationId: adminUsageReport
+      summary: Usage and estimated cost per account and provider, job states and claim-check counts
+      description: |
+        Window [from, to) in UTC; default the last 30 days; at most REPORT_MAX_WINDOW_DAYS (366), else 422
+        `report_window_too_large`. Accounts are shown by user ID only. An empty window returns empty arrays
+        (`empty: true`), never zeros. A failed data source returns 503, never zeros.
+      x-api-id: API-130
+      x-owner: reporting
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, report_window_too_large]
+      parameters:
+        - $ref: '#/components/parameters/ReportFrom'
+        - $ref: '#/components/parameters/ReportTo'
+      responses:
+        '200':
+          description: Report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UsageReportResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /admin/usage-report.csv:
+    get:
+      tags: [reporting]
+      operationId: adminUsageReportCsv
+      summary: CSV export of the same report (Could; audit-logged; no envelope)
+      x-api-id: API-131
+      x-owner: reporting
+      x-scope: A
+      x-error-codes: [forbidden_role, recent_auth_required, report_window_too_large]
+      parameters:
+        - $ref: '#/components/parameters/ReportFrom'
+        - $ref: '#/components/parameters/ReportTo'
+      responses:
+        '200':
+          description: |
+            text/csv; header row `user_id,provider,calls,succeeded,failed,rejected,unconfirmed,estimated_cost_usd,latency_p50_ms,latency_p95_ms`.
+            Cells that begin with `=`, `+`, `-` or `@` are prefixed with a single quote (formula injection).
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+              description: attachment; filename="usage-<from>-<to>.csv"
+            X-Request-ID: { $ref: '#/components/headers/XRequestId' }
+          content:
+            text/csv:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /health/live:
+    servers:
+      - url: /
+    get:
+      tags: [platform]
+      operationId: healthLive
+      summary: Liveness of the API process (no dependency checks, no detail)
+      x-api-id: API-900
+      x-owner: platform
+      x-scope: Pub
+      security: []
+      x-error-codes: []
+      responses:
+        '200':
+          description: Process is up
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+
+  /health/ready:
+    servers:
+      - url: /
+    get:
+      tags: [platform]
+      operationId: healthReady
+      summary: Readiness of the API process (database reachable within 1 s, configuration valid, not draining)
+      x-api-id: API-901
+      x-owner: platform
+      x-scope: Pub
+      security: []
+      x-error-codes: [service_unavailable]
+      responses:
+        '200':
+          description: Ready
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /internal/metrics:
+    servers:
+      - url: /
+    get:
+      tags: [platform]
+      operationId: internalMetrics
+      summary: Process metrics of the API in Prometheus text exposition format (internal, metrics token)
+      description: |
+        The prom-client registry of the api process: request duration histogram and counts by method, route template and
+        status class; database pool size, in use and wait time; pg-boss send failures; dropped telemetry events. Labels are
+        bounded (method, route template, status class, queue, known job type, provider, operation); never a user, record or
+        request ID. Not enveloped (exposition format). Token rule in the scope M convention (TD-D41). Exempt from rate limits;
+        not counted in the metrics windows; not audit-logged.
+      x-api-id: API-902
+      x-owner: platform
+      x-scope: M
+      security:
+        - metricsToken: []
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Prometheus text exposition (version 0.0.4)
+          content:
+            text/plain:
+              schema: { type: string }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /internal/metrics/window:
+    servers:
+      - url: /
+    get:
+      tags: [platform]
+      operationId: internalMetricsWindow
+      summary: Windowed request and pool summary of the API process over the last 10 and 15 minutes (internal, metrics token)
+      description: |
+        Kept in memory by the api process (one instance; a restart resets it, `processStartedAt` shows when), so a reader
+        needs no stored state. Read by the `monitor` cron every 5 minutes (ALR-2, ALR-3, ALR-7, ALR-9) and by the release
+        observation step every minute (DEVOPS-PLAN §11.4, §14.4). Requests to API-900..903 are not counted. `p95Ms` is null
+        when the window has no request. ALR-9 fires when `telemetryDropped10m` is above 0 (TD-D42); the cumulative
+        `telemetryDroppedTotal` cannot show a rise to a reader without stored state and is not an alert input. Token rule in the scope M convention (TD-D41). Exempt from rate limits; not
+        audit-logged.
+      x-api-id: API-903
+      x-owner: platform
+      x-scope: M
+      security:
+        - metricsToken: []
+      x-error-codes: [not_found]
+      responses:
+        '200':
+          description: Windowed summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MetricsWindowResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    sessionBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Identity provider session token (Clerk default), verified by JWKS (signature, issuer, authorized party, expiry). Roles and status are read from the users table on every request.
+    metricsToken:
+      type: http
+      scheme: bearer
+      description: The deployment's METRICS_TOKEN (opaque, at least 32 random bytes), held only by the monitor cron and the release observation step (SB v6 §7). Compared in constant time on SHA-256 digests. Used only by API-902 and API-903; never accepted on any other route, and a session token is never accepted here. Missing, wrong or unconfigured → 404 not_found.
+
+  headers:
+    XRequestId:
+      description: Request correlation ID; equals metaData.requestId
+      schema: { type: string, maxLength: 64 }
+    Location:
+      description: URL of the created or accepted resource
+      schema: { type: string }
+    ETag:
+      description: Strong entity tag of the form "<version>" (for example "3"), echoed in If-Match
+      schema: { type: string, pattern: '^"[0-9]+"$' }
+    RetryAfter:
+      description: Seconds until the request may be retried
+      schema: { type: integer, minimum: 1 }
+
+  parameters:
+    Provider:
+      name: provider
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/ProviderName' }
+    DraftId:
+      name: draftId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    MediaId:
+      name: mediaId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    CampaignId:
+      name: campaignId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    VideoJobId:
+      name: videoJobId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    InvitationId:
+      name: invitationId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    AccessRequestId:
+      name: accessRequestId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    SegmentPosition:
+      name: position
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1, maximum: 4 }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque signed token from metaData.pagination.nextCursor. Invalid, tampered, expired or filter-incompatible → 400 validation_failed with detail field `cursor`.
+      schema: { type: string, maxLength: 512 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated key (UUID recommended), scoped to the account and the operation, kept IDEMPOTENCY_TTL (24 h). Missing → 400 validation_failed; same key with a different body → 409 idempotency_key_reused; same key and body → the original result.
+      schema: { type: string, minLength: 8, maxLength: 128, pattern: '^[A-Za-z0-9_\-]+$' }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: The ETag from the last read ("<version>"). A mismatch → 409 version_conflict with no change (ADR-010 keeps 409 instead of 412).
+      schema: { type: string, pattern: '^"[0-9]+"$' }
+    ReportFrom:
+      name: from
+      in: query
+      required: false
+      description: Inclusive UTC instant; default now − 30 days
+      schema: { type: string, format: date-time }
+    ReportTo:
+      name: to
+      in: query
+      required: false
+      description: Exclusive UTC instant; default now; must be after from
+      schema: { type: string, format: date-time }
+
+  responses:
+    BadRequest:
+      description: validation_failed (malformed JSON, schema, missing Idempotency-Key, invalid cursor)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthenticated:
+      description: unauthenticated (no valid session token); includes WWW-Authenticate Bearer
+      headers:
+        WWW-Authenticate:
+          schema: { type: string }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: not_linked, account_suspended, account_removed, mfa_required, recent_auth_required or forbidden_role (admin routes also write an audit event)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: not_found, identical for a missing and a foreign record (BR-22)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: version_conflict, state_conflict or idempotency_key_reused
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    PayloadTooLarge:
+      description: payload_too_large (states the maximum)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    UnsupportedMediaType:
+      description: unsupported_media_type (states the allowed types)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    BusinessRule:
+      description: A 422 business-rule refusal; `code` is one of the operation's x-error-codes and `message` states the reason (for example the cap and estimate basis, the used and allowed storage, the clip name)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    RateLimited:
+      description: rate_limited, with Retry-After
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: internal_error; generic message and the request ID only
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    MethodNotAllowed:
+      description: |
+        method_not_allowed: the path template exists but does not declare this method. Produced by the router before
+        authentication, for every path, so it is not listed per operation (TD-D34, TD-D37). `Allow` lists the declared
+        methods for the path template, plus `HEAD` when `GET` is declared, never `OPTIONS`, in the order
+        `GET, HEAD, POST, PUT, PATCH, DELETE`, joined by ", ".
+      headers:
+        Allow:
+          required: true
+          description: Methods the path template accepts, for example `GET, HEAD, POST`
+          schema: { type: string }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ServiceUnavailable:
+      description: service_unavailable (database unreachable, a statement or lock timeout, draining, a report data source failed, or no price row effective now for a job-creating call, in which case nothing is created); Retry-After when known
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+    Instant:
+      type: string
+      format: date-time
+    MoneyUsd:
+      type: string
+      pattern: '^-?[0-9]{1,8}\.[0-9]{4}$'
+      description: USD decimal with 4 fraction digits, an estimate from the configured price table
+    ProviderName:
+      type: string
+      enum: [openai, wavespeed]
+    Role:
+      type: string
+      enum: [user, admin]
+    AccountStatus:
+      type: string
+      enum: [active, suspended, removed]
+    InvitationState:
+      type: string
+      enum: [invited, accepted, expired, revoked]
+
+    ErrorCode:
+      type: string
+      description: Registry codes (shared-boundaries §6 plus the v3 delta). One status per code.
+      enum:
+        - validation_failed            # 400
+        - unauthenticated              # 401
+        - not_linked                   # 403
+        - forbidden_role               # 403
+        - mfa_required                 # 403
+        - recent_auth_required         # 403
+        - account_suspended            # 403
+        - account_removed              # 403
+        - not_found                    # 404
+        - method_not_allowed           # 405 (v3 delta)
+        - version_conflict             # 409
+        - state_conflict               # 409
+        - idempotency_key_reused       # 409
+        - payload_too_large            # 413
+        - unsupported_media_type       # 415
+        - key_missing                  # 422
+        - key_disabled                 # 422
+        - key_invalid                  # 422
+        - storage_quota_reached        # 422
+        - media_not_ready              # 422
+        - open_claim_issues            # 422
+        - claim_not_clearable          # 422
+        - brief_not_accepted           # 422
+        - spend_cap_reached            # 422
+        - assembly_daily_limit         # 422
+        - clip_not_completed           # 422
+        - qc_confirmation_required     # 422 (v3 delta)
+        - last_admin                   # 422
+        - self_action                  # 422
+        - confirmation_mismatch        # 422
+        - invite_domain_not_allowed    # 422
+        - signup_open_prerequisites    # 422
+        - report_window_too_large      # 422
+        - rate_limited                 # 429
+        - internal_error               # 500 (v3 delta)
+        - service_unavailable          # 503 (v3 delta)
+
+    MetaData:
+      type: object
+      required: [requestId, timestamp]
+      additionalProperties: false
+      properties:
+        requestId: { type: string, maxLength: 64 }
+        timestamp: { $ref: '#/components/schemas/Instant' }
+
+    CursorPagination:
+      type: object
+      required: [type, limit, returnedCount, hasNextPage, nextCursor]
+      additionalProperties: false
+      properties:
+        type: { type: string, const: cursor }
+        limit: { type: integer, minimum: 1, maximum: 50 }
+        returnedCount: { type: integer, minimum: 0, maximum: 50 }
+        hasNextPage: { type: boolean }
+        nextCursor:
+          type: [string, 'null']
+          maxLength: 512
+      oneOf:
+        - required: [hasNextPage, nextCursor]
+          properties: { hasNextPage: { const: true }, nextCursor: { type: string } }
+        - required: [hasNextPage, nextCursor]
+          properties: { hasNextPage: { const: false }, nextCursor: { type: 'null' } }
+
+    PageMetaData:
+      type: object
+      description: MetaData of a list response. A separate closed object (not allOf over MetaData, whose additionalProperties false would reject pagination).
+      required: [requestId, timestamp, pagination]
+      additionalProperties: false
+      properties:
+        requestId: { type: string, maxLength: 64 }
+        timestamp: { $ref: '#/components/schemas/Instant' }
+        pagination: { $ref: '#/components/schemas/CursorPagination' }
+
+    ErrorDetail:
+      type: object
+      required: [field, code, message]
+      additionalProperties: false
+      properties:
+        field: { type: string, maxLength: 200, description: 'Public DTO path, for example segments.0.dialogue' }
+        code: { type: string, maxLength: 64, description: 'Detail code, for example required, too_long, out_of_range, invalid_format, cursor_invalid' }
+        message: { type: string, maxLength: 300 }
+
+    ErrorResponse:
+      type: object
+      required: [success, error, metaData]
+      additionalProperties: false
+      properties:
+        success: { type: boolean, const: false }
+        error:
+          type: object
+          required: [code, message]
+          additionalProperties: false
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message: { type: string, maxLength: 500 }
+            details:
+              type: array
+              maxItems: 50
+              items: { $ref: '#/components/schemas/ErrorDetail' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+
+    # ---------- job summary shared by every provider job ----------
+    JobLabel:
+      type: string
+      description: User-facing label (ARCH-G1 §5.3 mapping; SB §3.5)
+      enum: [pending, queued, created, processing, completed, failed]
+    JobState:
+      type: string
+      enum: [pending, submitting, submitted, processing, completed, failed, cancelled]
+    CauseClass:
+      type: string
+      enum: [temporary, configuration, credit, provider_timeout, key_replaced, key_deleted, reference_unreachable, output_unreachable, outcome_unknown, cancelled_campaign_deleted, cancelled_account_suspended, cancelled_account_removed]
+    JobSummary:
+      type: object
+      required: [id, state, label, causeClass, causeMessage, createdAt, updatedAt, reused]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        state: { $ref: '#/components/schemas/JobState' }
+        label: { $ref: '#/components/schemas/JobLabel' }
+        causeClass:
+          oneOf:
+            - $ref: '#/components/schemas/CauseClass'
+            - type: 'null'
+        causeMessage:
+          type: [string, 'null']
+          maxLength: 300
+          description: Safe message; names whose key for configuration and credit causes; for outcome_unknown says to check the provider account before retrying
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        updatedAt: { $ref: '#/components/schemas/Instant' }
+        deadlineAt:
+          oneOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        reused:
+          type: boolean
+          description: true when a job-creating call returned an existing job; false on reads
+
+    # ---------- identity ----------
+    MeLinked:
+      type: object
+      required: [linkState, id, role, status, mfa, recentAuth, keyNotices]
+      properties:
+        linkState: { type: string, const: linked }
+        id: { $ref: '#/components/schemas/Uuid' }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { type: string, const: active }
+        mfa:
+          type: object
+          required: [required, satisfied]
+          properties:
+            required: { type: boolean }
+            satisfied: { type: boolean }
+        recentAuth:
+          type: object
+          required: [satisfied, maxAgeSeconds]
+          properties:
+            satisfied: { type: boolean }
+            maxAgeSeconds: { type: integer }
+        keyNotices:
+          type: array
+          description: Persistent notices for disabled keys (shown on every page until replaced)
+          items:
+            type: object
+            required: [provider, status]
+            properties:
+              provider: { $ref: '#/components/schemas/ProviderName' }
+              status: { type: string, enum: [disabled, missing] }
+    MeNotLinked:
+      type: object
+      required: [linkState, accessRequest]
+      properties:
+        linkState: { type: string, const: not_linked }
+        accessRequest:
+          type: object
+          required: [formEnabled, state]
+          properties:
+            formEnabled: { type: boolean }
+            state: { type: string, enum: [none, pending, declined] }
+    MeResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/MeLinked'
+            - $ref: '#/components/schemas/MeNotLinked'
+        metaData: { $ref: '#/components/schemas/MetaData' }
+
+    AccessRequestCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        note: { type: string, maxLength: 500, description: "Optional free text for the admin; never logged" }
+    AccessRequestAcceptedResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [state]
+          properties:
+            state: { type: string, const: received }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+
+    # ---------- provider keys ----------
+    ProviderKeyStatus:
+      type: object
+      required: [provider, configured, status, last4, fingerprint, version, createdAt, updatedAt, lastValidatedAt, inFlightJobCount]
+      properties:
+        provider: { $ref: '#/components/schemas/ProviderName' }
+        configured: { type: boolean }
+        status:
+          type: [string, 'null']
+          enum: [active, untested, disabled, null]
+        last4: { type: [string, 'null'], pattern: '^.{4}$' }
+        fingerprint: { type: [string, 'null'], pattern: '^[0-9a-f]{12}$', description: "First 12 hex of HMAC-SHA-256(pepper, key)" }
+        version: { type: [integer, 'null'], minimum: 1 }
+        createdAt:
+          oneOf: [{ $ref: '#/components/schemas/Instant' }, { type: 'null' }]
+        updatedAt:
+          oneOf: [{ $ref: '#/components/schemas/Instant' }, { type: 'null' }]
+        lastValidatedAt:
+          oneOf: [{ $ref: '#/components/schemas/Instant' }, { type: 'null' }]
+        inFlightJobCount: { type: integer, minimum: 0, description: "Jobs in submitting, submitted or processing on this key (for the replace and delete warning)" }
+    ProviderKeyListResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items: { $ref: '#/components/schemas/ProviderKeyStatus' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    ProviderKeyPut:
+      type: object
+      required: [apiKey]
+      additionalProperties: false
+      properties:
+        apiKey:
+          type: string
+          minLength: 20
+          maxLength: 512
+          writeOnly: true
+          description: Trimmed of surrounding whitespace; format checked per provider (KEY_FORMAT rules, ARCHITECTURE.md §5.2); never echoed or logged
+    ProviderKeyPutResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          allOf:
+            - $ref: '#/components/schemas/ProviderKeyStatus'
+            - type: object
+              required: [probe]
+              properties:
+                probe: { type: string, enum: [valid, unknown], description: "unknown means stored as untested" }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    KeyEventKind:
+      type: string
+      enum: [added, replaced, deleted, test_passed, test_failed, stored_untested, validated_by_job, auth_failed, disabled, disabled_by_operator, attempt_rate_limited, rewrapped]
+    KeyEvent:
+      type: object
+      required: [id, provider, kind, at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        provider: { $ref: '#/components/schemas/ProviderName' }
+        kind: { $ref: '#/components/schemas/KeyEventKind' }
+        at: { $ref: '#/components/schemas/Instant' }
+    KeyEventPage:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/KeyEvent' } }
+        metaData: { $ref: '#/components/schemas/PageMetaData' }
+
+    # ---------- drafts and campaigns ----------
+    Audience:
+      type: object
+      additionalProperties: false
+      properties:
+        ageMin: { type: integer, minimum: 21, maximum: 99 }
+        ageMax: { type: integer, minimum: 21, maximum: 99, description: "Must be >= ageMin" }
+        gender: { type: string, enum: [all, female, male] }
+        interests:
+          type: array
+          maxItems: 10
+          items: { type: string, minLength: 1, maxLength: 40 }
+    Direction:
+      type: object
+      additionalProperties: false
+      properties:
+        goal: { type: string, enum: [awareness, conversion, retention] }
+        tone: { type: string, minLength: 1, maxLength: 60 }
+        segmentCount: { type: integer, minimum: 1, maximum: 4 }
+    DraftWrite:
+      type: object
+      additionalProperties: false
+      description: All fields optional while drafting; null clears a field; completeness is checked at submit
+      properties:
+        step: { type: integer, minimum: 1, maximum: 5 }
+        adStyle: { type: string, enum: [ugc] }
+        intakeMode: { type: string, enum: [description, script] }
+        productName: { type: [string, 'null'], minLength: 1, maxLength: 120 }
+        productDescription: { type: [string, 'null'], maxLength: 2000 }
+        audience:
+          oneOf: [{ $ref: '#/components/schemas/Audience' }, { type: 'null' }]
+        direction:
+          oneOf: [{ $ref: '#/components/schemas/Direction' }, { type: 'null' }]
+        concept: { type: [string, 'null'], maxLength: 4000 }
+        script: { type: [string, 'null'], maxLength: 4000 }
+        productMediaId:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+    DraftPatch:
+      allOf:
+        - $ref: '#/components/schemas/DraftWrite'
+        - type: object
+          minProperties: 1
+    Draft:
+      type: object
+      required: [id, version, step, adStyle, intakeMode, productName, productDescription, audience, direction, concept, script, productMediaId, campaignId, durationSeconds, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        version: { type: integer, minimum: 1 }
+        step: { type: integer, minimum: 1, maximum: 5 }
+        adStyle: { type: string, enum: [ugc] }
+        intakeMode: { type: string, enum: [description, script] }
+        productName: { type: [string, 'null'] }
+        productDescription: { type: [string, 'null'] }
+        audience:
+          oneOf: [{ $ref: '#/components/schemas/Audience' }, { type: 'null' }]
+        direction:
+          oneOf: [{ $ref: '#/components/schemas/Direction' }, { type: 'null' }]
+        concept: { type: [string, 'null'] }
+        script: { type: [string, 'null'] }
+        productMediaId:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+        campaignId:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+          description: Set once submitted; the draft is then read-only (SB-D13)
+        durationSeconds: { type: [integer, 'null'], enum: [15, 30, 45, 60, null], description: "segmentCount \u00d7 15" }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        updatedAt: { $ref: '#/components/schemas/Instant' }
+    DraftResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/Draft' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    DraftPage:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Draft' } }
+        metaData: { $ref: '#/components/schemas/PageMetaData' }
+    SubmitDraftResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [campaignId, briefJob]
+          properties:
+            campaignId: { $ref: '#/components/schemas/Uuid' }
+            briefJob: { $ref: '#/components/schemas/JobSummary' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    CampaignProgress:
+      type: string
+      enum: [in_progress, processing, completed, failed]
+      description: Derived at read (ARCHITECTURE.md §3.2); filter values map to processing, completed, failed
+    CampaignSummary:
+      type: object
+      required: [id, productName, productDescriptionExcerpt, progress, briefState, segmentCount, finalAvailable, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        productName: { type: string }
+        productDescriptionExcerpt: { type: string, maxLength: 160 }
+        progress: { $ref: '#/components/schemas/CampaignProgress' }
+        briefState: { type: string, enum: [generating, draft, accepted, failed] }
+        segmentCount: { type: integer, minimum: 1, maximum: 4 }
+        finalAvailable: { type: boolean }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        updatedAt: { $ref: '#/components/schemas/Instant' }
+    CampaignPage:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/CampaignSummary' } }
+        metaData: { $ref: '#/components/schemas/PageMetaData' }
+    Campaign:
+      allOf:
+        - $ref: '#/components/schemas/CampaignSummary'
+        - type: object
+          required: [productDescription, productMediaId, draftId, jobCounts, latestAssemblyId, thumbstopperJobId]
+          properties:
+            productDescription: { type: string }
+            productMediaId:
+              oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+            draftId: { $ref: '#/components/schemas/Uuid' }
+            jobCounts:
+              type: object
+              description: Latest job per segment, counted by label
+              additionalProperties: { type: integer, minimum: 0 }
+            latestAssemblyId:
+              oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+            thumbstopperJobId:
+              oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+    CampaignResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/Campaign' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    DeletionAcceptedResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [deletionRunId, state]
+          properties:
+            deletionRunId: { $ref: '#/components/schemas/Uuid' }
+            state: { type: string, const: running }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+
+    # ---------- media ----------
+    MediaRejectReason:
+      type: string
+      enum: [type_not_allowed, pixel_cap_exceeded, decompression_bomb, decode_failed]
+    Media:
+      type: object
+      required: [id, kind, state, contentType, bytes, width, height, rejectReason, attached, campaignId, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        kind: { type: string, enum: [upload, clip, final, thumbstopper] }
+        state: { type: string, enum: [processing, ready, rejected] }
+        contentType: { type: [string, 'null'], enum: [image/jpeg, image/png, image/webp, image/gif, video/mp4, null] }
+        bytes: { type: [integer, 'null'], minimum: 0 }
+        width: { type: [integer, 'null'], minimum: 1 }
+        height: { type: [integer, 'null'], minimum: 1 }
+        rejectReason:
+          oneOf: [{ $ref: '#/components/schemas/MediaRejectReason' }, { type: 'null' }]
+        attached: { type: boolean }
+        campaignId:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+        createdAt: { $ref: '#/components/schemas/Instant' }
+    MediaResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/Media' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    SignedUrlResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [url, expiresAt]
+          properties:
+            url: { type: string, format: uri, description: "Storage origin, one object, GET only; never logged" }
+            expiresAt: { $ref: '#/components/schemas/Instant' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    ImageAnalysisResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [job, productDescription]
+          properties:
+            job:
+              oneOf: [{ $ref: '#/components/schemas/JobSummary' }, { type: 'null' }]
+            productDescription:
+              type: [string, 'null']
+              maxLength: 1500
+              description: Product-only description after the sensitive-attribute filter (REQ-006, PM-D13)
+        metaData: { $ref: '#/components/schemas/MetaData' }
+
+    # ---------- brief ----------
+    Segment:
+      type: object
+      required: [position, state, revision, dialogue, prompt, wordCount]
+      properties:
+        position: { type: integer, minimum: 1, maximum: 4 }
+        state: { type: string, enum: [active, retired] }
+        revision: { type: integer, minimum: 1 }
+        dialogue: { type: string, maxLength: 600 }
+        prompt: { type: string, maxLength: 2000 }
+        wordCount: { type: integer, minimum: 0 }
+    ClaimIssue:
+      type: object
+      required: [id, segmentPosition, field, ruleId, class, resolution, message, clearReason]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        segmentPosition: { type: integer, minimum: 1, maximum: 4 }
+        field: { type: string, enum: [dialogue, prompt] }
+        ruleId: { type: string, maxLength: 64, description: 'brand_rules rule ID, for example BR-06-cure-claim' }
+        class: { type: string, enum: [high_risk, other] }
+        resolution: { type: string, enum: [open, closed_by_edit, cleared_with_reason] }
+        message: { type: string, maxLength: 300 }
+        span:
+          type: [object, 'null']
+          properties:
+            start: { type: integer, minimum: 0 }
+            end: { type: integer, minimum: 0 }
+        clearReason: { type: [string, 'null'], maxLength: 500 }
+    Brief:
+      type: object
+      required: [id, campaignId, state, version, acceptedAt, generationJob, segments, issues, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        campaignId: { $ref: '#/components/schemas/Uuid' }
+        state: { type: string, enum: [generating, draft, accepted, failed] }
+        version: { type: integer, minimum: 1 }
+        acceptedAt:
+          oneOf: [{ $ref: '#/components/schemas/Instant' }, { type: 'null' }]
+        generationJob:
+          oneOf: [{ $ref: '#/components/schemas/JobSummary' }, { type: 'null' }]
+        segments: { type: array, maxItems: 4, items: { $ref: '#/components/schemas/Segment' } }
+        issues: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/ClaimIssue' }, description: "Open issues plus issues resolved since the last accept" }
+        updatedAt: { $ref: '#/components/schemas/Instant' }
+    BriefResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/Brief' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    BriefPatch:
+      type: object
+      required: [segments]
+      additionalProperties: false
+      properties:
+        segments:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            type: object
+            required: [position]
+            additionalProperties: false
+            minProperties: 2
+            properties:
+              position: { type: integer, minimum: 1, maximum: 4 }
+              dialogue: { type: string, minLength: 1, maxLength: 600 }
+              prompt: { type: string, minLength: 1, maxLength: 2000 }
+    BriefJobResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [briefState, job]
+          properties:
+            briefState: { type: string, enum: [generating] }
+            job: { $ref: '#/components/schemas/JobSummary' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    ClearClaimIssue:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 500 }
+    ClaimIssueResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/ClaimIssue' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+
+    # ---------- production ----------
+    GenerateSegment:
+      type: object
+      additionalProperties: false
+      properties:
+        useProductImage: { type: boolean, default: true, description: "Send the campaign's ready product image as the reference" }
+    QcState:
+      type: string
+      enum: [pending, passed, failed, skipped]
+    QcRun:
+      allOf:
+        - $ref: '#/components/schemas/JobSummary'
+        - type: object
+          required: [videoJobId, qcState, reason]
+          properties:
+            videoJobId: { $ref: '#/components/schemas/Uuid' }
+            qcState: { $ref: '#/components/schemas/QcState' }
+            reason:
+              type: [string, 'null']
+              maxLength: 300
+              description: For failed (mismatch summary, no full transcript) or skipped (cause)
+    QcRunResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/QcRun' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    VideoJob:
+      allOf:
+        - $ref: '#/components/schemas/JobSummary'
+        - type: object
+          required: [campaignId, segmentPosition, segmentRevision, outOfDate, outputMediaId, latestQc, qcHistory]
+          properties:
+            campaignId: { $ref: '#/components/schemas/Uuid' }
+            segmentPosition: { type: integer, minimum: 1, maximum: 4 }
+            segmentRevision: { type: integer, minimum: 1 }
+            outOfDate: { type: boolean, description: "segmentRevision < current segment revision (SB-D11)" }
+            outputMediaId:
+              oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+            latestQc:
+              oneOf: [{ $ref: '#/components/schemas/QcRun' }, { type: 'null' }]
+            qcHistory:
+              type: array
+              maxItems: 20
+              items: { $ref: '#/components/schemas/QcRun' }
+    VideoJobResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/VideoJob' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    SegmentJobsResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: array
+          maxItems: 4
+          items:
+            type: object
+            required: [position, segmentState, segmentRevision, latestJob]
+            properties:
+              position: { type: integer, minimum: 1, maximum: 4 }
+              segmentState: { type: string, enum: [active, retired] }
+              segmentRevision: { type: integer, minimum: 1 }
+              latestJob:
+                oneOf: [{ $ref: '#/components/schemas/VideoJob' }, { type: 'null' }]
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    AssemblyCreate:
+      type: object
+      required: [clips]
+      additionalProperties: false
+      properties:
+        clips:
+          type: array
+          minItems: 1
+          maxItems: 4
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Uuid' }
+          description: Ordered video job IDs
+        thumbstopperJobId:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+          description: Optional completed thumbstopper shown as the opening frame (THUMBSTOPPER_FRAME_SECONDS)
+        confirmations:
+          type: object
+          additionalProperties: false
+          properties:
+            qcOverride:
+              type: array
+              maxItems: 4
+              uniqueItems: true
+              items: { $ref: '#/components/schemas/Uuid' }
+              description: Video job IDs whose failed or skipped QC the user explicitly accepts (REQ-010). Each must be in `clips` (else 400 `validation_failed`); an ID whose latest QC is `passed` or `pending` is ignored and not recorded (TD-D35)
+    AssemblyState:
+      type: string
+      enum: [pending, queued, fetching, rendering, saving, done, failed]
+    Assembly:
+      type: object
+      required: [id, campaignId, state, clips, thumbstopperJobId, outOfDate, outputMediaId, causeClass, causeMessage, createdAt, updatedAt, reused]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        campaignId: { $ref: '#/components/schemas/Uuid' }
+        state: { $ref: '#/components/schemas/AssemblyState' }
+        clips:
+          type: array
+          maxItems: 4
+          items:
+            type: object
+            required: [position, videoJobId, outOfDate, qcOverrideConfirmed]
+            properties:
+              position: { type: integer, minimum: 1, maximum: 4 }
+              videoJobId: { $ref: '#/components/schemas/Uuid' }
+              outOfDate: { type: boolean }
+              qcOverrideConfirmed: { type: boolean }
+        thumbstopperJobId:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+        outOfDate: { type: boolean, description: "Any clip out of date, or a newer completed job exists for a clip's segment (SB-D11)" }
+        outputMediaId:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+        causeClass:
+          type: [string, 'null']
+          enum: [render_failed, input_unavailable, timeout, cancelled_campaign_deleted, cancelled_account_suspended, cancelled_account_removed, null]
+        causeMessage: { type: [string, 'null'], maxLength: 300 }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        updatedAt: { $ref: '#/components/schemas/Instant' }
+        reused: { type: boolean }
+    AssemblyResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/Assembly' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    ThumbstopperCreate:
+      type: object
+      required: [calloutText]
+      additionalProperties: false
+      properties:
+        calloutText: { type: string, minLength: 1, maxLength: 80, description: "Checked by the deterministic claim rules before the job is created; any issue returns 422 open_claim_issues with details[].field calloutText and the rule ID as detail code" }
+    Thumbstopper:
+      allOf:
+        - $ref: '#/components/schemas/JobSummary'
+        - type: object
+          required: [campaignId, calloutText, outputMediaId]
+          properties:
+            campaignId: { $ref: '#/components/schemas/Uuid' }
+            calloutText: { type: string }
+            outputMediaId:
+              oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+    ThumbstopperResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          oneOf: [{ $ref: '#/components/schemas/Thumbstopper' }, { type: 'null' }]
+        metaData: { $ref: '#/components/schemas/MetaData' }
+
+    # ---------- admin ----------
+    AdminUser:
+      type: object
+      required: [id, email, role, status, version, createdAt, updatedAt, erasure]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        email: { type: string, format: email, description: "Shown on this screen only (PRD \u00a73.1)" }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { $ref: '#/components/schemas/AccountStatus' }
+        version: { type: integer, minimum: 1 }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        updatedAt: { $ref: '#/components/schemas/Instant' }
+        erasure:
+          type: [object, 'null']
+          description: Present while status is removed
+          properties:
+            deletionRunId: { $ref: '#/components/schemas/Uuid' }
+            step: { type: integer, minimum: 1, maximum: 5 }
+            state: { type: string, enum: [running, completed, stuck] }
+    AdminUserResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/AdminUser' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    AdminUserPage:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/AdminUser' } }
+        metaData: { $ref: '#/components/schemas/PageMetaData' }
+    RemoveUser:
+      type: object
+      required: [confirmation]
+      additionalProperties: false
+      properties:
+        confirmation: { type: string, minLength: 3, maxLength: 320, description: "The account email typed by the admin" }
+    SetRole:
+      type: object
+      required: [role]
+      additionalProperties: false
+      properties:
+        role: { $ref: '#/components/schemas/Role' }
+    DeletionRun:
+      type: object
+      required: [id, kind, subjectId, step, state, attempts, remainingObjects, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        kind: { type: string, enum: [account] }
+        subjectId: { $ref: '#/components/schemas/Uuid' }
+        step: { type: integer, minimum: 1, maximum: 5 }
+        state: { type: string, enum: [running, completed, stuck] }
+        attempts: { type: integer, minimum: 0 }
+        remainingObjects: { type: [integer, 'null'], minimum: 0 }
+        updatedAt: { $ref: '#/components/schemas/Instant' }
+    DeletionRunPage:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/DeletionRun' } }
+        metaData: { $ref: '#/components/schemas/PageMetaData' }
+    Invitation:
+      type: object
+      required: [id, email, state, sendState, expiresAt, invitedBy, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        email: { type: string, format: email }
+        state: { $ref: '#/components/schemas/InvitationState' }
+        sendState: { type: string, enum: [pending, sent, send_failed] }
+        expiresAt: { $ref: '#/components/schemas/Instant' }
+        invitedBy:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        updatedAt: { $ref: '#/components/schemas/Instant' }
+    InvitationResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/Invitation' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    InvitationPage:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Invitation' } }
+        metaData: { $ref: '#/components/schemas/PageMetaData' }
+    InvitationCreate:
+      type: object
+      required: [email]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 320 }
+    InvitationAcceptedResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [email, message]
+          properties:
+            email: { type: string, format: email }
+            message: { type: string, const: 'If this address can be invited, an invitation is on its way.' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    AccessRequest:
+      type: object
+      required: [id, email, state, note, createdAt, decidedAt, decidedBy]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        email: { type: string, format: email }
+        state: { type: string, enum: [pending, approved, declined] }
+        note: { type: [string, 'null'], maxLength: 500 }
+        createdAt: { $ref: '#/components/schemas/Instant' }
+        decidedAt:
+          oneOf: [{ $ref: '#/components/schemas/Instant' }, { type: 'null' }]
+        decidedBy:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+        userId:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+          description: Set on approve
+    AccessRequestResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/AccessRequest' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    AccessRequestPage:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/AccessRequest' } }
+        metaData: { $ref: '#/components/schemas/PageMetaData' }
+    Settings:
+      type: object
+      required: [signupMode, accessRequestFormEnabled, mfaRequiredFor, inviteEmailDomains, openModePrerequisites]
+      properties:
+        signupMode: { type: string, enum: [invited_only, open] }
+        accessRequestFormEnabled: { type: boolean, readOnly: true }
+        mfaRequiredFor: { type: string, enum: [all, admins], readOnly: true }
+        inviteEmailDomains: { type: array, items: { type: string }, readOnly: true }
+        openModePrerequisites:
+          type: object
+          readOnly: true
+          required: [emailVerificationRequired, signupRateLimitEnabled, abuseLimitsEnabled, verificationRecordId]
+          properties:
+            emailVerificationRequired: { type: boolean }
+            signupRateLimitEnabled: { type: boolean }
+            abuseLimitsEnabled: { type: boolean }
+            verificationRecordId: { type: [string, 'null'], maxLength: 120 }
+    SettingsResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/Settings' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    SetSignupMode:
+      type: object
+      required: [mode]
+      additionalProperties: false
+      properties:
+        mode: { type: string, enum: [invited_only, open] }
+    AlertKind:
+      type: string
+      enum: [campaign_deletion_stuck, account_erasure_stuck, job_burst, provider_auth_spike, admin_role_changed, reservation_inconsistency, key_unseal_failed, keys_disabled_all]
+    Alert:
+      type: object
+      required: [id, kind, subjectUserId, raisedAt, acknowledgedAt, acknowledgedBy, counts]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        kind: { $ref: '#/components/schemas/AlertKind' }
+        subjectUserId:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+        raisedAt: { $ref: '#/components/schemas/Instant' }
+        acknowledgedAt:
+          oneOf: [{ $ref: '#/components/schemas/Instant' }, { type: 'null' }]
+        acknowledgedBy:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+        counts:
+          type: object
+          description: IDs-free numeric facts only (for example jobs, window_minutes, remaining_objects)
+          additionalProperties: { type: integer }
+    AlertResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/Alert' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    AlertPage:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Alert' } }
+        metaData: { $ref: '#/components/schemas/PageMetaData' }
+    ProviderUsage:
+      type: object
+      required: [provider, calls, succeeded, failed, rejected, unconfirmed, estimatedCostUsd, latencyP50Ms, latencyP95Ms]
+      properties:
+        provider: { type: string, enum: [openai, wavespeed, assembly_vendor] }
+        calls: { type: integer, minimum: 0 }
+        succeeded: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        rejected: { type: integer, minimum: 0 }
+        unconfirmed: { type: integer, minimum: 0 }
+        estimatedCostUsd: { $ref: '#/components/schemas/MoneyUsd' }
+        latencyP50Ms: { type: [integer, 'null'], minimum: 0 }
+        latencyP95Ms: { type: [integer, 'null'], minimum: 0 }
+    UsageReport:
+      type: object
+      required: [from, to, asOf, empty, costBasis, accounts, providers, jobStates, claimChecks]
+      properties:
+        from: { $ref: '#/components/schemas/Instant' }
+        to: { $ref: '#/components/schemas/Instant' }
+        asOf: { $ref: '#/components/schemas/Instant' }
+        empty: { type: boolean }
+        costBasis: { type: string, const: estimate_from_configured_price_table }
+        accounts:
+          type: array
+          items:
+            type: object
+            required: [userId, providers]
+            properties:
+              userId: { $ref: '#/components/schemas/Uuid' }
+              providers: { type: array, items: { $ref: '#/components/schemas/ProviderUsage' } }
+        providers: { type: array, items: { $ref: '#/components/schemas/ProviderUsage' } }
+        jobStates:
+          type: object
+          description: Count of jobs created in the window by user label
+          additionalProperties: { type: integer, minimum: 0 }
+        claimChecks:
+          type: array
+          items:
+            type: object
+            required: [class, raised, closedByEdit, clearedWithReason]
+            properties:
+              class: { type: string, enum: [high_risk, other] }
+              raised: { type: integer, minimum: 0 }
+              closedByEdit: { type: integer, minimum: 0 }
+              clearedWithReason: { type: integer, minimum: 0 }
+    UsageReportResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/UsageReport' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+
+    HealthResponse:
+      type: object
+      required: [success, data, metaData]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [status]
+          additionalProperties: false
+          properties:
+            status: { type: string, const: ok }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    MetricsWindowResponse:
+      type: object
+      required: [success, data, metaData]
+      additionalProperties: false
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: '#/components/schemas/MetricsWindow' }
+        metaData: { $ref: '#/components/schemas/MetaData' }
+    MetricsWindow:
+      type: object
+      required: [processStartedAt, windows, poolWait, telemetryDropped10m, telemetryDroppedTotal]
+      additionalProperties: false
+      properties:
+        processStartedAt: { $ref: '#/components/schemas/Instant' }
+        windows:
+          description: Exactly two entries, 10 and 15 minutes, in that order
+          type: array
+          minItems: 2
+          prefixItems:
+            - $ref: '#/components/schemas/MetricsWindowSample'
+              properties:
+                minutes: { const: 10 }
+            - $ref: '#/components/schemas/MetricsWindowSample'
+              properties:
+                minutes: { const: 15 }
+          items: false
+        poolWait: { $ref: '#/components/schemas/PoolWaitSample' }
+        telemetryDropped10m:
+          description: |
+            Error-reporter and heartbeat events dropped over the last 10 minutes (same window end as `windows[0].to`).
+            ALR-9 input: the alert fires when this is above 0 (TD-D42).
+          type: integer
+          minimum: 0
+        telemetryDroppedTotal:
+          description: Error-reporter and heartbeat events dropped since process start (same counter as API-902 `telemetry_dropped_total`); not an alert input
+          type: integer
+          minimum: 0
+    MetricsWindowSample:
+      type: object
+      required: [minutes, from, to, requests, errors5xx, p95Ms]
+      additionalProperties: false
+      properties:
+        minutes: { type: integer, enum: [10, 15] }
+        from: { $ref: '#/components/schemas/Instant' }
+        to: { $ref: '#/components/schemas/Instant' }
+        requests: { type: integer, minimum: 0 }
+        errors5xx: { type: integer, minimum: 0 }
+        p95Ms: { type: [number, 'null'], minimum: 0 }
+    PoolWaitSample:
+      description: Database pool acquisitions that had to wait, over the last 10 minutes (ALR-7)
+      type: object
+      required: [minutes, acquisitions, waited, p95WaitMs]
+      additionalProperties: false
+      properties:
+        minutes: { type: integer, const: 10 }
+        acquisitions: { type: integer, minimum: 0 }
+        waited: { type: integer, minimum: 0 }
+        p95WaitMs: { type: [number, 'null'], minimum: 0 }

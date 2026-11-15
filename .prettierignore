@@ -5,3 +5,4 @@ reports
 pnpm-lock.yaml
 docs/evidence
 next-env.d.ts
+packages/contracts/openapi.yaml
