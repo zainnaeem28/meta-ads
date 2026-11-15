@@ -358,3 +358,66 @@ describe('staging and production', () => {
     ).toBe(false);
   });
 });
+
+describe('http object-storage endpoints (local MinIO)', () => {
+  const http = 'http://127.0.0.1:9000';
+  for (const appEnv of ['development', 'test']) {
+    it(`${appEnv}: api and worker accept an http R2_ENDPOINT`, () => {
+      for (const kind of ['api', 'worker'] as const) {
+        const result = validateConfig(kind, validEnv(kind, { APP_ENV: appEnv, R2_ENDPOINT: http }));
+        expect(result).toMatchObject({ ok: true });
+      }
+    });
+    it(`${appEnv}: api accepts an http STORAGE_PUBLIC_ORIGIN`, () => {
+      const result = validateConfig(
+        'api',
+        validEnv('api', { APP_ENV: appEnv, R2_ENDPOINT: http, STORAGE_PUBLIC_ORIGIN: http }),
+      );
+      expect(result).toMatchObject({ ok: true });
+    });
+    it(`${appEnv}: STORAGE_PUBLIC_ORIGIN defaults to the http R2_ENDPOINT`, () => {
+      const result = validateConfig('api', validEnv('api', { APP_ENV: appEnv, R2_ENDPOINT: http }));
+      expect(result).toMatchObject({ ok: true });
+      if (result.ok) expect(result.config['STORAGE_PUBLIC_ORIGIN']).toBe(http);
+    });
+  }
+
+  for (const appEnv of ['staging', 'production']) {
+    it(`${appEnv}: rejects http R2_ENDPOINT and STORAGE_PUBLIC_ORIGIN, accepts https`, () => {
+      for (const kind of ['api', 'worker'] as const) {
+        const env = { ...validEnv(kind, hardened(kind)), APP_ENV: appEnv };
+        expect(validateConfig(kind, env).ok).toBe(true);
+        expect(validateConfig(kind, { ...env, R2_ENDPOINT: http })).toEqual({
+          ok: false,
+          issues: [{ key: 'R2_ENDPOINT', fault: 'invalid' }],
+        });
+      }
+      const api = { ...validEnv('api', hardened('api')), APP_ENV: appEnv };
+      expect(
+        validateConfig('api', { ...api, STORAGE_PUBLIC_ORIGIN: 'https://files.example.test' }).ok,
+      ).toBe(true);
+      expect(validateConfig('api', { ...api, STORAGE_PUBLIC_ORIGIN: http })).toEqual({
+        ok: false,
+        issues: [{ key: 'STORAGE_PUBLIC_ORIGIN', fault: 'invalid' }],
+      });
+    });
+  }
+
+  for (const appEnv of ['development', 'test', 'staging', 'production']) {
+    it(`${appEnv}: rejects non-http(s) and non-URL values`, () => {
+      for (const bad of ['ftp://host/x', 'file:///etc/passwd', 'not a url']) {
+        for (const kind of ['api', 'worker'] as const) {
+          const env = { ...validEnv(kind, hardened(kind)), APP_ENV: appEnv };
+          const r = validateConfig(kind, { ...env, R2_ENDPOINT: bad });
+          expect(r.ok).toBe(false);
+          if (!r.ok) expect(r.issues).toContainEqual({ key: 'R2_ENDPOINT', fault: 'invalid' });
+        }
+        const api = { ...validEnv('api', hardened('api')), APP_ENV: appEnv };
+        const r = validateConfig('api', { ...api, STORAGE_PUBLIC_ORIGIN: bad });
+        expect(r.ok).toBe(false);
+        if (!r.ok)
+          expect(r.issues).toContainEqual({ key: 'STORAGE_PUBLIC_ORIGIN', fault: 'invalid' });
+      }
+    });
+  }
+});
