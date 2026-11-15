@@ -1,0 +1,51 @@
+# Dependency bots (DEVOPS-PLAN DO-09). Bot PRs target dev, never main, and are checked and merged by the
+# Integrator like a ticket (docs/ops/rescan.md). Weekly, grouped, so one PR per ecosystem and week.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    versioning-strategy: increase # keep exact pins: the bot rewrites the pinned version, never a range
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - dependencies
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - dependencies
+    groups:
+      actions:
+        patterns:
+          - "*"
+  - package-ecosystem: pip
+    directory: /scripts/ci
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "chore(ci-tools)"
+    labels:
+      - dependencies
+    groups:
+      ci-tools:
+        patterns:
+          - "*"

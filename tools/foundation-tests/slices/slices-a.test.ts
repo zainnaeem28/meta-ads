@@ -1,3 +1,4 @@
+import { apiEnv } from '../api-env.js';
 import { PgBoss } from 'pg-boss';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { pgTable, text } from 'drizzle-orm/pg-core';
@@ -491,7 +492,7 @@ describe('built web and api artifacts, with the slice behind them', () => {
     apiArtifact = await startProcess(
       'node',
       ['apps/api/dist/main.api.js'],
-      { PORT: '3811' },
+      apiEnv(3811),
       'http://127.0.0.1:3811/health/live',
     );
     const live = await (await fetch('http://127.0.0.1:3811/health/live')).json();

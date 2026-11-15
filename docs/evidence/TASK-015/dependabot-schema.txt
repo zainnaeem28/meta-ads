@@ -1,0 +1,4 @@
+# dependabot.yml schema check (SchemaStore dependabot-2.0.json)
+dependabot.yml: schema OK; 3 updates, all target dev, weekly, grouped
+negative probe (target-branch: main):
+AssertionError: npm /: target-branch must be dev
