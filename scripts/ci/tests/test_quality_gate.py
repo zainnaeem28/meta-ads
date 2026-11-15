@@ -31,7 +31,7 @@ def build(tmp_path, sha, junit="junit-pass.xml", lcov="lcov-good.info", sast="sa
     shutil.rmtree(reports, ignore_errors=True)
     for rid in ("lint", "types", "layers", "contract"):
         (reports / rid).mkdir(parents=True)
-        (reports / rid / "summary.json").write_text("{}")
+        (reports / rid / "summary.json").write_text(json.dumps({"id": rid, "exitCode": 0, "sourceSha": sha}))
         ci_reports.write_meta(str(reports), rid, "summary", "stub" if rid == "contract" else "pass", sha, "t", 0,
                               rid + "/summary.json")
     files = {"unit-ci": ("junit", "ci/junit.xml", junit), "sast": ("findings", "sast.sarif", sast),
@@ -198,3 +198,35 @@ def test_usage_errors(tmp_path, repo, capsys):
     assert qg.main(["--reports", str(tmp_path), "--repo", root, "--sha", sha, "--profile", "nope"]) == 2
     assert qg.main(["--reports", str(tmp_path), "--repo", str(tmp_path), "--profile", "ticket"]) == 2
     assert "quality_gate:" in capsys.readouterr().err
+
+
+def test_summary_reports_are_read_from_disk(tmp_path, repo):
+    root, sha = repo
+    for damage in ("missing", "empty", "exit", "sha", "malformed", "stale"):
+        reports = build(tmp_path, sha)
+        target = os.path.join(reports, "lint", "summary.json")
+        if damage == "missing":
+            os.remove(target)
+        elif damage == "empty":
+            open(target, "w").close()
+        elif damage == "exit":
+            json.dump({"exitCode": 9, "sourceSha": sha}, open(target, "w"))
+            ci_reports.write_meta(reports, "lint", "summary", "pass", sha, "t", 0, "lint/summary.json")
+        elif damage == "sha":
+            json.dump({"exitCode": 0, "sourceSha": "0" * 40}, open(target, "w"))
+            ci_reports.write_meta(reports, "lint", "summary", "pass", sha, "t", 0, "lint/summary.json")
+        elif damage == "malformed":
+            open(target, "w").write("{nope")
+            ci_reports.write_meta(reports, "lint", "summary", "pass", sha, "t", 0, "lint/summary.json")
+        else:
+            os.utime(target, (1_000_000_000, 1_000_000_000))
+        assert gate(reports, root, sha) == 1, damage
+
+
+def test_contract_stub_is_refused_once_the_contract_exists(tmp_path, repo):
+    root, sha = repo
+    reports = build(tmp_path, sha)
+    assert gate(reports, root, sha) == 0
+    os.makedirs(os.path.join(root, "packages", "contracts"))
+    open(os.path.join(root, "packages", "contracts", "openapi.yaml"), "w").close()
+    assert gate(reports, root, sha) == 1

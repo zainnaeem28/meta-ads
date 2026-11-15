@@ -24,7 +24,8 @@ echo "$violations" | tee "$REPORTS/layers/summary.txt"
 python3 -I -c "
 import json, sys
 json.dump({\"id\": \"layers\", \"tool\": \"dependency-cruiser\", \"depcruiseExit\": int(sys.argv[1]),
-           \"violationExit\": int(sys.argv[2]), \"sourceSha\": sys.argv[3]}, open(sys.argv[4], \"w\"), indent=2)
+           \"violationExit\": int(sys.argv[2]),
+           \"exitCode\": int(sys.argv[2]) or int(sys.argv[1]), \"sourceSha\": sys.argv[3]}, open(sys.argv[4], \"w\"), indent=2)
 " "$rc" "$vrc" "$SOURCE_SHA" "$REPORTS/layers/summary.json"
 if [ "$rc" -ne 0 ] && [ "$vrc" -eq 0 ]; then vrc=$rc; fi
 if [ "$vrc" -eq 0 ]; then record layers summary pass dependency-cruiser 0 layers/summary.json

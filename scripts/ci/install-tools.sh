@@ -8,6 +8,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GITLEAKS_VERSION=8.30.1
 OSV_VERSION=2.7.1
 TRIVY_VERSION=0.76.2
+GET_PIP_TAG=26.0.1   # pypa/get-pip tag; the sha256 below is of its public/get-pip.py
+GET_PIP_SHA256=feba1c697df45be1b539b40d93c102c9ee9dde1d966303323b830b06f3fbca3c
 mkdir -p "$TOOLS_DIR/bin"
 
 verify() { # file expected-sha256
@@ -20,14 +22,15 @@ install_python() {
   [ -x "$TOOLS_DIR/venv/bin/pip" ] && return 0
   python3 -m venv --without-pip "$TOOLS_DIR/venv"
   local tmp; tmp="$(mktemp -d)"
-  fetch https://bootstrap.pypa.io/get-pip.py "$tmp/get-pip.py"
+  fetch "https://raw.githubusercontent.com/pypa/get-pip/${GET_PIP_TAG}/public/get-pip.py" "$tmp/get-pip.py"
+  verify "$tmp/get-pip.py" "$GET_PIP_SHA256"
   "$TOOLS_DIR/venv/bin/python" "$tmp/get-pip.py" -q
   rm -rf "$tmp"
 }
 
 install_semgrep() {
   install_python
-  "$TOOLS_DIR/venv/bin/pip" install -q -r "$HERE/requirements.txt"
+  "$TOOLS_DIR/venv/bin/pip" install -q --require-hashes -r "$HERE/requirements.txt"
 }
 
 install_gitleaks() {

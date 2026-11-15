@@ -27,6 +27,10 @@ DEFAULT = {
 }
 
 
+def report_path(rid):
+    return os.path.join("ci", "junit.xml") if rid == "unit-ci" else (DEFAULT[rid][1] if rid in DEFAULT else "%s/summary.json" % rid)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("dest")
@@ -47,7 +51,7 @@ def main():
     for rid in SUMMARY:
         os.makedirs(os.path.join(args.dest, rid))
         with open(os.path.join(args.dest, rid, "summary.json"), "w", encoding="utf-8") as handle:
-            handle.write('{"id": "%s", "exitCode": 0}\n' % rid)
+            handle.write('{"id": "%s", "exitCode": 0, "sourceSha": "%s"}\n' % (rid, args.sha))
         status = "stub" if rid == "contract" else "pass"
         ci_reports.write_meta(args.dest, rid, "summary", statuses.get(rid, status), args.sha, "probe", 0,
                               "%s/summary.json" % rid)
@@ -61,16 +65,16 @@ def main():
         code = 0 if status == "pass" else 2
         ci_reports.write_meta(args.dest, rid, kind, status, args.sha, "probe", code, rel)
     for rid in args.tamper:
-        _, rel, _ = DEFAULT[rid]
+        rel = report_path(rid)
         with open(os.path.join(args.dest, rel), "a", encoding="utf-8") as handle:
             handle.write("\n")
     for rid in args.wrong_sha:
         meta, _ = ci_reports.read_meta(args.dest, rid)
         ci_reports.write_meta(args.dest, rid, meta["kind"], meta["status"], "0" * 40, "probe", 0, meta["report"])
     for rid in args.delete_report:
-        os.remove(os.path.join(args.dest, DEFAULT[rid][1]))
+        os.remove(os.path.join(args.dest, report_path(rid)))
     for rid in args.stale:
-        os.utime(os.path.join(args.dest, DEFAULT[rid][1]), (1_000_000_000, 1_000_000_000))
+        os.utime(os.path.join(args.dest, report_path(rid)), (1_000_000_000, 1_000_000_000))
     for rid in args.drop_meta:
         os.remove(ci_reports.meta_path(args.dest, rid))
 

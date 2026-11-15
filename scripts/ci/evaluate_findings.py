@@ -305,7 +305,7 @@ def evaluate(path, policy, dispositions_path=None, secrets=False, today=None):
     for f in findings:
         sev, threshold = effective(f, policy)
         item = dict(f, effectiveSeverity=sev, threshold=threshold)
-        entry = dismissal_for(f, entries, policy)
+        entry = None if secrets else dismissal_for(f, entries, policy)  # a secret is never dismissed
         if secrets:
             blocks = True
         else:

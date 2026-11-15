@@ -17,7 +17,7 @@ assemble() { python3 -I "$HERE/assemble.py" "$WORK/reports" "$SHA" "$@"; }
 # gate WORKFLOW-FIXTURE: run the real gate on $WORK/reports, ticket profile, output kept in $GATE_OUT.
 gate() {
   CI_REPORTS_DIR="$WORK/reports" CI_SOURCE_SHA="$SHA" "$ROOT/scripts/ci/quality-gate.sh" --profile ticket \
-    --workflow "$HERE/gate/${1:-workflow-complete.yml}" >"$GATE_OUT" 2>&1
+    --workflow "$HERE/gate/${1:-workflow-complete.yml}" "${@:2}" >"$GATE_OUT" 2>&1
 }
 # expect_fail LABEL PATTERN: the last gate run must have failed and printed PATTERN.
 expect_fail() {
@@ -62,8 +62,18 @@ print("      recorded: %s owner=%s due=%s" % (item["rule"], item["owner"], item[
 sys.exit(0 if item["owner"] and item["due"] else 1)
 PY
 then echo "PASS  4b nonblocking finding is recorded with owner and due date"; else echo "FAIL  4b no owner and due date recorded"; FAILED=$((FAILED + 1)); fi
+assemble --set secrets=sarif-secret.sarif; gate; expect_fail "4c a leaked secret" "secrets.*BLOCKING .* probe-secret-1"
+python3 -I -c "
+import datetime, json, sys
+exp = (datetime.date.today() + datetime.timedelta(days=7)).isoformat()
+json.dump({'dispositions': [{'match': 'probe-secret-1', 'reason': 'probe', 'owner': 'probe', 'expires': exp}]}, open(sys.argv[1], 'w'))
+" "$WORK/dismiss.json"
+assemble --set secrets=sarif-secret.sarif; gate workflow-complete.yml --dispositions "$WORK/dismiss.json"; expect_fail "4d a secret cannot be dismissed by a disposition" "secrets.*BLOCKING .* probe-secret-1"
 assemble --wrong-sha unit-ci; gate; expect_fail "5a report for the wrong commit" "unit-ci.*wrong commit"
 assemble --stale sast; gate; expect_fail "5b report older than the commit (stale)" "sast.*stale"
+assemble --delete-report lint; gate; expect_fail "5d summary report (lint) missing" "lint.*report file 'lint/summary.json' is missing"
+assemble --tamper lint; gate; expect_fail "5e summary report (lint) changed after its wrapper wrote it" "lint.*does not match the hash"
+assemble --stale types; gate; expect_fail "5f summary report (types) stale" "types.*stale"
 assemble --tamper sast; gate; expect_fail "5c report changed after its wrapper wrote it" "sast.*does not match the hash"
 assemble; gate workflow-missing-job.yml; expect_fail "6a workflow edit removes a required job" "workflow.*required job\(s\) missing: security"
 assemble; gate workflow-unpinned.yml; expect_fail "6b workflow edit unpins an action" "workflow.*unpinned action"

@@ -70,6 +70,15 @@ def test_secrets_block_whatever_the_severity(policy, write_json):
     assert not out["ok"]
 
 
+def test_a_secret_can_never_be_dismissed(policy, write_json, tmp_path):
+    disp = tmp_path / "d.json"
+    disp.write_text(json.dumps({"dispositions": [{"match": "S", "reason": "r", "owner": "o", "expires": "2026-12-01"}]}))
+    path = write_json("a.sarif", sarif([result("S", "error")]))
+    assert run(policy, path, dispositions_path=str(disp))["ok"]  # an ordinary finding can be dismissed
+    out = run(policy, path, dispositions_path=str(disp), secrets=True)
+    assert not out["ok"] and out["blocking"] and not out["dismissed"]
+
+
 def test_crashed_scanner_and_unknown_formats_are_tool_failures(policy, write_json):
     assert not run(policy, write_json("a.sarif", sarif([], ok=False)))["ok"]
     assert not run(policy, write_json("b.sarif", '{"version": "2.1.0", "runs": []}'))["ok"]

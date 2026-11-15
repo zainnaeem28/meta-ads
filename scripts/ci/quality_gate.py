@@ -109,14 +109,28 @@ def check_entry(entry, reports_dir, repo, sha, policy, dispositions, out_dir):
     if status == "stub":
         if not entry.get("stubAllowed"):
             return False, "a stub run is not allowed for this report"
+        present = [p for p in entry.get("stubWhenAbsent", []) if os.path.exists(os.path.join(repo, p))]
+        if present:
+            return False, "stub run but %s exists, so the real check is required" % ", ".join(present)
         return True, "stub accepted until %s" % entry["stubAllowed"]
     if meta.get("exitCode") not in (0, "0"):
         return False, "status pass but the tool exit code is %s" % meta.get("exitCode")
-    if entry["kind"] == "summary":
-        return True, "tool %s passed" % (meta.get("tool") or "-")
     problem = check_report_file(meta, entry, reports_dir, repo, sha)
     if problem:
         return False, problem
+    if entry["kind"] == "summary":
+        try:
+            with open(os.path.join(reports_dir, entry["report"]), encoding="utf-8") as handle:
+                summary = json.load(handle)
+        except (ValueError, OSError) as err:
+            return False, "summary '%s' is not valid JSON: %s" % (entry["report"], err)
+        if not isinstance(summary, dict) or summary.get("exitCode") != 0:
+            return False, "summary records exit code %s, expected 0" % (
+                summary.get("exitCode") if isinstance(summary, dict) else "-")
+        if summary.get("sourceSha") != sha:
+            return False, "summary is for commit %s, expected %s (wrong commit)" % (
+                str(summary.get("sourceSha"))[:12], sha[:12])
+        return True, "tool %s passed" % (meta.get("tool") or "-")
     full = os.path.join(reports_dir, entry["report"])
     kind = entry["kind"]
     if kind == "junit":

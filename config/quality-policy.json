@@ -79,6 +79,7 @@
       "kind": "summary",
       "report": "contract/summary.json",
       "stubAllowed": "TASK-019",
+      "stubWhenAbsent": ["packages/contracts/openapi.yaml"],
       "profiles": ["ticket", "release"]
     },
     {
