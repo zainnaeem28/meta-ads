@@ -21,10 +21,16 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: `pnpm exec next start --hostname 127.0.0.1 --port ${port}`,
+      // The e2e build bakes in the api origin (read by the root provider) and enables the test-only probe page.
+      command: `pnpm exec next build && pnpm exec next start --hostname 127.0.0.1 --port ${port}`,
+      env: {
+        NEXT_PUBLIC_API_ORIGIN: process.env.E2E_API_URL,
+        NEXT_PUBLIC_E2E_PROBE: '1',
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: '',
+      },
       url: `http://127.0.0.1:${port}`,
       reuseExistingServer: false,
-      timeout: 60_000,
+      timeout: 240_000,
     },
   ],
 });

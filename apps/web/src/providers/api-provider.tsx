@@ -1,9 +1,11 @@
 'use client';
 
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { installApiClient, type GetToken } from '../lib/api/client';
 import { clearForIdentityChange, createQueryClient } from '../lib/query/query-client';
+
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 export interface ApiProviderProps {
   children: ReactNode;
@@ -20,11 +22,12 @@ export function ApiProvider({ children, origin, getToken, identity, client }: Ap
   tokenRef.current = getToken;
   const previous = useRef(identity);
 
-  // Installed during render-phase state init so the first child query already has the bearer.
-  const [uninstall] = useState(() =>
-    installApiClient({ origin, getToken: () => tokenRef.current() }),
-  );
-  useEffect(() => uninstall, [uninstall]);
+  // Installed in the browser only (never on the server, where it would patch a fetch shared by requests).
+  // A layout effect runs before any child's query effect, and install/uninstall pair up under StrictMode.
+  useIsomorphicLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    return installApiClient({ origin, getToken: () => tokenRef.current() });
+  }, [origin]);
 
   useEffect(() => {
     if (previous.current !== identity) {

@@ -29,7 +29,7 @@ test.describe('@TASK-082 api layer through the built web app', () => {
       return route.fulfill({ response, headers: { ...response.headers(), ...cors } });
     });
 
-    await page.goto(`/api-probe?api=${encodeURIComponent(api)}`);
+    await page.goto('/api-probe');
     await expect(page.getByTestId('health')).toHaveText('http 200');
     await expect(page.getByTestId('me-error')).toHaveText(/^http:404:not_found:[0-9a-f-]{36}$/);
     expect(sent.some((r) => r.url === `${api}/health/live`)).toBe(true);

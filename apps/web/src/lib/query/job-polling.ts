@@ -57,6 +57,10 @@ export const useJobPolling = <TData, TError = Error, TKey extends QueryKey = Que
     ...opts.query,
     refetchIntervalInBackground: false,
     refetchInterval: (query: Query<TData, TError, TData, TKey>) =>
-      pollInterval({ state: opts.getState(query.state.data), hidden, errorShown }),
+      pollInterval({
+        state: opts.getState(query.state.data),
+        hidden,
+        errorShown: errorShown || query.state.status === 'error',
+      }),
   });
 };

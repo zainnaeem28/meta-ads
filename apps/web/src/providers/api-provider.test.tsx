@@ -3,6 +3,7 @@ import { useGetMe } from '@shroomap/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import { StrictMode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { server } from '../lib/api/msw.setup';
 import { createQueryClient } from '../lib/query/query-client';
@@ -58,5 +59,25 @@ describe('ApiProvider', () => {
     await waitFor(() => expect(client.getQueryCache().getAll()).toHaveLength(0));
     expect(client.getQueryData(['other'])).toBeUndefined();
     view.unmount();
+  });
+});
+
+describe('ApiProvider under StrictMode', () => {
+  it('keeps the client installed after the mount, cleanup, mount cycle', () => {
+    const base = () => (globalThis as { __SHROOMAP_API_BASE__?: string }).__SHROOMAP_API_BASE__;
+    const view = render(
+      <StrictMode>
+        <ApiProvider
+          origin="http://strict.test"
+          getToken={() => Promise.resolve(null)}
+          identity={null}
+        >
+          <p>x</p>
+        </ApiProvider>
+      </StrictMode>,
+    );
+    expect(base()).toBe('http://strict.test/api/v1');
+    view.unmount();
+    expect(base()).not.toBe('http://strict.test/api/v1');
   });
 });

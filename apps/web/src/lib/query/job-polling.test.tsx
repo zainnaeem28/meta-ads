@@ -95,4 +95,34 @@ describe('useJobPolling', () => {
     await tick(3000);
     expect(calls).toBeGreaterThan(1);
   });
+
+  it('stops polling while the query is in error state', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    let n = 0;
+    renderHook(
+      () =>
+        useJobPolling({
+          query: {
+            queryKey: ['job-err'],
+            queryFn: () => {
+              n += 1;
+              return n === 1
+                ? Promise.resolve({ state: 'processing' })
+                : Promise.reject(new Error('x'));
+            },
+          },
+          getState: (d: { state: string } | undefined) => d?.state,
+        }),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        ),
+      },
+    );
+    await tick(0);
+    await tick(3000);
+    expect(n).toBe(2);
+    await tick(9000);
+    expect(n).toBe(2);
+  });
 });
