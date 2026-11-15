@@ -1,27 +1,27 @@
-== commit 77c50bec0300bdec1d609527e8ba881bd151946e
+== commit d9f52981f5bad9264d6b5e19550d62877cbb08d7
 == gate probes (DEVOPS-PLAN section 15)
-PASS  0  clean set of reports passes                             gate exit 0: QUALITY GATE PASS (profile ticket, commit 77c50bec0300)
+PASS  0  clean set of reports passes                             gate exit 0: QUALITY GATE PASS (profile ticket, commit d9f52981f5ba)
 PASS  1  one required unit test fails                            gate exit 1: FAIL unit-ci      1 test(s) failed
 PASS  2a suite selects zero tests (runner exited 0)              gate exit 1: FAIL unit-ci      only 0 test(s) ran (0 skipped); at least 1 required
 PASS  2b every selected test is skipped                          gate exit 1: FAIL unit-ci      only 0 test(s) ran (2 skipped); at least 1 required
 PASS  2c coverage below the policy minimum                       gate exit 1: FAIL unit-ci      lines coverage 33.3% is under the overall minimum of 80%
 PASS  3a scanner crashed (exit 2, no report)                     gate exit 1: FAIL sast         wrapper recorded a failure (exit 2): -
 PASS  3b scanner report missing                                  gate exit 1: FAIL sast         report file 'sast.sarif' is missing
-PASS  3c scanner report malformed                                gate exit 1: FAIL sast         TOOL FAILURE: report '/tmp/paperclip-run-aiu-78-67ab3957-740-0iGrvT/tmp.XkWktAInpp/reports/sast.sarif' is not valid JSON: Unterminat
+PASS  3c scanner report malformed                                gate exit 1: FAIL sast         TOOL FAILURE: report '/tmp/paperclip-run-aiu-78-67ab3957-740-0iGrvT/tmp.5jCr880tZw/reports/sast.sarif' is not valid JSON: Unterminat
 PASS  3d scanner says the scan did not finish                    gate exit 1: FAIL deps         TOOL FAILURE: probe-scanner reports executionSuccessful=false (the scan did not finish)
 PASS  3f wrapper exits non-zero and records fail when its tool fails (exit 1)
 PASS  3e wrapper never ran (no meta file)                        gate exit 1: FAIL secrets      no meta file for report 'secrets' (the wrapper did not run or crashed)
 PASS  4  synthetic Critical finding                              gate exit 1: FAIL sast         BLOCKING CRITICAL PROBE-CRIT-1 at apps/api/src/example.ts (probe-scanner)
-PASS  4b nonblocking finding passes                              gate exit 0: QUALITY GATE PASS (profile ticket, commit 77c50bec0300)
+PASS  4b nonblocking finding passes                              gate exit 0: QUALITY GATE PASS (profile ticket, commit d9f52981f5ba)
       recorded: PROBE-MED-1 owner=DevOps Engineer due=2026-12-15
 PASS  4b nonblocking finding is recorded with owner and due date
 PASS  4c a leaked secret                                         gate exit 1: FAIL secrets      BLOCKING HIGH probe-secret-1 at example.env (probe-scanner)
 PASS  4d a secret cannot be dismissed by a disposition           gate exit 1: FAIL secrets      BLOCKING HIGH probe-secret-1 at example.env (probe-scanner)
-PASS  5a report for the wrong commit                             gate exit 1: FAIL unit-ci      report is for commit 000000000000, expected 77c50bec0300 (wrong commit)
-PASS  5b report older than the commit (stale)                    gate exit 1: FAIL sast         report file 'sast.sarif' is older than commit 77c50bec0300 (stale)
+PASS  5a report for the wrong commit                             gate exit 1: FAIL unit-ci      report is for commit 000000000000, expected d9f52981f5ba (wrong commit)
+PASS  5b report older than the commit (stale)                    gate exit 1: FAIL sast         report file 'sast.sarif' is older than commit d9f52981f5ba (stale)
 PASS  5d summary report (lint) missing                           gate exit 1: FAIL lint         report file 'lint/summary.json' is missing
 PASS  5e summary report (lint) changed after its wrapper wrote it gate exit 1: FAIL lint         report file 'lint/summary.json' does not match the hash its wrapper recorded
-PASS  5f summary report (types) stale                            gate exit 1: FAIL types        report file 'types/summary.json' is older than commit 77c50bec0300 (stale)
+PASS  5f summary report (types) stale                            gate exit 1: FAIL types        report file 'types/summary.json' is older than commit d9f52981f5ba (stale)
 PASS  5c report changed after its wrapper wrote it               gate exit 1: FAIL sast         report file 'sast.sarif' does not match the hash its wrapper recorded
 PASS  6a workflow edit removes a required job                    gate exit 1: FAIL workflow     required job(s) missing: security
 PASS  6b workflow edit unpins an action                          gate exit 1: FAIL workflow     unpinned action actions/checkout@v4
