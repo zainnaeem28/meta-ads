@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --config vitest.config.ts",
+    "test:render": "vitest run --config vitest.config.ts --outputFile.junit=../../../reports/release/render-junit.xml",
     "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {

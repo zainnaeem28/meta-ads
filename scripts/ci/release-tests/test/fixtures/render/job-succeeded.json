@@ -1,0 +1,6 @@
+{
+  "id": "job-1",
+  "status": "succeeded",
+  "startCommand": "pnpm db:migrate",
+  "finishedAt": "2026-03-10T12:01:00Z"
+}
