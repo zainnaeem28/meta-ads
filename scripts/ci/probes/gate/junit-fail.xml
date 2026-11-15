@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testsuite name="probe" tests="3" failures="1" errors="0" skipped="0">
+    <testcase classname="probe" name="adds"/>
+    <testcase classname="probe" name="subtracts">
+      <failure message="expected 1 to equal 2">AssertionError</failure>
+    </testcase>
+    <testcase classname="probe" name="multiplies"/>
+  </testsuite>
+</testsuites>

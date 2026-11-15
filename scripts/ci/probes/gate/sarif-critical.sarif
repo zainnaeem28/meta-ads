@@ -1,0 +1,29 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "probe-scanner",
+          "rules": [
+            {
+              "id": "PROBE-CRIT-1",
+              "properties": { "security-severity": "9.8" }
+            }
+          ]
+        }
+      },
+      "invocations": [{ "executionSuccessful": true }],
+      "results": [
+        {
+          "ruleId": "PROBE-CRIT-1",
+          "level": "error",
+          "message": { "text": "synthetic Critical finding (inert fixture)" },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "apps/api/src/example.ts" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+title = "shroomap secret scan"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "openai-key-shaped"
+description = "OpenAI-shaped API key"
+regex = '''sk-(?:proj-)?[A-Za-z0-9_-]{32,}'''
+keywords = ["sk-"]
+
+[[rules]]
+id = "wavespeed-key-shaped"
+description = "WaveSpeed-shaped API key"
+regex = '''(?i)wavespeed[A-Za-z0-9_-]{0,20}['"=: ]+[A-Za-z0-9]{32,}'''
+keywords = ["wavespeed"]

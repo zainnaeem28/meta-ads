@@ -1,0 +1,19 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": { "driver": { "name": "probe-scanner", "rules": [] } },
+      "invocations": [{ "executionSuccessful": true }],
+      "results": [
+        {
+          "ruleId": "PROBE-MED-1",
+          "level": "warning",
+          "message": { "text": "synthetic Medium finding (inert fixture)" },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "apps/web/src/example.ts" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

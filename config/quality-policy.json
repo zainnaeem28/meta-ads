@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "owner": "QUALITY-RELEASE-PLAN sections 4, 5 and DEVOPS-PLAN section 4.3",
+  "severity": {
+    "cvss": { "critical": 9.0, "high": 7.0, "medium": 4.0, "low": 0.1 },
+    "sarifLevel": { "error": "high", "warning": "medium", "note": "low", "none": "info" },
+    "words": {
+      "critical": "critical",
+      "high": "high",
+      "medium": "medium",
+      "moderate": "medium",
+      "low": "low",
+      "info": "info",
+      "informational": "info",
+      "negligible": "info"
+    },
+    "zapRiskCode": { "3": "high", "2": "medium", "1": "low", "0": "info" },
+    "missing": "high"
+  },
+  "failOn": {
+    "default": "high",
+    "sources": { "zap": "medium" },
+    "pathClasses": [
+      {
+        "name": "key-custody",
+        "paths": [
+          "(^|/)modules/provider-keys/",
+          "(^|/)modules/identity/",
+          "(^|/)platform/egress/",
+          "(^|/)modules/media/.*sign"
+        ],
+        "failOn": "medium",
+        "promoteTo": "high"
+      }
+    ]
+  },
+  "dispositions": { "maxDays": 90, "neverDismiss": ["critical"] },
+  "nonBlocking": { "owner": "DevOps Engineer", "dueDays": 30 },
+  "coverage": {
+    "classes": {
+      "authentication": { "lines": 90, "branches": 85 },
+      "overall": { "lines": 80, "branches": 75 },
+      "utilities": { "lines": 95, "branches": 90 },
+      "ui-components": { "lines": 75, "branches": 70 },
+      "hooks": { "lines": 85, "branches": 80 }
+    }
+  },
+  "profiles": ["ticket", "release"],
+  "reports": [
+    {
+      "id": "lint",
+      "kind": "summary",
+      "report": "lint/summary.json",
+      "profiles": ["ticket", "release"]
+    },
+    {
+      "id": "types",
+      "kind": "summary",
+      "report": "types/summary.json",
+      "profiles": ["ticket", "release"]
+    },
+    {
+      "id": "layers",
+      "kind": "summary",
+      "report": "layers/summary.json",
+      "profiles": ["ticket", "release"]
+    },
+    {
+      "id": "unit-ci",
+      "kind": "junit",
+      "report": "ci/junit.xml",
+      "coverage": "ci/lcov.info",
+      "coverageClass": "overall",
+      "minTests": 1,
+      "profiles": ["ticket", "release"]
+    },
+    {
+      "id": "contract",
+      "kind": "summary",
+      "report": "contract/summary.json",
+      "stubAllowed": "TASK-019",
+      "profiles": ["ticket", "release"]
+    },
+    {
+      "id": "sast",
+      "kind": "findings",
+      "report": "sast.sarif",
+      "profiles": ["ticket", "release"]
+    },
+    {
+      "id": "deps",
+      "kind": "findings",
+      "report": "deps.sarif",
+      "profiles": ["ticket", "release"]
+    },
+    {
+      "id": "deps-audit",
+      "kind": "findings",
+      "report": "audit.json",
+      "profiles": ["ticket", "release"]
+    },
+    {
+      "id": "secrets",
+      "kind": "secrets",
+      "report": "secrets.sarif",
+      "profiles": ["ticket", "release"]
+    },
+    {
+      "id": "integration",
+      "kind": "junit",
+      "report": "integration/junit.xml",
+      "minTests": 1,
+      "profiles": ["release"]
+    },
+    {
+      "id": "e2e",
+      "kind": "junit",
+      "report": "e2e/junit.xml",
+      "minTests": 1,
+      "notApplicableWhenAbsent": ["playwright.config.ts", "apps/web/playwright.config.ts"],
+      "profiles": ["release"]
+    },
+    {
+      "id": "container",
+      "kind": "findings",
+      "report": "container.sarif",
+      "notApplicableWhenAbsent": ["docker", "Dockerfile", "apps/api/Dockerfile"],
+      "profiles": ["release"]
+    },
+    {
+      "id": "iac",
+      "kind": "findings",
+      "report": "iac.sarif",
+      "notApplicableWhenAbsent": [
+        "docker",
+        "infra",
+        "Dockerfile",
+        "docker-compose.yml",
+        "compose.yaml",
+        ".github/workflows"
+      ],
+      "profiles": ["release"]
+    },
+    {
+      "id": "build",
+      "kind": "summary",
+      "report": "build/summary.json",
+      "profiles": ["release"]
+    }
+  ],
+  "workflow": {
+    "file": ".github/workflows/ci.yml",
+    "requiredJobs": [
+      "validate",
+      "unit",
+      "integration",
+      "e2e",
+      "security",
+      "build",
+      "container-scan",
+      "dast-baseline",
+      "quality-gate"
+    ],
+    "allowedPermissions": ["contents: read", "actions: read", "packages: write", "id-token: write"],
+    "forbiddenTriggers": ["pull_request_target", "schedule"]
+  }
+}
