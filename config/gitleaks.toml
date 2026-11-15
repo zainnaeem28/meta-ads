@@ -1,0 +1,28 @@
+# Custom gitleaks patterns for provider keys (SECURITY-DESIGN section 14). Applied to the diff, the full history
+# and the built web bundle by scripts/ci/security/. The WaveSpeed shape is VERIFIED against the stub fixtures
+# only (tools/provider-stubs: `ws-` prefix); re-verify it against a real key before go-live.
+title = "shroomap provider key patterns"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "openai-key-shaped"
+description = "OpenAI-shaped API key (sk- or sk-proj-)"
+regex = '''\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}'''
+keywords = ["sk-"]
+entropy = 3.0
+
+[[rules]]
+id = "wavespeed-key-prefixed"
+description = "WaveSpeed-shaped API key (ws- prefix)"
+regex = '''\bws-[A-Za-z0-9]{32,}'''
+keywords = ["ws-"]
+entropy = 3.0
+
+[[rules]]
+id = "wavespeed-key-assigned"
+description = "WaveSpeed API key assigned to a named variable"
+regex = '''(?i)wavespeed[A-Za-z0-9_-]{0,20}['"=: ]+[A-Za-z0-9]{32,}'''
+keywords = ["wavespeed"]
+entropy = 3.0

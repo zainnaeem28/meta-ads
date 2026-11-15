@@ -1,0 +1,5 @@
+# Workflow, CI wrapper and policy edits need the code owner's review (DEVOPS-PLAN 3.2).
+/.github/                 @zainnaeem28
+/scripts/ci/              @zainnaeem28
+/config/quality-policy.json @zainnaeem28
+/config/dispositions.json @zainnaeem28

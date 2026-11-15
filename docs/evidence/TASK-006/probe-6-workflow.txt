@@ -1,0 +1,114 @@
+== real workflow: actionlint + validate.sh
+1.7.12
+actionlint: 1 file(s) clean
+validate.sh: workflow policy clean (1 file(s))
+exit 0
+-- unpinned
+actionlint: 1 file(s) clean
+validate.sh: 9 problem(s)
+  unpinned.yml:30: action actions/checkout@v4 is not pinned by a full commit SHA
+validate exit 1
+-- wider-perm
+actionlint: 1 file(s) clean
+validate.sh: 9 problem(s)
+  wider-perm.yml:28: permission contents: write is wider than the allow-list
+validate exit 1
+-- write-all
+actionlint: 1 file(s) clean
+validate.sh: 1 problem(s)
+  write-all.yml:17: permissions must be listed per scope, not read-all or write-all
+validate exit 1
+-- default-branch-var
+../../../../../../../../../../..default-branch-var.yml:8:21: character ' ' is invalid for branch and tag names. ref name cannot contain spaces, ~, ^, :, [, ?, *. see `man git-check-ref-format` for more details. note that regular expression is unavailable. note: filter pattern syntax is explained at https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet [glob]
+  |
+8 |     branches: [ "${{ github.event.repository.default_branch }}" ]
+validate exit 1
+-- schedule
+actionlint: 1 file(s) clean
+validate.sh: 1 problem(s)
+  schedule.yml:11: trigger schedule is forbidden
+validate exit 1
+-- tag
+actionlint: 1 file(s) clean
+validate.sh: 1 problem(s)
+  tag.yml:10: tag triggers are forbidden (main-only hosted CI)
+validate exit 1
+-- third-party
+actionlint: 1 file(s) clean
+validate.sh: 8 problem(s)
+  third-party.yml:52: action evil/upload is not on the allow-list (DEVOPS-PLAN 4.6)
+validate exit 1
+-- continue-on-error
+actionlint: 1 file(s) clean
+validate.sh: 3 problem(s)
+  continue-on-error.yml:27: continue-on-error is not allowed (every job blocks)
+validate exit 1
+-- removed required job (security): validate.sh
+actionlint: 1 file(s) clean
+validate.sh: 1 problem(s)
+  missing-job.yml:1: required job(s) missing: security
+validate exit 1
+-- removed required job (security): quality-gate (probe 6)
+FAIL workflow     required job(s) missing: security
+QUALITY GATE FAIL (profile ticket, commit 544b6f29b0a1)
+gate exit 1
+-- control: the real workflow in the same gate
+PASS workflow     9 jobs, all 9 required present, actions pinned
+QUALITY GATE PASS (profile ticket, commit 544b6f29b0a1)
+gate exit 0
+
+######## Round 1 fix probes (F1-F5): validate.sh now parses the YAML with a pinned yq
+== recheck probes (structural validate.sh, yq 4.54.3 pinned)
+-- real workflow
+1.7.12
+actionlint: 1 file(s) clean
+validate.sh: workflow policy clean (1 file(s))
+exit 0
+-- flow-perm-job
+validate.sh: 2 problem(s)
+  flow-perm-job.yml: jobs.validate.permissions: permissions must be exactly {"contents": "read"}, found {"contents": "write", "packages": "write"}
+  flow-perm-job.yml: jobs.validate.permissions: permission contents: write is wider than the allow-list
+validate exit 1
+-- flow-perm-top
+validate.sh: 2 problem(s)
+  flow-perm-top.yml: permissions: permissions must be exactly {}, found {"contents": "write"}
+  flow-perm-top.yml: permissions: permission contents: write is wider than the allow-list
+validate exit 1
+-- id-token-job
+validate.sh: 1 problem(s)
+  id-token-job.yml: jobs.validate.permissions: permissions must be exactly {"contents": "read"}, found {"contents": "read", "id-token": "write"}
+validate exit 1
+-- step-if-first-key
+validate.sh: 1 problem(s)
+  step-if-first-key.yml: jobs.build.steps[3]: a step `if:` could skip a required check (only `if: always()` is allowed)
+validate exit 1
+-- step-coe-first-key
+validate.sh: 1 problem(s)
+  step-coe-first-key.yml: jobs.build.steps[3]: continue-on-error is not allowed (every job blocks)
+validate exit 1
+-- gate-needs-dropped
+validate.sh: 1 problem(s)
+  gate-needs-dropped.yml: jobs.quality-gate.needs: must list exactly ['build', 'container-scan', 'dast-baseline', 'e2e', 'integration', 'security', 'unit', 'validate'], found ['build', 'container-scan', 'dast-baseline', 'e2e', 'integration', 'unit', 'validate']
+validate exit 1
+-- gate-or-true
+validate.sh: 2 problem(s)
+  gate-or-true.yml: jobs.quality-gate.steps[5]: run line tolerates failure: scripts/ci/quality-gate.sh --profile release || true
+  gate-or-true.yml: jobs.quality-gate: must run exactly `scripts/ci/quality-gate.sh --profile release` once, found ['scripts/ci/quality-gate.sh --profile release || true']
+validate exit 1
+-- wrapper-replaced
+validate.sh: 2 problem(s)
+  wrapper-replaced.yml: jobs.security.steps[3]: run line tolerates failure: true
+  wrapper-replaced.yml: jobs.security: must run scripts/ci/sast.sh as its own command line
+validate exit 1
+-- wrapper-or-true
+validate.sh: 2 problem(s)
+  wrapper-or-true.yml: jobs.unit.steps[3]: run line tolerates failure: scripts/ci/unit.sh || true
+  wrapper-or-true.yml: jobs.unit: must run scripts/ci/unit.sh as its own command line
+validate exit 1
+-- gate-coe
+validate.sh: 1 problem(s)
+  gate-coe.yml: jobs.quality-gate: continue-on-error is not allowed (every job blocks)
+validate exit 1
+
+-- F7 assemble step (extracted from ci.yml and run on a fixture): disjoint files pass; a file two jobs wrote fails; a missing job artifact fails
+ok rc=0 / clash rc=1 (report files written by more than one job) / missing rc=1 (no report artifact from: e2e)
