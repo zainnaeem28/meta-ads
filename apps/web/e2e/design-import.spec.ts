@@ -1,4 +1,5 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 const evidence = process.env.EVIDENCE_DIR ?? '../../docs/evidence/TASK-066';
@@ -74,6 +75,17 @@ test.describe('@TASK-066 design import through the built web app', () => {
       expect(face.weight).toBe('400 600');
     }
   });
+
+  for (const width of [390, 1440]) {
+    test(`has no axe violations at ${width} px`, async ({ page }) => {
+      mkdirSync(evidence, { recursive: true });
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      const results = await new AxeBuilder({ page }).analyze();
+      writeFileSync(`${evidence}/axe-${width}.json`, JSON.stringify(results.violations, null, 2));
+      expect(results.violations).toEqual([]);
+    });
+  }
 
   test('runs beside the built api', async ({ request }) => {
     const res = await request.get(`${process.env.E2E_API_URL}/health/live`);

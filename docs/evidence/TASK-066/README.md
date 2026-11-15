@@ -5,4 +5,6 @@
 - Token lint: `scripts/ci/token-lint.sh` (tree) and `scripts/ci/token-lint.sh --self-test` (negative fixtures: raw hex, rgb(), `w-[13px]`, `[color:red]`, `13px`, Google Fonts `@import`, remote `@font-face`, `next/font/google`) both exit 0.
 - Network capture: the e2e test records every request of the page and asserts none leaves the web origin; CDP `CSS.getPlatformFontsForNode` reports `Inter` as a custom font.
 
-Limitations: axe-core is not in the lockfile, so no axe run on the test page (single text line, no components yet); the e2e api is the built api started with the fixture configuration (`tools/foundation-tests/api-env.ts`), checked on `/health/live`, no database. Files outside the ticket's allowed paths that this ticket needed: `apps/web/{postcss.config.mjs,playwright.config.ts,vitest.config.ts,e2e/**,src/design/**,package.json}`, `apps/web/src/app/page.tsx`, `pnpm-lock.yaml`, `eslint.config.mjs` and `.prettierignore` (ignore `design/`).
+- axe: `@axe-core/playwright` 4.10.2 (pinned) runs in the e2e at 390 and 1440 px; 0 violations (`axe-390.json`, `axe-1440.json`). The test page gained an `<h1>` for it.
+
+Limitations: the e2e api is the built api started with the fixture configuration (`tools/foundation-tests/api-env.ts`), checked on `/health/live`, no database. Files outside the ticket's allowed paths that this ticket needed: `apps/web/{postcss.config.mjs,playwright.config.ts,vitest.config.ts,e2e/**,src/design/**,package.json}`, `apps/web/src/app/page.tsx`, `pnpm-lock.yaml`, `eslint.config.mjs` and `.prettierignore` (ignore `design/`).

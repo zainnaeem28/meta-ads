@@ -32,7 +32,7 @@ describe('design tokens (TASK-066)', () => {
 
   it('reads declarations and tolerates an empty stylesheet', () => {
     expect(declarations('  ').size).toBe(0);
-    expect(declarations(':root { --a: 1px; }').get('--a')).toBe('1px');
+    expect(declarations(':root { --a: 1; }').get('--a')).toBe('1');
   });
 
   it('carries the portal override for administration', () => {
