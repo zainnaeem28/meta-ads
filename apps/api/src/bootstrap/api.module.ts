@@ -5,6 +5,7 @@ import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import helmet from '@fastify/helmet';
 import { Logger } from 'nestjs-pino';
 import type { AppEnv } from '../platform/config/index.js';
+import { DatabaseModule, dbConfigOf } from '../platform/db/index.js';
 import type { HttpLogging } from '../platform/logging/index.js';
 import { applyBounds } from '../platform/http/bounds.js';
 import { EgressModule } from '../platform/egress/index.js';
@@ -18,6 +19,10 @@ import { Scope, assertScopesDeclared } from '../platform/http/scope-registry.js'
 export interface EdgeConfig extends EgressModuleConfig {
   WEB_ORIGIN?: string | undefined;
   APP_ENV: AppEnv;
+  /** When present the application pool is opened and checked at startup (DATABASE_POOL_MAX and ACQUIRE_TIMEOUT too). */
+  DATABASE_URL?: string | undefined;
+  DATABASE_POOL_MAX?: number | undefined;
+  DATABASE_ACQUIRE_TIMEOUT_MS?: number | undefined;
 }
 
 /** Replaced by the health ticket (API-900/901). */
@@ -32,16 +37,23 @@ export class HealthController {
 }
 
 /** Operations served at the root, not under `/api/v1` (health probes API-900/901, internal metrics API-902/903). */
-export const ROOT_PATHS = ['health/live', 'health/ready', 'internal/metrics', 'internal/metrics/window'];
+export const ROOT_PATHS = [
+  'health/live',
+  'health/ready',
+  'internal/metrics',
+  'internal/metrics/window',
+];
 export const API_PREFIX = 'api/v1';
 
 function apiModule(
   logging: HttpLogging,
   controllers: (new () => object)[],
-  config: EgressModuleConfig,
+  config: EdgeConfig,
 ): new () => object {
+  const database =
+    config.DATABASE_URL === undefined ? [] : [DatabaseModule.forRoot(dbConfigOf(config))];
   @Module({
-    imports: [logging.module(), EgressModule.register(config)],
+    imports: [logging.module(), EgressModule.register(config), ...database],
     controllers: [HealthController, ...controllers],
   })
   class ApiModule {}
