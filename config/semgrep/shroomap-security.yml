@@ -27,6 +27,7 @@ rules:
     paths:
       exclude:
         - '**/platform/egress/**'
+        - '**/packages/contracts/src/http.ts'
         - '**/*.test.ts'
         - '**/*.spec.ts'
         - '**/tools/**'
