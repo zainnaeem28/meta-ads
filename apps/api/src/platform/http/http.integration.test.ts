@@ -135,13 +135,14 @@ describe('main.api.js (real entry point)', () => {
     expect(res.headers.get('x-request-id')).toBe('req-integration-1');
   });
 
-  it('answers bad JSON and a method with no route with registry errors', async () => {
+  it('answers a method with no route 405 with Allow, before the body is read (TASK-023)', async () => {
     const bad = await fetch(`${base}/health/live`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{nope' });
-    expect(bad.status).toBe(400);
-    expect(((await bad.json()) as Json)['error']['code']).toBe('validation_failed');
-    const wrongMethod = await fetch(`${base}/health/live`, { method: 'POST', headers: { 'content-type': 'application/xml' }, body: '<a/>' });
-    expect(wrongMethod.status).toBe(404);
-    expect(((await wrongMethod.json()) as Json)['error']['code']).toBe('not_found');
+    expect(bad.status).toBe(405);
+    expect(bad.headers.get('allow')).toBe('GET, HEAD');
+    expect(((await bad.json()) as Json)['error']['code']).toBe('method_not_allowed');
+    const unknown = await fetch(`${base}/nope`, { method: 'POST', headers: { 'content-type': 'application/xml' }, body: '<a/>' });
+    expect(unknown.status).toBe(404);
+    expect(((await unknown.json()) as Json)['error']['code']).toBe('not_found');
   });
 
   it('leaves the liveness probe raw', async () => {
