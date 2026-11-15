@@ -117,7 +117,8 @@ jobs:
       - name: PostgreSQL 17 client for pg_dump
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo curl -fsSL --retry 3 -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76  /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc" | sha256sum --check --strict
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -q
           sudo apt-get install -y -q postgresql-client-17
@@ -307,8 +308,28 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: reports-*
-          path: reports
-          merge-multiple: true
+          path: reports-by-job
+      - name: Assemble reports, refusing a file two jobs both wrote
+        run: |
+          python3 -I - <<'PY'
+          import pathlib, shutil, sys
+          src, dst = pathlib.Path("reports-by-job"), pathlib.Path("reports")
+          required = ["validate", "unit", "integration", "security", "build", "container-scan", "e2e"]
+          missing = [j for j in required if not (src / ("reports-" + j)).is_dir()]
+          if missing:
+              sys.exit("no report artifact from: %s" % ", ".join(missing))
+          clash = []
+          for job in sorted(src.iterdir()):
+              for f in sorted(p for p in job.rglob("*") if p.is_file()):
+                  target = dst / f.relative_to(job)
+                  if target.exists():
+                      clash.append(str(target))
+                      continue
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  shutil.copy2(f, target)
+          if clash:
+              sys.exit("report files written by more than one job: %s" % ", ".join(clash))
+          PY
       - name: Quality gate over every report
         run: scripts/ci/quality-gate.sh --profile release
       - name: Upload quality manifest

@@ -24,6 +24,13 @@ lint, types, layers, contract (stub until TASK-019), unit (40 tests, coverage 98
 
 `dast-baseline` has no wrapper in `scripts/ci/` yet (outside this ticket's allowed paths): the job prints "not applicable: no compose stack yet" and fails if a compose stack appears before a wrapper does. A `scripts/ci/dast.sh` change request goes to the Orchestrator.
 
+## Round 1 review fixes (F1-F9)
+
+- F1-F5, F9: `validate.sh` parses the workflow with a pinned `yq` 4.54.3 (release tarball, SHA-256 verified) and asserts structure: every `permissions` must be exactly `{}` at top level and `{contents: read}` per job (flow or block form), no job or step `continue-on-error`, no `if:` other than `always()` (first-key list items included), `quality-gate.needs` equals the required job set, the gate runs exactly `scripts/ci/quality-gate.sh --profile release`, each job runs its wrappers as their own lines with no `|| true`. Probes in `probe-6-workflow.txt`.
+- F6: the PGDG key is checked against a pinned SHA-256 (`0144068502a1...`) before apt trusts it. Still unproven on a hosted runner until the first run.
+- F7: the gate downloads each `reports-<job>` into its own folder, requires every job's artifact, and refuses to merge when two jobs wrote the same file (tested on a fixture).
+- F8 (owner/ops item): a `pull_request` into `main` from a fork still starts a run unless the repository setting *Actions > General > Fork pull request workflows > Require approval for all outside collaborators* is on. The owner sets it; the workflow file cannot prove "fork PR creates no run".
+
 ## Acceptance map
 
 - actionlint and `validate.sh` pass on the real workflow; removing a required job makes the gate fail: `probe-6-workflow.txt`.
