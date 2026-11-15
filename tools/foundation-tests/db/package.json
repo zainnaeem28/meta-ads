@@ -1,0 +1,23 @@
+{
+  "name": "foundation-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:db": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "gen:probe": "drizzle-kit generate --config=fixtures/probe/drizzle.config.ts --name=probe_items"
+  },
+  "dependencies": {
+    "drizzle-kit": "0.31.11",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1",
+    "pg-boss": "12.38.2"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}

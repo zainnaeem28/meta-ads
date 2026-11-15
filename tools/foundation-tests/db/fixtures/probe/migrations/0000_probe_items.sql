@@ -1,0 +1,4 @@
+CREATE TABLE "probe_items" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "probe_items_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"label" text NOT NULL
+);
