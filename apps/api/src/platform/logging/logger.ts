@@ -54,6 +54,18 @@ export function buildLogger(options: LoggerOptions = {}): BuiltLogger {
         logMethod(args, method) {
           // Message strings (and printf arguments) are scrubbed before pino formats them.
           const scrubbed = args.map((arg) => (typeof arg === 'string' ? scrub(arg) : arg));
+          const [first, ...rest] = scrubbed as unknown[];
+          if (first instanceof Error) {
+            // pino would copy err.message (and the stack) into the line unscrubbed.
+            const code = (first as { code?: unknown }).code;
+            const fields = typeof code === 'string' ? { code } : {};
+            const text = typeof rest[0] === 'string' ? rest.shift() : scrub(first.message);
+            return method.apply(this, [fields, text, ...rest] as unknown as Parameters<typeof method>);
+          }
+          if (first !== null && typeof first === 'object' && typeof (first as { msg?: unknown }).msg === 'string') {
+            const obj = first as { msg: string };
+            return method.apply(this, [{ ...obj, msg: scrub(obj.msg) }, ...rest] as unknown as Parameters<typeof method>);
+          }
           return method.apply(this, scrubbed as Parameters<typeof method>);
         },
       },

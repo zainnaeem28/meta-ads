@@ -43,3 +43,8 @@ Implements ARCHITECTURE 1.6 (XI), 3.1 and 3.7 in `apps/api/src/platform/logging/
 - `apps/api/vitest.config.ts`: coverage now also covers `platform/logging`, reports to `reports/logging` (the ticket's
   `--coverage`/`--junit` paths); `reports/config/junit.xml` is still written.
 - Report flags: the repo's scanners write `reports/deps.sarif` and `reports/audit.json`, not `reports/deps.json`.
+
+## Review round 1 fixes
+- F-1: `logMethod` now scrubs an Error passed as first argument (message and `{ msg }` objects); tests cover `log.error(err)`, `{ err }`, `{ msg }` and `runLoggedJob` with a throwing handler holding the canary.
+- F-2: covered by the same test.
+- F-3 (limitation): no `main.worker.ts` on dev; worker path is tested at unit level via `runLoggedJob` + `buildLogger`.

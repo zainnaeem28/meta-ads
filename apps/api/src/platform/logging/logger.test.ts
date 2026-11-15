@@ -100,6 +100,20 @@ describe('logger', () => {
     }
   });
 
+  it('scrubs the message of an Error passed as the first argument (F-1)', async () => {
+    const { sink, logger } = make();
+    const err = Object.assign(new Error(`boom ${CANARY_SECRET} ${CANARY_KEY}`), { code: 'E_X' });
+    logger.error(err);
+    logger.error(err, `with ${CANARY_TOKEN}`);
+    logger.error({ err }, `wrapped ${CANARY_SECRET}`);
+    logger.error({ msg: `obj ${CANARY_KEY}` });
+    await expect(
+      runLoggedJob(logger, { id: 'j1', name: 'x' }, () => Promise.reject(err)),
+    ).rejects.toBe(err);
+    expectNoCanary(sink.text());
+    expect(sink.lines()[0]).toMatchObject({ level: 'error', code: 'E_X' });
+  });
+
   it('defaults the level and release SHA', () => {
     const sink = capture();
     const { logger } = buildLogger({ destination: sink.stream });
