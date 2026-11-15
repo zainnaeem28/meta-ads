@@ -1,0 +1,6 @@
+# Structural validation only for generation; style rules run in the separate lint step (redocly.yaml).
+extends:
+  - minimal
+rules:
+  operation-4xx-response: off
+  no-unused-components: off

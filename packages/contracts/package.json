@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "@tanstack/react-query": "5.107.1"
   },
   "devDependencies": {
     "@redocly/cli": "2.78.0",
@@ -14,6 +15,24 @@
     "js-yaml": "4.3.2",
     "openapi-sampler": "1.7.10",
     "openapi-typescript": "7.13.0",
-    "orval": "8.48.0"
+    "orval": "8.48.0",
+    "react": "19.3.1",
+    "@types/react": "19.3.0",
+    "vitest": "5.1.0",
+    "@vitest/coverage-v8": "5.1.0"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "lint:openapi": "redocly lint openapi.yaml --config redocly.yaml",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.ts --coverage"
+  },
+  "peerDependencies": {
+    "react": "19.3.1"
   }
 }
