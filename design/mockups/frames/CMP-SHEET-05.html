@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CMP sheet 05: 500 and 503 error presentation</title><link rel="icon" href="../brand/favicon.svg">
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../base.css"><link rel="stylesheet" href="../components.css"><script src="../assets/icons.js"></script><script src="../shell.js"></script></head>
+<body data-portal="bare"><main class="sheet">
+<!-- CMP-SHEET-05: UI-UX 9.1 error rows internal_error (500) and service_unavailable (503), page-level (CMP-019) and in-context (CMP-011). REQ-019, NFR-07 -->
+<h1 class="sheet-h">Server errors: 500 and 503</h1>
+<section class="cmp" aria-label="Page-level load error"><h2>Page-level (first load replaces the skeleton)</h2><span class="cmp-id">CMP-019 · internal_error 500 · service_unavailable 503</span>
+  <div class="states">
+    <div class="state"><span class="tag">500, Try again enabled</span><div class="card"><div class="empty error" role="alert"><div class="glyph"><i data-icon="circle-alert" class="lg"></i></div><h2>Something went wrong on our side</h2><p>Something went wrong on our side. Your work was not changed by this request. Try again, and if it keeps happening quote the reference below.</p><span class="ui muted">Reference <code>req_7f3a91c2</code></span><button class="btn btn-outline"><i data-icon="refresh-cw" class="sm"></i>Try again</button></div></div></div>
+    <div class="state"><span class="tag">503, waiting for Retry-After</span><div class="card"><div class="empty" role="alert"><div class="glyph"><i data-icon="triangle-alert" class="lg"></i></div><span class="badge badge-warning"><i data-icon="triangle-alert"></i>Temporarily unavailable</span><h2>ShrooMap is temporarily unavailable</h2><p>ShrooMap is temporarily unavailable. You can try again in 12 seconds.</p><span class="ui muted">Reference <code>req_2b64d0e8</code></span><button class="btn btn-outline" aria-disabled="true" disabled><i data-icon="refresh-cw" class="sm"></i>Try again in 12s</button></div></div></div>
+  </div></section>
+<section class="cmp" aria-label="In-context alert"><h2>In-context (the form keeps its values)</h2><span class="cmp-id">CMP-011 · internal_error 500 · service_unavailable 503</span>
+  <div class="states">
+    <div class="state"><span class="tag">500 on a job-creating action, third failure</span><div class="card"><div class="card-body stack"><div class="field"><label for="p1">Product name</label><input id="p1" class="input" type="text" value="Morning Focus Blend"></div>
+      <div class="alert alert-destructive" role="alert"><i data-icon="circle-alert"></i><div class="body"><span class="title">Something went wrong on our side</span><span>Your work was not changed by this request. Check the list before you repeat this. If this continues, contact your administrator.</span><span class="ui muted">Reference <code>req_7f3a91c2</code></span></div></div></div>
+      <div class="card-footer"><button class="btn btn-outline">Back</button><button class="btn btn-primary"><i data-icon="refresh-cw" class="sm"></i>Try again</button></div></div></div>
+    <div class="state"><span class="tag">503 with Retry-After, countdown</span><div class="card"><div class="card-body stack"><div class="field"><label for="p2">Product name</label><input id="p2" class="input" type="text" value="Morning Focus Blend"></div>
+      <div class="alert alert-warning" role="alert"><i data-icon="triangle-alert"></i><div class="body"><span class="title">ShrooMap is temporarily unavailable</span><span>You can try again in 12 seconds. Your entries are kept.</span><span class="ui muted">Reference <code>req_2b64d0e8</code></span></div></div></div>
+      <div class="card-footer"><button class="btn btn-outline">Back</button><button class="btn btn-primary" aria-disabled="true" disabled><i data-icon="refresh-cw" class="sm"></i>Try again in 12s</button></div></div></div>
+  </div></section>
+</main></body></html>

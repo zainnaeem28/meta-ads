@@ -12,7 +12,7 @@
 <!-- SCREEN-009 Campaign workspace: Final ad (assembly, download, thumbstopper). Pattern: detail + job. FLOW-04. REQ-010 (QC confirm), 011, 022. API-061, 070, 071, 075, 076, 032 -->
 <main>
   <div data-ws data-tab="final" data-name="Evening Calm Gummies" data-meta="4 segments · 60 s" data-brief="success|Accepted" data-clips="success|4 of 4" data-final="success|Ready" data-when="default out-of-date"><div class="ws-actions"></div></div>
-  <div data-ws data-tab="final" data-name="Evening Calm Gummies" data-meta="4 segments · 60 s" data-brief="success|Accepted" data-clips="success|4 of 4" data-final="Choose clips" data-when="selecting qc-confirm no-clips failed assembling loading"><div class="ws-actions"></div></div>
+  <div data-ws data-tab="final" data-name="Evening Calm Gummies" data-meta="4 segments · 60 s" data-brief="success|Accepted" data-clips="success|4 of 4" data-final="Choose clips" data-when="selecting qc-confirm qc-confirm-required cap-reached no-clips failed assembling loading"><div class="ws-actions"></div></div>
 
   <div class="alert alert-warning" role="status" data-when="out-of-date" hidden><i data-icon="triangle-alert"></i><div class="body"><span class="title">This final ad is out of date</span><span>Clip 3 was regenerated after this ad was made. Re-assemble to include the new clip. The current file stays available until then.</span><div class="actions"><button class="btn btn-primary sm"><i data-icon="layers" class="sm"></i>Re-assemble</button></div></div></div>
 
@@ -34,16 +34,18 @@
   </div>
 
   <!-- selecting / confirm / no clips -->
-  <section class="card" data-when="selecting qc-confirm" hidden aria-labelledby="sel"><div class="card-header"><div><h2 id="sel">Choose and order clips</h2><div class="sub">Only completed clips can be used. Move clips to change their order.</div></div></div>
+  <section class="card" data-when="selecting qc-confirm qc-confirm-required cap-reached" hidden aria-labelledby="sel"><div class="card-header"><div><h2 id="sel">Choose and order clips</h2><div class="sub">Only completed clips can be used. Move clips to change their order.</div></div></div>
     <div class="card-body stack">
       <ol class="order-list">
         <li class="order-item"><span class="pos">1</span><input type="checkbox" checked aria-label="Use segment 1"><span class="grow">Segment 1 · 0:15</span><span class="badge badge-success"><i data-icon="circle-check"></i>QC passed</span><button class="btn btn-ghost icon sm" aria-label="Move segment 1 down"><i data-icon="chevron-down" class="sm"></i></button></li>
         <li class="order-item"><span class="pos">2</span><input type="checkbox" checked aria-label="Use segment 2"><span class="grow">Segment 2 · 0:15</span><span class="badge badge-destructive"><i data-icon="circle-alert"></i>QC failed</span><span class="row"><button class="btn btn-ghost icon sm" aria-label="Move segment 2 up"><i data-icon="chevron-up" class="sm"></i></button><button class="btn btn-ghost icon sm" aria-label="Move segment 2 down"><i data-icon="chevron-down" class="sm"></i></button></span></li>
         <li class="order-item"><span class="pos">3</span><input type="checkbox" checked aria-label="Use segment 3"><span class="grow">Segment 3 · 0:15</span><span class="badge badge-warning"><i data-icon="triangle-alert"></i>QC skipped</span><button class="btn btn-ghost icon sm" aria-label="Move segment 3 up"><i data-icon="chevron-up" class="sm"></i></button></li>
       </ol>
-      <div class="alert alert-warning"><i data-icon="triangle-alert"></i><div class="body"><span>2 selected clips have a failed or skipped audio check. You will be asked to confirm before assembling.</span></div></div>
+      <div class="alert alert-warning" role="alert" data-when="cap-reached" hidden><i data-icon="triangle-alert"></i><div class="body"><span class="title">Daily assembly limit reached</span><span>You have used all final-ad assemblies for today. Try again after midnight UTC. Your selection and order are kept.</span></div></div>
+      <div class="alert alert-warning" role="alert" data-when="qc-confirm-required" hidden><i data-icon="triangle-alert"></i><div class="body"><span class="title">Audio checks changed since this page loaded</span><span>Segment 2 and segment 3 did not pass the check. Nothing was assembled. Confirm to include them as they are.</span></div></div>
+      <div class="alert alert-warning" data-when="selecting qc-confirm" hidden><i data-icon="triangle-alert"></i><div class="body"><span>2 selected clips have a failed or skipped audio check. You will be asked to confirm before assembling.</span></div></div>
     </div>
-    <div class="card-footer"><span class="ui muted grow">3 clips · 0:45</span><button class="btn btn-primary"><i data-icon="layers" class="sm"></i>Assemble final ad</button></div></section>
+    <div class="card-footer"><span class="ui muted grow">3 clips · 0:45</span><button class="btn btn-primary" data-when="selecting qc-confirm qc-confirm-required" hidden><i data-icon="layers" class="sm"></i>Assemble final ad</button><button class="btn btn-primary" aria-disabled="true" disabled data-when="cap-reached" hidden><i data-icon="layers" class="sm"></i>Assemble final ad</button></div></section>
   <section class="card" data-when="no-clips" hidden><div class="empty"><div class="glyph"><i data-icon="clapperboard" class="lg"></i></div><h2>No completed clips yet</h2><p>Generate at least one clip first. Completed clips appear here for you to choose and order.</p><a class="btn btn-primary" href="SCREEN-008.html">Go to clips</a></div></section>
 
   <!-- assembling -->
@@ -56,5 +58,8 @@
 <div class="scrim" data-when="qc-confirm" hidden><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="qc-t"><div class="dialog-head"><h2 id="qc-t">Assemble with audio checks that did not pass?</h2></div>
   <div class="dialog-body"><p>Segment 2 failed its audio check (speech did not match the script). Segment 3's check was skipped.</p><label class="choice"><input type="checkbox" checked><span>I have reviewed these clips and want to use them anyway. This confirmation is recorded.</span></label></div>
   <div class="dialog-foot"><button class="btn btn-outline">Go back</button><button class="btn btn-primary">Assemble anyway</button></div></div></div>
+<div class="scrim" data-when="qc-confirm-required" hidden><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="qcr-t"><div class="dialog-head"><h2 id="qcr-t">Confirm clips that did not pass the check</h2></div>
+  <div class="dialog-body"><p>The checks for these clips changed since you opened this page.</p><ul><li>Segment 2: check failed</li><li>Segment 3: check skipped, the audio service did not answer</li></ul><p>The final ad will include these clips as they are. Your confirmation is recorded.</p></div>
+  <div class="dialog-foot"><button class="btn btn-outline">Go back</button><button class="btn btn-primary">Include these clips and assemble</button></div></div></div>
 </body>
 </html>
