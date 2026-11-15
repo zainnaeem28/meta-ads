@@ -15,6 +15,7 @@ import { EnvelopeInterceptor, ErrorFilter, RawResponse } from '../platform/http/
 import { installMethodIndex } from '../platform/http/method-index.js';
 import type { MethodIndex } from '../platform/http/method-index.js';
 import { Scope, assertScopesDeclared } from '../platform/http/scope-registry.js';
+import { AuditModule } from '../modules/audit/index.js';
 
 export interface EdgeConfig extends EgressModuleConfig {
   WEB_ORIGIN?: string | undefined;
@@ -53,7 +54,12 @@ function apiModule(
   const database =
     config.DATABASE_URL === undefined ? [] : [DatabaseModule.forRoot(dbConfigOf(config))];
   @Module({
-    imports: [logging.module(), EgressModule.register(config), ...database],
+    imports: [
+      logging.module(),
+      EgressModule.register(config),
+      AuditModule.register(logging.logger),
+      ...database,
+    ],
     controllers: [HealthController, ...controllers],
   })
   class ApiModule {}

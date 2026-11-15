@@ -11,6 +11,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/http/junit.xml' }],
       ['junit', { outputFile: 'reports/db/junit.xml' }],
       ['junit', { outputFile: 'reports/egress/junit.xml' }],
+      ['junit', { outputFile: 'reports/audit/junit.xml' }],
     ],
     coverage: {
       provider: 'v8',
@@ -21,6 +22,7 @@ export default defineConfig({
         'src/platform/egress/**/*.ts',
         'src/platform/shared-kernel/**/*.ts',
         'src/platform/db/**/*.ts',
+        'src/modules/audit/**/*.ts',
       ],
       exclude: [
         'src/**/*.test.ts',
@@ -37,6 +39,11 @@ export default defineConfig({
         'src/platform/db/schema.ts',
         'src/platform/db/test-database.ts',
         'src/database/**',
+        // Wiring and the Drizzle repository are proven on real PostgreSQL by tests/integration/audit.
+        'src/modules/audit/index.ts',
+        'src/modules/audit/audit.module.ts',
+        'src/modules/audit/infrastructure/audit.repository.ts',
+        'src/modules/audit/application/ports.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',
