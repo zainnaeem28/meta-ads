@@ -257,6 +257,42 @@ describe('render.sh: backup, schema read and smoke', () => {
     );
   });
 
+  it('waits until the on-demand backup is ready before returning its id', async () => {
+    const { f, result } = await adapter({ exportStatuses: ['pending', 'running', 'completed'] }, ['backup'], {
+      RENDER_POLL_SECONDS: '0',
+    });
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe('exp-2');
+    expect(f.calls('GET', /export$/).length).toBe(3);
+  });
+
+  it('fails when the backup fails or never becomes ready', async () => {
+    const failed = await adapter({ exportStatuses: ['pending', 'failed'] }, ['backup'], { RENDER_POLL_SECONDS: '0' });
+    expect(failed.result.code).toBe(1);
+    expect(failed.result.stderr).toContain('backup exp-2 ended as failed');
+    const slow = await adapter({ exportStatuses: ['pending'] }, ['backup'], {
+      RENDER_POLL_SECONDS: '0',
+      RENDER_EXPORT_TIMEOUT_SECONDS: '0',
+    });
+    expect(slow.result.code).toBe(1);
+    expect(slow.result.stderr).toContain('not ready in time');
+  });
+
+  it('passes the backup gate for fractional-second and offset timestamps', async () => {
+    const frac = [{ id: 'e', createdAt: '2026-03-10T08:00:00.123456Z' }];
+    expect((await adapter({ exports: frac }, ['backup-gate'])).result.code).toBe(0);
+    // 09:00+02:00 is 07:00Z, still inside 24 hours of the test clock; 2026-03-01 is not.
+    const off = [{ id: 'e', createdAt: '2026-03-10T09:00:00.5+02:00' }];
+    expect((await adapter({ exports: off }, ['backup-gate'])).result.code).toBe(0);
+    const old = [{ id: 'e', createdAt: '2026-03-09T01:00:00.5-02:00' }];
+    expect((await adapter({ exports: old }, ['backup-gate'])).result.code).toBe(1);
+  });
+
+  it('ignores failed exports in the backup gate', async () => {
+    const bad = [{ id: 'e', createdAt: '2026-03-10T08:00:00Z', status: 'failed' }];
+    expect((await adapter({ exports: bad }, ['backup-gate'])).result.code).toBe(1);
+  });
+
   it('passes the backup gate for a backup younger than 24 hours', async () => {
     const { result } = await adapter({}, ['backup-gate']);
     expect(result.code).toBe(0);
@@ -321,7 +357,7 @@ describe('render.sh: alert, observe and record', () => {
   });
 
   it('runs the observation window through observe.sh', async () => {
-    const { result } = await adapter({}, ['observe'], { OBSERVE_WINDOW_SECONDS: '0' });
+    const { result } = await adapter({ metrics: { requests: 10, errors5xx: 0, p95Ms: 100, stuckSubmitting: 0, kekUnsealFailures: 0, workerHeartbeatAgeSeconds: 60 } }, ['observe'], { OBSERVE_WINDOW_SECONDS: '0' });
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('window of 0s passed');
   });
@@ -388,7 +424,7 @@ describe('release-with-recovery.sh with the render adapter (real entry point)', 
       'srv-web': [digest('old-web')],
     };
   }
-  const metricsOk = { requests: 10, errors5xx: 0, p95Ms: 100, stuckSubmitting: 0 };
+  const metricsOk = { requests: 10, errors5xx: 0, p95Ms: 100, stuckSubmitting: 0, kekUnsealFailures: 0, workerHeartbeatAgeSeconds: 60 };
 
   it('migrates, deploys api, worker and web by digest, smokes, observes and records', async () => {
     const { f, evidence, result, outcome } = await release({ metrics: metricsOk });
@@ -432,7 +468,7 @@ describe('release-with-recovery.sh with the render adapter (real entry point)', 
   });
 
   it('aborts the observation window and rolls back on a 5xx spike', async () => {
-    const { result, outcome } = await release({ metrics: { requests: 500, errors5xx: 100 } });
+    const { result, outcome } = await release({ metrics: { ...metricsOk, requests: 500, errors5xx: 100 } });
     expect(result.code).toBe(1);
     expect(outcome()).toMatchObject({ status: 'rolled-back' });
   });

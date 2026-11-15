@@ -29,6 +29,8 @@ export interface Options {
   history?: Record<string, string[]>;
   jobStatuses?: string[];
   exports?: unknown;
+  /** Status sequence of the export a POST creates (the last repeats); default completed. */
+  exportStatuses?: string[];
   /** `METHOD /path` mapped to an HTTP status to force. */
   errors?: Record<string, number>;
   noDeployId?: boolean;
@@ -48,6 +50,8 @@ export class FakeRender {
   url = '';
   private deploys = new Map<string, { service: string; sha: string; polls: number }>();
   private jobPolls = 0;
+  private exportCreated = false;
+  private exportPolls = 0;
   private healthCalls = 0;
   constructor(private o: Options = {}) {}
 
@@ -151,8 +155,16 @@ export class FakeRender {
     if (/^\/v1\/services\/[\w-]+$/.test(path))
       return method === 'PATCH' ? [200, {}] : [200, fixture('service.json')];
     if (path === '/v1/postgres/pg-1/export') {
-      if (method === 'POST') return [202, this.o.noExportId ? {} : fixture('export-created.json')];
-      return [200, this.o.exports ?? fixture('exports.json')];
+      if (method === 'POST') {
+        this.exportCreated = true;
+        return [202, this.o.noExportId ? {} : fixture('export-created.json')];
+      }
+      const rows = (this.o.exports ?? fixture('exports.json')) as unknown[];
+      if (!this.exportCreated) return [200, rows];
+      const list = this.o.exportStatuses ?? ['completed'];
+      const status = list[Math.min(this.exportPolls, list.length - 1)]!;
+      this.exportPolls += 1;
+      return [200, [{ ...(fixture('export-created.json') as object), status }, ...rows]];
     }
     return [404, { message: `unrouted ${method} ${path}` }];
   }

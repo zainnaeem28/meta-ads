@@ -12,7 +12,7 @@
 #   RENDER_POSTGRES_ID, RELEASE_IMAGE_PREFIX (registry path; the image is PREFIX/<service>@DIGEST),
 #   RELEASE_G3_RECORD (the G3 record file), RENDER_SMOKE_API_URL, RENDER_SMOKE_WEB_URL    required (exit 78 without)
 #   RENDER_API_URL (https://api.render.com/v1), RENDER_POLL_SECONDS (10), RENDER_DEPLOY_TIMEOUT_SECONDS (900),
-#   RENDER_JOB_TIMEOUT_SECONDS (900), RENDER_WORKER_SHUTDOWN_DELAY (120), RENDER_BACKUP_MAX_AGE_HOURS (24),
+#   RENDER_JOB_TIMEOUT_SECONDS (900), RENDER_EXPORT_TIMEOUT_SECONDS (900), RENDER_WORKER_SHUTDOWN_DELAY (120), RENDER_BACKUP_MAX_AGE_HOURS (24),
 #   RENDER_CMD_MIGRATE ("pnpm db:migrate"), RENDER_CMD_JOBS ("pnpm jobs:migrate"),
 #   RENDER_CMD_SEED ("pnpm db:seed --dataset=reference"), SMOKE_ATTEMPTS (10), SMOKE_INTERVAL_SECONDS (15),
 #   ALERT_WEBHOOK_URL, RELEASE_NOW (epoch seconds, tests only)
@@ -107,6 +107,28 @@ wait_job() { # wait_job JOB_ID COMMAND
   done
 }
 
+# Export status words are VERIFY (docs/ops/release.md): an export without a status field counts as usable only
+# when it has a download url, or when it is read by the gate (older exports have no status to wait for).
+jq_ts='def ts: sub("\\.[0-9]+"; "") | capture("^(?<d>.*?)(?<z>Z|[+-][0-9]{2}:?[0-9]{2})$") as $m
+  | ($m.d + "Z" | fromdateiso8601) - (if $m.z == "Z" then 0 else ((if $m.z[0:1] == "-" then -1 else 1 end) * (($m.z[1:3] | tonumber) * 3600 + ($m.z[-2:] | tonumber) * 60)) end);
+  def export_usable: ((.status // "completed") | ascii_downcase) as $s | ($s == "completed" or $s == "succeeded" or $s == "ready" or $s == "available");
+  '
+
+wait_export() { # wait_export EXPORT_ID: the migration must not start before the backup is really there
+  local deadline entry status
+  deadline=$(($(now) + ${RENDER_EXPORT_TIMEOUT_SECONDS:-900}))
+  while :; do
+    entry="$(api GET "/postgres/$RENDER_POSTGRES_ID/export" | jq -c --arg id "$1" '[.[]? | select(.id == $id)][0] // {}')"
+    status="$(jq -r '(.status // (if (.url // .downloadUrl) then "completed" else "pending" end)) | ascii_downcase' <<<"$entry")"
+    case "$status" in
+      completed | succeeded | ready | available) echo "render: backup $1 is ready" >&2; return 0 ;;
+      failed | error | canceled | cancelled) die "backup $1 ended as $status" ;;
+    esac
+    [ "$(now)" -lt "$deadline" ] || die "backup $1 not ready in time (last status $status)"
+    sleep "$poll"
+  done
+}
+
 run_job() { # run_job COMMAND: one Render Job on the migrate service
   local job_id
   job_id="$(api POST "/services/$RENDER_SERVICE_MIGRATE/jobs" "$(jq -n --arg cmd "$1" '{startCommand: $cmd}')" | jq -r '.id // empty')"
@@ -125,7 +147,8 @@ case "$op" in
     echo "render-live-state-read"
     ;;
   backup-gate)
-    newest="$(api GET "/postgres/$RENDER_POSTGRES_ID/export" | jq -r '[.[]? | .createdAt // empty | fromdateiso8601] | max // 0')"
+    # Render timestamps carry fractions and may carry offsets: both are normalised before jq parses them.
+    newest="$(api GET "/postgres/$RENDER_POSTGRES_ID/export" | jq -r "$jq_ts"' [.[]? | select(export_usable) | .createdAt // empty | ts] | max // 0')"
     limit=$((${RENDER_BACKUP_MAX_AGE_HOURS:-24} * 3600))
     [ $(($(now) - newest)) -le "$limit" ] || die "no backup of the database younger than ${RENDER_BACKUP_MAX_AGE_HOURS:-24} hours"
     echo "render: backup gate passed"
@@ -133,6 +156,7 @@ case "$op" in
   backup)
     id="$(api POST "/postgres/$RENDER_POSTGRES_ID/export" '{}' | jq -r '.id // empty')"
     [ -n "$id" ] || die "Render accepted the backup without an id"
+    wait_export "$id"
     echo "$id"
     ;;
   migrate-db)

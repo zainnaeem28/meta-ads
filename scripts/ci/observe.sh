@@ -32,7 +32,12 @@ while :; do
   [ "$failed_probes" -lt 3 ] || abort "/health/ready failed $failed_probes probes in a row"
 
   summary="$(metrics)" || abort "the metrics summary cannot be read, so the window cannot be judged"
-  field() { jq -r "$1 // 0" <<<"$summary"; }
+  # A required field that is absent or not a number would switch its threshold off, so it aborts the window.
+  for name in requests errors5xx p95Ms stuckSubmitting kekUnsealFailures workerHeartbeatAgeSeconds; do
+    jq -e --arg n "$name" '.[$n] | type == "number"' <<<"$summary" >/dev/null 2>&1 \
+      || abort "the metrics summary has no numeric '$name' field, so the window cannot be judged"
+  done
+  field() { jq -r "$1" <<<"$summary"; }
   requests="$(field .requests)"
   [ "$requests" -lt "${OBSERVE_MIN_REQUESTS_5XX:-100}" ] \
     || jq -e --argjson r "$requests" --argjson e "$(field .errors5xx)" --argjson max "${OBSERVE_MAX_5XX_RATIO:-0.02}" '$e / $r <= $max' >/dev/null <<<null \
