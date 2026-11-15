@@ -9,11 +9,13 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/config/junit.xml' }],
       ['junit', { outputFile: 'reports/logging/junit.xml' }],
       ['junit', { outputFile: 'reports/http/junit.xml' }],
+      ['junit', { outputFile: 'reports/egress/junit.xml' }],
     ],
     coverage: {
       provider: 'v8',
       include: ['src/platform/config/**/*.ts', 'src/platform/logging/**/*.ts',
         'src/platform/http/**/*.ts',
+        'src/platform/egress/**/*.ts',
         'src/platform/shared-kernel/**/*.ts',
       ],
       exclude: [
@@ -24,6 +26,8 @@ export default defineConfig({
         'src/platform/logging/test-support.ts',
         'src/platform/http/test-support.ts',
         'src/platform/http/index.ts',
+        'src/platform/egress/index.ts',
+        'src/platform/egress/test-support.ts',
         'src/platform/shared-kernel/index.ts',
       ],
       reporter: ['text', 'lcovonly'],
