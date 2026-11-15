@@ -56,7 +56,8 @@ export default defineConfig({
     },
     {
       // The same build run as a production deployment: the gallery must not exist there.
-      command: next(prodPort),
+      // Waits for the first server, whose command builds the shared .next artifact.
+      command: `until curl -sf http://127.0.0.1:${port} >/dev/null; do sleep 1; done; ${next(prodPort)}`,
       env: { GALLERY_ENABLED: 'true', APP_ENV: 'production' },
       url: `http://127.0.0.1:${prodPort}`,
       reuseExistingServer: false,
