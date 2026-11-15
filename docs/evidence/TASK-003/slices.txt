@@ -1,0 +1,68 @@
+Scope: 2 of 7 workspace projects
+tools/foundation-tests/slices test:slices-a$ vitest run --config vitest.config.ts
+ RUN  v5.1.0 /paperclip/instances/default/projects/49d7702a-17ba-48f6-936a-6f2503a0a47e/1a1eae3f-76eb-4c97-b304-6407a3ae88d7/meta-ads/.paperclip/worktrees/feature/AIU-76-task-003-foundation-3-4-do-01c-auth-api-and-worker-vertical-slices/tools/foundation-tests/slices
+stdout | slices-a.test.ts
+[slices-a] database t002_fe2a905c; slice API http://127.0.0.1:42473; Clerk fake http://127.0.0.1:45547 (kid ins_d49011226d2e)
+stdout | slices-a.test.ts > step 3: auth slice against the local JWKS fake > refuses a missing, malformed, foreign-key, wrong-party and expired token; allows 5 s of skew
+[slices-a] token checks: missing/garbage/foreign key/wrong azp/expired -> 401; 3 s past exp -> 200 (skew 5 s)
+stdout | slices-a.test.ts > step 3: auth slice against the local JWKS fake > links the first admin from OWNER_EMAIL once, and only for a verified matching address
+[slices-a] first admin linked once; non-owner, unverified owner address and second claimant of OWNER_EMAIL -> 403 account_not_active
+stdout | slices-a.test.ts > step 3: auth slice against the local JWKS fake > concurrent first sign-ins of the owner create exactly one admin
+[slices-a] 4 concurrent claimants of OWNER_EMAIL -> statuses [403,403,200,403]; admins=1
+stdout | slices-a.test.ts > step 3: auth slice against the local JWKS fake > fva semantics: mfaSatisfied = fva[1] >= 0; recentAuth within 10 min, second factor too when required
+[slices-a] fva matrix: 9 direct cases and 3 through the API pass
+stdout | slices-a.test.ts > step 3: auth slice against the local JWKS fake > reverification: a stale session gets 403 recent_auth_required, a fresh token then succeeds
+[slices-a] stale fva [45,45] -> 403 recent_auth_required; after reverification fva [0,0] -> 201
+stdout | slices-a.test.ts > step 3: auth slice against the local JWKS fake > MFA is never bypassed: a first-factor-only token cannot use admin functions
+[slices-a] first-factor-only token -> 403 mfa_required on every admin route
+stdout | slices-a.test.ts > step 3: auth slice against the local JWKS fake > creates an invitation with expiresInDays 7 and revokes it
+[slices-a] invitation inv_8376348efb58: Backend API body {"email_address":"invitee@example.test","expires_in_days":7,"notify":false}; revoked; second revoke -> 404
+stdout | slices-a.test.ts > step 3: auth slice against the local JWKS fake > a revoked session stops working at once, and deleting a user removes the account and ends its sessions
+[slices-a] session revoke -> next request 401; user delete -> account row gone, Clerk user gone, live session 401
+stdout | slices-a.test.ts > step 3: auth slice against the local JWKS fake > NOT_RUN against a real Clerk development instance (deployment-time owner item DOP-OI-4)
+[slices-a] NOT_RUN TR-08 fva values and reverification strict_mfa 10 min as issued by Clerk (token shape here comes from the fake)
+[slices-a] NOT_RUN L-1 session revocation latency: Clerk session tokens are short-lived and verifyToken is networkless; this slice checks the session through the Backend API on each request
+[slices-a] NOT_RUN D-S2 MFA recovery path that does not bypass MFA (recovery codes / backup flow) in the Clerk UI
+[slices-a] NOT_RUN Real invitation email delivery, expiry at 7 days and acceptance, and invitation revoke semantics on Clerk
+[slices-a] NOT_RUN Real user deletion webhook/ordering and the Clerk Pro plan "require MFA" setting
+stdout | slices-a.test.ts > step 4: owner-scoped CRUD through the real Fastify app on real PostgreSQL > answers 404 identically for another owner’s record and a record that does not exist
+[slices-a] another owner’s id and a missing id: identical 404 body for GET, PATCH and DELETE; the record is untouched
+stdout | slices-a.test.ts > step 4: owner-scoped CRUD through the real Fastify app on real PostgreSQL > enforces If-Match: 428 without it, 412 when stale, 200 and a new version when current, one winner when racing
+[slices-a] If-Match: 428 / 200 / 412; 4 racing writers -> statuses 200,412,412,412
+stdout | slices-a.test.ts > step 4: owner-scoped CRUD through the real Fastify app on real PostgreSQL > pages with an opaque cursor: no duplicates, no gaps, scoped to the owner, bad cursor refused
+[slices-a] cursor paging: 3 pages of 2 over 5 rows; other owner sees none
+stdout | slices-a.test.ts > built web and api artifacts, with the slice behind them > serves the built api artifact (apps/api/dist) and the built web artifact (next standalone)
+[slices-a] built api artifact: GET /health/live -> {"status":"ok"}; built web artifact: GET / -> 200 "Shroomap foundation"
+stdout | slices-a.test.ts > built web and api artifacts, with the slice behind them > TC-AUT-11 (home route, unknown route) against the built web artifact
+[slices-a] TC-AUT-11: unknown route -> 404, non-indexable=true
+[slices-a] NOT_RUN TC-AUT-11 "Go Home" action and the signed-in campaign list on `/`: the web app has only a foundation page; owned by the web tickets
+stdout | slices-a.test.ts > built web and api artifacts, with the slice behind them > one request path through all layers: web home, then Bearer REST call, PostgreSQL row, auth check
+[slices-a] web artifact 200 -> Bearer POST /v1/campaigns 201 -> row owned by the linked admin; no token -> 401
+[slices-a] NOT_RUN browser-driven UI leg: apps/web has no page that calls the REST API yet and no browser is installed in this environment; the web leg is the built artifact serving, the REST leg is the slice app
+stdout | slices-a.test.ts > step 5: worker slice (pg-boss 12 on the shared PostgreSQL) > send({db}) inside a Drizzle transaction rolls back with it, and commits with it
+[slices-a] send({db}) in a Drizzle transaction: rollback -> 0 jobs and 0 rows; commit -> 1 job and 1 row
+stdout | slices-a.test.ts > step 5: worker slice (pg-boss 12 on the shared PostgreSQL) > retryLimit 0: a failing handler fails the job once and it is not retried
+[slices-a] retryLimit 0: handler ran 1 time, job state failed, retry_count 0
+stdout | slices-a.test.ts > step 5: worker slice (pg-boss 12 on the shared PostgreSQL) > expireInSeconds: an active job nobody completes is failed by supervision after the expiry
+[slices-a] expireInSeconds 3: fetched, never completed -> failed after supervise, not retried
+stdout | slices-a.test.ts > step 5: worker slice (pg-boss 12 on the shared PostgreSQL) > singletonKey: a second send with the same key on a short-policy queue is dropped until the first is fetched
+[slices-a] singletonKey: same key -> second send returns null; other key accepted; 2 jobs stored
+stdout | slices-a.test.ts > step 5: worker slice (pg-boss 12 on the shared PostgreSQL) > graceful drain: stop({graceful}) waits for the running handler, which completes its job
+[slices-a] graceful drain: stop() returned after 1910 ms with the handler finished and the job completed
+stdout | slices-a.test.ts > step 5: worker slice (pg-boss 12 on the shared PostgreSQL) > counted per-user claim: at most N concurrent claims per user, released claims free a slot, users are independent
+[slices-a] counted claim: 10 concurrent claims, limit 3 -> 3 won; release frees one slot; u2 independent
+stdout | slices-a.test.ts
+[slices-a] leftovers after teardown: []
+ ✓ slices-a.test.ts (25 tests) 11817ms
+   ✓ built web and api artifacts, with the slice behind them (3)
+     ✓ serves the built api artifact (apps/api/dist) and the built web artifact (next standalone) 866ms
+   ✓ step 5: worker slice (pg-boss 12 on the shared PostgreSQL) (7)
+     ✓ retryLimit 0: a failing handler fails the job once and it is not retried 3196ms
+     ✓ expireInSeconds: an active job nobody completes is failed by supervision after the expiry 4087ms
+     ✓ graceful drain: stop({graceful}) waits for the running handler, which completes its job 2548ms
+ Test Files  1 passed (1)
+      Tests  25 passed (25)
+   Start at  19:47:53
+   Duration  12.53s (tests 95%, import 4%, transform 1%)
+JUNIT report written to /paperclip/instances/default/projects/49d7702a-17ba-48f6-936a-6f2503a0a47e/1a1eae3f-76eb-4c97-b304-6407a3ae88d7/meta-ads/.paperclip/worktrees/feature/AIU-76-task-003-foundation-3-4-do-01c-auth-api-and-worker-vertical-slices/reports/foundation/slices-a-junit.xml
+Done

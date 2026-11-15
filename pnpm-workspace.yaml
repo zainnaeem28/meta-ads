@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
   - tools/foundation-tests/db
+  - tools/foundation-tests/slices
 onlyBuiltDependencies:
   - esbuild
   - sharp
