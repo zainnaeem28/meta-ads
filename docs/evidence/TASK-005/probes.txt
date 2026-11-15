@@ -1,0 +1,50 @@
+# TASK-005 gate probes and layer probes (scripts/ci/probes/run-all.sh)
+# wrappers: scripts/ci/*.sh; policy: config/quality-policy.json; run on 33e8d30
+
+== commit 33e8d30678ee197bc92706b2174acfb872751a32
+== gate probes (DEVOPS-PLAN section 15)
+PASS  0  clean set of reports passes                             gate exit 0: QUALITY GATE PASS (profile ticket, commit 33e8d30678ee)
+PASS  1  one required unit test fails                            gate exit 1: FAIL unit-ci      1 test(s) failed
+PASS  2a suite selects zero tests (runner exited 0)              gate exit 1: FAIL unit-ci      only 0 test(s) ran (0 skipped); at least 1 required
+PASS  2b every selected test is skipped                          gate exit 1: FAIL unit-ci      only 0 test(s) ran (2 skipped); at least 1 required
+PASS  2c coverage below the policy minimum                       gate exit 1: FAIL unit-ci      lines coverage 33.3% is under the overall minimum of 80%
+PASS  3a scanner crashed (exit 2, no report)                     gate exit 1: FAIL sast         wrapper recorded a failure (exit 2): -
+PASS  3b scanner report missing                                  gate exit 1: FAIL sast         report file 'sast.sarif' is missing
+PASS  3c scanner report malformed                                gate exit 1: FAIL sast         TOOL FAILURE: report '/tmp/paperclip-run-aiu-78-798ad326-c79-B9qgjs/tmp.WfyckXiZHh/reports/sast.sarif' is not valid JSON: Unterminat
+PASS  3d scanner says the scan did not finish                    gate exit 1: FAIL deps         TOOL FAILURE: probe-scanner reports executionSuccessful=false (the scan did not finish)
+PASS  3f wrapper exits non-zero and records fail when its tool fails (exit 1)
+PASS  3e wrapper never ran (no meta file)                        gate exit 1: FAIL secrets      no meta file for report 'secrets' (the wrapper did not run or crashed)
+PASS  4  synthetic Critical finding                              gate exit 1: FAIL sast         BLOCKING CRITICAL PROBE-CRIT-1 at apps/api/src/example.ts (probe-scanner)
+PASS  4b nonblocking finding passes                              gate exit 0: QUALITY GATE PASS (profile ticket, commit 33e8d30678ee)
+      recorded: PROBE-MED-1 owner=DevOps Engineer due=2026-12-15
+PASS  4b nonblocking finding is recorded with owner and due date
+PASS  5a report for the wrong commit                             gate exit 1: FAIL unit-ci      report is for commit 000000000000, expected 33e8d30678ee (wrong commit)
+PASS  5b report older than the commit (stale)                    gate exit 1: FAIL sast         report file 'sast.sarif' is older than commit 33e8d30678ee (stale)
+PASS  5c report changed after its wrapper wrote it               gate exit 1: FAIL sast         report file 'sast.sarif' does not match the hash its wrapper recorded
+PASS  6a workflow edit removes a required job                    gate exit 1: FAIL workflow     required job(s) missing: security
+PASS  6b workflow edit unpins an action                          gate exit 1: FAIL workflow     unpinned action actions/checkout@v4
+== layer probes (ARCHITECTURE section 1.4)
+PASS  L0 clean fixture tree passes                               layers exit 0: layers: 6 modules, 0 violations
+PASS  L1 upward import (production imports lifecycle)            layers exit 1: VIOLATION no-upward-module-import: apps/api/src/modules/production/application/production.service.ts -> apps/api/src/modules/lifecycle/index.ts
+PASS  L2 deep import into another module's repository            layers exit 1: VIOLATION no-deep-import: apps/api/src/modules/campaigns/application/campaign.service.ts -> apps/api/src/modules/media/infrastructure/media.repository
+PASS  L3 api-process file imports key-unsealer.ts                layers exit 1: VIOLATION unsealer-worker-only: apps/api/src/bootstrap/api.module.ts -> apps/api/src/modules/provider-keys/infrastructure/key-unsealer.ts
+PASS  L4 cycle between two platform packages                     layers exit 1: VIOLATION no-cycles: apps/api/src/platform/config/index.ts -> apps/api/src/platform/db/index.ts
+PASS  L5 apps/web imports apps/api                               layers exit 1: VIOLATION web-no-api: apps/web/src/page.ts -> apps/api/src/modules/audit/index.ts
+== real tree
+PASS  real tree passes layers.sh: layers: 6 modules, 0 violations
+ALL PROBES BEHAVED AS EXPECTED
+
+# real end-to-end run: wrappers lint types layers unit sast deps secrets contract, then quality-gate.sh --profile ticket (reads every report from disk)
+PASS lint         tool eslint+prettier passed
+PASS types        tool tsc passed
+PASS layers       tool dependency-cruiser passed
+PASS unit-ci      37 tests ran, 0 skipped; coverage lines 97.8%, branches 95.8%
+PASS contract     stub accepted until TASK-019
+PASS sast         0 recorded, 0 dismissed
+PASS deps         2 recorded, 0 dismissed
+PASS deps-audit   2 recorded, 0 dismissed
+PASS secrets      0 recorded, 0 dismissed
+PASS workflow     no workflow yet (checked in the release profile)
+QUALITY GATE PASS (profile ticket, commit 33e8d30678ee)
+
+# not run here: integration.sh failed on this host (pg_dump client missing for db-roles.test.ts; slices a and b passed), container.sh/iac.sh/e2e.sh are not applicable until a Dockerfile, infra or Playwright config exists
