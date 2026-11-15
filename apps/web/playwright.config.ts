@@ -31,14 +31,17 @@ export default defineConfig({
     { name: 'firefox', use: { ...devices['Desktop Firefox'] }, grep: /@harness/ },
     { name: 'webkit', use: { ...devices['Desktop Safari'] }, grep: /@harness/ },
     { name: 'edge', use: { ...devices['Desktop Edge'], channel: 'msedge' }, grep: /@harness/ },
+    // Home-screen device profiles (TASK-068): iOS Safari and Android Chrome emulation.
+    { name: 'ios-safari', use: { ...devices['iPhone 15'] }, grep: /@brand-device/ },
+    { name: 'android-chrome', use: { ...devices['Pixel 7'] }, grep: /@brand-device/ },
   ],
   webServer: [
     {
       command: 'node ../api/dist/main.api.js',
+      // E2E_DATABASE_URL points the api at the shared test database server when localhost has none.
       env: {
         ...apiEnv(apiPort),
         WEB_ORIGIN: `http://127.0.0.1:${port}`,
-        // The api checks its database at startup; a run without a local PostgreSQL points this at a throwaway one.
         ...(process.env.E2E_DATABASE_URL ? { DATABASE_URL: process.env.E2E_DATABASE_URL } : {}),
       },
       url: `http://127.0.0.1:${apiPort}/health/live`,
@@ -51,6 +54,7 @@ export default defineConfig({
       env: {
         GALLERY_ENABLED: 'true',
         APP_ENV: 'test',
+        WEB_ORIGIN: `http://127.0.0.1:${port}`,
         NEXT_PUBLIC_API_ORIGIN: process.env.E2E_API_URL,
         NEXT_PUBLIC_E2E_PROBE: '1',
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: '',
