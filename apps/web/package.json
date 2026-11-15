@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
     "start": "next start",
     "test:unit": "NODE_ENV=test vitest run --config vitest.config.ts --coverage",
     "test:e2e": "playwright test --config playwright.config.ts",
-    "lint": "eslint src e2e",
-    "test": "NODE_ENV=test vitest run --config vitest.config.ts --coverage"
+    "test": "NODE_ENV=test vitest run --config vitest.config.ts --coverage",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@clerk/nextjs": "7.10.0",

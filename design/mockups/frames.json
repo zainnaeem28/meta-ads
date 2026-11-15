@@ -35,7 +35,8 @@
    "conflict",
    "key-missing",
    "cap-reached",
-   "session-expired"
+   "session-expired",
+   "details-summary"
   ],
   "widths": [
    390,
@@ -89,7 +90,9 @@
    "qc-confirm",
    "assembling",
    "failed",
-   "out-of-date"
+   "out-of-date",
+   "qc-confirm-required",
+   "cap-reached"
   ],
   "widths": [
    390,
@@ -295,6 +298,17 @@
  {
   "id": "CMP-SHEET-04",
   "file": "frames/CMP-SHEET-04.html",
+  "states": [
+   "default"
+  ],
+  "widths": [
+   1440,
+   390
+  ]
+ },
+ {
+  "id": "CMP-SHEET-05",
+  "file": "frames/CMP-SHEET-05.html",
   "states": [
    "default"
   ],
