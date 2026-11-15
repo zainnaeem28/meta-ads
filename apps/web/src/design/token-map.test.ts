@@ -30,6 +30,11 @@ describe('design tokens (TASK-066)', () => {
     expect(themeCss).not.toMatch(/\b(rgb|hsl|oklch)a?\(/);
   });
 
+  it('reads declarations and tolerates an empty stylesheet', () => {
+    expect(declarations('  ').size).toBe(0);
+    expect(declarations(':root { --a: 1px; }').get('--a')).toBe('1px');
+  });
+
   it('carries the portal override for administration', () => {
     expect(tokensCss).toContain('[data-portal="admin"]');
   });

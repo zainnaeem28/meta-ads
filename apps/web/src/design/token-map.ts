@@ -1,6 +1,7 @@
 /** Reads custom-property declarations out of a stylesheet so tests can check the token mapping. */
 export function declarations(css: string): Map<string, string> {
   const out = new Map<string, string>();
+  if (!css.trim()) return out;
   for (const match of css.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
     out.set(match[1]!, match[2]!.trim());
   }
