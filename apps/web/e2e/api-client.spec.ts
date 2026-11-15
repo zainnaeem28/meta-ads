@@ -11,13 +11,18 @@ test.describe('@TASK-082 api layer through the built web app', () => {
       const request = route.request();
       sent.push({ url: request.url(), authorization: await request.headerValue('authorization') });
       const cors = {
-        'access-control-allow-origin': '*',
+        'access-control-allow-origin': (await request.headerValue('origin')) ?? '*',
+        'access-control-allow-credentials': 'true',
         'access-control-expose-headers': 'x-request-id,etag',
       };
       if (request.method() === 'OPTIONS') {
         return route.fulfill({
           status: 204,
-          headers: { ...cors, 'access-control-allow-headers': '*' },
+          headers: {
+            ...cors,
+            'access-control-allow-headers':
+              (await request.headerValue('access-control-request-headers')) ?? '*',
+          },
         });
       }
       const response = await route.fetch();
@@ -26,7 +31,7 @@ test.describe('@TASK-082 api layer through the built web app', () => {
 
     await page.goto(`/api-probe?api=${encodeURIComponent(api)}`);
     await expect(page.getByTestId('health')).toHaveText('http 200');
-    await expect(page.getByTestId('me-error')).toHaveText(/^http:404:unknown_error:[0-9a-f-]{36}$/);
+    await expect(page.getByTestId('me-error')).toHaveText(/^http:404:not_found:[0-9a-f-]{36}$/);
     expect(sent.some((r) => r.url === `${api}/health/live`)).toBe(true);
     expect(sent.some((r) => r.url === `${api}/api/v1/me`)).toBe(true);
   });
