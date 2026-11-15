@@ -35,7 +35,14 @@ try {
     } else {
       // Only the catalogue's tunable options; partition and policy cannot change on an existing queue.
       const { retryLimit, retryBackoff, expireInSeconds } = options;
-      await boss.updateQueue(name, { retryLimit, retryBackoff, expireInSeconds });
+      await boss.updateQueue(
+        name,
+        Object.fromEntries(
+          Object.entries({ retryLimit, retryBackoff, expireInSeconds }).filter(
+            ([, v]) => v !== undefined,
+          ),
+        ),
+      );
       console.log(`queue ${name} present, options updated`);
     }
   }
