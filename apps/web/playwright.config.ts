@@ -8,14 +8,16 @@ const apiPort = Number(process.env.E2E_API_PORT ?? 4100);
 process.env.E2E_API_URL = `http://127.0.0.1:${apiPort}`;
 process.env.E2E_PROD_URL = `http://127.0.0.1:${prodPort}`;
 
+const reports = `reports/${process.env.REPORT_DIR ?? 'icons-gallery'}`;
+
 const next = (p: number) => `pnpm exec next start --hostname 127.0.0.1 --port ${p}`;
 
 // The built artifacts: `next start` for the web and the compiled api (pnpm build first).
 // Tests tagged @harness run in every browser project; the rest (CDP, font internals) run in chromium only.
 export default defineConfig({
   testDir: 'e2e',
-  outputDir: 'reports/icons-gallery/pw-output',
-  reporter: [['junit', { outputFile: 'reports/icons-gallery/e2e-junit.xml' }]],
+  outputDir: `${reports}/pw-output`,
+  reporter: [['junit', { outputFile: `${reports}/e2e-junit.xml` }]],
   // Linux CI is the baseline platform: one baseline per project, no platform suffix.
   snapshotPathTemplate: '{testDir}/__baselines__/{projectName}/{arg}{ext}',
   expect: { toHaveScreenshot: { ...SCREENSHOT } },
