@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./tokens.css": "./src/tokens.css",
-    "./theme.css": "./src/theme.css"
+    "./theme.css": "./src/theme.css",
+    "./icons": "./src/icons/index.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",
@@ -14,5 +15,18 @@
   "peerDependencies": {
     "react": "19.3.1",
     "react-dom": "19.3.1"
+  },
+  "scripts": {
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
   }
 }

@@ -7,13 +7,15 @@ import { Logger } from 'nestjs-pino';
 import type { AppEnv } from '../platform/config/index.js';
 import type { HttpLogging } from '../platform/logging/index.js';
 import { applyBounds } from '../platform/http/bounds.js';
+import { EgressModule } from '../platform/egress/index.js';
+import type { EgressModuleConfig } from '../platform/egress/index.js';
 import { corsOptions } from '../platform/http/cors.js';
 import { EnvelopeInterceptor, ErrorFilter, RawResponse } from '../platform/http/index.js';
 import { installMethodIndex } from '../platform/http/method-index.js';
 import type { MethodIndex } from '../platform/http/method-index.js';
 import { Scope, assertScopesDeclared } from '../platform/http/scope-registry.js';
 
-export interface EdgeConfig {
+export interface EdgeConfig extends EgressModuleConfig {
   WEB_ORIGIN?: string | undefined;
   APP_ENV: AppEnv;
 }
@@ -33,8 +35,15 @@ export class HealthController {
 export const ROOT_PATHS = ['health/live', 'health/ready', 'internal/metrics', 'internal/metrics/window'];
 export const API_PREFIX = 'api/v1';
 
-function apiModule(logging: HttpLogging, controllers: (new () => object)[]): new () => object {
-  @Module({ imports: [logging.module()], controllers: [HealthController, ...controllers] })
+function apiModule(
+  logging: HttpLogging,
+  controllers: (new () => object)[],
+  config: EgressModuleConfig,
+): new () => object {
+  @Module({
+    imports: [logging.module(), EgressModule.register(config)],
+    controllers: [HealthController, ...controllers],
+  })
   class ApiModule {}
   return ApiModule;
 }
@@ -78,7 +87,7 @@ export async function createApiApp(
   extraControllers: (new () => object)[] = [],
 ): Promise<ApiApp> {
   const app = await NestFactory.create<NestFastifyApplication>(
-    apiModule(logging, extraControllers),
+    apiModule(logging, extraControllers, config),
     logging.adapter(),
     { bufferLogs: true },
   );
