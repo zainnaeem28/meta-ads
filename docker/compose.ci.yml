@@ -1,0 +1,68 @@
+# Isolated stack for end-to-end tests and the DAST baseline (DEVOPS-PLAN 9). The PostgreSQL is NOT part of this file:
+# the shared test PostgreSQL is passed in through the env files (DATABASE_URL), one database per run.
+# Per-run parameters (so two stacks run side by side): COMPOSE_PROJECT_NAME, CI_API_PORT, CI_WEB_PORT, CI_MINIO_PORT,
+# CI_STUB_PORT (empty = a free port chosen by Docker), CI_ENV_DIR (holds api.env and worker.env from
+# docker/smoke/make-env.sh), CI_IMAGE_API / CI_IMAGE_WORKER / CI_IMAGE_WEB (image refs, preferably name@digest).
+name: ${COMPOSE_PROJECT_NAME:-shroomap-ci}
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  api:
+    <<: *hardening
+    image: ${CI_IMAGE_API:-shroomap-api:ci}
+    env_file:
+      - path: ${CI_ENV_DIR:-./.ci-env}/api.env
+        required: false
+    environment:
+      API_PORT: "4000"
+    volumes: ["${CI_ENV_DIR:-./.ci-env}/certs/public.crt:/certs/public.crt:ro"]
+    ports: ["127.0.0.1:${CI_API_PORT:-}:4000"]
+    depends_on:
+      minio: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health/live').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  worker:
+    <<: *hardening
+    image: ${CI_IMAGE_WORKER:-shroomap-worker:ci}
+    env_file:
+      - path: ${CI_ENV_DIR:-./.ci-env}/worker.env
+        required: false
+    volumes: ["${CI_ENV_DIR:-./.ci-env}/certs/public.crt:/certs/public.crt:ro"]
+    depends_on:
+      minio: { condition: service_started }
+
+  web:
+    <<: *hardening
+    image: ${CI_IMAGE_WEB:-shroomap-web:ci}
+    tmpfs: [/tmp, /app/apps/web/.next/cache]
+    ports: ["127.0.0.1:${CI_WEB_PORT:-}:3000"]
+    depends_on:
+      api: { condition: service_healthy }
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-shroomap-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-shroomap-local-secret}
+    ports: ["127.0.0.1:${CI_MINIO_PORT:-}:9000"]
+    volumes: ["${CI_ENV_DIR:-./.ci-env}/certs:/root/.minio/certs:ro"]
+    tmpfs: [/data]
+
+  stubs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.stubs
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    ports: ["127.0.0.1:${CI_STUB_PORT:-}:8089"]
