@@ -11,6 +11,8 @@ export const scriptPaths = [
   'scripts/ci/verify-release-approval.sh',
   'scripts/ci/release-with-recovery.sh',
   'scripts/ci/hosts/stub.sh',
+  'scripts/ci/hosts/render.sh',
+  'scripts/ci/observe.sh',
 ];
 export const PS4 = 'TRC|${BASH_SOURCE[0]}|${LINENO}|${BASHPID}|${#BASH_LINENO[@]}|';
 

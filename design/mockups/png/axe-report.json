@@ -184,6 +184,14 @@
   "violations": []
  },
  {
+  "frame": "SCREEN-006--details-summary--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-006--details-summary--1440",
+  "violations": []
+ },
+ {
   "frame": "SCREEN-007--default--390",
   "violations": []
  },
@@ -373,6 +381,22 @@
  },
  {
   "frame": "SCREEN-009--out-of-date--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--qc-confirm-required--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--qc-confirm-required--1440",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--cap-reached--390",
+  "violations": []
+ },
+ {
+  "frame": "SCREEN-009--cap-reached--1440",
   "violations": []
  },
  {
@@ -989,6 +1013,14 @@
  },
  {
   "frame": "CMP-SHEET-04--default--390",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-05--default--1440",
+  "violations": []
+ },
+ {
+  "frame": "CMP-SHEET-05--default--390",
   "violations": []
  }
 ]

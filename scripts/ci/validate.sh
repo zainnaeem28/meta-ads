@@ -128,7 +128,10 @@ for path in sys.argv[2:]:
     for name in triggers:
         if name in FORBIDDEN_TRIGGERS:
             bad(path, "on", "trigger %s is forbidden" % name)
-    for event in ("pull_request", "push"):
+    is_release = doc.get("name") == "release"
+    if is_release and set(triggers) != {"workflow_dispatch"}:
+        bad(path, "on", "the release workflow runs on workflow_dispatch only, found %s" % sorted(triggers))
+    for event in () if is_release else ("pull_request", "push"):
         cfg = triggers.get(event)
         if not isinstance(cfg, dict) or cfg.get("branches") != ["main"]:
             bad(path, "on." + event, "trigger %s must be limited to `branches: [main]`" % event)
@@ -140,7 +143,10 @@ for path in sys.argv[2:]:
         if re.search(r"default_branch|default-branch", text):
             bad(path, "on", "triggers name `main` literally, not the default-branch variable")
     conc = doc.get("concurrency")
-    if not isinstance(conc, dict) or conc.get("cancel-in-progress") is not True:
+    if is_release:
+        if not isinstance(conc, dict) or conc.get("cancel-in-progress") is not False or "release-" not in str(conc.get("group")):
+            bad(path, "concurrency", "the release workflow needs a release-<environment> group with cancel-in-progress: false")
+    elif not isinstance(conc, dict) or conc.get("cancel-in-progress") is not True:
         bad(path, "concurrency", "concurrency with cancel-in-progress: true is required")
     is_ci = doc.get("name") == "ci"
     if "permissions" not in doc:

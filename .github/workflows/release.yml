@@ -1,0 +1,144 @@
+# Release of one named environment (DEVOPS-PLAN 14.2, 14.3). Manual dispatch only, on refs/heads/main, one run per
+# environment at a time and never cancelled mid-release. The workflow holds no credential: it names secrets that the
+# owner adds to the environment after the matching G3 (docs/ops/release.md). Without them it verifies what it can,
+# records "deployment-ready, not deployed" and ends green; with them the same steps deploy, with no code change.
+# Approval is verify-release-approval.sh reading the recorded G3 decision, never an input or a variable.
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to release (its G3 names it)
+        required: true
+        type: choice
+        options: [staging, production]
+      source_sha:
+        description: Commit the main pipeline built (40 characters)
+        required: true
+        type: string
+      run_id:
+        description: Run id of the main pipeline that built the artifact and quality.json
+        required: true
+        type: string
+      g3_ref:
+        description: Reference of the recorded G3 decision
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    env:
+      RELEASE_ENVIRONMENT: ${{ inputs.environment }}
+      RELEASE_SOURCE_SHA: ${{ inputs.source_sha }}
+      RELEASE_RUN_ID: ${{ inputs.run_id }}
+      RELEASE_G3_REF: ${{ inputs.g3_ref }}
+      RELEASE_DISPATCHER: ${{ github.actor }}
+      RELEASE_DISPATCH_REF: ${{ github.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Check the inputs
+        run: |
+          [[ "$RELEASE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::source_sha must be a 40 character commit"; exit 1; }
+          [[ "$RELEASE_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::run_id must be a number"; exit 1; }
+          [[ "$RELEASE_G3_REF" =~ ^[A-Za-z0-9._:-]+$ ]] || { echo "::error::g3_ref has unexpected characters"; exit 1; }
+          echo "RELEASE_WORK_DIR=$RUNNER_TEMP/release" >>"$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/release"
+      - name: Fetch the approval evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAPERCLIP_G3_READER_TOKEN: ${{ secrets.PAPERCLIP_G3_READER_TOKEN }}
+          PAPERCLIP_API_URL: ${{ vars.PAPERCLIP_API_URL }}
+          PAPERCLIP_RELEASE_ISSUE_ID: ${{ vars.PAPERCLIP_RELEASE_ISSUE_ID }}
+          RELEASE_IMAGE_PREFIX: ${{ vars.RELEASE_IMAGE_PREFIX }}
+          RELEASE_EXPECTED_TARGETS: ${{ vars.RELEASE_EXPECTED_TARGETS }}
+        run: |
+          cd "$RELEASE_WORK_DIR"
+          gh run download "$RELEASE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name quality --dir quality-artifact
+          cp quality-artifact/quality.json quality.json
+          if [ -z "$PAPERCLIP_G3_READER_TOKEN" ] || [ -z "$PAPERCLIP_API_URL" ] || [ -z "$PAPERCLIP_RELEASE_ISSUE_ID" ]; then
+            echo "::notice::No G3 reader credential is configured: the release will stop at deployment-ready, not deployed"
+            echo "approval_evidence=absent" >>"$GITHUB_ENV"
+            exit 0
+          fi
+          document() { # document KEY OUTPUT: the body of a Paperclip task document, as JSON
+            printf 'header = "Authorization: Bearer %s"\n' "$PAPERCLIP_G3_READER_TOKEN" \
+              | curl -fsS -K - --max-time 30 "$PAPERCLIP_API_URL/api/issues/$PAPERCLIP_RELEASE_ISSUE_ID/documents/$1" | jq -er '.body | fromjson' >"$2"
+          }
+          document "g3-$RELEASE_ENVIRONMENT" g3.json
+          document "deployments-$RELEASE_ENVIRONMENT" releases.json
+          [ "$(jq -r '.ref // ""' g3.json)" = "$RELEASE_G3_REF" ] || { echo "::error::the recorded G3 is not $RELEASE_G3_REF"; exit 1; }
+          printf '%s' "$RELEASE_EXPECTED_TARGETS" | jq -e . >targets.json
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for service in api worker web; do
+            ref="$RELEASE_IMAGE_PREFIX/$service@$(jq -r --arg s "$service" '.digests[$s]' g3.json)"
+            docker manifest inspect --verbose "$ref" | jq -r 'if type == "array" then .[0] else . end | .Descriptor.digest' >"$service.digest"
+          done
+          jq -n --rawfile a api.digest --rawfile w worker.digest --rawfile v web.digest \
+            '{api: ($a | rtrimstr("\n")), worker: ($w | rtrimstr("\n")), web: ($v | rtrimstr("\n"))}' >actual.json
+          echo "approval_evidence=present" >>"$GITHUB_ENV"
+      - name: Release through the locked job
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_API: ${{ secrets.RENDER_SERVICE_API }}
+          RENDER_SERVICE_WORKER: ${{ secrets.RENDER_SERVICE_WORKER }}
+          RENDER_SERVICE_WEB: ${{ secrets.RENDER_SERVICE_WEB }}
+          RENDER_SERVICE_MIGRATE: ${{ secrets.RENDER_SERVICE_MIGRATE }}
+          RENDER_POSTGRES_ID: ${{ secrets.RENDER_POSTGRES_ID }}
+          METRICS_TOKEN: ${{ secrets.METRICS_TOKEN }}
+          RELEASE_IMAGE_PREFIX: ${{ vars.RELEASE_IMAGE_PREFIX }}
+          RENDER_SMOKE_API_URL: ${{ vars.RENDER_SMOKE_API_URL }}
+          RENDER_SMOKE_WEB_URL: ${{ vars.RENDER_SMOKE_WEB_URL }}
+          OBSERVE_BASELINE_P95_MS: ${{ vars.OBSERVE_BASELINE_P95_MS }}
+          OBSERVE_WINDOW_SECONDS: ${{ vars.OBSERVE_WINDOW_SECONDS }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          cd "$RELEASE_WORK_DIR"
+          args=(--out-dir out --environment "$RELEASE_ENVIRONMENT" --source-sha "$RELEASE_SOURCE_SHA" --run-id "$RELEASE_RUN_ID" \
+            --ref "$RELEASE_DISPATCH_REF" --dispatcher "$RELEASE_DISPATCHER")
+          if [ "${approval_evidence:-absent}" = present ]; then
+            args+=(--g3-record g3.json --quality quality.json --actual-digests actual.json --expected-targets targets.json --release-record releases.json)
+            export RELEASE_G3_RECORD="$PWD/g3.json"
+            [ -z "$RENDER_API_KEY" ] || export HOST_ADAPTER=render
+          else
+            [ -z "$RENDER_API_KEY" ] || { echo "::error::hosting credentials are set but no approval evidence could be read: refusing to run"; exit 1; }
+            echo '[]' >releases.json
+            args+=(--release-record releases.json)
+          fi
+          # Unset variables stay unset so the adapter's own defaults apply.
+          for name in OBSERVE_BASELINE_P95_MS OBSERVE_WINDOW_SECONDS ALERT_WEBHOOK_URL; do
+            [ -n "${!name}" ] || unset "$name"
+          done
+          "$GITHUB_WORKSPACE/scripts/ci/release-with-recovery.sh" "${args[@]}"
+      - name: Show the result
+        if: always()
+        run: |
+          cd "$RELEASE_WORK_DIR"
+          shopt -s nullglob
+          for f in out/deployment-result-*.json; do
+            { echo "### Release result"; echo '```json'; jq . "$f"; echo '```'; } >>"$GITHUB_STEP_SUMMARY"
+          done
+      - name: Upload the release evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ inputs.environment }}-${{ inputs.run_id }}
+          path: ${{ runner.temp }}/release/out
+          retention-days: 90
+          if-no-files-found: warn
