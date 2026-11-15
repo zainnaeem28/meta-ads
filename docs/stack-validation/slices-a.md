@@ -4,26 +4,26 @@ Draft section of the `stack-validation` document (ARCHITECTURE §1.10 steps 3, 4
 
 ## Setup
 
-| Item | Value |
-| --- | --- |
-| Run command | `CI=1 pnpm --filter foundation-tests test:slices-a` (25 tests, about 12 s; needs `apps/api` and `apps/web` built with `pnpm build`) |
-| Server | the shared test PostgreSQL; each run provisions its own database and roles through `tools/foundation-tests/db/harness.ts` and drops them (leftovers `[]`) |
-| Clerk | none. `clerk-fake.ts` serves the JWKS and the Backend API calls the slice uses (`users`, `sessions`, `invitations`) on a local port; the real `@clerk/backend` 3.29.0 `verifyToken` and `createClerkClient({ apiUrl })` talk to it. No Clerk account, key or instance was requested or awaited |
-| API | `app.ts`: real Fastify 5.12.8 + Drizzle 0.45.4 + `pg` as `app_api`. It stands in for the Nest API's behaviour (it is not product code); the product API is a later ticket |
-| Worker | pg-boss 12.38.2, queues created by `jobs-migrate.ts` under `app_migrator`; runtime as `app_api` and `app_worker` with `migrate:false, createSchema:false` and DML-only grants |
+| Item        | Value                                                                                                                                                                                                                                                                                          |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Run command | `CI=1 pnpm --filter foundation-tests test:slices-a` (25 tests, about 12 s; needs `apps/api` and `apps/web` built with `pnpm build`)                                                                                                                                                            |
+| Server      | the shared test PostgreSQL; each run provisions its own database and roles through `tools/foundation-tests/db/harness.ts` and drops them (leftovers `[]`)                                                                                                                                      |
+| Clerk       | none. `clerk-fake.ts` serves the JWKS and the Backend API calls the slice uses (`users`, `sessions`, `invitations`) on a local port; the real `@clerk/backend` 3.29.0 `verifyToken` and `createClerkClient({ apiUrl })` talk to it. No Clerk account, key or instance was requested or awaited |
+| API         | `app.ts`: real Fastify 5.12.8 + Drizzle 0.45.4 + `pg` as `app_api`. It stands in for the Nest API's behaviour (it is not product code); the product API is a later ticket                                                                                                                      |
+| Worker      | pg-boss 12.38.2, queues created by `jobs-migrate.ts` under `app_migrator`; runtime as `app_api` and `app_worker` with `migrate:false, createSchema:false` and DML-only grants                                                                                                                  |
 
 ## Step 3: auth slice (local JWKS fake)
 
-| Claim | Result |
-| --- | --- |
-| Bearer verification: missing, malformed, foreign-key, wrong `azp` and expired tokens are 401; 3 s past `exp` is accepted (5 s skew) | pass |
-| First admin linked from `OWNER_EMAIL` (verified address, case-insensitive) once; other addresses, an unverified address and a second claimant get 403 `account_not_active`; 4 concurrent claimants create exactly one admin | pass |
-| `fva` semantics: `mfaSatisfied = fva[1] >= 0`; `recentAuth` within 10 min, second factor too when required for the actor (9 direct cases, 3 through the API) | pass |
-| Reverification: stale `fva` gets 403 `recent_auth_required`; a token with fresh factors then succeeds | pass |
-| MFA not bypassed: a first-factor-only token gets 403 `mfa_required` on every admin route | pass |
-| Invitation create with `expiresInDays: 7` (recorded `expires_in_days: 7` in the Backend API body) and revoke; second revoke 404 | pass |
-| Session revoke: an unexpired token is refused on the next request; user delete removes the row and the Clerk user and ends its sessions | pass |
-| TR-08, L-1, D-S2 on a real Clerk development instance; real invitation delivery and expiry; Clerk Pro "require MFA" | **NOT_RUN**, deployment-time owner item DOP-OI-4 (never a pass) |
+| Claim                                                                                                                                                                                                                       | Result                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Bearer verification: missing, malformed, foreign-key, wrong `azp` and expired tokens are 401; 3 s past `exp` is accepted (5 s skew)                                                                                         | pass                                                            |
+| First admin linked from `OWNER_EMAIL` (verified address, case-insensitive) once; other addresses, an unverified address and a second claimant get 403 `account_not_active`; 4 concurrent claimants create exactly one admin | pass                                                            |
+| `fva` semantics: `mfaSatisfied = fva[1] >= 0`; `recentAuth` within 10 min, second factor too when required for the actor (9 direct cases, 3 through the API)                                                                | pass                                                            |
+| Reverification: stale `fva` gets 403 `recent_auth_required`; a token with fresh factors then succeeds                                                                                                                       | pass                                                            |
+| MFA not bypassed: a first-factor-only token gets 403 `mfa_required` on every admin route                                                                                                                                    | pass                                                            |
+| Invitation create with `expiresInDays: 7` (recorded `expires_in_days: 7` in the Backend API body) and revoke; second revoke 404                                                                                             | pass                                                            |
+| Session revoke: an unexpired token is refused on the next request; user delete removes the row and the Clerk user and ends its sessions                                                                                     | pass                                                            |
+| TR-08, L-1, D-S2 on a real Clerk development instance; real invitation delivery and expiry; Clerk Pro "require MFA"                                                                                                         | **NOT_RUN**, deployment-time owner item DOP-OI-4 (never a pass) |
 
 Findings: in `@clerk/backend` 3.x a session token header must carry `cat: "cl_B7d4PD111AAA"` or `verifyToken` throws "Invalid session token category"; `verifyToken` throws on failure and returns the payload otherwise. Because verification is networkless, a revoked session is only seen by the API through a Backend API session check (the slice does it on each request); the real-Clerk latency of this check is part of the NOT_RUN L-1 row. `createInvitation` is called with `notify: false` in the slice; whether the product wants Clerk's email is a product decision.
 
@@ -39,15 +39,15 @@ The built `apps/api/dist/main.api.js` answers `GET /health/live`; the built web 
 
 ## Step 5: worker slice
 
-| Claim | Result |
-| --- | --- |
-| `send({db})` inside a Drizzle transaction: rollback leaves 0 jobs and 0 rows; commit leaves 1 and 1 (job is visible inside the transaction) | pass |
-| `retryLimit: 0`: a throwing handler runs once; job `failed`, `retry_count` 0 | pass |
-| `expireInSeconds: 3`: a fetched, never completed job is failed by supervision, not retried | pass |
-| `singletonKey` (queue policy `short`): same key returns `null`, another key is accepted | pass |
-| Graceful drain: `stop({graceful:true})` waits for the running handler, job `completed` | pass |
-| Counted per-user claim (`INSERT ... ON CONFLICT DO UPDATE ... WHERE active < N`): 10 concurrent claims with limit 3 give 3 winners, release frees one slot, users are independent, a rolled-back claim leaves no row | pass |
-| `app_worker` has only USAGE and DML on `pgboss` (42501 on `CREATE`); queues come from `jobs:migrate` | pass |
+| Claim                                                                                                                                                                                                                | Result |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `send({db})` inside a Drizzle transaction: rollback leaves 0 jobs and 0 rows; commit leaves 1 and 1 (job is visible inside the transaction)                                                                          | pass   |
+| `retryLimit: 0`: a throwing handler runs once; job `failed`, `retry_count` 0                                                                                                                                         | pass   |
+| `expireInSeconds: 3`: a fetched, never completed job is failed by supervision, not retried                                                                                                                           | pass   |
+| `singletonKey` (queue policy `short`): same key returns `null`, another key is accepted                                                                                                                              | pass   |
+| Graceful drain: `stop({graceful:true})` waits for the running handler, job `completed`                                                                                                                               | pass   |
+| Counted per-user claim (`INSERT ... ON CONFLICT DO UPDATE ... WHERE active < N`): 10 concurrent claims with limit 3 give 3 winners, release frees one slot, users are independent, a rolled-back claim leaves no row | pass   |
+| `app_worker` has only USAGE and DML on `pgboss` (42501 on `CREATE`); queues come from `jobs:migrate`                                                                                                                 | pass   |
 
 ## Change requests
 
