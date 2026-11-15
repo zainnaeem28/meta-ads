@@ -18,6 +18,6 @@
 - Select has no read-only state: the native `select` has none; disabled, invalid, empty and filled are shown.
 - jsdom unit axe runs with colour-contrast off (no layout); contrast is checked by the browser axe run.
 - Files outside the allowed list this ticket needed: `packages/ui/{package.json (subpath exports, test dev dependencies), vitest.config.ts, tsconfig.json, test/**}`, `packages/ui/src/icons/icons.test.tsx` (node environment docblock), `apps/web/{playwright.config.ts, vitest.config.ts}` (report folder from `REPORT_DIR`), `apps/web/e2e/prim-a.spec.ts`, `apps/web/e2e/__baselines__/chromium/prim-a-*`, `pnpm-lock.yaml`.
-- Reports were produced with `REPORT_DIR=prim-a`; `lcov.info` is the web lcov followed by the ui lcov with paths prefixed `../../packages/ui/`.
+- Reports were produced with `REPORT_DIR=reports/prim-a`; `lcov.info` is the web lcov followed by the ui lcov with paths prefixed `../../packages/ui/`.
 - Firefox, WebKit and Edge are not run for this ticket (components are not `@harness`).
 - Baselines are new, generated on Linux chromium; they cannot detect a regression until UI/UX approves them.

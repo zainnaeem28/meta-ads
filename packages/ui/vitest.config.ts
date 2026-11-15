@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 process.env.NODE_ENV = 'test'; // React's act() needs the development build
 
-const reports = `../../apps/web/reports/${process.env.REPORT_DIR ?? 'icons-gallery'}`;
+const reports = `../../apps/web/${process.env.REPORT_DIR ?? 'reports/icons-gallery'}`;
 
 export default defineConfig({
   test: {
