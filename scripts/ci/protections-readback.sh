@@ -149,7 +149,7 @@ else:
 
 order = {"PASS": 0, "GAP": 1, "BLOCKED": 1, "FAIL": 2}
 lines = ["## Read-back", f"repository: {e['REPO']} (private={repo.get('private')}, owner type={(repo.get('owner') or {}).get('type')})",
-         f"commit: {subprocess.run(['git','rev-parse','HEAD'],capture_output=True,text=True).stdout.strip()}", ""]
+         ""]
 for i, s, d, o, c in rows:
     lines.append(f"{s} {i}: {d}")
     if o: lines.append(f"    owner: {o}")
