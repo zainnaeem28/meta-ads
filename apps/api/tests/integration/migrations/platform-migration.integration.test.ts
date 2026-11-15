@@ -45,7 +45,7 @@ const dirs: string[] = [];
 async function setUp(options: ProvisionOptions = {}) {
   const env = await provision(options);
   envs.push(env);
-  const dir = renderMigrations(env);
+  const dir = renderMigrations(env, 1);
   dirs.push(dir);
   return { env, dir };
 }

@@ -186,7 +186,7 @@ export async function teardown(env: Env): Promise<string[]> {
 }
 
 /** The real migrations folder copied with the fixed role names replaced by this run's suffixed names. */
-export function renderMigrations(env: Env): string {
+export function renderMigrations(env: Env, through?: number): string {
   const dir = mkdtempSync(join(tmpdir(), `t025-${env.suffix}-`));
   cpSync(realMigrations, join(dir, 'migrations'), { recursive: true });
   for (const name of readdirSync(join(dir, 'migrations')).filter((n) => n.endsWith('.sql'))) {
@@ -196,6 +196,13 @@ export function renderMigrations(env: Env): string {
       (_all, key: RoleKey) => env.roles[key],
     );
     writeFileSync(path, sql);
+  }
+  if (through !== undefined) {
+    // Only the migrations numbered up to `through` (the M0001 suite stands in for the later ones with scaffolds).
+    const journalPath = join(dir, 'migrations', 'meta', '_journal.json');
+    const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as { entries: { tag: string }[] };
+    journal.entries = journal.entries.filter((e) => Number(e.tag.slice(0, 4)) <= through);
+    writeFileSync(journalPath, JSON.stringify(journal, null, 2));
   }
   writeFileSync(
     join(dir, 'drizzle.config.ts'),
