@@ -1,0 +1,26 @@
+# TASK-013 probes 7, 9, 10 (real scripts, HOST_ADAPTER=stub, fixture G3 records, no credentials)
+
+## Probe 7: no mutation without a recorded G3
+no G3 record: exit 1, recorded-call file bytes: 0
+FAIL input: evidence file missing or unreadable: <tmp>/g3.json
+approval: REJECTED, no mutation allowed
+G3 recorded for production, dispatch for staging: exit 1, recorded-call file bytes: 0
+FAIL g3-environment: G3 names 'production', not staging
+approval: REJECTED (1 failed), no mutation allowed
+G3 for other digests: exit 1, recorded-call file bytes: 0
+FAIL digests-registry: G3 digests differ from the registry digests
+FAIL digests-quality: G3 digests differ from quality.json
+approval: REJECTED (2 failed), no mutation allowed
+
+## Probe 9: two dispatches to staging, second waits
+first exit 0, second exit 0
+second run said: release: another release holds the staging lock; waiting
+recorded ops in order (22): schema-version backup-gate backup migrate-db migrate-jobs deploy-api deploy-worker deploy-web smoke observe record schema-version backup-gate backup migrate-db migrate-jobs deploy-api deploy-worker deploy-web smoke observe record
+the first run recorded all of its operations before the second run recorded any
+
+## Probe 10: smoke fails, then recovery step rollback-worker fails
+job exit code: 2 (red)
+recorded ops: schema-version backup-gate backup migrate-db migrate-jobs deploy-api deploy-worker deploy-web smoke rollback-web rollback-worker alert
+alert recorded: staging smoke failed; recovery step rollback-worker failed. Job stays failed, evidence preserved, no further action taken
+annotation: ::error::release staging: smoke failed; recovery step rollback-worker failed. Job stays failed, evidence preserved, no further action taken
+nothing after the failed recovery step ran (no rollback-api, no record)

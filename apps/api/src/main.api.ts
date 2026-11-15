@@ -5,11 +5,13 @@ import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { loadConfigOrExit } from './platform/config/index.js';
 import { createHttpLogging, secretValuesOf } from './platform/logging/index.js';
 import type { HttpLogging } from './platform/logging/index.js';
+import { ErrorFilter, EnvelopeInterceptor, RawResponse } from './platform/http/index.js';
 import { Logger } from 'nestjs-pino';
 
 @Controller('health')
 class HealthController {
   @Get('live')
+  @RawResponse()
   live(): { status: string } {
     return { status: 'ok' };
   }
@@ -34,6 +36,8 @@ async function bootstrap(): Promise<void> {
     { bufferLogs: true },
   );
   app.useLogger(app.get(Logger));
+  app.useGlobalFilters(new ErrorFilter(logging.logger));
+  app.useGlobalInterceptors(new EnvelopeInterceptor());
   app.enableShutdownHooks();
   await app.listen(config.API_PORT ?? 4000, '0.0.0.0');
 }
