@@ -195,6 +195,18 @@ describe('release-with-recovery.sh', () => {
       );
     });
 
+    it('fails with an alert before any rollback call when the previous record lacks a digest', async () => {
+      const t = setup(
+        { releases: [{ environment: 'staging', runId: '50', g3Ref: 'g3-50', digests: { api: digest('old-api') } }] },
+        { STUB_FAIL_OPS: 'smoke' },
+      );
+      const r = await t.release();
+      expect(r.code).toBe(2);
+      expect(t.result().status).toBe('recovery-failed');
+      expect(callsOf(t.calls).some((c) => c.startsWith('rollback'))).toBe(false);
+      expect(readFileSync(join(t.f.out, 'alerts-staging.log'), 'utf8')).toContain('no digest for web');
+    });
+
     it('reports a failed record step', async () => {
       const t = setup({}, { STUB_FAIL_OPS: 'record' });
       const r = await t.release();

@@ -111,6 +111,11 @@ describe('verify-release-approval.sh', () => {
       'not-stale',
     ],
     [
+      'a G3 with no ref',
+      () => fixture({ g3: { ref: '' }, releases: [{ environment: 'staging', runId: '50', g3Ref: '' }] }),
+      'g3-ref',
+    ],
+    [
       'a run older than the last release',
       () => fixture({ releases: [{ environment: 'staging', runId: '500', g3Ref: 'g3-1' }] }),
       'not-stale',

@@ -80,6 +80,7 @@ max_age=$(( ${G3_MAX_AGE_HOURS:-72} * 3600 ))
 check g3-fresh "G3 approval is missing a valid time, is in the future, or is older than ${G3_MAX_AGE_HOURS:-72} hours" $?
 
 g3_ref="$(g3 '.ref // ""')"
+[ -n "$g3_ref" ]; check g3-ref "G3 record has no ref" $?
 last_run="$(jq -r --arg e "$environment" '[.[] | select(.environment == $e) | .runId | tonumber] | max // 0' "$releases" 2>/dev/null || echo bad)"
 [[ "$last_run" =~ ^[0-9]+$ ]] && [ "$run_id" -ge "$last_run" ] \
   && ! jq -e --arg e "$environment" --arg r "$g3_ref" '.[] | select(.environment == $e and .g3Ref == $r)' "$releases" >/dev/null

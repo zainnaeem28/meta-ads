@@ -106,6 +106,11 @@ recover() { # recover REASON
   [ -n "$previous" ] || { alert "$1; no previous release is recorded, so no approved recovery exists"; write_result recovery-failed "$1; nothing to recover to"; exit 2; }
   for svc in web worker api; do
     case " ${deployed[*]} " in *" $svc "*) ;; *) continue ;; esac
+    if [ -z "$(prev "$svc")" ]; then
+      alert "$1; previous release has no digest for $svc. Job stays failed, no adapter call made"
+      write_result recovery-failed "$1; no previous digest for $svc"
+      exit 2
+    fi
     if ! host "rollback-$svc" "$(prev "$svc")" >/dev/null; then
       alert "$1; recovery step rollback-$svc failed. Job stays failed, evidence preserved, no further action taken"
       write_result recovery-failed "$1; rollback-$svc failed"
