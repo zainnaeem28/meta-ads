@@ -1,0 +1,16 @@
+**/node_modules
+**/.next
+**/dist
+**/coverage
+reports
+.git
+.github
+.env
+.env.*
+!.env.example
+docs
+**/*.test.ts
+**/*.integration.test.ts
+*.md
+*.pem
+*.key
