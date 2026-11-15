@@ -14,8 +14,8 @@ const next = (p: number) => `pnpm exec next start --hostname 127.0.0.1 --port ${
 // Tests tagged @harness run in every browser project; the rest (CDP, font internals) run in chromium only.
 export default defineConfig({
   testDir: 'e2e',
-  outputDir: 'reports/icons-gallery/pw-output',
-  reporter: [['junit', { outputFile: 'reports/icons-gallery/e2e-junit.xml' }]],
+  outputDir: 'reports/brand/pw-output',
+  reporter: [['junit', { outputFile: 'reports/brand/e2e-junit.xml' }]],
   // Linux CI is the baseline platform: one baseline per project, no platform suffix.
   snapshotPathTemplate: '{testDir}/__baselines__/{projectName}/{arg}{ext}',
   expect: { toHaveScreenshot: { ...SCREENSHOT } },
@@ -28,6 +28,9 @@ export default defineConfig({
     { name: 'firefox', use: { ...devices['Desktop Firefox'] }, grep: /@harness/ },
     { name: 'webkit', use: { ...devices['Desktop Safari'] }, grep: /@harness/ },
     { name: 'edge', use: { ...devices['Desktop Edge'], channel: 'msedge' }, grep: /@harness/ },
+    // Home-screen device profiles (TASK-068): iOS Safari and Android Chrome emulation.
+    { name: 'ios-safari', use: { ...devices['iPhone 15'] }, grep: /@brand-device/ },
+    { name: 'android-chrome', use: { ...devices['Pixel 7'] }, grep: /@brand-device/ },
   ],
   webServer: [
     {
@@ -39,7 +42,7 @@ export default defineConfig({
     },
     {
       command: next(port),
-      env: { GALLERY_ENABLED: 'true', APP_ENV: 'test' },
+      env: { GALLERY_ENABLED: 'true', APP_ENV: 'test', WEB_ORIGIN: `http://127.0.0.1:${port}` },
       url: `http://127.0.0.1:${port}`,
       reuseExistingServer: false,
       timeout: 60_000,

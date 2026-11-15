@@ -7,6 +7,7 @@
     "lint": "eslint .",
     "start": "next start",
     "test": "vitest run --config vitest.config.ts --coverage",
+    "test:brand": "vitest run --config vitest.config.ts tests/brand",
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:unit": "vitest run --config vitest.config.ts --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit"
