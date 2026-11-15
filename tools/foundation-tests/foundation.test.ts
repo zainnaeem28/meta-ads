@@ -1,3 +1,4 @@
+import { apiEnv } from './api-env.js';
 import { execFileSync, spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -75,7 +76,7 @@ describe('foundation', () => {
     expect(existsSync(join(root, 'apps/api/dist/main.api.js'))).toBe(true);
     const child = spawn('node', ['dist/main.api.js'], {
       cwd: join(root, 'apps/api'),
-      env: { ...process.env, PORT: '3911' },
+      env: { ...process.env, ...apiEnv(3911) },
       stdio: 'inherit',
     });
     children.push(child);
