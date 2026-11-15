@@ -1,0 +1,53 @@
+# TASK-009 evidence (names only; no value printed)
+
+## node scripts/ci/config-consistency.mjs
+registry.json: 119 keys (22 secret); schema.ts: 104 keys; container files checked: none present
+config-consistency: registry, schema, .env.example, secrets doc and container definitions agree
+exit=0
+
+## node scripts/ci/config-consistency.mjs --probe (injected mismatches, one at a time)
+caught  renamed key
+caught  class flipped to secret
+caught  requirement dropped
+caught  process dropped
+caught  default changed
+caught  key only in the registry marked schema
+caught  key read by api but unknown to the schema
+caught  key missing from the registry
+caught  KEK private key given to the api
+caught  database url given to backup
+caught  age private key variable
+caught  backup forbidden list loses a name
+caught  registry entry malformed
+caught  .env.example misses a variable
+caught  .env.example carries a secret value
+caught  local mode default is not local
+caught  secrets doc stale
+caught  backup Dockerfile target sets the KEK
+caught  api compose service sets the worker secret
+caught  web image holds the database url
+caught  backup holds the age private key
+21/21 injected mismatches caught; merged files pass
+exit=0
+
+## default-valued local env started through the real api entry point (apps/api/dist/main.api.js)
+wrote 6 per-process env files to <tmp> (generated key material, never committed)
+api env keys (names only): 52 ; DATABASE_URL overridden to the shared test PostgreSQL (no owner-supplied URL)
+GET /health/live -> {"status":200,"body":{"status":"ok"}}
+stderr lines: 0
+api started with the worker file -> exit 78
+config error (api): KEK_PRIVATE_KEYS is forbidden
+config error (api): R2_LEDGER_ACCESS_KEY_ID is forbidden
+config error (api): R2_LEDGER_SECRET_ACCESS_KEY is forbidden
+config error (api): WEB_ORIGIN is missing
+config error (api): CLERK_JWT_ISSUER is missing
+config error (api): KEY_FINGERPRINT_PEPPERS is missing
+config error (api): KEY_FINGERPRINT_PEPPER_ACTIVE is missing
+config error (api): RATE_LIMIT_IP_KEY is missing
+config error (api): CURSOR_SIGNING_KEY is missing
+
+## pnpm --filter @shroomap/api test:startup-config
+ ✓ src/platform/config/example-env.test.ts (6 tests) 316ms
+ ✓ src/platform/config/schema.test.ts (122 tests | 9 skipped) 219ms
+ Test Files  2 passed (2)
+      Tests  119 passed | 9 skipped (128)

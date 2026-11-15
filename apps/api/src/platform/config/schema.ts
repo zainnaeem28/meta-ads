@@ -79,6 +79,7 @@ function crossChecks(
 
   if (kind !== 'release') {
     https('WEB_ORIGIN');
+    https('R2_ENDPOINT');
     if (hardened && isPresent(env['DATABASE_URL'])) {
       const mode = new URL(env['DATABASE_URL']).searchParams.get('sslmode');
       if (mode === null || !['require', 'verify-ca', 'verify-full'].includes(mode))
@@ -99,6 +100,7 @@ function crossChecks(
   }
 
   if (kind === 'api') {
+    https('STORAGE_PUBLIC_ORIGIN');
     if (appEnv === 'production' && !isSet('OWNER_EMAIL')) fail('OWNER_EMAIL', 'missing');
     if (hardened && !isSet('METRICS_TOKEN')) fail('METRICS_TOKEN', 'missing');
     const peppers = mapVersions(c['KEY_FINGERPRINT_PEPPERS']);

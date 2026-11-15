@@ -1,0 +1,1690 @@
+{
+  "version": 1,
+  "sources": "DEVOPS-PLAN section 8 (AIU-16 v2.2) merged with ARCHITECTURE section 6 and 6.1 (AIU-13 v4.5); names follow ARCHITECTURE.",
+  "environments": ["development", "staging", "production"],
+  "secretNamePattern": "shroomap/<env>/<service>/<KEY>",
+  "hostedEnvironments": ["staging", "production"],
+  "backupForbidden": [
+    "KEK_PRIVATE_KEYS",
+    "KEK_V*",
+    "KEY_FINGERPRINT_PEPPERS",
+    "HMAC_PEPPER",
+    "DATABASE_URL",
+    "MIGRATION_DATABASE_URL",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "R2_LEDGER_ACCESS_KEY_ID",
+    "R2_LEDGER_SECRET_ACCESS_KEY",
+    "CLERK_SECRET_KEY",
+    "CURSOR_SIGNING_KEY",
+    "RATE_LIMIT_IP_KEY",
+    "METRICS_TOKEN",
+    "SHOTSTACK_API_KEY",
+    "RENDER_API_KEY",
+    "GHCR_PULL_TOKEN",
+    "SENTRY_AUTH_TOKEN",
+    "GITHUB_TOKEN",
+    "AGE_SECRET_KEY",
+    "AGE_PRIVATE_KEY",
+    "BACKUP_AGE_IDENTITY"
+  ],
+  "forbiddenElsewhere": [
+    {
+      "name": "KEK_V*",
+      "reason": "KEK private versions live only in the worker KEK_PRIVATE_KEYS map"
+    },
+    {
+      "name": "HMAC_PEPPER",
+      "reason": "alias of KEY_FINGERPRINT_PEPPERS, api only"
+    },
+    {
+      "name": "RENDER_API_KEY",
+      "reason": "release executor only"
+    },
+    {
+      "name": "GHCR_PULL_TOKEN",
+      "reason": "Render registry credential only"
+    },
+    {
+      "name": "SENTRY_AUTH_TOKEN",
+      "reason": "main build only"
+    },
+    {
+      "name": "GITHUB_TOKEN",
+      "reason": "workflows only"
+    },
+    {
+      "name": "PAPERCLIP_G3_READER_TOKEN",
+      "reason": "release verification only"
+    },
+    {
+      "name": "AGE_SECRET_KEY",
+      "reason": "the age private key is escrowed, never a runtime variable"
+    },
+    {
+      "name": "AGE_PRIVATE_KEY",
+      "reason": "the age private key is escrowed, never a runtime variable"
+    },
+    {
+      "name": "BACKUP_AGE_IDENTITY",
+      "reason": "the age private key is escrowed, never a runtime variable"
+    }
+  ],
+  "keys": [
+    {
+      "name": "APP_ENV",
+      "group": "Platform",
+      "class": "public",
+      "services": ["api", "worker", "release", "web", "backup", "monitor"],
+      "requiredIn": ["api", "worker", "release", "web", "backup", "monitor"],
+      "default": null,
+      "schema": "schema",
+      "validation": "One of development, test, staging, production.",
+      "local": {
+        "value": "development"
+      }
+    },
+    {
+      "name": "RELEASE_SHA",
+      "group": "Platform",
+      "class": "public",
+      "services": ["api", "worker", "release"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "7 to 40 hex characters; required in staging and production.",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "API_PORT",
+      "group": "Platform",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "4000",
+      "schema": "schema",
+      "validation": "Integer 1-65535.",
+      "local": {
+        "value": "4000"
+      }
+    },
+    {
+      "name": "WEB_ORIGIN",
+      "group": "Platform",
+      "class": "public",
+      "services": ["api", "web"],
+      "requiredIn": ["api", "web"],
+      "default": null,
+      "schema": "schema",
+      "validation": "URL; https in staging and production.",
+      "local": {
+        "value": "http://localhost:3000"
+      }
+    },
+    {
+      "name": "TRUST_PROXY_HOPS",
+      "group": "Platform",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "1",
+      "schema": "schema",
+      "validation": "Integer 0-3.",
+      "local": {
+        "value": "1"
+      }
+    },
+    {
+      "name": "LOG_LEVEL",
+      "group": "Platform",
+      "class": "public",
+      "services": ["api", "worker", "release", "web", "backup", "monitor"],
+      "requiredIn": [],
+      "default": "info",
+      "schema": "schema",
+      "validation": "A pino level.",
+      "local": {
+        "value": "info"
+      }
+    },
+    {
+      "name": "DATABASE_URL",
+      "group": "Database",
+      "class": "secret",
+      "services": ["api", "worker"],
+      "requiredIn": ["api", "worker"],
+      "default": null,
+      "schema": "schema",
+      "validation": "PostgreSQL URL; TLS required in staging and production.",
+      "store": "Host secret store, per service role (`app_api` for api, `app_worker` for worker)",
+      "owner": "Operations owner; DevOps provisions",
+      "rotation": "Yearly or on compromise; two-step role password rotation with overlap",
+      "local": {
+        "value": "postgres://postgres:shroomap-local@localhost:5432/shroomap_dev"
+      }
+    },
+    {
+      "name": "MIGRATION_DATABASE_URL",
+      "group": "Database",
+      "class": "secret",
+      "services": ["release"],
+      "requiredIn": ["release"],
+      "default": null,
+      "schema": "schema",
+      "validation": "PostgreSQL URL; absent from api and worker.",
+      "store": "Host secret store of the `migrate` release step only (`app_migrator`); never a CI variable on PR runs",
+      "owner": "Operations owner; DevOps provisions",
+      "rotation": "Per environment after use if the owner wants; on compromise",
+      "local": {
+        "value": "postgres://postgres:shroomap-local@localhost:5432/shroomap_dev"
+      }
+    },
+    {
+      "name": "DATABASE_POOL_MAX",
+      "group": "Database",
+      "class": "public",
+      "services": ["api", "worker"],
+      "requiredIn": [],
+      "default": "10",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "10"
+      }
+    },
+    {
+      "name": "DATABASE_ACQUIRE_TIMEOUT_MS",
+      "group": "Database",
+      "class": "public",
+      "services": ["api", "worker"],
+      "requiredIn": [],
+      "default": "5000",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "5000"
+      }
+    },
+    {
+      "name": "CLERK_SECRET_KEY",
+      "group": "Identity",
+      "class": "secret",
+      "services": ["api", "worker", "web"],
+      "requiredIn": ["api", "worker", "web"],
+      "default": null,
+      "schema": "schema",
+      "validation": "`sk_` prefix.",
+      "store": "Host secret store (api, worker, web)",
+      "owner": "Owner's Clerk account",
+      "rotation": "On compromise or yearly; overlap then revoke",
+      "local": {
+        "value": "sk_local_not_a_real_key"
+      }
+    },
+    {
+      "name": "CLERK_JWT_ISSUER",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": ["api"],
+      "default": null,
+      "schema": "schema",
+      "validation": "https URL.",
+      "local": {
+        "value": "https://clerk.local.invalid"
+      }
+    },
+    {
+      "name": "OWNER_EMAIL",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "Valid email; required in production.",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "MFA_REQUIRED_FOR",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "all",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "all"
+      }
+    },
+    {
+      "name": "RECENT_AUTH_MAX_AGE_MIN",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "10",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "10"
+      }
+    },
+    {
+      "name": "INVITE_EMAIL_DOMAINS",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": ""
+      }
+    },
+    {
+      "name": "INVITE_EXPIRY_DAYS",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "7",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "7"
+      }
+    },
+    {
+      "name": "ACCESS_REQUEST_FORM_ENABLED",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "false",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "false"
+      }
+    },
+    {
+      "name": "SIGNUP_OPEN_EMAIL_VERIFICATION",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "false",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "false"
+      }
+    },
+    {
+      "name": "SIGNUP_OPEN_RATE_LIMIT",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "false",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "false"
+      }
+    },
+    {
+      "name": "SIGNUP_OPEN_ABUSE_LIMITS",
+      "group": "Identity",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "false",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "false"
+      }
+    },
+    {
+      "name": "KEK_PUBLIC_KEYS",
+      "group": "Provider keys",
+      "class": "public",
+      "services": ["api", "worker"],
+      "requiredIn": ["api", "worker"],
+      "default": null,
+      "schema": "schema",
+      "validation": "JSON map {version: RSA-3072 public PEM}.",
+      "local": {
+        "generate": "rsa3072-public"
+      }
+    },
+    {
+      "name": "KEK_ACTIVE_VERSION",
+      "group": "Provider keys",
+      "class": "public",
+      "services": ["api", "worker"],
+      "requiredIn": ["api", "worker"],
+      "default": null,
+      "schema": "schema",
+      "validation": "Present in both KEK maps.",
+      "local": {
+        "value": "1"
+      }
+    },
+    {
+      "name": "KEK_PRIVATE_KEYS",
+      "group": "Provider keys",
+      "class": "secret",
+      "services": ["worker"],
+      "requiredIn": ["worker"],
+      "default": null,
+      "schema": "schema",
+      "validation": "JSON map {version: PEM}; worker only.",
+      "store": "Host secret store of the worker only (highest sensitivity)",
+      "owner": "Operations owner (named minimum set, D-19)",
+      "rotation": "By `kek:rewrap`: add version, switch active, re-wrap, remove old private key",
+      "local": {
+        "generate": "rsa3072-private"
+      }
+    },
+    {
+      "name": "KEY_FINGERPRINT_PEPPERS",
+      "group": "Provider keys",
+      "class": "secret",
+      "services": ["api"],
+      "requiredIn": ["api"],
+      "default": null,
+      "schema": "schema",
+      "validation": "JSON map {version: base64}, 32+ bytes each.",
+      "store": "Host secret store (api)",
+      "owner": "Operations owner",
+      "rotation": "Add a version; old fingerprints stay valid display values (TD-D6)",
+      "local": {
+        "generate": "pepper-map"
+      }
+    },
+    {
+      "name": "KEY_FINGERPRINT_PEPPER_ACTIVE",
+      "group": "Provider keys",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": ["api"],
+      "default": null,
+      "schema": "schema",
+      "validation": "Present in the pepper map.",
+      "local": {
+        "value": "1"
+      }
+    },
+    {
+      "name": "KEY_ENTRY_ATTEMPTS_PER_WINDOW",
+      "group": "Provider keys",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "5",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "5"
+      }
+    },
+    {
+      "name": "KEY_ENTRY_WINDOW_MIN",
+      "group": "Provider keys",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "10",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "10"
+      }
+    },
+    {
+      "name": "KEY_AUTO_DISABLE_THRESHOLD",
+      "group": "Provider keys",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "5",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "5"
+      }
+    },
+    {
+      "name": "KEY_FORMAT_OPENAI",
+      "group": "Provider keys",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "^sk-[A-Za-z0-9_-]{20,}$",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "^sk-[A-Za-z0-9_-]{20,}$"
+      }
+    },
+    {
+      "name": "KEY_FORMAT_WAVESPEED",
+      "group": "Provider keys",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "^[A-Za-z0-9_-]{20,}$",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "^[A-Za-z0-9_-]{20,}$"
+      }
+    },
+    {
+      "name": "PROBE_TIMEOUT_MS",
+      "group": "Provider keys",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "5000",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "5000"
+      }
+    },
+    {
+      "name": "R2_ENDPOINT",
+      "group": "Storage",
+      "class": "public",
+      "services": ["api", "worker", "backup"],
+      "requiredIn": ["api", "worker", "backup"],
+      "default": null,
+      "schema": "schema",
+      "validation": "URL; https in staging and production.",
+      "local": {
+        "value": "http://localhost:9000"
+      }
+    },
+    {
+      "name": "R2_BUCKET",
+      "group": "Storage",
+      "class": "public",
+      "services": ["api", "worker"],
+      "requiredIn": ["api", "worker"],
+      "default": null,
+      "schema": "schema",
+      "validation": "Non-empty.",
+      "local": {
+        "value": "app"
+      }
+    },
+    {
+      "name": "R2_ACCESS_KEY_ID",
+      "group": "Storage",
+      "class": "secret",
+      "services": ["api", "worker"],
+      "requiredIn": ["api", "worker"],
+      "default": null,
+      "schema": "schema",
+      "validation": "Non-empty; distinct per process.",
+      "store": "Host secret store; api holds token A, worker holds token B",
+      "owner": "Owner's Cloudflare account; Operations owner",
+      "rotation": "Yearly or on compromise; overlap with the other token",
+      "local": {
+        "value": "shroomap-local"
+      }
+    },
+    {
+      "name": "R2_SECRET_ACCESS_KEY",
+      "group": "Storage",
+      "class": "secret",
+      "services": ["api", "worker"],
+      "requiredIn": ["api", "worker"],
+      "default": null,
+      "schema": "schema",
+      "validation": "Non-empty; distinct per process.",
+      "store": "Host secret store; api holds token A, worker holds token B",
+      "owner": "Owner's Cloudflare account; Operations owner",
+      "rotation": "Yearly or on compromise; overlap with the other token",
+      "local": {
+        "value": "shroomap-local-secret"
+      }
+    },
+    {
+      "name": "R2_LEDGER_BUCKET",
+      "group": "Storage",
+      "class": "public",
+      "services": ["worker", "backup"],
+      "requiredIn": ["worker", "backup"],
+      "default": null,
+      "schema": "schema",
+      "validation": "Non-empty; differs from R2_BUCKET.",
+      "local": {
+        "value": "ledger"
+      }
+    },
+    {
+      "name": "R2_LEDGER_ACCESS_KEY_ID",
+      "group": "Storage",
+      "class": "secret",
+      "services": ["worker"],
+      "requiredIn": ["worker"],
+      "default": null,
+      "schema": "schema",
+      "validation": "Non-empty; differs from token B.",
+      "store": "Host secret store of the worker only (token C, ledger bucket write-once and read)",
+      "owner": "Owner's Cloudflare account; Operations owner",
+      "rotation": "Yearly or on compromise",
+      "local": {
+        "value": "shroomap-local-ledger"
+      }
+    },
+    {
+      "name": "R2_LEDGER_SECRET_ACCESS_KEY",
+      "group": "Storage",
+      "class": "secret",
+      "services": ["worker"],
+      "requiredIn": ["worker"],
+      "default": null,
+      "schema": "schema",
+      "validation": "Non-empty; differs from token B.",
+      "store": "Host secret store of the worker only (token C)",
+      "owner": "Owner's Cloudflare account; Operations owner",
+      "rotation": "Yearly or on compromise",
+      "local": {
+        "value": "shroomap-local-ledger-secret"
+      }
+    },
+    {
+      "name": "STORAGE_PUBLIC_ORIGIN",
+      "group": "Storage",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "MEDIA_MAX_UPLOAD_BYTES",
+      "group": "Storage",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "10485760",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "10485760"
+      }
+    },
+    {
+      "name": "MEDIA_MAX_PIXEL_DIMENSION",
+      "group": "Storage",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "8000",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "8000"
+      }
+    },
+    {
+      "name": "MEDIA_MAX_PIXELS",
+      "group": "Storage",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "40000000",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "40000000"
+      }
+    },
+    {
+      "name": "MEDIA_BROWSER_URL_TTL_SEC",
+      "group": "Storage",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "300",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "300"
+      }
+    },
+    {
+      "name": "PROVIDER_FETCH_URL_TTL_SEC",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "3600",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "3600"
+      }
+    },
+    {
+      "name": "MEDIA_UNATTACHED_TTL_HOURS",
+      "group": "Storage",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "24",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "24"
+      }
+    },
+    {
+      "name": "STORAGE_QUOTA_BYTES",
+      "group": "Storage",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "21474836480",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "21474836480"
+      }
+    },
+    {
+      "name": "SPEND_CAP_DAILY_USD",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "50",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "50"
+      }
+    },
+    {
+      "name": "SPEND_CAP_MONTHLY_USD",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "500",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "500"
+      }
+    },
+    {
+      "name": "JOB_BURST_ALERT_COUNT",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "20",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "20"
+      }
+    },
+    {
+      "name": "JOB_BURST_WINDOW_MIN",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "10",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "10"
+      }
+    },
+    {
+      "name": "PROVIDER_AUTH_SPIKE_COUNT",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "5",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "5"
+      }
+    },
+    {
+      "name": "PROVIDER_AUTH_SPIKE_WINDOW_MIN",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "10",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "10"
+      }
+    },
+    {
+      "name": "JOB_CREATE_RATE_LIMIT",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "60",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "60"
+      }
+    },
+    {
+      "name": "JOB_CREATE_RATE_WINDOW_MIN",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "10",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "10"
+      }
+    },
+    {
+      "name": "RATE_LIMIT_IP_KEY",
+      "group": "Limits and caps",
+      "class": "secret",
+      "services": ["api"],
+      "requiredIn": ["api"],
+      "default": null,
+      "schema": "schema",
+      "validation": "32+ bytes.",
+      "store": "Host secret store (api)",
+      "owner": "Operations owner",
+      "rotation": "On compromise; rotation resets IP buckets",
+      "local": {
+        "generate": "random"
+      }
+    },
+    {
+      "name": "RUNNING_JOBS_PER_USER",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "5",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "5"
+      }
+    },
+    {
+      "name": "ASSEMBLY_RENDERS_PER_USER_PER_DAY",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "20",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "20"
+      }
+    },
+    {
+      "name": "ASSEMBLY_ADAPTER",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "ffmpeg",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "ffmpeg"
+      }
+    },
+    {
+      "name": "ASSEMBLY_VENDOR_PLATFORM_CAP",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "SHOTSTACK_API_KEY",
+      "group": "Platform",
+      "class": "secret",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "store": "Host secret store (worker), only with the Shotstack adapter",
+      "owner": "Owner's vendor account",
+      "rotation": "On compromise or yearly",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "ASSEMBLY_CONCURRENCY",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "1",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "1"
+      }
+    },
+    {
+      "name": "THUMBSTOPPER_FRAME_SECONDS",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "1.5",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "1.5"
+      }
+    },
+    {
+      "name": "PROVIDER_HTTP_TIMEOUT_MS",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "120000",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "120000"
+      }
+    },
+    {
+      "name": "SUBMIT_JOB_EXPIRE_SEC",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "150",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "150"
+      }
+    },
+    {
+      "name": "SUBMIT_ORPHAN_AFTER_SEC",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "300",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "300"
+      }
+    },
+    {
+      "name": "POLL_INTERVAL_SEC",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "5",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "5"
+      }
+    },
+    {
+      "name": "POLL_LEASE_SEC",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "60",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "60"
+      }
+    },
+    {
+      "name": "VIDEO_JOB_DEADLINE_MIN",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "30",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "30"
+      }
+    },
+    {
+      "name": "PROVIDER_OUTPUT_COPY_WINDOW_HOURS",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "24",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "24"
+      }
+    },
+    {
+      "name": "INVITATION_SEND_STALE_MIN",
+      "group": "Identity",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "15",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "15"
+      }
+    },
+    {
+      "name": "PROVIDER_OUTPUT_MAX_BYTES",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "209715200",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "209715200"
+      }
+    },
+    {
+      "name": "EGRESS_ALLOWED_HOSTS",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["api", "worker"],
+      "requiredIn": [],
+      "default": "{\"openai\":[\"api.openai.com\"],\"wavespeed\":[\"api.wavespeed.ai\"]}",
+      "schema": "schema",
+      "validation": "JSON map vendor to exact hosts or *.domain suffixes.",
+      "local": {
+        "value": "{\"openai\":[\"api.openai.com\"],\"wavespeed\":[\"api.wavespeed.ai\"]}"
+      }
+    },
+    {
+      "name": "WAVESPEED_MODEL_I2V",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "bytedance/seedance-2.0/image-to-video",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "bytedance/seedance-2.0/image-to-video"
+      }
+    },
+    {
+      "name": "WAVESPEED_MODEL_T2V",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "bytedance/seedance-2.0/text-to-video",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "bytedance/seedance-2.0/text-to-video"
+      }
+    },
+    {
+      "name": "VIDEO_RESOLUTION",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "1080p",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "1080p"
+      }
+    },
+    {
+      "name": "VIDEO_ASPECT_RATIO",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "9:16",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "9:16"
+      }
+    },
+    {
+      "name": "VIDEO_SEGMENT_SECONDS",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "15",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "15"
+      }
+    },
+    {
+      "name": "OPENAI_TEXT_MODEL",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "local-stub-text"
+      }
+    },
+    {
+      "name": "OPENAI_VISION_MODEL",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "local-stub-vision"
+      }
+    },
+    {
+      "name": "OPENAI_TRANSCRIBE_MODEL",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "gpt-transcribe",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "gpt-transcribe"
+      }
+    },
+    {
+      "name": "OPENAI_IMAGE_MODEL",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "local-stub-image"
+      }
+    },
+    {
+      "name": "QC_MAX_WORD_ERROR_RATE",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "0.20",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "0.20"
+      }
+    },
+    {
+      "name": "IDEMPOTENCY_TTL_HOURS",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "24",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "24"
+      }
+    },
+    {
+      "name": "CURSOR_SIGNING_KEY",
+      "group": "Lifecycle",
+      "class": "secret",
+      "services": ["api"],
+      "requiredIn": ["api"],
+      "default": null,
+      "schema": "schema",
+      "validation": "32+ bytes.",
+      "store": "Host secret store (api)",
+      "owner": "Operations owner",
+      "rotation": "On compromise or yearly; open cursors restart at page 1",
+      "local": {
+        "generate": "random"
+      }
+    },
+    {
+      "name": "REPORT_DEFAULT_WINDOW_DAYS",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "30",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "30"
+      }
+    },
+    {
+      "name": "REPORT_MAX_WINDOW_DAYS",
+      "group": "Limits and caps",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "366",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "366"
+      }
+    },
+    {
+      "name": "ERASURE_HOLD_PERIOD_HOURS",
+      "group": "Lifecycle",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "0",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "0"
+      }
+    },
+    {
+      "name": "DELETION_RETRY_LIMIT",
+      "group": "Lifecycle",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "10",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "10"
+      }
+    },
+    {
+      "name": "WORKER_WATCHDOG_SECONDS",
+      "group": "Platform",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "180",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "180"
+      }
+    },
+    {
+      "name": "WORKER_DRAIN_SECONDS",
+      "group": "Platform",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "25",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "25"
+      }
+    },
+    {
+      "name": "API_DRAIN_SECONDS",
+      "group": "Platform",
+      "class": "public",
+      "services": ["api"],
+      "requiredIn": [],
+      "default": "20",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "20"
+      }
+    },
+    {
+      "name": "WORKER_CONCURRENCY_PROVIDER",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "20",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "20"
+      }
+    },
+    {
+      "name": "WORKER_CONCURRENCY_SANITIZE",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "2",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "2"
+      }
+    },
+    {
+      "name": "WORKER_CONCURRENCY_DELETION",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "2",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "2"
+      }
+    },
+    {
+      "name": "HEARTBEAT_URL_WORKER",
+      "group": "Observability",
+      "class": "secret",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "https URL.",
+      "store": "Host secret store (worker)",
+      "owner": "DevOps",
+      "rotation": "On compromise",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "METRICS_TOKEN",
+      "group": "Observability",
+      "class": "secret",
+      "services": ["api", "monitor"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "43+ base64url characters; required in staging and production.",
+      "store": "Host secret store of api and `monitor`; release executor secret store for the observation step",
+      "owner": "DevOps",
+      "rotation": "Yearly or on compromise; overlap api first",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "SENTRY_DSN",
+      "group": "Observability",
+      "class": "secret",
+      "services": ["api", "worker", "monitor"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "https DSN.",
+      "store": "Host secret store (api, worker, monitor)",
+      "owner": "DevOps",
+      "rotation": "On compromise",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "SENTRY_ENVIRONMENT",
+      "group": "Observability",
+      "class": "public",
+      "services": ["api", "worker", "web", "monitor"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "[a-z0-9-]{1,32}; defaults to APP_ENV.",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "SENTRY_ERRORS_SAMPLE_RATE",
+      "group": "Observability",
+      "class": "public",
+      "services": ["api", "worker", "web"],
+      "requiredIn": [],
+      "default": "1.0",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "1.0"
+      }
+    },
+    {
+      "name": "SENTRY_TRACES_SAMPLE_RATE",
+      "group": "Observability",
+      "class": "public",
+      "services": ["api", "worker", "web"],
+      "requiredIn": [],
+      "default": "0",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "0"
+      }
+    },
+    {
+      "name": "PROVIDER_DATA_MODE_OPENAI",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "synthetic",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "synthetic"
+      }
+    },
+    {
+      "name": "PROVIDER_DATA_MODE_WAVESPEED",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "synthetic",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "synthetic"
+      }
+    },
+    {
+      "name": "PROVIDER_DATA_MODE_SHOTSTACK",
+      "group": "Providers and models",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": "synthetic",
+      "schema": "schema",
+      "validation": "See ARCHITECTURE section 6.",
+      "local": {
+        "value": "synthetic"
+      }
+    },
+    {
+      "name": "BACKUP_DATABASE_URL",
+      "default": null,
+      "requiredIn": ["backup"],
+      "schema": "n/a",
+      "group": "Backup",
+      "class": "secret",
+      "services": ["backup"],
+      "validation": "PostgreSQL URL (role `app_backup`), TLS outside development; never named DATABASE_URL.",
+      "store": "Host secret store of the `backup` service only",
+      "owner": "DevOps creates the role (DO-11); Operations owner holds the password",
+      "rotation": "Yearly or on compromise; two-step role password rotation with overlap",
+      "local": {
+        "value": "postgres://postgres:shroomap-local@localhost:5432/shroomap_dev"
+      }
+    },
+    {
+      "name": "R2_BACKUP_SOURCE_ACCESS_KEY_ID",
+      "default": null,
+      "requiredIn": ["backup"],
+      "schema": "n/a",
+      "group": "Backup",
+      "class": "secret",
+      "services": ["backup"],
+      "validation": "Object Read only token on the app and ledger buckets.",
+      "store": "Host secret store of the `backup` service only",
+      "owner": "Owner's Cloudflare account; Operations owner",
+      "rotation": "Yearly or on compromise; overlap",
+      "local": {
+        "value": "shroomap-local"
+      }
+    },
+    {
+      "name": "R2_BACKUP_SOURCE_SECRET_ACCESS_KEY",
+      "default": null,
+      "requiredIn": ["backup"],
+      "schema": "n/a",
+      "group": "Backup",
+      "class": "secret",
+      "services": ["backup"],
+      "validation": "Object Read only token on the app and ledger buckets.",
+      "store": "Host secret store of the `backup` service only",
+      "owner": "Owner's Cloudflare account; Operations owner",
+      "rotation": "Yearly or on compromise; overlap",
+      "local": {
+        "value": "shroomap-local-secret"
+      }
+    },
+    {
+      "name": "R2_BACKUP_SINK_ACCESS_KEY_ID",
+      "default": null,
+      "requiredIn": ["backup"],
+      "schema": "n/a",
+      "group": "Backup",
+      "class": "secret",
+      "services": ["backup"],
+      "validation": "Object Read and Write token on the backup bucket only; not Admin.",
+      "store": "Host secret store of the `backup` service only",
+      "owner": "Owner's Cloudflare account; Operations owner",
+      "rotation": "Yearly or on compromise; overlap",
+      "local": {
+        "value": "shroomap-local"
+      }
+    },
+    {
+      "name": "R2_BACKUP_SINK_SECRET_ACCESS_KEY",
+      "default": null,
+      "requiredIn": ["backup"],
+      "schema": "n/a",
+      "group": "Backup",
+      "class": "secret",
+      "services": ["backup"],
+      "validation": "Object Read and Write token on the backup bucket only; not Admin.",
+      "store": "Host secret store of the `backup` service only",
+      "owner": "Owner's Cloudflare account; Operations owner",
+      "rotation": "Yearly or on compromise; overlap",
+      "local": {
+        "value": "shroomap-local-secret"
+      }
+    },
+    {
+      "name": "HEARTBEAT_URL_BACKUP",
+      "default": null,
+      "requiredIn": ["backup"],
+      "schema": "n/a",
+      "group": "Backup",
+      "class": "secret",
+      "services": ["backup"],
+      "validation": "https URL.",
+      "store": "Host secret store of the `backup` service only",
+      "owner": "DevOps",
+      "rotation": "On compromise",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "BACKUP_AGE_RECIPIENT",
+      "default": null,
+      "requiredIn": ["backup"],
+      "schema": "n/a",
+      "group": "Backup",
+      "class": "public",
+      "services": ["backup"],
+      "validation": "`age1` public recipient; the private key is never present.",
+      "local": {
+        "value": "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"
+      }
+    },
+    {
+      "name": "R2_BACKUP_BUCKET",
+      "default": null,
+      "requiredIn": ["backup"],
+      "schema": "n/a",
+      "group": "Backup",
+      "class": "public",
+      "services": ["backup"],
+      "validation": "Non-empty; three distinct bucket names.",
+      "local": {
+        "value": "backup"
+      }
+    },
+    {
+      "name": "BACKUP_RETENTION_DAYS",
+      "default": "30",
+      "requiredIn": [],
+      "schema": "n/a",
+      "group": "Backup",
+      "class": "public",
+      "services": ["backup"],
+      "validation": "Integer 7-365; equals the Admin-set lock age (DO-07).",
+      "local": {
+        "value": "30"
+      }
+    },
+    {
+      "name": "HEARTBEAT_URL_MONITOR",
+      "default": null,
+      "requiredIn": [],
+      "schema": "n/a",
+      "group": "Observability",
+      "class": "secret",
+      "services": ["monitor"],
+      "validation": "https URL.",
+      "store": "Host secret store of the `monitor` cron",
+      "owner": "DevOps",
+      "rotation": "On compromise",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "NEXT_PUBLIC_API_ORIGIN",
+      "default": null,
+      "requiredIn": ["web"],
+      "schema": "n/a",
+      "group": "Web build",
+      "class": "public",
+      "services": ["web"],
+      "validation": "URL; https in staging and production. Inlined at build; the web image is built per environment.",
+      "local": {
+        "value": "http://localhost:4000"
+      }
+    },
+    {
+      "name": "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+      "default": null,
+      "requiredIn": ["web"],
+      "schema": "n/a",
+      "group": "Web build",
+      "class": "public",
+      "services": ["web"],
+      "validation": "`pk_` prefix. Inlined at build.",
+      "local": {
+        "value": "pk_local_not_a_real_key"
+      }
+    },
+    {
+      "name": "NEXT_PUBLIC_SENTRY_DSN",
+      "default": null,
+      "requiredIn": [],
+      "schema": "n/a",
+      "group": "Web build",
+      "class": "public",
+      "services": ["web"],
+      "validation": "https DSN; same Sentry organisation as SENTRY_DSN. Visible in the browser by design.",
+      "local": {
+        "unset": true
+      }
+    },
+    {
+      "name": "IDENTITY_MODE",
+      "default": null,
+      "requiredIn": [],
+      "schema": "pending:TASK-033",
+      "group": "Local mode",
+      "class": "public",
+      "services": ["api"],
+      "refusedIn": ["staging", "production"],
+      "validation": "`local` or `clerk`; `local` is refused when APP_ENV is staging or production.",
+      "local": {
+        "value": "local"
+      }
+    },
+    {
+      "name": "AUTH_MODE",
+      "default": null,
+      "requiredIn": [],
+      "schema": "pending:TASK-084",
+      "group": "Local mode",
+      "class": "public",
+      "services": ["web"],
+      "refusedIn": ["staging", "production"],
+      "validation": "`local` or `clerk`; `local` is refused when APP_ENV is staging or production.",
+      "local": {
+        "value": "local"
+      }
+    }
+  ]
+}
