@@ -3,6 +3,8 @@ packages:
   - packages/*
   - tools/foundation-tests/db
   - tools/foundation-tests/slices
+  - tools/foundation-tests/media
+  - tools/provider-stubs
 onlyBuiltDependencies:
   - esbuild
   - sharp

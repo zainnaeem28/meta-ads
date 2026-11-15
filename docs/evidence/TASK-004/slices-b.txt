@@ -1,0 +1,63 @@
+Scope: 3 of 9 workspace projects
+tools/foundation-tests/media test:slices-b$ vitest run --config vitest.config.ts
+tools/foundation-tests/media test:slices-b:  RUN  v5.1.0 <worktree>/AIU-77-task-004-foundation-4-4-do-01d-storage-media-crypto-and-provider-stub-slices-and-the-stack-validation-doc/tools/foundation-tests/media
+tools/foundation-tests/media test:slices-b: stdout | ffmpeg.test.ts > FFmpeg concat of four 15 s 1080x1920 clips > renders 60 s H.264/AAC in the 10 min limit on all host cores
+tools/foundation-tests/media test:slices-b: FFMPEG all host cores: 12.1 s, peak RSS 408 MB, output 34.0 MB, host cores 4
+tools/foundation-tests/media test:slices-b: stdout | ffmpeg.test.ts > FFmpeg concat of four 15 s 1080x1920 clips > renders 60 s H.264/AAC in the 10 min limit on 1 vCPU (taskset -c 0, the Standard size)
+tools/foundation-tests/media test:slices-b: FFMPEG 1 vCPU (taskset -c 0, the Standard size): 34.5 s, peak RSS 255 MB, output 34.0 MB, host cores 4
+tools/foundation-tests/media test:slices-b:  ✓ ffmpeg.test.ts (4 tests) 77053ms
+tools/foundation-tests/media test:slices-b:    ✓ FFmpeg concat of four 15 s 1080x1920 clips (4)
+tools/foundation-tests/media test:slices-b:      ✓ fixtures are 15 s 1080x1920 451ms
+tools/foundation-tests/media test:slices-b:      ✓ renders 60 s H.264/AAC in the 10 min limit on all host cores 14517ms
+tools/foundation-tests/media test:slices-b:      ✓ renders 60 s H.264/AAC in the 10 min limit on 1 vCPU (taskset -c 0, the Standard size) 37307ms
+tools/foundation-tests/media test:slices-b: stdout | storage.test.ts
+tools/foundation-tests/media test:slices-b: MinIO minio version DEVELOPMENT.2025-07-23T15-54-02Z (commit-id=7ced9663e6a791fef9dc6be798ff24cda9c730ac)
+tools/foundation-tests/media test:slices-b:  ✓ storage.test.ts (6 tests) 3641ms
+tools/foundation-tests/media test:slices-b:    ✓ storage slice on MinIO (6)
+tools/foundation-tests/media test:slices-b:      ✓ presigned GET expires 2506ms
+tools/foundation-tests/media test:slices-b: stdout | media.test.ts > pixel cap and decompression bomb > a 20000 x 20000 bomb (400 MP, a few hundred KB on disk) is refused without decoding it
+tools/foundation-tests/media test:slices-b: bomb fixture: 20000x20000 gray PNG, 388871 bytes on disk, 400000000 bytes decoded
+tools/foundation-tests/media test:slices-b: stdout | media.test.ts > pixel cap and decompression bomb > a 20000 x 20000 bomb (400 MP, a few hundred KB on disk) is refused without decoding it
+tools/foundation-tests/media test:slices-b: bomb rejected in 1 ms, RSS grew 0.0 MB (a decode needs >= 400 MB)
+tools/foundation-tests/media test:slices-b:  ✓ media.test.ts (11 tests) 2017ms
+tools/foundation-tests/media test:slices-b:    ✓ pixel cap and decompression bomb (5)
+tools/foundation-tests/media test:slices-b:      ✓ width x height above MEDIA_MAX_PIXELS is rejected although each side is within the dimension cap 345ms
+tools/foundation-tests/media test:slices-b:      ✓ a 20000 x 20000 bomb (400 MP, a few hundred KB on disk) is refused without decoding it 1433ms
+tools/foundation-tests/media test:slices-b:  ✓ crypto.test.ts (9 tests) 405ms
+tools/foundation-tests/media test:slices-b:  ✓ providers.test.ts (3 tests) 42ms
+tools/foundation-tests/media test:slices-b:  Test Files  5 passed (5)
+tools/foundation-tests/media test:slices-b:       Tests  33 passed (33)
+tools/foundation-tests/media test:slices-b:    Start at  20:01:39
+tools/foundation-tests/media test:slices-b:    Duration  84.28s (tests 99%, import 1%)
+tools/foundation-tests/media test:slices-b: JUNIT report written to <worktree>/AIU-77-task-004-foundation-4-4-do-01d-storage-media-crypto-and-provider-stub-slices-and-the-stack-validation-doc/reports/foundation/slices-b-junit.xml
+tools/foundation-tests/media test:slices-b: Done
+--- provider-stubs ---
+
+> provider-stubs@0.0.0 test <worktree>/AIU-77-task-004-foundation-4-4-do-01d-storage-media-crypto-and-provider-stub-slices-and-the-stack-validation-doc/tools/provider-stubs
+> vitest run --config vitest.config.ts --coverage
+
+
+ RUN  v5.1.0 <worktree>/AIU-77-task-004-foundation-4-4-do-01d-storage-media-crypto-and-provider-stub-slices-and-the-stack-validation-doc/tools/provider-stubs
+      Coverage enabled with v8
+
+
+ Test Files  2 passed (2)
+      Tests  12 passed (12)
+   Start at  20:03:04
+   Duration  391ms (tests 42%, import 35%, transform 16%, worker 7%)
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-----------------|---------|----------|---------|---------|-------------------
+File             | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-----------------|---------|----------|---------|---------|-------------------
+All files        |   98.87 |    95.83 |   95.34 |   98.78 |                   
+ msw-handlers.ts |     100 |    96.96 |     100 |     100 | 50                
+ stub-server.ts  |   97.82 |    93.97 |    87.5 |   97.64 | 84,89             
+-----------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 98.87% ( 175/177 )
+Branches     : 95.83% ( 138/144 )
+Functions    : 95.34% ( 41/43 )
+Lines        : 98.78% ( 162/164 )
+================================================================================

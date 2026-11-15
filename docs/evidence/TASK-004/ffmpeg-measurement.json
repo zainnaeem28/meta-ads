@@ -1,0 +1,14 @@
+{
+  "hostCores": 4,
+  "cpuModel": "QEMU Virtual CPU version 2.5+",
+  "results": {
+    "all host cores": {
+      "seconds": 12.125,
+      "peakRssMb": 407.80859375
+    },
+    "1 vCPU (taskset -c 0, the Standard size)": {
+      "seconds": 34.536,
+      "peakRssMb": 254.83984375
+    }
+  }
+}

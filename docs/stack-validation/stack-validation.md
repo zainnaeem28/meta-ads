@@ -1,0 +1,72 @@
+# Stack validation (ARCHITECTURE §1.10)
+
+Assembled by TASK-004 (AIU-77) from the step documents of TASK-001 to TASK-004. Every claim links to its proof output; nothing here is a pass unless a test ran and its output is in the repository.
+
+## Verdict: FOUNDATION_VERIFIED
+
+All nine required steps ran against real components and every row below is `pass`, with one row that passed **with a design finding** (step 2, F-1 and F-2) and the NOT_RUN rows listed at the end. None of the NOT_RUN rows is a required row of §1.10: each one needs an account, an instance or a host the foundation does not have, and each has an owner item. Dependent tickets are not blocked by this document. Two items are carried to other owners and are not closed by it:
+
+1. **Solution Architect decision on F-1 and F-2 (step 2).** `createQueue` is not refused for a runtime role as TC-BKP-08 expects, except for partitioned queues; a `migrate: true` start on an up-to-date schema is a no-op. The candidate control (`REVOKE INSERT, DELETE ON pgboss.queue FROM app_api`, `REVOKE DELETE ... FROM app_worker`, applied by `jobs:migrate`) was proven in the test and the runtime flows still pass. M0001 (TASK-025) and TC-BKP-08 take the decision; this document does not decide it.
+2. **FFmpeg build for the worker image (step 7).** Measured with 7.0.2 (GPL); the design pins 7.1.x without GPL components. DevOps item for the worker image (DO-07).
+
+## Versions
+
+| Item                                                  | Version                                                                                                                                                  |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js                                               | 24.22.2 (the recorded fallback line; `.nvmrc` 26 is the target and cannot run on this host, `libatomic.so.1` missing)                                    |
+| pnpm, TypeScript                                      | 10.34.9, 6.0.3 (TS 7.0.2 probe: `apps/api` and `apps/web` typecheck clean, TD-D27)                                                                       |
+| Next, React, Tailwind                                 | 16.4.6, 19.3.1, 4.3.5                                                                                                                                    |
+| NestJS, Fastify, `@fastify/multipart`, helmet         | 12.5.0, 5.12.8, 10.1.8, 13.2.0                                                                                                                           |
+| Clerk (`@clerk/backend`, `@clerk/nextjs`)             | 3.29.0, 7.10.0                                                                                                                                           |
+| drizzle-orm, drizzle-kit, pg, pg-boss                 | 0.45.4, 0.31.11 (no 0.45 line exists), 8.23.1, 12.38.2                                                                                                   |
+| PostgreSQL server, `pg_dump`                          | 17.11, 17.12                                                                                                                                             |
+| `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` | 3.1169.0, 3.1169.0                                                                                                                                       |
+| MinIO                                                 | RELEASE 2025-07-23 (binary taken from `docker.io/bitnamilegacy/minio:2025.7.23-debian-12-r5`; MinIO no longer publishes binaries or image tags)          |
+| sharp, libvips                                        | 0.35.5, 8.18.7 (libvips LGPL-3.0, dynamically linked)                                                                                                    |
+| FFmpeg                                                | 7.0.2 static (GPL build, measurement only)                                                                                                               |
+| openai, undici, zod, msw, vitest                      | 7.57.0, 8.12.4, 4.6.7, 3.0.6, 5.1.0                                                                                                                      |
+| Full direct pin list, licences, audit                 | `docs/evidence/TASK-001/versions.md` (565 packages; 0 critical or high advisories; the licence list names one `FSL-1.1` package for the owner to review) |
+
+## Rows
+
+| #   | Step (§1.10)   | Required rows                                                                                                                                                        | Result                                                                                                           | Evidence                                                                   |
+| --- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 1   | Workspace      | pnpm and Node pins, TS strict, frozen install, `pnpm build` for web and api; built api answers `/health/live`, built web serves                                      | pass (Node 24 fallback recorded)                                                                                 | `docs/evidence/TASK-001/versions.md`, `submit-check.md` (AIU-74)           |
+| 2   | Database       | four roles as at provisioning, `drizzle-kit migrate`, `jobs:migrate`, runtime roles with USAGE and DML only, `app_backup` read-only and `pg_dump`, run cleanup       | pass; TC-BKP-08 sub-claim **partly** (F-1, F-2), F-3 for M0001 and the backup design                             | `docs/stack-validation/db.md`, `docs/evidence/TASK-002/db-proof.txt`       |
+| 3   | Auth slice     | `fva` semantics, reverification, MFA not bypassed, first admin from `OWNER_EMAIL`, invitation create and revoke with `expiresInDays: 7`, session revoke, user delete | pass against a local JWKS fake with the real `@clerk/backend` verifier                                           | `docs/stack-validation/slices-a.md`, `docs/evidence/TASK-003/slices.txt`   |
+| 4   | API slice      | owner-scoped CRUD through real Fastify on real PostgreSQL, envelope, 404 concealment, `If-Match`, cursor paging                                                      | pass                                                                                                             | same                                                                       |
+| 5   | Worker slice   | `send({db})` in a transaction, `retryLimit 0`, `expireInSeconds`, `singletonKey`, graceful drain, counted per-user claim                                             | pass                                                                                                             | same                                                                       |
+| 6   | Storage slice  | conditional put, presigned GET with `Content-Disposition`, prefix delete (MinIO)                                                                                     | pass                                                                                                             | `docs/stack-validation/slices-b.md`, `docs/evidence/TASK-004/slices-b.txt` |
+| 7   | Media slice    | header inspection, pixel cap, bomb fixture, metadata strip, FFmpeg concat of four 15 s 1080x1920 clips with time and peak RSS                                        | pass: 12.1 s (4 cores) and 34.5 s (1 vCPU), peak RSS 408 MB; estimate 10 to 60 s; Standard 2 GB worker confirmed | same, `docs/evidence/TASK-004/ffmpeg-measurement.json`                     |
+| 8   | Crypto slice   | RSA-OAEP-SHA-256 3072 DEK wrap, AES-256-GCM, AAD mismatch fails, api binding has no unsealer                                                                         | pass                                                                                                             | same                                                                       |
+| 9   | Provider stubs | OpenAI and WaveSpeed stubs (MSW and local server), recorded shapes, restart point between provider accept and task-ID write                                          | pass (shapes from provider documentation, not a live capture, see NOT_RUN)                                       | same, `tools/provider-stubs`                                               |
+
+## NOT_RUN rows and owner items
+
+None of these is a pass. Each stays open until the named item runs.
+
+| Row                                                                                                                         | Why not run here                                                                           | Owner item                                |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| Step 3: TR-08, L-1, D-S2 on a real Clerk development instance, real invitation delivery and expiry, Clerk Pro "require MFA" | no Clerk account, key or instance is available                                             | DOP-OI-4 (deployment-time, owner)         |
+| Step 6: the storage slice on an R2 dev bucket; R2's `If-None-Match: *` and presign behaviour (VERIFY, §1.3)                 | no R2 account or bucket                                                                    | DOP-OI-5 (deployment-time, owner)         |
+| Step 7: render time and RSS on a real Render Standard worker, and with a real Seedance clip set                             | host is a 4-core QEMU VM; clips are synthetic                                              | DO-07 worker image run                    |
+| Step 7: the FFmpeg 7.1.x build without GPL components and its H.264 encoder                                                 | build not produced; 7.0.2 GPL was measured                                                 | DevOps worker image (DO-07)               |
+| Step 9: live OpenAI and WaveSpeed smoke, the WaveSpeed output CDN host (VERIFY, §5.5), real key-probe responses             | no provider keys                                                                           | go-live evidence (Solution Architect, QA) |
+| Step 1: Node 26                                                                                                             | Node 26 cannot run on this host                                                            | hosted CI (DO-02)                         |
+| Steps 1 to 9 as containers: PostgreSQL, MinIO and the worker image run as Docker Compose services                           | no Docker daemon on this host; MinIO ran as a binary, PostgreSQL is the shared test server | CI foundation and the compose ticket      |
+| Step 3 note: the web UI leg and the signed-in campaign list, TC-ACC first-admin form                                        | web tickets not built; no browser installed                                                | web tickets                               |
+
+## Recorded decisions that need a reader
+
+- Step 6 and step 7 evidence uses tools downloaded with checksum verification (MinIO from the Bitnami legacy image, FFmpeg from `eugeneware/ffmpeg-static`). If either source disappears, set `MINIO_BIN` and `FFMPEG_BIN`; the release pipeline needs its own pinned copies (DevOps).
+- Two lockfile and workspace changes sit outside the allowed paths of TASK-002, TASK-003 and TASK-004 (`pnpm-workspace.yaml`, `pnpm-lock.yaml`); each ticket records them as a change request.
+
+## Proof commands
+
+```
+CI=1 pnpm --filter foundation-tests test:slices-b   # steps 6 to 8 and the stub integration (33 tests)
+CI=1 pnpm --filter provider-stubs test              # step 9 unit and integration (12 tests, coverage gate)
+CI=1 pnpm --filter foundation-tests test:db         # step 2
+CI=1 pnpm --filter foundation-tests test:slices-a   # steps 3 to 5
+CI=1 pnpm -w test:foundation                        # step 1
+```
