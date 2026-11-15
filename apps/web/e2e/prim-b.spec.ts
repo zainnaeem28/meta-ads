@@ -23,7 +23,7 @@ test.describe('@TASK-070 badge and loading (CMP-007, CMP-008) through the built 
     ]);
     // Token colours resolve (destructive subtle background, not transparent).
     const bg = await page
-      .locator('[data-variant=destructive]')
+      .locator('[data-testid=badge-variants] [data-variant=destructive]')
       .first()
       .evaluate((e) => getComputedStyle(e).backgroundColor);
     expect(bg).toBe('rgb(253, 236, 234)');
@@ -31,17 +31,18 @@ test.describe('@TASK-070 badge and loading (CMP-007, CMP-008) through the built 
 
   test('progress, spinner and skeleton expose their states', async ({ page }) => {
     await page.goto('/gallery');
-    const bars = page.getByRole('progressbar');
+    const gallery = page.locator('[data-testid=prim-b]');
+    const bars = gallery.getByRole('progressbar');
     await expect(bars).toHaveCount(4);
-    await expect(page.getByRole('progressbar', { name: 'Upload 60 percent' })).toHaveAttribute(
+    await expect(gallery.getByRole('progressbar', { name: 'Upload 60 percent' })).toHaveAttribute(
       'aria-valuenow',
       '60',
     );
     await expect(
-      page.getByRole('progressbar', { name: 'Working, duration unknown' }),
+      gallery.getByRole('progressbar', { name: 'Working, duration unknown' }),
     ).not.toHaveAttribute('aria-valuenow', /.*/);
-    await expect(page.getByRole('status').filter({ hasText: 'Saving' })).toBeVisible();
-    const region = page.locator('[aria-busy=true]');
+    await expect(gallery.getByRole('status').filter({ hasText: 'Saving' })).toBeVisible();
+    const region = gallery.locator('[aria-busy=true]');
     await expect(region).toHaveCount(1);
     await expect(region.getByText('Loading campaigns')).toBeVisible();
   });
