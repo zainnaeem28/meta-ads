@@ -147,7 +147,7 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
     await expect(dialog.getByLabel('New OpenAI API key')).toBeFocused();
     await page.keyboard.type(KEY);
     await page.keyboard.press('Enter');
-    await expect(page.getByText('OpenAI key saved')).toBeVisible();
+    await expect(page.getByText('OpenAI key saved', { exact: true })).toBeVisible();
     await expect(page.getByText(/It ends in …Zz09/)).toBeVisible();
     expect(bodies).toEqual([JSON.stringify({ apiKey: KEY })]);
     await expect(page.locator('body')).not.toContainText(KEY);
@@ -197,7 +197,7 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
     { state: 'validation-error', api: () => ({ keys: wsMissing, put: () => failure(422, 'key_invalid') }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByText(/did not accept this key/)).toBeVisible(); } },
     { state: 'rate-limited', api: () => ({ keys: wsMissing, put: () => failure(429, 'rate_limited', { 'retry-after': '420' }) }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByText('Too many attempts. Try again in 7 minutes.')).toBeVisible(); } },
     { state: 'step-up', api: () => ({ keys: wsMissing, put: () => failure(403, 'recent_auth_required') }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByRole('dialog', { name: 'Confirm it is you' })).toBeVisible(); } },
-    { state: 'saved', api: () => ({ keys: wsMissing, put: (provider) => putOk(provider, { last4: '9fK2' }) }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByText('WaveSpeed key saved')).toBeVisible(); } },
+    { state: 'saved', api: () => ({ keys: wsMissing, put: (provider) => putOk(provider, { last4: '9fK2' }) }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByText('WaveSpeed key saved', { exact: true })).toBeVisible(); } },
     { state: 'untested', api: () => ({ keys: ok([key('openai'), key('wavespeed', { status: 'untested', lastValidatedAt: null })]) }), ready: (p) => expect(p.getByTestId('untested-wavespeed')).toBeVisible() },
     { state: 'replace-warning', api: () => ({ keys: ok([key('openai', { inFlightJobCount: 1 }), key('wavespeed')]) }), ready: async (p) => { await open(p, 'Replace OpenAI key'); await expect(p.getByText(/1 job is running on the current key/)).toBeVisible(); } },
     { state: 'delete-confirm', api: () => ({ keys: both }), ready: async (p) => { await open(p, 'Delete OpenAI key'); await expect(p.getByRole('dialog', { name: 'Delete OpenAI key?' })).toBeVisible(); } },
