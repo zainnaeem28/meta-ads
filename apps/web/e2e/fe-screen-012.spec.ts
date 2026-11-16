@@ -158,11 +158,14 @@ async function capture(
     page,
     `${evidence}/axe/${info.project.name}-${state}-${size.name}.json`,
   );
-  mkdirSync(`${evidence}/screenshots`, { recursive: true });
-  await page.screenshot({
-    path: `${evidence}/screenshots/${state}-${size.name}.png`,
-    fullPage: true,
-  });
+  // The committed evidence images are refreshed on request (EVIDENCE=1), so a check run leaves the tree clean.
+  if (process.env['EVIDENCE'] === '1') {
+    mkdirSync(`${evidence}/screenshots`, { recursive: true });
+    await page.screenshot({
+      path: `${evidence}/screenshots/${state}-${size.name}.png`,
+      fullPage: true,
+    });
+  }
   await expect(page).toHaveScreenshot(`fe-screen-012-${state}-${size.name}.png`, {
     fullPage: true,
   });
