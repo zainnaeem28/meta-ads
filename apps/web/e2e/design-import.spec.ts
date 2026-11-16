@@ -13,7 +13,7 @@ test.describe('@TASK-066 design import through the built web app', () => {
     const requests: string[] = [];
     page.on('request', (req) => requests.push(req.url()));
 
-    await page.goto('/');
+    await page.goto('/sign-in');
     await page.evaluate(() => document.fonts.load('400 16px Inter', 'Shroomap'));
 
     const foreign = requests.filter((url) => !url.startsWith(origin) && !url.startsWith('data:'));
@@ -35,7 +35,7 @@ test.describe('@TASK-066 design import through the built web app', () => {
         family: body.fontFamily,
         interLoaded: document.fonts.check('400 16px Inter', 'Shroomap'),
         faces: [...document.fonts].map((f) => `${f.family}|${f.weight}|${f.status}`),
-        main: getComputedStyle(document.querySelector('[data-testid=home]')!).fontSize,
+        main: getComputedStyle(document.querySelector('h1')!).fontSize,
       };
     });
     expect(state.primary).toBe('#4a6f47');
@@ -52,14 +52,14 @@ test.describe('@TASK-066 design import through the built web app', () => {
     const { root } = await cdp.send('DOM.getDocument');
     const { nodeId } = await cdp.send('DOM.querySelector', {
       nodeId: root.nodeId,
-      selector: '[data-testid=home]',
+      selector: 'h1',
     });
     const { fonts } = await cdp.send('CSS.getPlatformFontsForNode', { nodeId });
     expect(fonts.map((f) => [f.familyName, f.isCustomFont])).toEqual([['Inter', true]]);
   });
 
   test('stylesheet declares the Inter faces with font-display swap', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/sign-in');
     const faces = await page.evaluate(() =>
       [...document.styleSheets]
         .flatMap((sheet) => [...sheet.cssRules])
@@ -80,7 +80,7 @@ test.describe('@TASK-066 design import through the built web app', () => {
     test(`has no axe violations at ${width} px`, async ({ page }) => {
       mkdirSync(evidence, { recursive: true });
       await page.setViewportSize({ width, height: 900 });
-      await page.goto('/');
+      await page.goto('/sign-in');
       const results = await new AxeBuilder({ page }).analyze();
       writeFileSync(`${evidence}/axe-${width}.json`, JSON.stringify(results.violations, null, 2));
       expect(results.violations).toEqual([]);
@@ -99,7 +99,7 @@ test.describe('@TASK-066 design import through the built web app', () => {
     test(`screenshot at ${name} px`, async ({ page }) => {
       mkdirSync(evidence, { recursive: true });
       await page.setViewportSize({ width, height });
-      await page.goto('/');
+      await page.goto('/sign-in');
       await page.evaluate(() => document.fonts.ready);
       await page.screenshot({ path: `${evidence}/home-${name}.png` });
     });
