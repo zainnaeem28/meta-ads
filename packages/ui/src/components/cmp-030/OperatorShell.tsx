@@ -124,7 +124,8 @@ export function OperatorShell({
   useShellDocument(pageName);
   const go = (href: string) => (onNavigate ? onNavigate(href) : window.location.assign(href));
   const current = currentItem(OPERATOR_NAV, path);
-  const signedIn = role === 'admin' ? 'Signed in as Administrator' : 'Signed in as Operator';
+  const roleLabel = role === 'admin' ? 'Administrator' : 'Operator';
+  const signedIn = `Signed in as ${roleLabel}`;
 
   const items: MenuItem[] = [
     { id: 'keys', label: 'Provider keys', onSelect: () => go(PROVIDER_KEYS_HREF) },
@@ -147,14 +148,19 @@ export function OperatorShell({
         <LogoLink href="/campaigns" logo={{ form: 'mark', size: 32 }} className="shrink-0 @xs:hidden" />
         <div className="flex min-w-0 items-center gap-2 md:gap-3">
           {keyState !== 'ok' ? (
-            <a href={PROVIDER_KEYS_HREF} data-key-badge={keyState} className={`rounded-full ${FOCUS}${previewFocus === 'key-badge' ? ` ${FOCUS_SHOWN}` : ''}`}>
-              <Badge variant={keyState === 'missing' ? 'warning' : 'destructive'}>
-                {keyState === 'missing' ? 'Add provider keys' : 'Key disabled'}
+            <a
+              href={PROVIDER_KEYS_HREF}
+              data-key-badge={keyState}
+              className={`inline-flex min-h-control-touch min-w-control-touch items-center justify-center rounded-full md:min-h-0 md:min-w-0 ${FOCUS}${previewFocus === 'key-badge' ? ` ${FOCUS_SHOWN}` : ''}`}
+            >
+              <Badge variant={keyState === 'missing' ? 'warning' : 'destructive'} icon={keyState === 'missing' ? 'key-round' : 'triangle-alert'}>
+                <span className="max-md:sr-only">{keyState === 'missing' ? 'Add provider keys' : 'Key disabled'}</span>
               </Badge>
             </a>
           ) : null}
           <Menu
-            label="Account menu"
+            label={`${roleLabel} account menu`}
+            triggerClassName="h-control gap-2 rounded-full border border-border-strong bg-card py-0 pl-1 pr-2 max-md:h-control-touch"
             align="end"
             defaultOpen={menuOpen}
             header={
@@ -163,7 +169,15 @@ export function OperatorShell({
                 {userName ? <span className="block font-semibold">{userName}</span> : null}
               </>
             }
-            trigger={<Icon name="circle-user" size={20} />}
+            trigger={
+              <>
+                <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary-subtle text-primary">
+                  <Icon name="circle-user" size={20} />
+                </span>
+                <span className="max-md:hidden" aria-hidden="true">{roleLabel}</span>
+                <Icon name="chevron-down" size={16} />
+              </>
+            }
             items={items}
           />
         </div>
@@ -173,6 +187,11 @@ export function OperatorShell({
           aria-label="Main"
           className={`z-20 flex shrink-0 gap-1 border-sidebar-border bg-sidebar p-0 md:gap-1 md:p-2 ${NAV_LAYOUT[layout]}`}
         >
+          {layout === 'auto' || layout === 'sidebar' ? (
+            <p className={`px-4 pb-1 pt-2 text-caption font-semibold uppercase tracking-wider text-muted-foreground ${layout === 'auto' ? 'hidden lg:block' : ''}`}>
+              Workspace
+            </p>
+          ) : null}
           {OPERATOR_NAV.map((item) => (
             <NavLink key={item.id} item={item} layout={layout} current={current?.id === item.id} hover={previewHover === item.id} focus={previewFocus === item.id} disabled={item.disabled === true || previewDisabled === item.id} />
           ))}

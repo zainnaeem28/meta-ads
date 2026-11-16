@@ -7,6 +7,7 @@
     "lint": "eslint .",
     "start": "next start",
     "test:unit": "NODE_ENV=test vitest run --config vitest.config.ts --coverage",
+    "test:headers": "NODE_ENV=test vitest run --config vitest.config.ts tests/security --reporter=default",
     "test:brand": "NODE_ENV=test vitest run --config vitest.config.ts tests/brand",
     "test:e2e": "playwright test --config playwright.config.ts",
     "test": "NODE_ENV=test vitest run --config vitest.config.ts --coverage",

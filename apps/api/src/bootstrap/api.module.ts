@@ -19,6 +19,7 @@ import { RateLimitModule } from '../platform/rate-limit/index.js';
 import { assertScopesDeclared } from '../platform/http/scope-registry.js';
 import { AuditModule } from '../modules/audit/index.js';
 import { IdentityModule, authOptionsFrom, identityConfigFrom } from '../modules/identity/index.js';
+import { MediaModule } from '../modules/media/media.module.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { JobsModule } from '../platform/jobs/boss.js';
 import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
@@ -92,6 +93,10 @@ function apiModule(
               config.DATABASE_URL === undefined ? undefined : { audit, egress },
             ),
           ]),
+      // Object storage and quota (REQ-020); needs the database and the bucket settings.
+      ...(config.DATABASE_URL === undefined || process.env['R2_ENDPOINT'] === undefined
+        ? []
+        : [MediaModule.register(process.env)]),
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),
     ],
