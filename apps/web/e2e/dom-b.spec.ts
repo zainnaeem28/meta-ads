@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { expectNoAxeViolations } from '../tests/support/axe';
 import { VIEWPORTS } from '../tests/support/visual';
 
@@ -14,6 +14,12 @@ const CELLS = [
   'preview-failed',
   'preview-out-of-date',
 ];
+
+// Other tickets' sections sit above this one and shift its fractional y offset, which changes how element
+// screenshots round (a cell turns 1 px shorter). Showing only this section keeps the baselines stable.
+async function showOnlyThisSection(page: Page) {
+  await page.addStyleTag({ content: 'main > :not(#CMP-025) { display: none !important; }' });
+}
 
 test.describe('@TASK-077 provider key card, final preview, campaign row, metric tile (CMP-025 to 028) through the built web app', () => {
   test('key card: delete flow moves focus, names actions per provider and has no reveal control', async ({
@@ -57,7 +63,10 @@ test.describe('@TASK-077 provider key card, final preview, campaign row, metric 
     await expect(rows.first().getByRole('button')).toHaveCount(2);
     await expect(rows.nth(2)).toHaveAttribute('data-state', 'deleting');
     await expect(rows.nth(2).getByRole('button')).toHaveCount(0);
-    await rows.first().getByRole('link').focus();
+    await page.waitForLoadState('networkidle');
+    const link = rows.first().getByRole('link');
+    await link.focus();
+    await expect(link).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(rows.first().getByRole('button', { name: 'Open Summer sale' })).toBeFocused();
   });
@@ -85,6 +94,7 @@ test.describe('@TASK-077 provider key card, final preview, campaign row, metric 
   test('tablet 768 px: metric tiles are 2 up and rows have baselines', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto('/gallery');
+    await showOnlyThisSection(page);
     await page.evaluate(() => document.fonts.ready);
     const cols = await page
       .getByTestId('metric-tiles')
@@ -104,6 +114,7 @@ test.describe('@TASK-077 provider key card, final preview, campaign row, metric 
     }, info) => {
       await page.setViewportSize({ width, height });
       await page.goto('/gallery');
+      await showOnlyThisSection(page);
       const section = page.getByTestId('dom-b');
       await expectNoAxeViolations(
         page,
