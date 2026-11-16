@@ -1194,6 +1194,7 @@ export interface components {
       version: number | null;
       createdAt: components['schemas']['Instant'] | null;
       updatedAt: components['schemas']['Instant'] | null;
+      /** @description When the provider last accepted this key version: the probe on add or replace, or a job's successful provider call. Calls that fail do not update it. SCREEN-010 shows it as the key's last-used time; null means not yet used successfully. */
       lastValidatedAt: components['schemas']['Instant'] | null;
       /** @description Jobs in submitting, submitted or processing on this key (for the replace and delete warning) */
       inFlightJobCount: number;

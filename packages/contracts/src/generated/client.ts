@@ -418,6 +418,7 @@ export interface ProviderKeyStatus {
   version: number | null;
   createdAt: Instant | null;
   updatedAt: Instant | null;
+  /** When the provider last accepted this key version: the probe on add or replace, or a job's successful provider call. Calls that fail do not update it. SCREEN-010 shows it as the key's last-used time; null means not yet used successfully. */
   lastValidatedAt: Instant | null;
   /**
    * Jobs in submitting, submitted or processing on this key (for the replace and delete warning)
