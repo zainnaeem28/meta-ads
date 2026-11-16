@@ -6,7 +6,7 @@ import type { Logger } from 'pino';
 import type { PgBoss } from 'pg-boss';
 import type { ProcessConfig } from '../platform/config/index.js';
 import { DATABASE, DatabaseModule, dbConfigOf } from '../platform/db/index.js';
-import type { Database } from '../platform/db/index.js';
+import type { Database, DbTx } from '../platform/db/index.js';
 import { BOSS, JobsModule } from '../platform/jobs/boss.js';
 import type { RuntimeBoss } from '../platform/jobs/boss.js';
 import { Heartbeat } from '../platform/jobs/heartbeat.js';
@@ -106,6 +106,11 @@ export class WorkerRuntime implements OnApplicationBootstrap {
     this.heartbeat = new Heartbeat({ log, pingUrl: config.HEARTBEAT_URL_WORKER });
   }
 
+  /** A transaction on the application pool, for handlers and sweep hooks. */
+  unitOfWork<T>(fn: (tx: DbTx) => Promise<T>): Promise<T> {
+    return this.database.uow.run(fn);
+  }
+
   /** The boss is started and checked (`JobsLifecycle`) before this runs. */
   async onApplicationBootstrap(): Promise<void> {
     const log = this.options.logger;
@@ -123,8 +128,9 @@ export class WorkerRuntime implements OnApplicationBootstrap {
     }
     this.watchdog.start();
     this.heartbeat.start();
-    // Settle whatever a previous worker left behind without waiting for the first cron tick.
-    await this.sweep().catch(() => {
+    // Settle whatever a previous worker left behind without waiting for the first cron tick. Not awaited: a sweep
+    // that hangs must be caught by the watchdog, not hold the start-up.
+    void this.sweep().catch(() => {
       log.warn({ module: 'worker', outcome: 'error' }, 'start-up recovery sweep failed');
     });
     log.info({ module: 'worker', outcome: 'ok' }, 'worker started');
@@ -134,7 +140,7 @@ export class WorkerRuntime implements OnApplicationBootstrap {
   async sweep(): Promise<void> {
     await runRecoverySweep({
       registry: this.registry,
-      inTx: (fn) => this.database.uow.run(fn),
+      inTx: (fn) => this.unitOfWork(fn),
       log: this.options.logger,
       acquire: sweepLockOf(this.database.pool),
     });
