@@ -2,6 +2,7 @@
 
 import { ClerkProvider } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
+import '../lib/security/zod-jitless';
 import { ApiProvider } from './api-provider';
 import { ClerkApiProvider } from './clerk-api-provider';
 
