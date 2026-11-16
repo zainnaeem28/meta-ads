@@ -9,8 +9,8 @@
 
 ## Limitations
 
-- Chromium only; 768 px is not captured (the grids are asserted by class).
-- Hover and focus are exercised by interaction in tests, not baselined per state; the delete-confirm baseline shows the focused "Keep" button.
-- The player has no media file in the gallery (`src` empty), so the done state shows the empty player chrome; captions use an empty WebVTT data URI.
+- Chromium only. 768 px is captured for the metric grid and the campaign rows (2 up asserted by computed columns); component cells are captured at 390 and 1440 px.
+- Every provider has all six key-card states in the gallery; the cost tile has loading and no-data cells; campaign-row hover and focus have their own baselines (`dom-b-campaign-row-hover|focus-*`).
+- The done and out-of-date players show a real poster image; the gallery has no video file, so playback is not exercised.
 - Playwright ran against a throwaway database with only the pg-boss schema (the gallery does not call the api).
 - Files outside the allowed list: `packages/ui/package.json` (subpath exports), `apps/web/e2e/dom-b.spec.ts` and baselines, and `gallery-demos.tsx` inside the component folders.

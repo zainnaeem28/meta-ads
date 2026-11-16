@@ -7,35 +7,26 @@ import type { SectionMeta } from '../registry';
 
 export const meta: SectionMeta = {
   id: 'CMP-025',
-  title: 'Domain B: Provider key card, Final preview, Campaign row, Metric tile (CMP-026, 027, 028)',
+  title: 'Domain B: Provider key card, Final preview, Campaign row, Metric tile (CMP-025, 026, 027, 028)',
   order: 25,
 };
 
 // Plain list: a client module's exports cannot be read as values from this server section.
+const PROVIDERS = ['openai', 'wavespeed'] as const;
+const KEY_STATES = ['active', 'untested', 'disabled', 'none', 'testing', 'delete-confirm'] as const;
 const PREVIEW_STATES = ['assembling', 'done', 'failed', 'out-of-date'] as const;
 
 export default function FeDomBSection() {
   return (
     <div className="flex flex-col gap-8" data-testid="dom-b">
       <div data-testid="key-cards" className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Cell id="key-openai-active" label="CMP-025 OpenAI, active (Delete opens the confirmation)">
-          <KeyCardDemo provider="openai" initial="active" />
-        </Cell>
-        <Cell id="key-wavespeed-untested" label="CMP-025 WaveSpeed, untested">
-          <KeyCardDemo provider="wavespeed" initial="untested" />
-        </Cell>
-        <Cell id="key-openai-disabled" label="CMP-025 OpenAI, disabled">
-          <KeyCardDemo provider="openai" initial="disabled" />
-        </Cell>
-        <Cell id="key-wavespeed-none" label="CMP-025 WaveSpeed, none">
-          <KeyCardDemo provider="wavespeed" initial="none" />
-        </Cell>
-        <Cell id="key-openai-testing" label="CMP-025 OpenAI, testing">
-          <KeyCardDemo provider="openai" initial="testing" />
-        </Cell>
-        <Cell id="key-wavespeed-confirm" label="CMP-025 WaveSpeed, delete-confirm">
-          <KeyCardDemo provider="wavespeed" initial="delete-confirm" />
-        </Cell>
+        {PROVIDERS.flatMap((provider) =>
+          KEY_STATES.map((state) => (
+            <Cell key={`${provider}-${state}`} id={`key-${provider}-${state}`} label={`CMP-025 ${provider} ${state}`}>
+              <KeyCardDemo provider={provider} initial={state} />
+            </Cell>
+          )),
+        )}
       </div>
 
       <div data-testid="final-previews" className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -58,6 +49,8 @@ export default function FeDomBSection() {
         <MetricTile variant="cost" label="Cost" value="$12.40" unit="USD" bar={{ value: 12, max: 40, tone: 2 }} />
         <MetricTile label="Videos finished" loading />
         <MetricTile label="Failed runs" value={null} />
+        <MetricTile variant="cost" label="Cost" loading />
+        <MetricTile variant="cost" label="Cost" value={null} />
       </MetricGrid>
       <div data-testid="inline-bar" className="max-w-sm">
         <InlineBar label="Budget used" value={30} max={40} tone={3} />

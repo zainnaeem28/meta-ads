@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { HTMLAttributes } from 'react';
 import { Badge } from '../cmp-007';
 import type { BadgeVariant } from '../cmp-007';
@@ -70,11 +70,11 @@ export function ProviderKeyCard({
   const badge = BADGE[state];
   const confirming = state === 'delete-confirm';
   const testing = state === 'testing';
-  const keep = useRef<HTMLButtonElement>(null);
+  const keep = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (confirming) keep.current?.focus();
+    if (confirming) keep.current?.querySelector<HTMLButtonElement>('[data-keep]')?.focus();
   }, [confirming]);
-  const headingId = `key-card-${provider}`;
+  const headingId = useId();
   return (
     <section
       aria-labelledby={headingId}
@@ -126,11 +126,13 @@ export function ProviderKeyCard({
           <p className="text-ui">
             Delete the {name} key? Generation that needs it stops until you add a new key.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div ref={keep} className="flex flex-wrap gap-2">
             <Button variant="destructive" size="sm" onClick={onConfirmDelete}>
               Confirm delete {name} key
             </Button>
-            <KeepButton innerRef={keep} label={`Keep ${name} key`} onClick={onCancelDelete} />
+            <Button variant="outline" size="sm" data-keep="" onClick={onCancelDelete}>
+              Keep {name} key
+            </Button>
           </div>
         </div>
       ) : (
@@ -165,27 +167,5 @@ export function ProviderKeyCard({
         </div>
       )}
     </section>
-  );
-}
-
-/** A plain button so focus can move to the safe choice when the confirmation opens. */
-function KeepButton({
-  innerRef,
-  label,
-  onClick,
-}: {
-  innerRef: React.RefObject<HTMLButtonElement | null>;
-  label: string;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      ref={innerRef}
-      type="button"
-      onClick={onClick}
-      className="inline-flex min-h-control-sm items-center justify-center rounded-md border border-input bg-card px-3 text-ui font-medium text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring max-md:min-h-control-touch"
-    >
-      {label}
-    </button>
   );
 }

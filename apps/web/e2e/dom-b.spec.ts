@@ -6,12 +6,9 @@ import { VIEWPORTS } from '../tests/support/visual';
 const evidence = process.env.EVIDENCE_DIR ?? '../../docs/evidence/TASK-077';
 
 const CELLS = [
-  'key-openai-active',
-  'key-wavespeed-untested',
-  'key-openai-disabled',
-  'key-wavespeed-none',
-  'key-openai-testing',
-  'key-wavespeed-confirm',
+  ...['openai', 'wavespeed'].flatMap((p) =>
+    ['active', 'untested', 'disabled', 'none', 'testing', 'delete-confirm'].map((s) => `key-${p}-${s}`),
+  ),
   'preview-assembling',
   'preview-done',
   'preview-failed',
@@ -70,14 +67,35 @@ test.describe('@TASK-077 provider key card, final preview, campaign row, metric 
   }) => {
     await page.goto('/gallery');
     const tiles = page.getByTestId('metric-tiles').getByRole('group');
-    await expect(tiles).toHaveCount(4);
-    await expect(page.getByRole('group', { name: 'Cost (estimated)' })).toContainText('$12.40');
+    await expect(tiles).toHaveCount(6);
+    await expect(tiles.nth(1)).toContainText('$12.40');
     await expect(tiles.nth(2)).toHaveAttribute('data-state', 'loading');
     await expect(tiles.nth(3)).toHaveAttribute('data-state', 'no-data');
+    await expect(tiles.nth(4)).toHaveAttribute('data-state', 'loading');
+    await expect(tiles.nth(5)).toHaveAttribute('data-state', 'no-data');
+    await expect(page.getByRole('group', { name: 'Cost (estimated)' })).toHaveCount(3);
+    const ids = await page.locator('[data-testid=dom-b] [id]').evaluateAll((els) => els.map((e) => e.id));
+    expect(new Set(ids).size).toBe(ids.length);
     await expect(page.getByRole('meter', { name: 'Budget used' })).toHaveAttribute(
       'aria-valuetext',
       '30 of 40',
     );
+  });
+
+  test('tablet 768 px: metric tiles are 2 up and rows have baselines', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('/gallery');
+    await page.evaluate(() => document.fonts.ready);
+    const cols = await page
+      .getByTestId('metric-tiles')
+      .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+    expect(cols).toBe(2);
+    mkdirSync(`${evidence}/screenshots`, { recursive: true });
+    for (const id of ['metric-tiles', 'campaign-rows']) {
+      const part = page.getByTestId(id);
+      await expect(part).toHaveScreenshot(`dom-b-${id}-768.png`);
+      await part.screenshot({ path: `${evidence}/screenshots/dom-b-${id}-768.png` });
+    }
   });
 
   for (const { name, width, height } of VIEWPORTS.filter((v) => v.name !== '768')) {
@@ -99,6 +117,14 @@ test.describe('@TASK-077 provider key card, final preview, campaign row, metric 
         await expect(cell).toHaveScreenshot(`dom-b-${id}-${name}.png`);
         await cell.screenshot({ path: `${evidence}/screenshots/dom-b-${id}-${name}.png` });
       }
+      const row = page.getByTestId('campaign-rows').getByRole('listitem').first();
+      await row.hover();
+      await expect(row).toHaveScreenshot(`dom-b-campaign-row-hover-${name}.png`);
+      await row.screenshot({ path: `${evidence}/screenshots/dom-b-campaign-row-hover-${name}.png` });
+      await row.getByRole('link').focus();
+      await page.mouse.move(0, 0);
+      await expect(row).toHaveScreenshot(`dom-b-campaign-row-focus-${name}.png`);
+      await row.screenshot({ path: `${evidence}/screenshots/dom-b-campaign-row-focus-${name}.png` });
       for (const id of ['campaign-rows', 'metric-tiles', 'inline-bar']) {
         const part = page.getByTestId(id);
         await expect(part).toHaveScreenshot(`dom-b-${id}-${name}.png`);

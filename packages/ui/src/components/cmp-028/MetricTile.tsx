@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { HTMLAttributes } from 'react';
 import { Skeleton } from '../cmp-008';
 
@@ -76,7 +77,7 @@ export function MetricTile({
   ...rest
 }: MetricTileProps) {
   const state = loading ? 'loading' : value == null ? 'no-data' : 'value';
-  const labelId = `metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  const labelId = useId();
   return (
     <div
       role="group"
