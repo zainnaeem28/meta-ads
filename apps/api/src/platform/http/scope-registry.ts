@@ -7,7 +7,7 @@ import type { INestApplicationContext } from '@nestjs/common';
 export const SCOPES = ['Pub', 'T', 'U', 'U+RA', 'A', 'M'] as const;
 export type RouteScope = (typeof SCOPES)[number];
 
-const SCOPE_KEY = 'http:scope';
+export const SCOPE_KEY = 'http:scope';
 const METRICS_GUARD_KEY = 'http:metrics-token-guard';
 
 /** Declares the scope of a route (or of every route of a controller). A route without one fails startup. */

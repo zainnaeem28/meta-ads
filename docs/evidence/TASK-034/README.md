@@ -1,0 +1,25 @@
+# TASK-034 evidence: identity 2/4, auth guard, actor context, linking, first admin, API-001
+
+Official check report: `submit-check.md` (uploaded to the task as document `submit-check`; it names the exact commit).
+
+| Acceptance | Proof |
+| --- | --- |
+| Concurrent first token: one `users` row and one first admin; a second owner-email sign-in creates none | `identity-auth.integration.test.ts` "first admin": 8 concurrent first tokens give one admin row, one `auth.first_admin_seeded` event, the marker set; a second subject with the owner email is `not_linked` and has no row. Before the admin exists, an unverified owner email and a token without a second factor link nothing |
+| Role or status change takes effect on the next request; forged, expired, wrong-party, revoked tokens give the documented code | "role and status are read on every request" (row changed by SQL between requests: `forbidden_role` then 200, `account_suspended`, `account_removed`); "token to actor" (missing, non-bearer, garbage, tampered, unknown key, expired, wrong `azp`, foreign issuer: 401 `unauthenticated`; provider outage 503 `service_unavailable`, also during linking) |
+| `mfa_required` enforced by the server (TC-ACC-15); API-001 validated against the contract | "MFA and recent authentication": `fva` absent or `[5,-1]` gives 403 `mfa_required` on U and U+RA routes while `/me` still answers with `mfa.satisfied=false`; recent auth needs both factors within 10 min. `/me` bodies (linked admin, not linked) validated with Ajv against `MeResponse` of `packages/contracts/openapi.yaml` (design.5) |
+| Wired into the running product and proven through the real entry point | The tests boot `createApiApp` (the composition root `main.api.ts` runs) on real PostgreSQL and call `fastify.inject` against `/api/v1/me` and three probe routes (scopes U, A, U+RA, Pub). A "wiring" test shows the session guard runs before the rate limiter (per-user buckets exist) |
+| Layer rule, lint, typecheck, unit, contract | `scripts/ci/layers.sh`: 0 violations; unit coverage thresholds of the package (95/90) hold |
+
+## Decision order (SECURITY-DESIGN 7.1, ARCHITECTURE 5.1)
+
+Scope Pub and M read no session. Otherwise: no or malformed Bearer 401 `unauthenticated`; bad, expired, foreign-party token 401; keys unavailable or provider down while linking 503; no row and no basis 403 `not_linked` (scope T answers API-001 with `linkState: not_linked` instead); `suspended`/`removed` 403 `account_suspended`/`account_removed`; MFA (`fva[1] >= 0`, required for everyone or admins by `MFA_REQUIRED_FOR`) 403 `mfa_required`; scope A without the admin role 403 `forbidden_role` (writes `auth.denied`); scope U+RA 403 `recent_auth_required` (`fva[0]` and, when MFA is required, `fva[1]` within `RECENT_AUTH_MAX_AGE_MIN`). Scope T stops after the link decision so the account can still read its own MFA state.
+
+## Decisions
+
+- The guard is global (`APP_GUARD`) and registered by `IdentityModule` only when the composition root passes the auth options, which it does when a database is configured; it runs before the rate limiter (module order), so `request.userId` is set for the per-user limit.
+- `platform/http/auth.guard.ts` knows only the `SessionAuthenticator` interface (platform never imports modules); `SessionService` in the identity application implements it. `ActorContext`, `requireRole`, `requireMfa`, `requireRecentAuth` are exported from `platform/http`.
+- Linking (`LinkingService.linkOnFirstToken`) runs in one transaction: first admin under the `admin-invariant` lock (verified `OWNER_EMAIL`, second factor, marker null, no active admin, then marker + audit), else an unexpired `invited` row (accepted + audit), else open signup within `INVITE_EMAIL_DOMAINS`. The Clerk call happens before the transaction. A second subject with an already used email hits `users_email_lower_uq` and is not linked.
+- `keyNotices` is empty until the provider-keys module (a higher layer) binds `KEY_NOTICE_PORT`.
+- Local identity mode now enforces `authorizedParties: [WEB_ORIGIN]` like Clerk mode.
+- Files outside the allowed paths that had to change (Orchestrator to confirm): `apps/api/src/bootstrap/api.module.ts` (passes the auth options and the audit module instance to `IdentityModule`), `apps/api/src/platform/http/{index.ts,scope-registry.ts}` (exports; `SCOPE_KEY` exported), `apps/api/src/modules/identity/infrastructure/identity.queries.ts` (new, read side of access requests for API-001), `apps/api/vitest.config.ts` and `apps/api/package.json` (junit and lcov copy for `reports/identity-auth`; linking service and queries proven on real PostgreSQL, not in unit coverage), `apps/api/src/platform/idempotency/limits.integration.test.ts` (its probe route is now scope `Pub`; with the global guard a scope-U route needs a token).
+- Five tests of `tests/integration/migrations/platform-migration.integration.test.ts` (pg_dump based: TC-BKP-01/06/07/09, GAP G-1) fail here because no `pg_dump` is on the path (`PG_CLIENT_ROOT` unset); they do not touch this change.

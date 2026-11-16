@@ -18,7 +18,7 @@ import { IdempotencyModule } from '../platform/idempotency/index.js';
 import { RateLimitModule } from '../platform/rate-limit/index.js';
 import { assertScopesDeclared } from '../platform/http/scope-registry.js';
 import { AuditModule } from '../modules/audit/index.js';
-import { IdentityModule, identityConfigFrom } from '../modules/identity/identity.module.js';
+import { IdentityModule, authOptionsFrom, identityConfigFrom } from '../modules/identity/index.js';
 import { JobsModule } from '../platform/jobs/boss.js';
 import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
 import { MetricsModule } from '../platform/metrics/index.js';
@@ -63,12 +63,21 @@ function apiModule(
           RateLimitModule.register(config),
           IdempotencyModule.register(config),
         ];
+  const audit = AuditModule.register(logging.logger);
+  // The session guard needs the database; it is registered before the rate limiter so that guard sees the user.
+  const auth =
+    config.DATABASE_URL === undefined
+      ? undefined
+      : { options: authOptionsFrom(process.env, config.WEB_ORIGIN), audit };
   @Module({
     imports: [
       logging.module(),
       EgressModule.register(config),
-      AuditModule.register(logging.logger),
-      IdentityModule.register(identityConfigFrom(process.env, config.APP_ENV, config.WEB_ORIGIN)),
+      audit,
+      IdentityModule.register(
+        identityConfigFrom(process.env, config.APP_ENV, config.WEB_ORIGIN),
+        auth,
+      ),
       ...database,
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),

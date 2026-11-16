@@ -14,3 +14,23 @@ export {
 } from './response.js';
 export type { CursorPagination, ErrorEnvelope, MetaData, SuccessEnvelope } from './response.js';
 export { ZodValidationPipe, issueDetails, parseWith } from './validation.pipe.js';
+export {
+  AuthGuard,
+  CurrentActor,
+  CurrentSession,
+  SESSION_AUTHENTICATOR,
+  authorizeScope,
+  bearerToken,
+  requireMfa,
+  requireRecentAuth,
+  requireRole,
+} from './auth.guard.js';
+export type {
+  ActorContext,
+  ActorRole,
+  AuthResult,
+  AuthenticatedRequest,
+  SessionAuthenticator,
+  UnlinkedSession,
+} from './auth.guard.js';
+export { Scope } from './scope-registry.js';
