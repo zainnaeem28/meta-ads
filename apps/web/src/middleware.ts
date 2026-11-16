@@ -1,9 +1,9 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse, type NextMiddleware, type NextRequest } from 'next/server';
-import { withSecurityHeaders } from './lib/auth/headers';
 import { readLocalSession, LOCAL_SESSION_COOKIE } from './lib/auth/local-session';
 import { resolveAuthMode } from './lib/auth/mode';
 import { decideRoute, isProbePath, type SessionKind } from './lib/auth/route-policy';
+import { passThrough, securityContext, withSecurityHeaders } from './lib/security/apply';
 
 /** Redirects carry the request's own origin; the path comes from the policy and is always a same-origin relative path. */
 function respond(request: NextRequest, session: SessionKind): NextResponse {
@@ -12,8 +12,9 @@ function respond(request: NextRequest, session: SessionKind): NextResponse {
     search: request.nextUrl.search,
     session,
   });
-  if (decision.kind === 'next') return withSecurityHeaders(NextResponse.next());
-  return withSecurityHeaders(NextResponse.redirect(new URL(decision.to, request.url)));
+  const security = securityContext(request);
+  if (decision.kind === 'next') return passThrough(request, security);
+  return withSecurityHeaders(NextResponse.redirect(new URL(decision.to, request.url)), security);
 }
 
 type ClerkHandler = NextMiddleware;
