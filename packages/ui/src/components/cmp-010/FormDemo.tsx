@@ -34,7 +34,7 @@ export function FormDemo() {
   return (
     <form
       noValidate
-      className="flex max-w-3xl flex-col gap-4"
+      className="flex max-w-narrow flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
         setDetails(DETAILS);
