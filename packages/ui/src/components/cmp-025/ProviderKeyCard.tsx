@@ -4,7 +4,9 @@ import { useEffect, useId, useRef } from 'react';
 import type { HTMLAttributes } from 'react';
 import { Badge } from '../cmp-007';
 import type { BadgeVariant } from '../cmp-007';
+import type { IconName } from '../../icons';
 import { Button } from '../cmp-003';
+import { Icon } from '../../icons';
 import { Spinner } from '../cmp-008';
 
 export const PROVIDERS = ['openai', 'wavespeed'] as const;
@@ -24,14 +26,19 @@ export const PROVIDER_NAMES: Record<Provider, string> = {
   wavespeed: 'WaveSpeed',
 };
 
-const BADGE: Record<KeyCardState, { label: string; variant: BadgeVariant }> = {
-  active: { label: 'Active', variant: 'success' },
-  untested: { label: 'Untested', variant: 'warning' },
-  disabled: { label: 'Disabled', variant: 'neutral' },
-  none: { label: 'No key', variant: 'neutral' },
+const BADGE: Record<KeyCardState, { label: string; variant: BadgeVariant; icon?: IconName }> = {
+  active: { label: 'Active', variant: 'success', icon: 'circle-check' },
+  untested: { label: 'Untested', variant: 'warning', icon: 'clock' },
+  disabled: { label: 'Disabled', variant: 'destructive', icon: 'circle-x' },
+  none: { label: 'Not added', variant: 'neutral' },
   testing: { label: 'Testing', variant: 'info' },
-  'delete-confirm': { label: 'Active', variant: 'success' },
+  'delete-confirm': { label: 'Active', variant: 'success', icon: 'circle-check' },
 };
+
+/** "4f9a1c07b21e" becomes "4f9a·1c07" (two groups of four of the 12-hex fingerprint). */
+export function formatFingerprint(fingerprint: string): string {
+  return `${fingerprint.slice(0, 4)}·${fingerprint.slice(4, 8)}`;
+}
 
 export interface ProviderKeyCardProps
   extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'onReset'> {
@@ -39,11 +46,18 @@ export interface ProviderKeyCardProps
   state: KeyCardState;
   /** Last four characters of the stored key. The full key is never shown and cannot be revealed. */
   hint?: string;
+  /** The 12-hex key fingerprint; shown as two groups of four. */
   fingerprint?: string;
-  /** Already formatted, e.g. "12 Nov 2026, 09:41". */
-  lastTested?: string;
-  /** Link to the key-event trail. */
-  eventTrailHref?: string;
+  /** One line on what the provider is used for. */
+  description?: string;
+  /** `createdAt`, already formatted, e.g. "3 Nov 2026". */
+  added?: string;
+  /** `ProviderKeyStatus.lastValidatedAt`, already formatted ("12 min ago"); null or omitted reads "Not yet". */
+  lastUsed?: string | null;
+  /** `inFlightJobCount`. */
+  jobsRunning?: number;
+  /** Extra line under the rows, e.g. why the key was disabled. */
+  note?: string;
   /** Add (state none) or replace the key. */
   onReplace?: () => void;
   onDelete?: () => void;
@@ -57,8 +71,11 @@ export function ProviderKeyCard({
   state,
   hint,
   fingerprint,
-  lastTested,
-  eventTrailHref,
+  description,
+  added,
+  lastUsed,
+  jobsRunning,
+  note,
   onReplace,
   onDelete,
   onConfirmDelete,
@@ -89,33 +106,60 @@ export function ProviderKeyCard({
         .join(' ')}
       {...rest}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={headingId} className="text-section font-semibold">
-          {name}
-        </h3>
-        <Badge variant={badge.variant}>{badge.label}</Badge>
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 id={headingId} className="text-section font-semibold">
+            {name}
+          </h3>
+          <Badge variant={badge.variant} icon={badge.icon}>
+            {badge.label}
+          </Badge>
+          {state !== 'none' && !confirming ? (
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" disabled={testing} onClick={onReplace}>
+                <Icon name="refresh-cw" size={16} />
+                Replace key
+              </Button>
+              <Button variant="destructive-outline" size="sm" disabled={testing} onClick={onDelete} aria-label={`Delete ${name} key`}>
+                <Icon name="trash-2" size={16} />
+                Delete
+              </Button>
+            </div>
+          ) : null}
+        </div>
+        {description ? <p className="text-ui text-muted-foreground">{description}</p> : null}
       </div>
-      {state === 'none' ? (
-        <p className="text-ui text-muted-foreground">No {name} key is stored.</p>
-      ) : (
-        <dl className="grid grid-cols-3 gap-x-4 gap-y-1 text-ui">
+      {state !== 'none' ? (
+        <dl className="grid grid-cols-4 gap-x-4 gap-y-1 text-ui">
           <dt className="text-muted-foreground">Key</dt>
-          <dd className="col-span-2">
+          <dd className="col-span-3 min-w-0">
             <span className="sr-only">Ends in </span>
             <code className="font-mono" data-testid="key-hint">
               {hint ? `…${hint}` : '…'}
             </code>
+            {fingerprint ? (
+              <span className="ml-2 text-muted-foreground">
+                fingerprint <span className="font-mono">{formatFingerprint(fingerprint)}</span>
+              </span>
+            ) : null}
           </dd>
-          {fingerprint ? (
+          {added ? (
             <>
-              <dt className="text-muted-foreground">Fingerprint</dt>
-              <dd className="col-span-2 min-w-0 break-all font-mono">{fingerprint}</dd>
+              <dt className="text-muted-foreground">Added</dt>
+              <dd className="col-span-3">{added}</dd>
             </>
           ) : null}
-          <dt className="text-muted-foreground">Last tested</dt>
-          <dd className="col-span-2">{lastTested ?? 'Not tested yet'}</dd>
+          <dt className="text-muted-foreground">Last used</dt>
+          <dd className="col-span-3">{lastUsed ?? 'Not yet'}</dd>
+          {jobsRunning !== undefined ? (
+            <>
+              <dt className="text-muted-foreground">Jobs running</dt>
+              <dd className="col-span-3">{jobsRunning}</dd>
+            </>
+          ) : null}
         </dl>
-      )}
+      ) : null}
+      {note ? <p className="text-ui text-muted-foreground">{note}</p> : null}
       {testing ? <Spinner label={`Testing ${name} key`} /> : null}
       {confirming ? (
         <div
@@ -135,37 +179,14 @@ export function ProviderKeyCard({
             </Button>
           </div>
         </div>
-      ) : (
+      ) : state === 'none' ? (
         <div className="flex flex-wrap items-center gap-2">
-          {state === 'none' ? (
-            <Button size="sm" onClick={onReplace}>
-              Add {name} key
-            </Button>
-          ) : (
-            <>
-              <Button variant="outline" size="sm" disabled={testing} onClick={onReplace}>
-                Replace {name} key
-              </Button>
-              <Button
-                variant="destructive-outline"
-                size="sm"
-                disabled={testing}
-                onClick={onDelete}
-              >
-                Delete {name} key
-              </Button>
-            </>
-          )}
-          {eventTrailHref && state !== 'none' ? (
-            <a
-              href={eventTrailHref}
-              className="text-ui text-primary underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              {name} key events
-            </a>
-          ) : null}
+          <Button size="sm" onClick={onReplace}>
+            <Icon name="plus" size={16} />
+            Add {name} key
+          </Button>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

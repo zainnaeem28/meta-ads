@@ -103,29 +103,45 @@ describe('CMP-030 OperatorShell', () => {
     const onSignOut = vi.fn();
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     shell({ role: 'admin', onNavigate, onSignOut, userName: 'Sam' });
-    await user.click(screen.getByRole('button', { name: 'Account menu' }));
+    await user.click(screen.getByRole('button', { name: /account menu/ }));
     expect(screen.getByText('Signed in as Administrator')).toBeInTheDocument();
     expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
       'Provider keys', 'Switch to administration', 'Account and security', 'Sign out',
     ]);
     await user.click(screen.getByRole('menuitem', { name: 'Switch to administration' }));
     expect(onNavigate).toHaveBeenCalledWith('/admin/accounts');
-    await user.click(screen.getByRole('button', { name: 'Account menu' }));
+    await user.click(screen.getByRole('button', { name: /account menu/ }));
     await user.click(screen.getByRole('menuitem', { name: 'Provider keys' }));
     expect(onNavigate).toHaveBeenLastCalledWith('/settings/provider-keys');
-    await user.click(screen.getByRole('button', { name: 'Account menu' }));
+    await user.click(screen.getByRole('button', { name: /account menu/ }));
     await user.click(screen.getByRole('menuitem', { name: 'Account and security' }));
     expect(open).toHaveBeenCalledWith('/account', '_blank', 'noopener,noreferrer');
-    await user.click(screen.getByRole('button', { name: 'Account menu' }));
+    await user.click(screen.getByRole('button', { name: /account menu/ }));
     await user.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     expect(onSignOut).toHaveBeenCalled();
     open.mockRestore();
   });
 
+  it('account button: role label, chevron, aria-label by role; sidebar label WORKSPACE; chip icons', () => {
+    const { unmount } = shell({ keyState: 'disabled' });
+    const trigger = screen.getByRole('button', { name: 'Operator account menu' });
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+    expect(trigger).toHaveTextContent('Operator');
+    expect(trigger.querySelector('svg:last-child')).not.toBeNull();
+    expect(screen.getByText('Workspace')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Key disabled' }).querySelector('svg')).not.toBeNull();
+    unmount();
+    shell({ role: 'admin' });
+    expect(screen.getByRole('button', { name: 'Administrator account menu' })).toHaveTextContent('Administrator');
+    cleanup();
+    shell({ layout: 'rail' });
+    expect(screen.queryByText('Workspace')).toBeNull();
+  });
+
   it('operator menu has no administration switch; Escape closes it and returns focus', async () => {
     const user = userEvent.setup();
     shell();
-    const trigger = screen.getByRole('button', { name: 'Account menu' });
+    const trigger = screen.getByRole('button', { name: /account menu/ });
     await user.click(trigger);
     expect(screen.getByText('Signed in as Operator')).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Switch to administration' })).toBeNull();
@@ -140,7 +156,7 @@ describe('CMP-030 OperatorShell', () => {
     Object.defineProperty(window, 'location', { value: { assign }, configurable: true });
     const user = userEvent.setup();
     shell();
-    await user.click(screen.getByRole('button', { name: 'Account menu' }));
+    await user.click(screen.getByRole('button', { name: /account menu/ }));
     await user.click(screen.getByRole('menuitem', { name: 'Provider keys' }));
     expect(assign).toHaveBeenCalledWith('/settings/provider-keys');
     Object.defineProperty(window, 'location', { value: original, configurable: true });
