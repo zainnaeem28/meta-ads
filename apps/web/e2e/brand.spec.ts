@@ -39,9 +39,9 @@ async function headTags(page: Page) {
 
 test.describe('@TASK-068 @harness brand metadata through the built web app', () => {
   test('page title pattern, theme colour, robots and manifest link', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/sign-in');
     const home = await headTags(page);
-    expect(home.title).toBe('ShrooMap AI UGC Ad Director');
+    expect(home.title).toBe('Sign in · ShrooMap');
     expect(home.robots).toMatch(/noindex/);
     expect(home.themeColor).toBe('#4A6F47');
     expect(home.manifest).toBe('/site.webmanifest');
@@ -53,7 +53,7 @@ test.describe('@TASK-068 @harness brand metadata through the built web app', () 
     page,
     request,
   }) => {
-    await page.goto('/');
+    await page.goto('/sign-in');
     const tags = await headTags(page);
     expect(tags.ogImage).toBe(`${ORIGIN}/social-preview.png`);
     expect(tags.twitterImage).toBe(`${ORIGIN}/social-preview.png`);
@@ -73,7 +73,7 @@ test.describe('@TASK-068 @harness brand metadata through the built web app', () 
     page,
     request,
   }) => {
-    await page.goto('/');
+    await page.goto('/sign-in');
     const { icons } = await headTags(page);
     expect(icons.map((i) => i.href).sort()).toEqual(
       [
@@ -112,7 +112,7 @@ test.describe('@TASK-068 @harness brand metadata through the built web app', () 
   test('maskable icon artwork stays inside the 80 % safe zone and the tab icon renders', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/sign-in');
     const farthest = await page.evaluate(async () => {
       const img = new Image();
       img.src = '/icon-maskable-512.png';
@@ -311,7 +311,7 @@ test.describe('@TASK-068 @brand-device home-screen and device emulation', () => 
     page,
     request,
   }) => {
-    await page.goto('/');
+    await page.goto('/sign-in');
     const tags = await headTags(page);
     expect(tags.themeColor).toBe('#4A6F47');
     expect(tags.icons.some((i) => i.rel === 'apple-touch-icon' && i.sizes === '180x180')).toBe(
