@@ -138,9 +138,9 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
     await expect(page.getByRole('heading', { level: 1, name: 'Provider keys' })).toBeVisible();
     expect(await page.title()).toBe('Provider keys · ShrooMap');
     await expect(page.getByTestId('key-hint').first()).toHaveText('…7Q2d');
-    await expect(page.getByText('4f9a1c07b21e')).toBeVisible();
+    await expect(page.getByText('4f9a·1c07')).toBeVisible();
     await expect(page.locator('body')).not.toContainText('sk-');
-    await page.getByRole('button', { name: 'Replace OpenAI key' }).focus();
+    await page.getByRole('region', { name: 'OpenAI' }).getByRole('button', { name: 'Replace key' }).focus();
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Replace OpenAI key?' });
     await expect(dialog).toBeVisible();
@@ -199,7 +199,7 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
     { state: 'step-up', api: () => ({ keys: wsMissing, put: () => failure(403, 'recent_auth_required') }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByRole('dialog', { name: 'Confirm it is you' })).toBeVisible(); } },
     { state: 'saved', api: () => ({ keys: wsMissing, put: (provider) => putOk(provider, { last4: '9fK2' }) }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByText('WaveSpeed key saved', { exact: true })).toBeVisible(); } },
     { state: 'untested', api: () => ({ keys: ok([key('openai'), key('wavespeed', { status: 'untested', lastValidatedAt: null })]) }), ready: (p) => expect(p.getByTestId('untested-wavespeed')).toBeVisible() },
-    { state: 'replace-warning', api: () => ({ keys: ok([key('openai', { inFlightJobCount: 1 }), key('wavespeed')]) }), ready: async (p) => { await open(p, 'Replace OpenAI key'); await expect(p.getByText(/1 job is running on the current key/)).toBeVisible(); } },
+    { state: 'replace-warning', api: () => ({ keys: ok([key('openai', { inFlightJobCount: 1 }), key('wavespeed')]) }), ready: async (p) => { await p.getByRole('region', { name: 'OpenAI' }).getByRole('button', { name: 'Replace key' }).click(); await expect(p.getByText(/1 job is running on the current key/)).toBeVisible(); } },
     { state: 'delete-confirm', api: () => ({ keys: both }), ready: async (p) => { await open(p, 'Delete OpenAI key'); await expect(p.getByRole('dialog', { name: 'Delete OpenAI key?' })).toBeVisible(); } },
     { state: 'disabled', api: () => ({ keys: ok([key('openai'), key('wavespeed', { status: 'disabled' })]) }), ready: (p) => expect(p.getByText('Your WaveSpeed key was disabled')).toBeVisible() },
   ];
