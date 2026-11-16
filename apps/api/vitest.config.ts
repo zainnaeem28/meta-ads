@@ -19,6 +19,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/identity-admin/junit.xml' }],
       ['junit', { outputFile: 'reports/keys-crypto/junit.xml' }],
       ['junit', { outputFile: 'reports/media-core/junit.xml' }],
+      ['junit', { outputFile: 'reports/media-api/junit.xml' }],
       ['junit', { outputFile: 'reports/keys/junit.xml' }],
       ['junit', { outputFile: 'reports/usage/junit.xml' }],
       ['junit', { outputFile: 'reports/campaigns/junit.xml' }],
