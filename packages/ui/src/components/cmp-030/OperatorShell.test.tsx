@@ -17,6 +17,24 @@ const shell = (props: Partial<OperatorShellProps> = {}) =>
   );
 
 describe('CMP-030 OperatorShell', () => {
+  it('renders a disabled nav item as non-link, not focusable', () => {
+    shell({ previewDisabled: 'new-brief' });
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(within(nav).getAllByRole('link').map((l) => l.textContent)).toEqual(['Campaigns', 'Provider keys']);
+    const item = nav.querySelector('[aria-disabled=true]');
+    expect(item).toHaveTextContent('New brief');
+    expect(item).not.toHaveAttribute('href');
+    expect(item).not.toHaveAttribute('tabindex');
+  });
+
+  it('can show the focus ring on a nav item and on the key badge', () => {
+    shell({ keyState: 'missing', previewFocus: 'provider-keys' });
+    expect(screen.getByRole('link', { name: 'Provider keys' }).className).toContain('outline-2');
+    cleanup();
+    shell({ keyState: 'missing', previewFocus: 'key-badge' });
+    expect(screen.getByRole('link', { name: 'Add provider keys' }).className).toContain('outline-2');
+  });
+
   it('has the skip link first, header, Main nav and main landmarks, and no axe violations', async () => {
     const { container } = shell({ userName: 'Alex' });
     const first = container.querySelector('a, button');

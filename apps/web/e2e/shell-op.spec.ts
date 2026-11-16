@@ -55,7 +55,23 @@ test.describe('@TASK-079 operator shell (CMP-030) through the built web app', ()
     await expect(missing.locator('[data-variant=warning]')).toBeVisible();
     const disabled = page.locator(cell('shell-key-disabled')).getByRole('link', { name: 'Key disabled' });
     await expect(disabled.locator('[data-variant=destructive]')).toBeVisible();
-    await expect(page.locator(cell('shell-key-disabled')).getByText('Brief saved.')).toBeVisible();
+    await disabled.click({ trial: true });
+    await expect(page.locator(cell('shell-toast')).getByText('Brief saved.')).toBeVisible();
+  });
+
+  test('disabled nav item is not a link and not focusable; focus rings are drawn', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/gallery');
+    const d = page.locator(cell('shell-nav-disabled')).getByRole('navigation', { name: 'Main' });
+    await expect(d.getByRole('link')).toHaveText(['Campaigns', 'Provider keys']);
+    const item = d.locator('[aria-disabled=true]');
+    await expect(item).toHaveText('New brief');
+    await expect(item).not.toHaveAttribute('href');
+    await expect(item).not.toHaveAttribute('tabindex');
+    for (const [id, name] of [['shell-nav-focus', 'Provider keys'], ['shell-key-focus', 'Add provider keys']]) {
+      const link = page.locator(cell(id)).getByRole('link', { name });
+      expect(await link.evaluate((e) => getComputedStyle(e).outlineWidth)).toBe('2px');
+    }
   });
 
   test('responsive: tab bar under 768 px, rail 64 px at 768 px, sidebar 240 px from 1024 px', async ({ page }) => {
@@ -79,8 +95,8 @@ test.describe('@TASK-079 operator shell (CMP-030) through the built web app', ()
   });
 
   const SHOTS: Record<string, string[]> = {
-    '1440': ['shell-user-sidebar', 'shell-nav-states', 'shell-rail', 'shell-tabbar', 'shell-menu-user', 'shell-admin', 'shell-key-missing', 'shell-key-disabled', 'shell-auto'],
-    '390': ['shell-tabbar', 'shell-menu-user', 'shell-admin', 'shell-key-missing', 'shell-key-disabled', 'shell-auto'],
+    '1440': ['shell-user-sidebar', 'shell-nav-states', 'shell-rail', 'shell-tabbar', 'shell-menu-user', 'shell-admin', 'shell-key-missing', 'shell-key-disabled', 'shell-toast', 'shell-nav-disabled', 'shell-nav-focus', 'shell-key-focus', 'shell-auto'],
+    '390': ['shell-tabbar', 'shell-menu-user', 'shell-admin', 'shell-key-missing', 'shell-key-disabled', 'shell-toast', 'shell-nav-disabled', 'shell-nav-focus', 'shell-key-focus', 'shell-auto'],
     '768': ['shell-auto'],
   };
   for (const [name, ids] of Object.entries(SHOTS)) {

@@ -39,9 +39,15 @@ export interface OperatorShellProps {
   menuOpen?: boolean;
   /** Gallery only: preview a nav item's hover look. */
   previewHover?: string;
+  /** Gallery only: render one nav item (by id) in its disabled state. */
+  previewDisabled?: string;
+  /** Gallery only: show the focus ring on a nav item (by id) or on the key badge (`key-badge`). */
+  previewFocus?: string;
 }
 
 const FOCUS = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+
+const FOCUS_SHOWN = 'outline-2 outline-offset-2 outline-ring';
 
 const NAV_LAYOUT: Record<ShellLayout, string> = {
   auto: 'fixed inset-x-0 bottom-0 h-tabbar flex-row md:static md:inset-x-auto md:bottom-auto md:h-auto md:self-stretch md:w-rail md:flex-col md:border-r md:border-t-0 lg:w-sidebar',
@@ -50,7 +56,7 @@ const NAV_LAYOUT: Record<ShellLayout, string> = {
   tabbar: 'order-last h-tabbar w-full flex-row border-t',
 };
 
-function itemClasses(layout: ShellLayout, current: boolean, hover: boolean): string {
+function itemClasses(layout: ShellLayout, current: boolean, hover: boolean, focus = false, disabled = false): string {
   const shape =
     layout === 'tabbar'
       ? 'flex-1 flex-col justify-center gap-1 border-t-3 px-1 text-caption'
@@ -59,8 +65,8 @@ function itemClasses(layout: ShellLayout, current: boolean, hover: boolean): str
         : layout === 'sidebar'
           ? 'gap-3 border-l-3 px-4 min-h-control text-ui'
           : 'flex-1 flex-col justify-center gap-1 border-t-3 px-1 text-caption md:flex-none md:flex-row md:justify-center md:gap-3 md:border-l-3 md:border-t-0 md:px-2 md:text-ui md:min-h-control lg:justify-start lg:px-4';
-  const marker = current ? 'border-primary bg-sidebar-accent font-semibold text-sidebar-accent-foreground' : `border-transparent text-sidebar-foreground hover:bg-accent${hover ? ' bg-accent' : ''}`;
-  return `flex items-center ${shape} ${marker} ${FOCUS}`;
+  const marker = disabled ? 'border-transparent text-disabled-foreground cursor-not-allowed' : current ? 'border-primary bg-sidebar-accent font-semibold text-sidebar-accent-foreground' : `border-transparent text-sidebar-foreground hover:bg-accent${hover ? ' bg-accent' : ''}`;
+  return `flex items-center ${shape} ${marker} ${FOCUS}${focus ? ` ${FOCUS_SHOWN}` : ''}`;
 }
 
 function labelClasses(layout: ShellLayout): string {
@@ -69,12 +75,12 @@ function labelClasses(layout: ShellLayout): string {
   return '';
 }
 
-function NavLink({ item, layout, current, hover }: { item: NavItem; layout: ShellLayout; current: boolean; hover: boolean }) {
+function NavLink({ item, layout, current, hover, focus, disabled }: { item: NavItem; layout: ShellLayout; current: boolean; hover: boolean; focus: boolean; disabled: boolean }) {
   const collapsed = layout === 'rail';
   const label = <span className={labelClasses(layout)}>{item.label}</span>;
-  if (item.disabled) {
+  if (disabled) {
     return (
-      <span aria-disabled="true" data-state="disabled" className={`${itemClasses(layout, false, false)} cursor-not-allowed text-disabled-foreground`}>
+      <span aria-disabled="true" data-state="disabled" className={`${itemClasses(layout, false, false, false, true)}`}>
         <Icon name={item.icon} size={20} />
         {label}
       </span>
@@ -86,7 +92,7 @@ function NavLink({ item, layout, current, hover }: { item: NavItem; layout: Shel
       aria-current={current ? 'page' : undefined}
       data-state={current ? 'current' : hover ? 'hover' : 'default'}
       title={collapsed ? item.label : undefined}
-      className={itemClasses(layout, current, hover)}
+      className={itemClasses(layout, current, hover, focus)}
     >
       <Icon name={item.icon} size={20} />
       {label}
@@ -112,6 +118,8 @@ export function OperatorShell({
   embedded = false,
   menuOpen = false,
   previewHover,
+  previewDisabled,
+  previewFocus,
 }: OperatorShellProps) {
   useShellDocument(pageName);
   const go = (href: string) => (onNavigate ? onNavigate(href) : window.location.assign(href));
@@ -139,7 +147,7 @@ export function OperatorShell({
         <LogoLink href="/campaigns" logo={{ form: 'mark', size: 32 }} className="shrink-0 @xs:hidden" />
         <div className="flex min-w-0 items-center gap-2 md:gap-3">
           {keyState !== 'ok' ? (
-            <a href={PROVIDER_KEYS_HREF} data-key-badge={keyState} className={`rounded-full ${FOCUS}`}>
+            <a href={PROVIDER_KEYS_HREF} data-key-badge={keyState} className={`rounded-full ${FOCUS}${previewFocus === 'key-badge' ? ` ${FOCUS_SHOWN}` : ''}`}>
               <Badge variant={keyState === 'missing' ? 'warning' : 'destructive'}>
                 {keyState === 'missing' ? 'Add provider keys' : 'Key disabled'}
               </Badge>
@@ -166,7 +174,7 @@ export function OperatorShell({
           className={`z-20 flex shrink-0 gap-1 border-sidebar-border bg-sidebar p-0 md:gap-1 md:p-2 ${NAV_LAYOUT[layout]}`}
         >
           {OPERATOR_NAV.map((item) => (
-            <NavLink key={item.id} item={item} layout={layout} current={current?.id === item.id} hover={previewHover === item.id} />
+            <NavLink key={item.id} item={item} layout={layout} current={current?.id === item.id} hover={previewHover === item.id} focus={previewFocus === item.id} disabled={item.disabled === true || previewDisabled === item.id} />
           ))}
         </nav>
         <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 pb-24 outline-none md:px-6 md:pb-6 lg:px-8">
