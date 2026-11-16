@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -187,6 +187,7 @@ describe('negative probes', () => {
     const partial = join(dir, 'partial');
     mkdirSync(partial);
     writeFileSync(join(partial, '0001.sql'), 'DROP TABLE rate_limit_buckets;');
+    copyFileSync(join(compensating, '0010.sql'), join(partial, '0010.sql'));
     const left = await checkRollback(env, migrations, partial, previous, [], '');
     expect(
       left.some((f) => f.startsWith('rollback left structure behind: column idempotency_records')),
