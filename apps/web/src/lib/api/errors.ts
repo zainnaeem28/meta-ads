@@ -8,6 +8,8 @@ export interface ApiClientErrorInit {
   message?: string;
   details?: ErrorDetail[];
   requestId?: string | null;
+  /** `Retry-After` of the answer, whole seconds (minimum 1); null when absent or not a number. */
+  retryAfterSeconds?: number | null;
   cause?: unknown;
 }
 
@@ -18,6 +20,7 @@ export class ApiClientError extends Error {
   readonly code: string;
   readonly details: ErrorDetail[];
   readonly requestId: string | null;
+  readonly retryAfterSeconds: number | null;
 
   constructor(init: ApiClientErrorInit) {
     super(init.message ?? init.code, init.cause === undefined ? undefined : { cause: init.cause });
@@ -26,6 +29,7 @@ export class ApiClientError extends Error {
     this.code = init.code;
     this.details = init.details ?? [];
     this.requestId = init.requestId ?? null;
+    this.retryAfterSeconds = init.retryAfterSeconds ?? null;
   }
 }
 
