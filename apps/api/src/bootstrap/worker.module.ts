@@ -15,12 +15,14 @@ import { sweepRegistry } from '../platform/jobs/sweep-registry.js';
 import type { SweepRegistry } from '../platform/jobs/sweep-registry.js';
 import { EXIT_WATCHDOG, Watchdog } from '../platform/jobs/watchdog.js';
 import { AuditModule } from '../modules/audit/index.js';
+import { KeyUnsealer } from '../modules/provider-keys/infrastructure/key-unsealer.js';
+import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { runLoggedJob } from '../platform/logging/index.js';
 
 /**
  * The worker composition root (ARCHITECTURE §5.11, ADR-012): used by `main.worker.ts` and by the tests that must reach
  * the real wiring. This is the one file that may bind the provider-key unsealer (layer rule L3); no module that does
- * so exists yet, so nothing is bound here until its ticket adds the provider.
+ * so exists yet, the unsealer is bound below from `KEK_PRIVATE_KEYS`.
  */
 
 /** The cron table (ARCHITECTURE §5.11). A queue is scheduled only when its owning ticket registered a handler. */
@@ -61,6 +63,8 @@ export interface WorkerOptions {
   /** Queue name to handler; each owning ticket contributes its own. */
   readonly handlers?: Readonly<Record<string, JobHandler>>;
   readonly registry?: SweepRegistry;
+  /** The environment the key custody reads (`KEK_*`); `process.env` by default. */
+  readonly env?: Readonly<Record<string, string | undefined>>;
   /** Replaces `process.exit` (tests). */
   readonly exit?: (code: number) => void;
 }
@@ -184,13 +188,23 @@ export interface WorkerApp {
 
 /** The composition root: database, pg-boss (worker role: supervises and schedules), audit and the runtime. */
 export async function createWorkerApp(config: WorkerConfig, options: WorkerOptions): Promise<WorkerApp> {
+  const env = options.env ?? process.env;
+  // Provider-key custody (REQ-015/016): the seal port and the one unsealer binding in the product. Unreadable or
+  // non-RSA-3072 maps stop the start-up here.
+  const keys = env['KEK_PUBLIC_KEYS'] === undefined ? [] : [ProviderKeysModule.register(env, 'worker')];
+  const unsealer =
+    env['KEK_PRIVATE_KEYS'] === undefined
+      ? []
+      : [{ provide: KeyUnsealer, useValue: KeyUnsealer.fromEnv(env) }];
   @Module({
     imports: [
       DatabaseModule.forRoot(dbConfigOf(config)),
       JobsModule.forRoot({ DATABASE_URL: dbConfigOf(config).DATABASE_URL, role: 'worker' }),
       AuditModule.register(options.logger),
+      ...keys,
     ],
     providers: [
+      ...unsealer,
       { provide: OPTIONS, useValue: options },
       { provide: CONFIG, useValue: config },
       WorkerRuntime,

@@ -19,6 +19,7 @@ import { RateLimitModule } from '../platform/rate-limit/index.js';
 import { assertScopesDeclared } from '../platform/http/scope-registry.js';
 import { AuditModule } from '../modules/audit/index.js';
 import { IdentityModule, authOptionsFrom, identityConfigFrom } from '../modules/identity/index.js';
+import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { JobsModule } from '../platform/jobs/boss.js';
 import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
 import { MetricsModule } from '../platform/metrics/index.js';
@@ -79,6 +80,10 @@ function apiModule(
         auth,
       ),
       ...database,
+      // The seal side of the key custody (REQ-015); present whenever the KEK public keys are configured.
+      ...(process.env['KEK_PUBLIC_KEYS'] === undefined
+        ? []
+        : [ProviderKeysModule.register(process.env, 'api')]),
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),
     ],
