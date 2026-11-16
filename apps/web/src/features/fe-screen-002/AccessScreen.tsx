@@ -11,7 +11,7 @@ import { resolveError } from '../../lib/errors/resolve';
 import { ROUTES } from '../../lib/errors/routes';
 import { AccessMessage } from './AccessMessage';
 import { AccessRequestForm, type AccessFormOutcome } from './AccessRequestForm';
-import { ACCESS_FORM_COPY, SCREEN_002_COPY, type NamedState, type Screen002State } from './copy';
+import { ACCESS_FORM_COPY, type NamedState, type Screen002State } from './copy';
 
 const go = (href: string) => window.location.assign(href);
 
