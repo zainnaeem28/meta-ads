@@ -67,6 +67,17 @@ test.describe('@TASK-076 job card, claim issue, segment editor (CMP-022, 023, 02
       const section = page.locator('[data-testid=dom-a]');
       await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-dom-a-${name}.json`);
       await page.evaluate(() => document.fonts.ready);
+      const clipped = await section.locator('[data-variant]').evaluateAll((els) =>
+        els
+          .filter((e) => e.scrollWidth > e.clientWidth || !e.closest('article, section')?.contains(e))
+          .filter((e) => {
+            const a = e.getBoundingClientRect();
+            const c = e.closest('article')?.getBoundingClientRect();
+            return c ? a.right > c.right + 0.5 || a.left < c.left - 0.5 : false;
+          })
+          .map((e) => e.textContent),
+      );
+      expect(clipped, 'badges must stay inside their card').toEqual([]);
       await expect(section).toHaveScreenshot(`dom-a-${name}.png`);
       mkdirSync(`${evidence}/screenshots`, { recursive: true });
       await section.screenshot({ path: `${evidence}/screenshots/dom-a-${name}.png` });

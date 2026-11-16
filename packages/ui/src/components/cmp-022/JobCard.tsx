@@ -99,8 +99,8 @@ export function JobCard({
         .filter(Boolean)
         .join(' ')}
     >
-      <header className="flex items-center justify-between gap-2">
-        <h3 className="text-ui font-semibold">Segment {segment}</h3>
+      <header className="flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <h3 className="whitespace-nowrap text-ui font-semibold">Segment {segment}</h3>
         <Badge variant={badge.variant} icon={badge.icon}>
           {STATE_LABEL[state]}
         </Badge>

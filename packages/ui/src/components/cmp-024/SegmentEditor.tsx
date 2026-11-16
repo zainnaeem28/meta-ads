@@ -49,7 +49,8 @@ export interface SegmentEditorProps {
   className?: string;
 }
 
-/** CMP-024 segment editor: dialogue textarea with a word counter; the counter is announced politely after typing pauses. */
+/** CMP-024 segment editor: dialogue textarea with a word counter; the counter is announced politely after typing pauses.
+ * Over 45 words (`wordZone` is `blocked`) is only styled and announced here: the parent must block save. */
 export function SegmentEditor({
   segment,
   value,
