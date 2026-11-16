@@ -6,6 +6,7 @@ const reports = `../../apps/web/${process.env.REPORT_DIR ?? 'reports/icons-galle
 
 export default defineConfig({
   test: {
+    env: { NODE_ENV: 'test' },
     include: ['src/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
     setupFiles: ['test/setup.ts'],
