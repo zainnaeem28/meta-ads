@@ -28,7 +28,7 @@ let direct: pg.Pool;
 let created = 0;
 
 @Controller('jobs')
-@Scope('U')
+@Scope('Pub')
 class JobsProbe {
   constructor() {}
   @Post()
