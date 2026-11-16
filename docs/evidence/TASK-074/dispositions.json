@@ -1,0 +1,9 @@
+[
+  {
+    "match": "openai-key-shaped",
+    "path": "docs/evidence/TASK-074/submit-check.md",
+    "reason": "False positive in historical commit 5611c6a: the report's branch line contains a hyphenated word run from the branch name, not a key. The file holds no credentials and is removed from the tree in a later commit.",
+    "owner": "Frontend Engineer",
+    "expires": "2026-12-16"
+  }
+]
