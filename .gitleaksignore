@@ -1,0 +1,2 @@
+# False positive: git commit id in an earlier TASK-072 submit-check report (no credential)
+e4772ec5706351406f35cde27066048c1930c502:docs/evidence/TASK-072/submit-check.md:openai-key-shaped:3

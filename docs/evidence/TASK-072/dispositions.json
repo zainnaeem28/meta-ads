@@ -1,1 +1,0 @@
-[{"match":"openai-key-shaped","path":"docs/evidence/TASK-072/submit-check.md","reason":"False positive: line 3 is the 40-hex git commit id in the earlier submit-check report (removed from the tree; the new report replaces it). No credential.","owner":"Frontend Engineer","expires":"2026-12-16"}]
