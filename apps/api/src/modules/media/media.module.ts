@@ -8,10 +8,20 @@ import { MEDIA_CONFIG, MEDIA_REPOSITORY } from './application/ports.js';
 import type { MediaConfig } from './application/ports.js';
 import { STORAGE_PORT } from './domain/storage.js';
 import { DrizzleMediaRepository } from './infrastructure/media.repository.js';
+import { DrizzleMediaMaintenance } from './infrastructure/media-maintenance.repository.js';
 import { createStorage } from './infrastructure/s3-storage.js';
 import type { S3StorageConfig } from './infrastructure/s3-storage.js';
+import { SharpImageSanitizer } from './infrastructure/sharp-image-sanitizer.js';
+import { IMAGE_SANITIZE_PORT } from './worker/image-sanitize.port.js';
+import { MEDIA_MAINTENANCE_REPOSITORY, WORKER_MEDIA_CONFIG } from './worker/maintenance.js';
+import type { JobLog, WorkerMediaConfig } from './worker/maintenance.js';
+import { MediaDeletion } from './worker/media-deletion.js';
+import { SANITIZE_QUEUE, SanitizeJob } from './worker/sanitize.job.js';
+import { UNATTACHED_SWEEP_QUEUE, UnattachedSweep } from './worker/unattached-sweep.job.js';
 import { MediaUploadService } from './transport/media-upload.service.js';
 import { MediaController, MultipartSupport } from './transport/media.controller.js';
+
+export { MediaDeletion, SanitizeJob, UnattachedSweep };
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -20,6 +30,9 @@ const DEFAULTS = {
   MEDIA_MAX_UPLOAD_BYTES: 10_485_760,
   MEDIA_BROWSER_URL_TTL_SEC: 300,
   PROVIDER_FETCH_URL_TTL_SEC: 3600,
+  MEDIA_MAX_PIXEL_DIMENSION: 8000,
+  MEDIA_MAX_PIXELS: 40_000_000,
+  MEDIA_UNATTACHED_TTL_HOURS: 24,
 } as const;
 
 function required(env: Env, name: string): string {
@@ -44,6 +57,19 @@ export function mediaConfigFrom(env: Env): MediaConfig {
     maxUploadBytes: integer(env, 'MEDIA_MAX_UPLOAD_BYTES', 1, 10_485_760),
     browserUrlTtlSec: integer(env, 'MEDIA_BROWSER_URL_TTL_SEC', 300, 900),
     providerFetchUrlTtlSec: integer(env, 'PROVIDER_FETCH_URL_TTL_SEC', 600, 7200),
+  };
+}
+
+/** The worker's media settings, checked at start-up like the api's. */
+export function workerMediaConfigFrom(env: Env): {
+  readonly maxDimension: number;
+  readonly maxPixels: number;
+  readonly unattachedTtlHours: number;
+} {
+  return {
+    maxDimension: integer(env, 'MEDIA_MAX_PIXEL_DIMENSION', 1, 65_535),
+    maxPixels: integer(env, 'MEDIA_MAX_PIXELS', 1, 1_000_000_000),
+    unattachedTtlHours: integer(env, 'MEDIA_UNATTACHED_TTL_HOURS', 1, 168),
   };
 }
 
@@ -82,4 +108,48 @@ export class MediaModule {
       exports: [MediaService, STORAGE_PORT],
     };
   }
+
+  /**
+   * The worker side (TASK-043): the `sharp` sanitizer (the only place an image is decoded), the `media.sanitize` job,
+   * the hourly unattached sweep and the deletion helpers. Storage is the worker's own token B. Fails at construction
+   * when a setting is missing or out of range.
+   */
+  static registerWorker(env: Env): DynamicModule {
+    const { maxDimension, maxPixels, unattachedTtlHours } = workerMediaConfigFrom(env);
+    const workerConfig: WorkerMediaConfig = { unattachedTtlHours };
+    return {
+      module: MediaModule,
+      providers: [
+        { provide: STORAGE_PORT, useValue: createStorage(storageConfigFrom(env)) },
+        { provide: MEDIA_REPOSITORY, useClass: DrizzleMediaRepository },
+        { provide: MEDIA_MAINTENANCE_REPOSITORY, useClass: DrizzleMediaMaintenance },
+        { provide: IMAGE_SANITIZE_PORT, useValue: new SharpImageSanitizer({ maxDimension, maxPixels }) },
+        { provide: WORKER_MEDIA_CONFIG, useValue: workerConfig },
+        MediaDeletion,
+        SanitizeJob,
+        UnattachedSweep,
+      ],
+      exports: [MediaDeletion, SanitizeJob, UnattachedSweep],
+    };
+  }
+}
+
+/** The queue handlers of this module, resolved when a job arrives (the worker composition root binds them). */
+export function mediaJobHandlers(resolve: {
+  readonly sanitize: () => SanitizeJob;
+  readonly sweep: () => UnattachedSweep;
+}): Readonly<Record<string, (job: { id: string; data: unknown }, log: JobLog) => Promise<void>>> {
+  return {
+    [SANITIZE_QUEUE]: async (job, log) => {
+      await resolve.sanitize().handle(job, log);
+    },
+    [UNATTACHED_SWEEP_QUEUE]: async (_job, log) => {
+      const outcome = await resolve.sweep().run();
+      log.info(
+        { module: 'media', outcome: outcome.failed === 0 ? 'ok' : 'error' },
+        `unattached-sweep: ${String(outcome.deleted)} deleted, ${String(outcome.failed)} failed`,
+      );
+      if (outcome.failed > 0) throw new Error(`unattached sweep left ${String(outcome.failed)} uploads for the next run`);
+    },
+  };
 }
