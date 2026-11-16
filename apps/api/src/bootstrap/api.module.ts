@@ -20,6 +20,7 @@ import { assertScopesDeclared } from '../platform/http/scope-registry.js';
 import { AuditModule } from '../modules/audit/index.js';
 import { IdentityModule, authOptionsFrom, identityConfigFrom } from '../modules/identity/index.js';
 import { MediaModule } from '../modules/media/media.module.js';
+import { CampaignsModule } from '../modules/campaigns/campaigns.module.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { JobsModule } from '../platform/jobs/boss.js';
@@ -73,6 +74,10 @@ function apiModule(
     config.DATABASE_URL === undefined
       ? undefined
       : { options: authOptionsFrom(process.env, config.WEB_ORIGIN), audit };
+  const media =
+    config.DATABASE_URL === undefined || process.env['R2_ENDPOINT'] === undefined
+      ? undefined
+      : MediaModule.register(process.env);
   @Module({
     imports: [
       logging.module(),
@@ -95,9 +100,9 @@ function apiModule(
             ),
           ]),
       // Object storage and quota (REQ-020); needs the database and the bucket settings.
-      ...(config.DATABASE_URL === undefined || process.env['R2_ENDPOINT'] === undefined
-        ? []
-        : [MediaModule.register(process.env)]),
+      ...(media === undefined ? [] : [media]),
+      // Drafts CRUD (API-020 to API-023, API-025); needs the database and media (the product image).
+      ...(media === undefined ? [] : [CampaignsModule.register(process.env, { audit, media })]),
       // Spend caps, reservations, usage events and the start-up price check (REQ-019, TD-D39); needs the database.
       ...(config.DATABASE_URL === undefined ? [] : [UsageModule.register(process.env)]),
       HealthModule.register(healthOptionsFrom(process.env, config)),

@@ -43,6 +43,13 @@
       "when": 1794848626368,
       "tag": "0050_task-044-usage",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794865458618,
+      "tag": "0070_task-046-campaigns",
+      "breakpoints": true
     }
   ]
 }
