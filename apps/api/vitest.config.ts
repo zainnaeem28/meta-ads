@@ -12,6 +12,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/db/junit.xml' }],
       ['junit', { outputFile: 'reports/egress/junit.xml' }],
       ['junit', { outputFile: 'reports/audit/junit.xml' }],
+      ['junit', { outputFile: 'reports/limits/junit.xml' }],
     ],
     coverage: {
       provider: 'v8',
@@ -23,6 +24,8 @@ export default defineConfig({
         'src/platform/shared-kernel/**/*.ts',
         'src/platform/db/**/*.ts',
         'src/modules/audit/**/*.ts',
+        'src/platform/rate-limit/**/*.ts',
+        'src/platform/idempotency/**/*.ts',
       ],
       exclude: [
         'src/**/*.test.ts',
@@ -36,6 +39,8 @@ export default defineConfig({
         'src/platform/egress/test-support.ts',
         'src/platform/shared-kernel/index.ts',
         'src/platform/db/index.ts',
+        'src/platform/rate-limit/index.ts',
+        'src/platform/idempotency/index.ts',
         'src/platform/db/schema.ts',
         'src/platform/db/test-database.ts',
         'src/database/**',

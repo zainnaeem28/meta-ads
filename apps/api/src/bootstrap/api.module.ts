@@ -14,6 +14,8 @@ import { corsOptions } from '../platform/http/cors.js';
 import { EnvelopeInterceptor, ErrorFilter, RawResponse } from '../platform/http/index.js';
 import { installMethodIndex } from '../platform/http/method-index.js';
 import type { MethodIndex } from '../platform/http/method-index.js';
+import { IdempotencyModule } from '../platform/idempotency/index.js';
+import { RateLimitModule } from '../platform/rate-limit/index.js';
 import { Scope, assertScopesDeclared } from '../platform/http/scope-registry.js';
 import { AuditModule } from '../modules/audit/index.js';
 
@@ -24,6 +26,11 @@ export interface EdgeConfig extends EgressModuleConfig {
   DATABASE_URL?: string | undefined;
   DATABASE_POOL_MAX?: number | undefined;
   DATABASE_ACQUIRE_TIMEOUT_MS?: number | undefined;
+  RATE_LIMIT_IP_KEY?: string | undefined;
+  TRUST_PROXY_HOPS?: number | undefined;
+  JOB_CREATE_RATE_LIMIT?: number | undefined;
+  JOB_CREATE_RATE_WINDOW_MIN?: number | undefined;
+  IDEMPOTENCY_TTL_HOURS?: number | undefined;
 }
 
 /** Replaced by the health ticket (API-900/901). */
@@ -52,7 +59,13 @@ function apiModule(
   config: EdgeConfig,
 ): new () => object {
   const database =
-    config.DATABASE_URL === undefined ? [] : [DatabaseModule.forRoot(dbConfigOf(config))];
+    config.DATABASE_URL === undefined
+      ? []
+      : [
+          DatabaseModule.forRoot(dbConfigOf(config)),
+          RateLimitModule.register(config),
+          IdempotencyModule.register(config),
+        ];
   @Module({
     imports: [
       logging.module(),
