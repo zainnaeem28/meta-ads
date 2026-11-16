@@ -1,0 +1,8 @@
+# TASK-042 evidence (media 2/3: API-030, API-031, API-032)
+
+- Wired in the api composition root (`MediaModule.register` in `bootstrap/api.module.ts`: `MediaController`, `MediaUploadService`, multipart support). Proven by `apps/api/src/modules/media/transport/media.integration.test.ts`: `createApiApp` (the root `main.api.ts` runs) with `fastify.inject`, real PostgreSQL and a real MinIO server, 17 tests.
+- Upload: exactly 10 MiB accepted for JPEG, PNG, WebP and GIF (quarantine object `q/{owner}/{id}`, `processing` row, `media.sanitize` job, contract-valid answer, `Location`); 10 MiB + 1 gives 413; PDF, renamed exe, SVG and empty give 415; traversal names never reach the key or the row; quota gives 422 `storage_quota_reached`; 31st upload in 10 minutes gives 429 with Retry-After.
+- Streaming: a 400 MiB chunked body over a real socket is cut off at the cap (413, connection closed), far less than the body is read, memory growth bounded, no row or reserved bytes left. Note: `S3Storage.put` (TASK-041, not in this ticket's paths) collects the accepted body (at most 10 MiB) before the conditional put; the request path itself never buffers beyond the cap.
+- Reads: owner sees state and reject reason; a foreign and an unknown id give the identical 404 on both reads; `media_not_ready` 422 while processing, 404 once rejected; the signed URL is fetched from MinIO, `no-store`, TTL 300 s; a short-lived URL fails after expiry and a new one needs the ownership check.
+- Shared config touched (append-only, needed for the report the plan names): `apps/api/vitest.config.ts` and `apps/api/package.json` add `reports/media-api/` (junit, lcov).
+- The full machine report is attached to the task as `submit-check`.
