@@ -5,7 +5,7 @@ const reports = process.env.REPORT_DIR ?? 'reports/api-client';
 
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.{ts,tsx}', 'tests/brand/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}', 'tests/brand/**/*.test.ts', 'tests/security/**/*.test.ts'],
     setupFiles: ['src/lib/api/msw.setup.ts'],
     reporters: ['default', ['junit', { outputFile: `${reports}/junit.xml` }]],
     coverage: {
