@@ -42,6 +42,10 @@ const edge = (role: 'api' | 'worker' = 'api') => ({
   DATABASE_URL: env.urlFor(role),
   DATABASE_POOL_MAX: 3,
   DATABASE_ACQUIRE_TIMEOUT_MS: 5000,
+  RATE_LIMIT_IP_KEY: validEnv('api', {})['RATE_LIMIT_IP_KEY'],
+  TRUST_PROXY_HOPS: 1,
+  JOB_CREATE_RATE_LIMIT: 3,
+  JOB_CREATE_RATE_WINDOW_MIN: 10,
 });
 
 beforeAll(async () => {
