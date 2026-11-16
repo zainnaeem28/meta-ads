@@ -9,7 +9,7 @@ import { AUTH_COPY, AUTH_PANEL } from '../fe-screen-001-003/copy';
 import { isApiClientError } from '../../lib/api/errors';
 import { resolveError } from '../../lib/errors/resolve';
 import { ROUTES } from '../../lib/errors/routes';
-import { AccessMessage } from './AccessMessage';
+import { AccessMessage, AccessNotLinked } from './AccessMessage';
 import { AccessRequestForm, type AccessFormOutcome } from './AccessRequestForm';
 import { ACCESS_FORM_COPY, type NamedState, type Screen002State } from './copy';
 
@@ -70,12 +70,12 @@ export function AccessScreen({ named, navigate = go }: { named: NamedState | nul
   const account = accountOf(me);
   const formEnabled = account?.linkState === 'not_linked' && account.accessRequest.formEnabled;
   return (
-    <AccessMessage state="not-linked">
+    <AccessNotLinked>
       {submitted === 'form-off' || !formEnabled ? (
         <p className="text-ui text-muted-foreground">{ACCESS_FORM_COPY.formOff}</p>
       ) : (
         <AccessRequestForm onDone={setSubmitted} />
       )}
-    </AccessMessage>
+    </AccessNotLinked>
   );
 }

@@ -52,7 +52,6 @@ export const NOTE_MAX = 500;
 
 /** Icon of each state's glyph (frame SCREEN-002). */
 export const STATE_ICON = {
-  'not-linked': 'lock',
   'request-pending': 'clock',
   suspended: 'ban',
   removed: 'user-x',
