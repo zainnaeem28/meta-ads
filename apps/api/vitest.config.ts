@@ -20,6 +20,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/keys-crypto/junit.xml' }],
       ['junit', { outputFile: 'reports/media-core/junit.xml' }],
       ['junit', { outputFile: 'reports/media-api/junit.xml' }],
+      ['junit', { outputFile: 'reports/media-worker/junit.xml' }],
       ['junit', { outputFile: 'reports/keys/junit.xml' }],
       ['junit', { outputFile: 'reports/usage/junit.xml' }],
       ['junit', { outputFile: 'reports/campaigns/junit.xml' }],
@@ -91,6 +92,10 @@ export default defineConfig({
         'src/modules/media/media.module.ts',
         'src/modules/media/infrastructure/s3-storage.ts',
         'src/modules/media/infrastructure/media.repository.ts',
+        // The worker's SQL is proven on real PostgreSQL, MinIO and sharp through the worker composition root by
+        // media-worker.integration.test.ts; the port and the type-only contracts have no statements.
+        'src/modules/media/infrastructure/media-maintenance.repository.ts',
+        'src/modules/media/worker/maintenance.ts',
         'src/modules/media/infrastructure/test-support.ts',
         // The SQL repository, the price-file seed step and the module wiring are proven on real PostgreSQL through the api
         // composition root by usage.integration.test.ts; the fakes are the unit tests' own.

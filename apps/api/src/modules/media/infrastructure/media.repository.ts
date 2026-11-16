@@ -11,7 +11,7 @@ import type {
 
 type Row = typeof mediaObjects.$inferSelect;
 
-function toRecord(row: Row): MediaRecord {
+export function toRecord(row: Row): MediaRecord {
   return {
     id: row.id,
     ownerId: row.ownerId,
