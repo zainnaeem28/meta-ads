@@ -14,7 +14,7 @@ export const parseNamedState = (value: string | string[] | undefined): NamedStat
 export const SCREEN_002_COPY = {
   'not-linked': {
     title: 'This account has no access yet',
-    body: 'Accounts are created by invitation or after an administrator approves a request.',
+    body: 'Your account is not set up for this workspace yet. Ask for access below, or ask an administrator for an invitation.',
   },
   'request-pending': {
     title: 'Request sent',
@@ -22,11 +22,11 @@ export const SCREEN_002_COPY = {
   },
   suspended: {
     title: 'This account is suspended',
-    body: 'Your work is kept and can be restored. Ask an administrator to reinstate your account.',
+    body: 'Your account is suspended. Contact your administrator.',
   },
   removed: {
-    title: 'This account has been removed',
-    body: 'It can no longer be used to sign in. If this is a mistake, ask an administrator to invite you again.',
+    title: 'This account has been removed.',
+    body: 'It can no longer be used to sign in.',
   },
   'invite-invalid': {
     title: 'This invitation cannot be used',
@@ -43,6 +43,8 @@ export const ACCESS_FORM_COPY = {
   loading: 'Checking your account',
   /** API-002 answered not_found: the form is switched off. Same neutral wording for every address. */
   formOff: 'Requests are not being taken. Ask an administrator for an invitation.',
+  tryAgain: 'Try again',
+  checkFailedTitle: 'We could not check your account',
   noteTooLong: 'Keep this to 500 characters or fewer.',
 } as const;
 

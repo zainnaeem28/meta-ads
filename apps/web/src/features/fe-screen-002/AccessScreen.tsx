@@ -58,10 +58,10 @@ export function AccessScreen({ named, navigate = go }: { named: NamedState | nul
   if (resolved === 'error') {
     const view = resolveError(me.error);
     return (
-      <AuthShell variant="message" panel={AUTH_PANEL} title={SCREEN_002_COPY['not-linked'].title}>
+      <AuthShell variant="message" panel={AUTH_PANEL} title={ACCESS_FORM_COPY.checkFailedTitle}>
         <Alert variant={view.tone === 'destructive' ? 'destructive' : 'warning'}>{view.message}</Alert>
         <Button variant="outline" onClick={() => void me.refetch()}>
-          Try again
+          {ACCESS_FORM_COPY.tryAgain}
         </Button>
       </AuthShell>
     );

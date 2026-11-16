@@ -76,8 +76,11 @@ test.describe('@TASK-088 SCREEN-002 access states through the built web app', ()
       expect(await page.locator('meta[name=robots]').evaluateAll((els) => els.map((e) => e.getAttribute('content')))).toEqual(
         expect.arrayContaining([expect.stringMatching(/noindex/)]),
       );
-      if (state === 'removed') await expect(page.getByText(/contact your administrator/i)).toHaveCount(0);
-      if (state === 'suspended') await expect(page.getByText('Ask an administrator to reinstate your account.')).toBeVisible();
+      if (state === 'removed') {
+        await expect(page.getByText('This account has been removed.', { exact: true })).toBeVisible();
+        await expect(page.getByText(/administrator/i)).toHaveCount(0);
+      }
+      if (state === 'suspended') await expect(page.getByText('Your account is suspended. Contact your administrator.')).toBeVisible();
       // Only API-001 and API-002 are ever called (suspended, removed and invite-invalid make no call).
       expect(calls.every((c) => c === 'GET /api/v1/me' || c === 'POST /api/v1/access-requests')).toBe(true);
       if (state !== 'not-linked' && state !== 'request-pending') expect(calls).toEqual([]);

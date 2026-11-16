@@ -77,7 +77,8 @@ describe('SCREEN-002 access states', () => {
     server.use(http.get(`${ORIGIN}/api/v1/me`, () => failure(403, 'account_removed')));
     view(null);
     await waitFor(() => expect(h1()).toHaveTextContent(SCREEN_002_COPY.removed.title));
-    expect(document.body.textContent).not.toMatch(/contact your administrator/i);
+    expect(document.body.textContent).toContain('This account has been removed.');
+    expect(document.body.textContent).not.toMatch(/administrator/i);
   });
 
   it.each(['suspended', 'removed', 'invite-invalid'] as const)('?state=%s renders without any api call', async (state) => {
