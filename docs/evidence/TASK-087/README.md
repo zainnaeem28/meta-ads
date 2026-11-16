@@ -1,0 +1,8 @@
+# TASK-087 evidence: SCREEN-001 sign-in, SCREEN-003 two-step verification
+
+- Screens: `apps/web/src/features/fe-screen-001-003/` (SignInScreen, MfaScreen, MfaVerifyForm, copy), routes under `apps/web/src/app/(auth)/{sign-in,mfa}`, group `layout/loading/error.tsx`.
+- Built from CMP-001, 032, 003, 011, 008 (+ 004, 010 inside the local stand-in forms) and tokens only. API operations: none (provider-hosted).
+- States: SCREEN-001 default, session-expired (exact copy above the form), invalid, loading (`loading.tsx`, component test), error (`error.tsx`, component test); SCREEN-003 enrol (`/mfa?step=enrol`), error, challenge (default `/mfa`). In hosted mode the provider chooses enrol vs challenge; the recovery copy is rendered by the page in both modes.
+- Screenshots at 390 and 1440 px (real Inter): `screenshots/` (`sign-in-*` come from the TASK-084 spec, regenerated for this UI). Axe JSON: `axe/` (zero violations). Baselines: `apps/web/e2e/__baselines__/chromium/` (`fe-screen-001-003-*`, `clerk-*` regenerated).
+- Consequential edits outside the allowed paths (necessary, minimal): `apps/web/e2e/clerk.spec.ts` h1 text now 'AI UGC Ad Director' and its 8 `clerk-*` baselines regenerated; the new e2e `apps/web/e2e/fe-screen-001-003.spec.ts`. `_components/LocalVerifyForm.tsx` (TASK-084) is now unused (superseded by `MfaVerifyForm`); removal left to the owner of that path.
+- Deviations: the provider's real hosted UI is not reachable at build time without Clerk keys (none configured); theming deviations remain as recorded in docs/evidence/TASK-084/README.md. Loading and provider-error states are verified by component tests, not screenshots, because they only appear transiently / with the hosted provider.

@@ -41,7 +41,7 @@ test.describe('@TASK-084 Clerk integration, route protection and sign-in through
       expect(url.pathname).toBe('/sign-in');
       expect(url.searchParams.get('return')).toBe(path);
       expect(url.searchParams.get('reason')).toBeNull();
-      await expect(page.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'AI UGC Ad Director' })).toBeVisible();
       expect(apiCalls).toEqual([]);
     });
   }
