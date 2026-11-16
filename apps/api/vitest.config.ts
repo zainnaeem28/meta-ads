@@ -14,6 +14,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/audit/junit.xml' }],
       ['junit', { outputFile: 'reports/identity/junit.xml' }],
       ['junit', { outputFile: 'reports/identity-auth/junit.xml' }],
+      ['junit', { outputFile: 'reports/invitations/junit.xml' }],
       ['junit', { outputFile: 'reports/identity-admin/junit.xml' }],
       ['junit', { outputFile: 'reports/keys-crypto/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
@@ -69,6 +70,8 @@ export default defineConfig({
         'src/modules/identity/application/linking.service.ts',
         'src/modules/identity/infrastructure/identity.queries.ts',
         'src/modules/identity/infrastructure/identity.repositories.ts',
+        // The Drizzle store of the invitations is proven on real PostgreSQL by invitations.integration.test.ts.
+        'src/modules/identity/application/invitations.store.ts',
         'src/modules/identity/infrastructure/test-support.ts',
         // Wiring is proven through the real composition roots on real PostgreSQL by provider-keys.integration.test.ts.
         'src/modules/provider-keys/provider-keys.module.ts',
