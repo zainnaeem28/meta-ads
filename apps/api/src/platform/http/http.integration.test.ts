@@ -8,6 +8,7 @@ import pg from 'pg';
 import { z } from 'zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { validEnv } from '../config/test-env.js';
+import { installJobs } from '../jobs/test-support.js';
 import { buildPage, decodeCursor } from './cursor.js';
 import { ZodValidationPipe } from './validation.pipe.js';
 import { createTestApp } from './test-support.js';
@@ -96,6 +97,7 @@ beforeAll(async () => {
   await admin.end();
   const url = new URL(adminUrl);
   url.pathname = `/${database}`;
+  await installJobs(url.toString());
   pool = new pg.Pool({ connectionString: url.toString(), max: 4 });
   await pool.query('CREATE TABLE items (seq int PRIMARY KEY)');
   await pool.query('INSERT INTO items SELECT generate_series(1, 11)');
@@ -146,7 +148,7 @@ describe('main.api.js (real entry point)', () => {
   });
 
   it('leaves the liveness probe raw', async () => {
-    expect(await (await fetch(`${base}/health/live`)).json()).toEqual({ status: 'ok' });
+    expect(await (await fetch(`${base}/health/live`)).json()).toMatchObject({ success: true, data: { status: 'ok' } });
   });
 });
 

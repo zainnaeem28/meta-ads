@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Shroomap images (DEVOPS-PLAN 9, ARCHITECTURE 1.6 VII/IX): targets api, worker, web. Build once, deploy by digest.
-# The `backup` target is added by DO-07. Build from the repository root: docker build -f docker/Dockerfile --target api .
+# The `backup` target (DO-07a) holds no application code. Build from the repository root: docker build -f docker/Dockerfile --target api .
 # Base image pinned by digest (node 24.22.2, Debian bookworm slim).
 ARG NODE_IMAGE=node:24.22.2-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
 
@@ -21,6 +21,7 @@ COPY tools/provider-stubs/package.json tools/provider-stubs/
 COPY tools/foundation-tests/db/package.json tools/foundation-tests/db/
 COPY tools/foundation-tests/slices/package.json tools/foundation-tests/slices/
 COPY tools/foundation-tests/media/package.json tools/foundation-tests/media/
+COPY scripts/backup/package.json scripts/backup/
 RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile --store-dir /pnpm/store --prod=false
 
 FROM deps AS source
@@ -83,3 +84,28 @@ EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
 CMD ["node", "apps/web/server.js"]
+
+# ---- backup (DO-07a, SB v6 7.1 A): the copy script, the PostgreSQL client of the server's major version and age. No
+# application code (no apps/api, ops-cli, unsealer, Drizzle or pg-boss) and no KEK or age private key. Runs only as the
+# `backup` cron service. Two repository stages: the script with production dependencies only, then the runtime image. ----
+FROM deps AS backup-build
+COPY scripts/backup scripts/backup
+RUN pnpm --filter backup deploy --prod --legacy /out/backup \
+ && rm -rf /out/backup/tests /out/backup/vitest.config.ts /out/backup/tsconfig.json
+
+FROM ${NODE_IMAGE} AS backup
+# The client major version must equal the server's (DO-11 records it); the PGDG key is pinned by the checksum file.
+ARG PG_MAJOR=17
+ENV NODE_ENV=production
+COPY docker/backup/pgdg.asc.sha256 /tmp/pgdg.asc.sha256
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl age \
+ && curl -fsSL -o /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && sha256sum --check --status /tmp/pgdg.asc.sha256 \
+ && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update && apt-get install -y --no-install-recommends "postgresql-client-${PG_MAJOR}" \
+ && apt-get purge -y --auto-remove curl && rm -rf /var/lib/apt/lists/* /tmp/pgdg.asc.sha256 \
+ && pg_dump --version && age --version
+WORKDIR /app
+COPY --from=backup-build --chown=node:node /out/backup/ ./
+USER node
+CMD ["node", "src/main.ts"]

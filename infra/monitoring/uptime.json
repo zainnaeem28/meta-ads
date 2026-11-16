@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "source": "DEVOPS-PLAN 11.1, 11.3, 11.4; vendor is owner item DOP-OI-3 (default: a free tier of a mainstream uptime vendor; interval and heartbeat feature VERIFY)",
+  "vendorNeutral": true,
+  "monitorStaleMinutes": 15,
+  "http": [
+    {
+      "id": "api-ready",
+      "alert": "ALR-1",
+      "method": "GET",
+      "url": "${API_ORIGIN}/health/ready",
+      "expectStatus": 200,
+      "intervalMinutes": 1,
+      "locations": 2,
+      "failAfterConsecutive": 3,
+      "recoverAfterConsecutive": 3,
+      "sslExpiryAlert": "ALR-10",
+      "sslExpiryDays": 21
+    },
+    {
+      "id": "web-root",
+      "alert": "ALR-1",
+      "method": "GET",
+      "url": "${WEB_ORIGIN}/",
+      "expectStatus": 200,
+      "intervalMinutes": 5,
+      "locations": 2,
+      "failAfterConsecutive": 3,
+      "recoverAfterConsecutive": 3,
+      "sslExpiryAlert": "ALR-10",
+      "sslExpiryDays": 21
+    },
+    {
+      "id": "public-journey",
+      "alert": "ALR-1",
+      "method": "GET",
+      "url": "${WEB_ORIGIN}/",
+      "expectStatus": 200,
+      "intervalMinutes": 5,
+      "locations": 1,
+      "failAfterConsecutive": 3,
+      "recoverAfterConsecutive": 3,
+      "note": "the one authentication-free journey; the exact path is set when the public page exists"
+    }
+  ],
+  "heartbeats": [
+    {
+      "id": "worker",
+      "alert": "ALR-4",
+      "secret": "HEARTBEAT_URL_WORKER",
+      "expectEveryMinutes": 5,
+      "graceMinutes": 10,
+      "pinger": "worker sweep"
+    },
+    {
+      "id": "monitor",
+      "alert": "ALR-9",
+      "secret": "HEARTBEAT_URL_MONITOR",
+      "expectEveryMinutes": 5,
+      "graceMinutes": 10,
+      "pinger": "monitor cron, after every completed run"
+    },
+    {
+      "id": "backup",
+      "alert": "ALR-6",
+      "secret": "HEARTBEAT_URL_BACKUP",
+      "expectEveryMinutes": 1440,
+      "graceMinutes": 120,
+      "pinger": "backup cron, after a successful run only"
+    }
+  ],
+  "destination": "email to the Operations owner and the administrators"
+}

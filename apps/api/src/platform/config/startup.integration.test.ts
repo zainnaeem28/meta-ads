@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { migrateJobs } from '../../database/jobs-migrate.js';
 import { REGISTRY, keysFor } from './registry.js';
 import type { KeyDefinition } from './registry.js';
 import { SENTINEL, validEnv } from './test-env.js';
@@ -60,6 +61,12 @@ beforeAll(async () => {
   const url = new URL(adminUrl);
   url.pathname = `/${database}`;
   databaseUrl = url.toString();
+  // The api fails closed without the pg-boss schema and queues: the release order is db:migrate, then jobs:migrate.
+  const db = new pg.Client({ connectionString: databaseUrl });
+  await db.connect();
+  await db.query('CREATE SCHEMA pgboss');
+  await db.end();
+  await migrateJobs(databaseUrl, undefined, null);
 });
 
 afterAll(async () => {
@@ -78,7 +85,7 @@ describe('api process startup (real entry point, real PostgreSQL)', () => {
     });
     await db.end();
     const ran = await run(validEnv('api', { DATABASE_URL: databaseUrl }), 3921, true);
-    expect(ran.live).toEqual({ status: 'ok' });
+    expect(ran.live).toMatchObject({ success: true, data: { status: 'ok' } });
     expect(ran.stderr).toBe('');
   });
 

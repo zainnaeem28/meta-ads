@@ -7,7 +7,6 @@ import { createHttpLogging } from '../logging/index.js';
 import { corsOptions } from './cors.js';
 import { MethodIndex } from './method-index.js';
 import {
-  MetricsTokenGuardMarker,
   Scope,
   assertScopesDeclared,
   collectRouteScopes,
@@ -47,29 +46,6 @@ class DraftsController {
   }
 }
 
-@MetricsTokenGuardMarker()
-class MetricsGuard implements CanActivate {
-  canActivate(): boolean {
-    return true;
-  }
-}
-
-@Controller('internal/metrics')
-class MetricsController {
-  @Get()
-  @Scope('M')
-  @UseGuards(MetricsGuard)
-  metrics(): string {
-    return 'x';
-  }
-  @Get('window')
-  @Scope('M')
-  @UseGuards(MetricsGuard)
-  window(): string {
-    return 'y';
-  }
-}
-
 @Controller('loose')
 class UnscopedController {
   @Get()
@@ -89,7 +65,7 @@ class BareMetricsController {
 
 let current: ApiApp | undefined;
 const logging = () => createHttpLogging({ level: 'silent' });
-const boot = async (extra: (new () => object)[] = [DraftsController, MetricsController], env = 'development' as const) => {
+const boot = async (extra: (new () => object)[] = [DraftsController], env = 'development' as const) => {
   current = await createApiApp({ WEB_ORIGIN: ORIGIN, APP_ENV: env }, logging(), extra);
   return current;
 };
@@ -206,7 +182,7 @@ describe('CORS, headers and bounds (TC-ZT-05, TC-ZT-08)', () => {
   });
 
   it('sends HSTS in production', async () => {
-    const { app } = await boot([DraftsController, MetricsController], 'production' as never);
+    const { app } = await boot([DraftsController], 'production' as never);
     const res = await app.inject({ method: 'GET', url: '/health/live' });
     expect(res.headers['strict-transport-security']).toBeDefined();
   });

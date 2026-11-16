@@ -1,0 +1,17 @@
+# The `backup` service for the local stack and the CI end-to-end run (DO-07a). It is a run-to-completion job, not a
+# long-lived service: `docker compose -f docker/compose.dev.yml -f docker/backup/compose.backup.yml run --rm backup`.
+# Only the allowed names are set (SB v6 7.1 D); the container refuses to start if a KEK, an age private key, an api or
+# worker credential or a deployment credential is added. Values come from the env file named by BACKUP_ENV_FILE.
+services:
+  backup:
+    image: ${CI_IMAGE_BACKUP:-shroomap-backup:ci}
+    profiles: ['backup']
+    restart: 'no'
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    env_file:
+      - path: ${BACKUP_ENV_FILE:-./.ci-env/backup.env}
+        required: false
+    # No published port: the service has no inbound traffic.

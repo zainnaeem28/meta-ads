@@ -1,0 +1,19 @@
+{
+  "name": "monitor",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The `monitor` cron (DEVOPS-PLAN 11.4): reads API-903, evaluates ALR-2, ALR-3, ALR-7 and ALR-9, reports through Sentry, pings its dead-man heartbeat. No database, no state.",
+  "scripts": {
+    "start": "node src/main.ts",
+    "lint:alerts": "node src/lint-alerts.ts",
+    "test": "vitest run --config vitest.config.ts --coverage",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "@vitest/coverage-v8": "5.1.0",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}

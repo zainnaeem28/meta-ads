@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { validEnv } from '../config/test-env.js';
+import { installJobs } from '../jobs/test-support.js';
 import { CANARY_EMAIL, CANARY_KEY, CANARY_TOKEN, expectNoCanary } from './test-support.js';
 
 // TC-LOG-01 / TC-LOG-03 through the real composition root: the built apps/api/dist/main.api.js, started as a
@@ -45,6 +46,7 @@ beforeAll(async () => {
   const url = new URL(adminUrl);
   url.pathname = `/${database}`;
   databaseUrl = url.toString();
+  await installJobs(databaseUrl);
   child = spawn('node', ['dist/main.api.js'], {
     cwd: apiDir,
     env: {

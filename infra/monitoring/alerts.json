@@ -1,0 +1,145 @@
+{
+  "version": 1,
+  "source": "DEVOPS-PLAN 11.3 and 11.4 (AIU-16 v2.2); thresholds are PROPOSED and calibrated at staging",
+  "destination": "email to the Operations owner and the administrators (DOP-OI-3 default applied); no page-out is invented",
+  "requiredFields": [
+    "rule",
+    "owner",
+    "runbook",
+    "volumeCondition",
+    "recoveryCondition",
+    "missingDataSignal"
+  ],
+  "alerts": [
+    {
+      "id": "ALR-1",
+      "name": "App down",
+      "evaluator": "uptime",
+      "severity": "page-worthy",
+      "rule": "GET /health/ready fails from 2 locations, 3 consecutive probes",
+      "owner": "Operations owner",
+      "runbook": "RB-startup",
+      "volumeCondition": "3 consecutive probes",
+      "recoveryCondition": "3 consecutive passes",
+      "missingDataSignal": "No probe result for 15 minutes is reported by the uptime vendor as a paused monitor and emailed (uptime.json: monitorStaleMinutes)"
+    },
+    {
+      "id": "ALR-2",
+      "name": "Elevated 5xx",
+      "evaluator": "monitor",
+      "severity": "page-worthy",
+      "rule": "5xx ratio over 2% in windows[0] (10 minutes) of API-903",
+      "owner": "Operations owner",
+      "runbook": "RB-errors",
+      "volumeCondition": "At least 100 requests in the 10-minute window; below that the state is insufficient data (never green, never an alert)",
+      "recoveryCondition": "windows[1] (15 minutes) with at least 100 requests and a 5xx ratio below 1% in one reading; the 15-minute auto-resolve of the issue is a Sentry issue-alert setting (sentry.json)",
+      "missingDataSignal": "ALR-9: API-903 does not answer 200 with a valid body, and the monitor dead-man heartbeat (HEARTBEAT_URL_MONITOR)",
+      "params": {
+        "windowIndex": 0,
+        "recoveryWindowIndex": 1,
+        "minRequests": 100,
+        "maxRatio": 0.02,
+        "recoveryRatio": 0.01
+      }
+    },
+    {
+      "id": "ALR-3",
+      "name": "Latency",
+      "evaluator": "monitor",
+      "severity": "ticket",
+      "rule": "p95 over 500 ms in windows[1] (15 minutes) of API-903",
+      "owner": "Operations owner",
+      "runbook": "RB-latency",
+      "volumeCondition": "At least 200 requests in the 15-minute window and a non-null p95Ms; below that the state is insufficient data",
+      "recoveryCondition": "Window with at least 200 requests and p95 not over 500 ms in one reading; the 30-minute auto-resolve is a Sentry issue-alert setting (sentry.json)",
+      "missingDataSignal": "ALR-9 and the monitor dead-man heartbeat",
+      "params": { "windowIndex": 1, "minRequests": 200, "maxP95Ms": 500 }
+    },
+    {
+      "id": "ALR-4",
+      "name": "Worker silent",
+      "evaluator": "uptime",
+      "severity": "page-worthy",
+      "rule": "Dead-man heartbeat HEARTBEAT_URL_WORKER missing for 15 minutes (the worker sweep pings every 5 minutes)",
+      "owner": "Operations owner",
+      "runbook": "RB-worker",
+      "volumeCondition": "Not applicable: dead-man switch, one missed window",
+      "recoveryCondition": "The heartbeat resumes",
+      "missingDataSignal": "The absence of the heartbeat is the signal"
+    },
+    {
+      "id": "ALR-5",
+      "name": "Job backlog",
+      "evaluator": "product",
+      "severity": "ticket",
+      "rule": "Oldest queued paid job older than 10 minutes while the worker is alive, or any job in submitting beyond the orphan threshold (admin_alerts raised by the worker)",
+      "owner": "Operations owner",
+      "runbook": "RB-jobs",
+      "volumeCondition": "Any; page-worthy if it persists 1 hour",
+      "recoveryCondition": "The queue drains and the alert resolves in admin_alerts",
+      "missingDataSignal": "ALR-4: a silent worker raises no admin_alerts, so the worker heartbeat covers it"
+    },
+    {
+      "id": "ALR-6",
+      "name": "Backup stale",
+      "evaluator": "uptime",
+      "severity": "page-worthy",
+      "rule": "Newest successful backup older than 26 hours (heartbeat HEARTBEAT_URL_BACKUP expected every 24 hours with a 2-hour grace)",
+      "owner": "Operations owner",
+      "runbook": "RB-backup",
+      "volumeCondition": "Not applicable: one missed expected ping",
+      "recoveryCondition": "A fresh backup pings the heartbeat",
+      "missingDataSignal": "The absence of the ping is the signal; a failed run sends no ping"
+    },
+    {
+      "id": "ALR-7",
+      "name": "Database pressure",
+      "evaluator": "monitor",
+      "severity": "ticket",
+      "rule": "poolWait.p95WaitMs over 250 ms in API-903 (the 10-minute pool-wait object); connections or storage over 80% come from the host's own database alerts or the daily platform review",
+      "owner": "Operations owner",
+      "runbook": "RB-db",
+      "volumeCondition": "At least 1 acquisition in the 10-minute object and a non-null p95WaitMs; otherwise insufficient data, no alert and no error",
+      "recoveryCondition": "poolWait.p95WaitMs not over the threshold in one reading; host alerts below 70%",
+      "missingDataSignal": "ALR-9 and the monitor dead-man heartbeat",
+      "params": { "minAcquisitions": 1, "maxP95WaitMs": 250 }
+    },
+    {
+      "id": "ALR-8",
+      "name": "Security or spend events",
+      "evaluator": "product",
+      "severity": "ticket (page-worthy for KEK unseal failure)",
+      "rule": "Provider 401/429 burst, spend cap hit, KEK unseal failure, stuck deletion (admin_alerts raised by the worker)",
+      "owner": "Operations owner",
+      "runbook": "RB-security",
+      "volumeCondition": "Per product rule (for example the 5th provider 401 or 429 in 10 minutes)",
+      "recoveryCondition": "Per product rule: the admin alert is resolved",
+      "missingDataSignal": "ALR-4: a silent worker raises no admin_alerts, so the worker heartbeat covers it"
+    },
+    {
+      "id": "ALR-9",
+      "name": "Telemetry missing",
+      "evaluator": "monitor",
+      "severity": "ticket",
+      "rule": "API-903 does not answer 200 with a valid MetricsWindowResponse (404, 5xx, timeout, malformed body), or telemetryDropped10m is above 0; never telemetryDroppedTotal",
+      "owner": "Operations owner",
+      "runbook": "RB-telemetry",
+      "volumeCondition": "Not applicable: any failed read or any drop within the last 10 minutes",
+      "recoveryCondition": "A valid 200 with telemetryDropped10m at 0",
+      "missingDataSignal": "The monitor heartbeat (HEARTBEAT_URL_MONITOR) stopping for 15 minutes is the dead-man form of this alert",
+      "params": { "timeoutMs": 10000 }
+    },
+    {
+      "id": "ALR-10",
+      "name": "Certificate or domain expiry",
+      "evaluator": "uptime",
+      "severity": "ticket",
+      "rule": "21 days to expiry (the uptime vendor's SSL check)",
+      "owner": "Operations owner",
+      "runbook": "RB-domain",
+      "volumeCondition": "Not applicable: one check per day",
+      "recoveryCondition": "The certificate or domain is renewed",
+      "missingDataSignal": "No SSL result for 48 hours is reported by the uptime vendor as a paused monitor and emailed (uptime.json: monitorStaleMinutes)"
+    }
+  ]
+}
