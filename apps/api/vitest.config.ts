@@ -21,6 +21,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/media-core/junit.xml' }],
       ['junit', { outputFile: 'reports/keys/junit.xml' }],
       ['junit', { outputFile: 'reports/usage/junit.xml' }],
+      ['junit', { outputFile: 'reports/campaigns/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -39,6 +40,7 @@ export default defineConfig({
         'src/modules/provider-keys/**/*.ts',
         'src/modules/media/**/*.ts',
         'src/modules/usage/**/*.ts',
+        'src/modules/campaigns/**/*.ts',
         'src/platform/jobs/**/*.ts',
         'src/platform/rate-limit/**/*.ts',
         'src/platform/idempotency/**/*.ts',
@@ -97,6 +99,12 @@ export default defineConfig({
         'src/modules/usage/application/ports.ts',
         'src/modules/usage/infrastructure/usage.repository.ts',
         'src/modules/usage/infrastructure/price-table-file.ts',
+        // The SQL repository and the module wiring are proven on real PostgreSQL through the api composition root by
+        // drafts.integration.test.ts; the in-memory fakes are the unit tests' own.
+        'src/modules/campaigns/index.ts',
+        'src/modules/campaigns/campaigns.module.ts',
+        'src/modules/campaigns/application/draft-ports.ts',
+        'src/modules/campaigns/infrastructure/draft.repository.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',
