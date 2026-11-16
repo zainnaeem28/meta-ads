@@ -164,7 +164,10 @@ beforeAll(async () => {
   }
   // The api process: public keys only, in the real api composition root.
   const apiEnv = kekEnv({ 1: kek }, 1, false);
-  Object.assign(process.env, apiEnv);
+  Object.assign(process.env, apiEnv, {
+    KEY_FINGERPRINT_PEPPERS: JSON.stringify({ '1': Buffer.alloc(32, 7).toString('base64') }),
+    KEY_FINGERPRINT_PEPPER_ACTIVE: '1',
+  });
   ({ app: apiApp } = await createApiApp(
     {
       WEB_ORIGIN: 'http://localhost:3000',
