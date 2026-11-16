@@ -395,9 +395,14 @@ describe('SCREEN-012 invitations and requests', () => {
     serve();
     mount();
     await ready();
-    await waitFor(() => expect(calls.length).toBeGreaterThanOrEqual(3));
+    await waitFor(() => expect(calls.length).toBeGreaterThanOrEqual(4));
     expect(new Set(calls)).toEqual(
-      new Set(['GET /admin/invitations', 'GET /admin/access-requests', 'GET /admin/settings']),
+      new Set([
+        'GET /admin/invitations',
+        'GET /admin/access-requests',
+        'GET /admin/settings',
+        'GET /me',
+      ]),
     );
   });
 });
