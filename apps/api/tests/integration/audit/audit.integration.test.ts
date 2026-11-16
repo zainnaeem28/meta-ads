@@ -1,6 +1,8 @@
 import { Writable } from 'node:stream';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApiApp } from '../../../src/bootstrap/api.module.js';
+import { migrateJobs } from '../../../src/database/jobs-migrate.js';
+import { QUEUES } from '../../../src/platform/jobs/queues.js';
 import { DATABASE } from '../../../src/platform/db/index.js';
 import type { Database } from '../../../src/platform/db/index.js';
 import { createHttpLogging } from '../../../src/platform/logging/index.js';
@@ -30,6 +32,10 @@ beforeAll(async () => {
   dir = renderMigrations(env);
   const run = drizzleMigrate(env, dir);
   expect(run.status, run.stdout + run.stderr).toBe(0);
+  await migrateJobs(env.urlFor('migrator'), QUEUES, {
+    api: env.roles.api,
+    worker: env.roles.worker,
+  });
   const destination = new Writable({
     write(chunk: Buffer, _enc, done) {
       for (const text of chunk.toString().split('\n').filter(Boolean)) {
