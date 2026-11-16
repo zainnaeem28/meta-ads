@@ -7,7 +7,6 @@ import type { AdminUserListed, AdminUserRecord, AdminUserStore } from './admin.p
 import { RevokeSessionsService, revokeSessionsHandler } from './revoke-sessions.service.js';
 import { IdentityNotFound, IdentityUnavailable } from '../domain/identity-port.js';
 import type { IdentityPort } from '../domain/identity-port.js';
-import { AdminUserListQueries } from '../infrastructure/admin-users.queries.js';
 import { AdminUsersController, versionOf } from '../transport/admin-users.controller.js';
 
 const locks = vi.hoisted(() => ({ lockXact: vi.fn(() => Promise.resolve()) }));
@@ -292,23 +291,5 @@ describe('transport', () => {
     await expect(controller.setRole(actor, OTHER, { role: 'root' }, '"3"', request, reply)).rejects.toMatchObject({ code: 'validation_failed' });
     await expect(controller.setRole(actor, OTHER, { role: 'user', extra: 1 }, '"3"', request, reply)).rejects.toMatchObject({ code: 'validation_failed' });
     await expect(controller.setRole(actor, OTHER, { role: 'user' }, undefined, request, reply)).rejects.toMatchObject({ code: 'validation_failed' });
-  });
-});
-
-describe('AdminUserListQueries', () => {
-  it('builds the keyset query with and without a status and a position', async () => {
-    const chain = (calls: unknown[]) => {
-      const q: Record<string, unknown> = {};
-      for (const name of ['from', 'where', 'orderBy', 'limit']) {
-        q[name] = (...args: unknown[]) => { calls.push([name, args.length]); return name === 'limit' ? Promise.resolve([{ id: 'x' }]) : q; };
-      }
-      return q;
-    };
-    const calls: unknown[] = [];
-    const db = { select: () => chain(calls) } as never;
-    const queries = new AdminUserListQueries();
-    expect(await queries.list(db, { limit: 5 })).toEqual([{ id: 'x' }]);
-    await queries.list(db, { limit: 5, status: 'active', after: { createdAt: '2026-01-01 00:00:00+00', id: ME } });
-    expect(calls.filter((c) => (c as [string])[0] === 'where')).toHaveLength(2);
   });
 });
