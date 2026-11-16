@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { validEnv } from '../config/test-env.js';
+import { installJobs } from '../jobs/test-support.js';
 
 // TASK-031: the egress module wired into the built api (`dist/main.api.js`, real composition root) on a uniquely
 // named database of the shared test PostgreSQL: the process starts with the allow-list, and refuses to start with a bad one.
@@ -30,6 +31,7 @@ beforeAll(async () => {
   const url = new URL(adminUrl);
   url.pathname = `/${database}`;
   databaseUrl = url.toString();
+  await installJobs(databaseUrl);
 });
 
 afterAll(async () => {

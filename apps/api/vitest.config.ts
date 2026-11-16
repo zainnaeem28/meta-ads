@@ -11,6 +11,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/http/junit.xml' }],
       ['junit', { outputFile: 'reports/db/junit.xml' }],
       ['junit', { outputFile: 'reports/egress/junit.xml' }],
+      ['junit', { outputFile: 'reports/jobs/junit.xml' }],
     ],
     coverage: {
       provider: 'v8',
@@ -21,6 +22,7 @@ export default defineConfig({
         'src/platform/egress/**/*.ts',
         'src/platform/shared-kernel/**/*.ts',
         'src/platform/db/**/*.ts',
+        'src/platform/jobs/**/*.ts',
       ],
       exclude: [
         'src/**/*.test.ts',
@@ -36,6 +38,7 @@ export default defineConfig({
         'src/platform/db/index.ts',
         'src/platform/db/schema.ts',
         'src/platform/db/test-database.ts',
+        'src/platform/jobs/test-support.ts',
         'src/database/**',
       ],
       reporter: ['text', 'lcovonly'],

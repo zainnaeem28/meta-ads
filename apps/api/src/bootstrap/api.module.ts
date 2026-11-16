@@ -15,6 +15,7 @@ import { EnvelopeInterceptor, ErrorFilter, RawResponse } from '../platform/http/
 import { installMethodIndex } from '../platform/http/method-index.js';
 import type { MethodIndex } from '../platform/http/method-index.js';
 import { Scope, assertScopesDeclared } from '../platform/http/scope-registry.js';
+import { JobsModule } from '../platform/jobs/boss.js';
 
 export interface EdgeConfig extends EgressModuleConfig {
   WEB_ORIGIN?: string | undefined;
@@ -50,8 +51,14 @@ function apiModule(
   controllers: (new () => object)[],
   config: EdgeConfig,
 ): new () => object {
+  // With a database the api also runs pg-boss (send only) and fails closed when its schema or a queue is missing.
   const database =
-    config.DATABASE_URL === undefined ? [] : [DatabaseModule.forRoot(dbConfigOf(config))];
+    config.DATABASE_URL === undefined
+      ? []
+      : [
+          DatabaseModule.forRoot(dbConfigOf(config)),
+          JobsModule.forRoot({ DATABASE_URL: config.DATABASE_URL, role: 'api' }),
+        ];
   @Module({
     imports: [logging.module(), EgressModule.register(config), ...database],
     controllers: [HealthController, ...controllers],
