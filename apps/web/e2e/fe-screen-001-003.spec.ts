@@ -19,14 +19,14 @@ const session = async (context: BrowserContext, baseURL: string) =>
 
 test.describe('@TASK-087 SCREEN-001 and SCREEN-003 through the built web app (local mode)', () => {
   test('sign-in has the one h1 and keyboard-only operation reaches the submit', async ({ page }) => {
-    await page.goto('/sign-in');
+    await page.goto('/sign-in', { waitUntil: 'networkidle' });
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('AI UGC Ad Director');
     await page.getByLabel('Email address').focus();
     await page.keyboard.type('operator@example.com');
     await page.keyboard.press('Tab');
     await page.keyboard.type(LOCAL_DEV_PASSWORD);
     await page.keyboard.press('Enter');
-    await page.waitForURL('**/campaigns');
+    await expect(page).toHaveURL(/\/campaigns$/, { timeout: 20_000 });
   });
 
   test('session-expired shows the exact message above the form', async ({ page }) => {
