@@ -25,6 +25,7 @@ const timing = { intervalSec: 5, leaseSec: 60 };
 beforeAll(async () => {
   database = await createTestDatabase({ label: 'task029', migrations: false });
   pool = new pg.Pool({ connectionString: database.url, max: 16 });
+  pool.on('error', () => undefined); // an idle client closed by the database drop must not fail the run
   await pool.query(`create table fake_jobs (
     id uuid primary key default gen_random_uuid(), owner_id uuid not null, state text not null default 'pending',
     cause_class text, cause_message text, reuse_hash text, key_id uuid, key_version int, submitting_at timestamptz,
