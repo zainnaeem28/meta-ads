@@ -135,8 +135,16 @@ const world = (w: World = {}): Handler => {
 
 const SHOTS = VIEWPORTS;
 
+// A weight that is first used after a tab change may still be downloading on a cold start: request each one.
 const settle = async (page: Page) => {
-  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(async () => {
+    await Promise.all(
+      ['400', '500', '600', '700'].map((w) => document.fonts.load(`${w} 16px Inter`)),
+    );
+    await document.fonts.ready;
+    // CMP-014's tab list (overflow-x: auto) can be scrolled 1 px vertically by the click that selects a tab.
+    document.querySelectorAll('[role=tablist]').forEach((el) => (el.scrollTop = 0));
+  });
 };
 
 async function capture(
