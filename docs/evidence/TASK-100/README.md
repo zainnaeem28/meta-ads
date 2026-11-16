@@ -3,7 +3,7 @@
 - `apps/web/src/features/fe-screen-012/`: `InvitationsScreen` (CMP-031 shell, CMP-014 tabs, CMP-016 tables, CMP-013 dialogs, CMP-012 toasts via the shell, CMP-019 empty states, CMP-007 badges, CMP-010/004 field), copy, formatting, contract-shaped fixtures, component tests (MSW).
 - `apps/web/src/app/(admin)/admin/invitations/page.tsx`: the route `/admin/invitations` (noindex, title "Invitations and requests · ShrooMap").
 - `apps/web/e2e/fe-screen-012.spec.ts` (`@TASK-100`): built web app (`next start`) against the built api, all seven states at 390, 768 and 1440 px, axe, keyboard-only run, the exact set of calls, the real api's answer without an administrator session, anonymous redirect. Baselines: `apps/web/e2e/__baselines__/chromium/fe-screen-012-*`.
-- Evidence: `screenshots/` (every state, three widths, real Inter fonts), `axe/` (zero violations on every state, WCAG 2.2 AA tags), `submit-check.md`.
+- Evidence: `screenshots/` (every state, three widths, real Inter fonts), `axe/` (zero violations on every state, WCAG 2.2 AA tags); the submit-check report is the `submit-check` document on the task (a report committed here would be stale against its own commit).
 
 ## What is real and what is scripted
 
