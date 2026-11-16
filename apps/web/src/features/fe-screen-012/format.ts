@@ -30,11 +30,17 @@ export function askedLabel(iso: string, now: number): string {
   const days = Math.round((startOfDay(now) - startOfDay(new Date(iso).getTime())) / DAY);
   if (days <= 0) return 'Today';
   if (days === 1) return 'Yesterday';
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 /** Status badge of an invitation; a send failure on a live invitation reads "Email not delivered". */
-export function invitationView(invitation: Pick<Invitation, 'state' | 'sendState'>): InvitationStateView {
+export function invitationView(
+  invitation: Pick<Invitation, 'state' | 'sendState'>,
+): InvitationStateView {
   switch (invitation.state) {
     case 'invited':
       return invitation.sendState === 'send_failed'
@@ -50,4 +56,5 @@ export function invitationView(invitation: Pick<Invitation, 'state' | 'sendState
 }
 
 /** Who invited: an administrator's user ID (never an email outside the admin screens), or the system. */
-export const invitedByLabel = (id: string | null): string => (id ? `Admin ${id.slice(0, 8)}` : 'System');
+export const invitedByLabel = (id: string | null): string =>
+  id ? `Admin ${id.slice(0, 8)}` : 'System';

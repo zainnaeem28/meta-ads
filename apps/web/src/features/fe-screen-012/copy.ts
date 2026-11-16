@@ -47,6 +47,12 @@ export type InvitationStateView = {
 };
 
 export const COLUMNS = {
-  invitations: { email: 'Email', state: 'State', by: 'Invited by', expires: 'Expires', actions: 'Actions' },
+  invitations: {
+    email: 'Email',
+    state: 'State',
+    by: 'Invited by',
+    expires: 'Expires',
+    actions: 'Actions',
+  },
   requests: { email: 'Email', note: 'Note', asked: 'Asked', actions: 'Actions' },
 } as const;

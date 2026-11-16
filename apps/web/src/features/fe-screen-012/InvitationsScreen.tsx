@@ -79,7 +79,10 @@ export function InvitationsScreen() {
 
   const invitations = useAdminListInvitations({ limit: 50 });
   // Waits for the settings: with requests off the list is never fetched.
-  const requests = useAdminListAccessRequests({ state: 'pending', limit: 50 }, { query: { enabled: !settings.isPending && !requestsOff } });
+  const requests = useAdminListAccessRequests(
+    { state: 'pending', limit: 50 },
+    { query: { enabled: !settings.isPending && !requestsOff } },
+  );
   const invitationRows = rowsOf<Invitation>(invitations.data);
   const requestRows = rowsOf<AccessRequest>(requests.data);
 
@@ -102,7 +105,8 @@ export function InvitationsScreen() {
 
   /** A failed row action: step-up opens its dialog, everything else is an alert above the tabs (UI-UX §9.1). */
   const fail = (error: unknown) => {
-    if (resolveError(error, { surface: 'context' }).code === 'recent_auth_required') setStepUp(error);
+    if (resolveError(error, { surface: 'context' }).code === 'recent_auth_required')
+      setStepUp(error);
     else setActionError(error);
     refresh();
   };
@@ -148,7 +152,8 @@ export function InvitationsScreen() {
       refresh();
     } catch (error) {
       const view = resolveError(error, { surface: 'context' });
-      if (view.code === 'invite_domain_not_allowed' || view.code === 'validation_failed') setFieldError(view.message);
+      if (view.code === 'invite_domain_not_allowed' || view.code === 'validation_failed')
+        setFieldError(view.message);
       else if (view.code === 'recent_auth_required') {
         setInviteOpen(false);
         setStepUp(error);
@@ -159,7 +164,11 @@ export function InvitationsScreen() {
   };
 
   const invitationColumns: TableColumn<Invitation>[] = [
-    { id: 'email', header: COLUMNS.invitations.email, cell: (r) => <span className="font-semibold">{r.email}</span> },
+    {
+      id: 'email',
+      header: COLUMNS.invitations.email,
+      cell: (r) => <span className="font-semibold">{r.email}</span>,
+    },
     {
       id: 'state',
       header: COLUMNS.invitations.state,
@@ -176,7 +185,8 @@ export function InvitationsScreen() {
     {
       id: 'expires',
       header: COLUMNS.invitations.expires,
-      cell: (r) => (r.state === 'invited' || r.state === 'expired' ? relativeDays(r.expiresAt, now) : '—'),
+      cell: (r) =>
+        r.state === 'invited' || r.state === 'expired' ? relativeDays(r.expiresAt, now) : '—',
     },
     {
       id: 'actions',
@@ -192,18 +202,35 @@ export function InvitationsScreen() {
                 pending={busy}
                 pendingLabel="Working…"
                 aria-label={`Resend to ${r.email}`}
-                onClick={() => void run(r.id, () => resend.mutateAsync({ invitationId: r.id }), COPY.toast.resent)}
+                onClick={() =>
+                  void run(
+                    r.id,
+                    () => resend.mutateAsync({ invitationId: r.id }),
+                    COPY.toast.resent,
+                  )
+                }
               >
                 Resend
               </Button>
-              <Button variant="ghost" size="sm" disabled={busy} aria-label={`Revoke ${r.email}`} onClick={() => setRevoking(r)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                aria-label={`Revoke ${r.email}`}
+                onClick={() => setRevoking(r)}
+              >
                 Revoke
               </Button>
             </span>
           );
         if (r.state === 'expired')
           return (
-            <Button variant="outline" size="sm" aria-label={`Invite ${r.email} again`} onClick={() => openInvite(r.email)}>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={`Invite ${r.email} again`}
+              onClick={() => openInvite(r.email)}
+            >
               Invite again
             </Button>
           );
@@ -213,7 +240,11 @@ export function InvitationsScreen() {
   ];
 
   const requestColumns: TableColumn<AccessRequest>[] = [
-    { id: 'email', header: COLUMNS.requests.email, cell: (r) => <span className="font-semibold">{r.email}</span> },
+    {
+      id: 'email',
+      header: COLUMNS.requests.email,
+      cell: (r) => <span className="font-semibold">{r.email}</span>,
+    },
     { id: 'note', header: COLUMNS.requests.note, cell: (r) => r.note || 'No note' },
     { id: 'asked', header: COLUMNS.requests.asked, cell: (r) => askedLabel(r.createdAt, now) },
     {
@@ -228,7 +259,13 @@ export function InvitationsScreen() {
               pending={busy}
               pendingLabel="Working…"
               aria-label={`Approve ${r.email}`}
-              onClick={() => void run(r.id, () => approve.mutateAsync({ accessRequestId: r.id }), COPY.toast.approved)}
+              onClick={() =>
+                void run(
+                  r.id,
+                  () => approve.mutateAsync({ accessRequestId: r.id }),
+                  COPY.toast.approved,
+                )
+              }
             >
               <Icon name="check" size={16} />
               Approve
@@ -238,7 +275,13 @@ export function InvitationsScreen() {
               size="sm"
               disabled={busy}
               aria-label={`Decline ${r.email}`}
-              onClick={() => void run(r.id, () => decline.mutateAsync({ accessRequestId: r.id }), COPY.toast.declined)}
+              onClick={() =>
+                void run(
+                  r.id,
+                  () => decline.mutateAsync({ accessRequestId: r.id }),
+                  COPY.toast.declined,
+                )
+              }
             >
               Decline
             </Button>
@@ -275,7 +318,11 @@ export function InvitationsScreen() {
 
   const requestsPanel = requestsOff ? (
     <div className="rounded-md border border-border bg-card">
-      <EmptyState title={COPY.requestsOff.title} description={COPY.requestsOff.body} headingLevel={2} />
+      <EmptyState
+        title={COPY.requestsOff.title}
+        description={COPY.requestsOff.body}
+        headingLevel={2}
+      />
     </div>
   ) : requests.isError ? (
     <ErrorNotice error={requests.error} onAction={() => void requests.refetch()} />
@@ -294,14 +341,24 @@ export function InvitationsScreen() {
 
   const tabs = useMemo(
     () => [
-      { id: 'invitations', label: 'Invitations', count: invitations.isSuccess ? invitationRows.length : undefined },
+      {
+        id: 'invitations',
+        label: 'Invitations',
+        count: invitations.isSuccess ? invitationRows.length : undefined,
+      },
       {
         id: 'requests',
         label: 'Access requests',
         count: !requestsOff && requests.isSuccess ? requestRows.length : undefined,
       },
     ],
-    [invitations.isSuccess, invitationRows.length, requestsOff, requests.isSuccess, requestRows.length],
+    [
+      invitations.isSuccess,
+      invitationRows.length,
+      requestsOff,
+      requests.isSuccess,
+      requestRows.length,
+    ],
   );
 
   return (
@@ -334,7 +391,12 @@ export function InvitationsScreen() {
             }}
           />
         ) : null}
-        <Tabs tabs={tabs} value={tab} onValueChange={(id) => setTab(id as TabId)} label={COPY.tabsLabel}>
+        <Tabs
+          tabs={tabs}
+          value={tab}
+          onValueChange={(id) => setTab(id as TabId)}
+          label={COPY.tabsLabel}
+        >
           {tab === 'invitations' ? invitationsPanel : requestsPanel}
         </Tabs>
       </div>
@@ -375,9 +437,11 @@ export function InvitationsScreen() {
         onConfirm={() => {
           const target = revoking;
           if (!target) return;
-          void run(target.id, () => revoke.mutateAsync({ invitationId: target.id }), COPY.toast.revoked).then(() =>
-            setRevoking(null),
-          );
+          void run(
+            target.id,
+            () => revoke.mutateAsync({ invitationId: target.id }),
+            COPY.toast.revoked,
+          ).then(() => setRevoking(null));
         }}
       />
 

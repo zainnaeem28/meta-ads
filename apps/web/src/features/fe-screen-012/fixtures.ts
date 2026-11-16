@@ -58,7 +58,9 @@ export const requestFixtures = (): AccessRequest[] => [
   },
 ];
 
-export const settingsFixture = (over: { signupMode?: 'invited_only' | 'open'; accessRequestFormEnabled?: boolean } = {}) => ({
+export const settingsFixture = (
+  over: { signupMode?: 'invited_only' | 'open'; accessRequestFormEnabled?: boolean } = {},
+) => ({
   signupMode: 'invited_only',
   accessRequestFormEnabled: true,
   mfaRequiredFor: 'all',
@@ -75,6 +77,12 @@ export const settingsFixture = (over: { signupMode?: 'invited_only' | 'open'; ac
 export const metaPage = (count: number) => ({
   requestId: 'req-fixture',
   timestamp: new Date().toISOString(),
-  pagination: { type: 'cursor', limit: 50, returnedCount: count, hasNextPage: false, nextCursor: null },
+  pagination: {
+    type: 'cursor',
+    limit: 50,
+    returnedCount: count,
+    hasNextPage: false,
+    nextCursor: null,
+  },
 });
 export const meta = { requestId: 'req-fixture', timestamp: new Date().toISOString() };

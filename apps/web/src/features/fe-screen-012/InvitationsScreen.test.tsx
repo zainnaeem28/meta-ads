@@ -25,7 +25,10 @@ const userEvent = {
 afterEach(cleanup);
 
 const error = (status: number, code: string, message = 'x', extra: object = {}) =>
-  HttpResponse.json({ success: false, error: { code, message, ...extra }, metaData: { requestId: 'req-1' } }, { status });
+  HttpResponse.json(
+    { success: false, error: { code, message, ...extra }, metaData: { requestId: 'req-1' } },
+    { status },
+  );
 
 interface Setup {
   invitations?: ReturnType<typeof invitationFixtures>;
@@ -37,12 +40,26 @@ server.events.on('request:start', ({ request }) => {
   calls.push(`${request.method} ${new URL(request.url).pathname.replace('/api/v1', '')}`);
 });
 
-function serve({ invitations = invitationFixtures(), requests = requestFixtures(), settings }: Setup = {}) {
+function serve({
+  invitations = invitationFixtures(),
+  requests = requestFixtures(),
+  settings,
+}: Setup = {}) {
   calls.length = 0;
   server.use(
-    http.get(`${API}/admin/invitations`, () => HttpResponse.json({ success: true, data: invitations, metaData: metaPage(invitations.length) })),
-    http.get(`${API}/admin/access-requests`, () => HttpResponse.json({ success: true, data: requests, metaData: metaPage(requests.length) })),
-    http.get(`${API}/admin/settings`, () => HttpResponse.json({ success: true, data: settingsFixture(settings), metaData: meta })),
+    http.get(`${API}/admin/invitations`, () =>
+      HttpResponse.json({
+        success: true,
+        data: invitations,
+        metaData: metaPage(invitations.length),
+      }),
+    ),
+    http.get(`${API}/admin/access-requests`, () =>
+      HttpResponse.json({ success: true, data: requests, metaData: metaPage(requests.length) }),
+    ),
+    http.get(`${API}/admin/settings`, () =>
+      HttpResponse.json({ success: true, data: settingsFixture(settings), metaData: meta }),
+    ),
   );
 }
 
@@ -63,9 +80,17 @@ describe('SCREEN-012 invitations and requests', () => {
     serve();
     mount();
     const table = await ready();
-    expect(screen.getByRole('heading', { level: 1, name: 'Invitations and requests' })).toBeInTheDocument();
-    expect(within(screen.getByRole('tab', { name: /^Invitations/ })).getByText('3')).toBeInTheDocument();
-    await waitFor(() => expect(within(screen.getByRole('tab', { name: /^Access requests/ })).getByText('2')).toBeInTheDocument());
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Invitations and requests' }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('tab', { name: /^Invitations/ })).getByText('3'),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('tab', { name: /^Access requests/ })).getByText('2'),
+      ).toBeInTheDocument(),
+    );
     expect(within(table).getByText('sam.okafor@shroomap.example')).toBeInTheDocument();
     expect(within(table).getByText('Invited')).toBeInTheDocument();
     expect(within(table).getByText('Expired')).toBeInTheDocument();
@@ -73,7 +98,9 @@ describe('SCREEN-012 invitations and requests', () => {
     expect(within(table).getByText('in 6 days')).toBeInTheDocument();
     expect(within(table).getByText('9 days ago')).toBeInTheDocument();
     expect(within(table).getAllByRole('button', { name: /^Resend to/ })).toHaveLength(2);
-    expect(within(table).getByRole('button', { name: 'Invite lena.brandt@shroomap.example again' })).toBeInTheDocument();
+    expect(
+      within(table).getByRole('button', { name: 'Invite lena.brandt@shroomap.example again' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Invitations/, current: 'page' })).toBeInTheDocument();
   });
 
@@ -118,35 +145,54 @@ describe('SCREEN-012 invitations and requests', () => {
 
     server.use(
       http.post(`${API}/admin/access-requests/44444444-4444-4444-8444-444444444444/approve`, () =>
-        HttpResponse.json({ success: true, data: { ...requestFixtures()[0], state: 'approved' }, metaData: meta }),
+        HttpResponse.json({
+          success: true,
+          data: { ...requestFixtures()[0], state: 'approved' },
+          metaData: meta,
+        }),
       ),
     );
-    await userEvent.click(within(table).getByRole('button', { name: 'Approve nina.castellano@shroomap.example' }));
+    await userEvent.click(
+      within(table).getByRole('button', { name: 'Approve nina.castellano@shroomap.example' }),
+    );
     expect(await screen.findByText('Request approved.')).toBeInTheDocument();
-    expect(calls).toContain('POST /admin/access-requests/44444444-4444-4444-8444-444444444444/approve');
+    expect(calls).toContain(
+      'POST /admin/access-requests/44444444-4444-4444-8444-444444444444/approve',
+    );
 
     server.use(
       http.post(`${API}/admin/access-requests/55555555-5555-4555-8555-555555555555/decline`, () =>
-        HttpResponse.json({ success: true, data: { ...requestFixtures()[1], state: 'declined' }, metaData: meta }),
+        HttpResponse.json({
+          success: true,
+          data: { ...requestFixtures()[1], state: 'declined' },
+          metaData: meta,
+        }),
       ),
     );
-    await userEvent.click(within(table).getByRole('button', { name: 'Decline j.mbeki@shroomap.example' }));
+    await userEvent.click(
+      within(table).getByRole('button', { name: 'Decline j.mbeki@shroomap.example' }),
+    );
     expect(await screen.findByText('Request declined.')).toBeInTheDocument();
   });
 
   it.each([
     ['open sign-up mode', { signupMode: 'open' as const, accessRequestFormEnabled: true }],
     ['the form disabled', { signupMode: 'invited_only' as const, accessRequestFormEnabled: false }],
-  ])('requests-off (%s): the tab explains requests are off and the requests API is not called', async (_name, settings) => {
-    serve({ settings });
-    mount();
-    await ready();
-    await waitFor(() => expect(calls).toContain('GET /admin/settings'));
-    await userEvent.click(screen.getByRole('tab', { name: /^Access requests/ }));
-    expect(await screen.findByRole('heading', { name: 'The request-access form is off' })).toBeInTheDocument();
-    expect(screen.getByText(/Invite them instead/)).toBeInTheDocument();
-    expect(calls).not.toContain('GET /admin/access-requests');
-  });
+  ])(
+    'requests-off (%s): the tab explains requests are off and the requests API is not called',
+    async (_name, settings) => {
+      serve({ settings });
+      mount();
+      await ready();
+      await waitFor(() => expect(calls).toContain('GET /admin/settings'));
+      await userEvent.click(screen.getByRole('tab', { name: /^Access requests/ }));
+      expect(
+        await screen.findByRole('heading', { name: 'The request-access form is off' }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/Invite them instead/)).toBeInTheDocument();
+      expect(calls).not.toContain('GET /admin/access-requests');
+    },
+  );
 
   it('resent: Resend calls API-112 and shows the toast; Revoke asks first and calls API-113', async () => {
     serve();
@@ -157,13 +203,23 @@ describe('SCREEN-012 invitations and requests', () => {
         HttpResponse.json({ success: true, data: invitationFixtures()[0], metaData: meta }),
       ),
       http.post(`${API}/admin/invitations/11111111-1111-4111-8111-111111111111/revoke`, () =>
-        HttpResponse.json({ success: true, data: { ...invitationFixtures()[0], state: 'revoked' }, metaData: meta }),
+        HttpResponse.json({
+          success: true,
+          data: { ...invitationFixtures()[0], state: 'revoked' },
+          metaData: meta,
+        }),
       ),
     );
-    await userEvent.click(within(table).getByRole('button', { name: 'Resend to sam.okafor@shroomap.example' }));
-    expect(await screen.findByText('Invitation sent again. The 7-day period starts over.')).toBeInTheDocument();
+    await userEvent.click(
+      within(table).getByRole('button', { name: 'Resend to sam.okafor@shroomap.example' }),
+    );
+    expect(
+      await screen.findByText('Invitation sent again. The 7-day period starts over.'),
+    ).toBeInTheDocument();
 
-    await userEvent.click(within(table).getByRole('button', { name: 'Revoke sam.okafor@shroomap.example' }));
+    await userEvent.click(
+      within(table).getByRole('button', { name: 'Revoke sam.okafor@shroomap.example' }),
+    );
     const dialog = await screen.findByRole('dialog', { name: 'Revoke this invitation?' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Revoke invitation' }));
     expect(await screen.findByText('Invitation revoked.')).toBeInTheDocument();
@@ -180,7 +236,14 @@ describe('SCREEN-012 invitations and requests', () => {
       http.post(`${API}/admin/invitations`, async ({ request }) => {
         body = await request.json();
         return HttpResponse.json(
-          { success: true, data: { email: 'new@shroomap.example', message: 'If this address can be invited, an invitation is on its way.' }, metaData: meta },
+          {
+            success: true,
+            data: {
+              email: 'new@shroomap.example',
+              message: 'If this address can be invited, an invitation is on its way.',
+            },
+            metaData: meta,
+          },
           { status: 202 },
         );
       }),
@@ -188,7 +251,9 @@ describe('SCREEN-012 invitations and requests', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Invite person' }));
     await userEvent.type(await screen.findByLabelText('Email address'), '  new@shroomap.example ');
     await userEvent.click(screen.getByRole('button', { name: 'Send invitation' }));
-    expect(await screen.findByText('If this address can be invited, an invitation is on its way.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('If this address can be invited, an invitation is on its way.'),
+    ).toBeInTheDocument();
     expect(body).toEqual({ email: 'new@shroomap.example' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
@@ -210,13 +275,19 @@ describe('SCREEN-012 invitations and requests', () => {
     serve();
     mount();
     await ready();
-    server.use(http.post(`${API}/admin/invitations`, () => error(422, 'invite_domain_not_allowed')));
+    server.use(
+      http.post(`${API}/admin/invitations`, () => error(422, 'invite_domain_not_allowed')),
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Invite person' }));
     await userEvent.type(await screen.findByLabelText('Email address'), 'sam@gmail.com');
     await userEvent.click(screen.getByRole('button', { name: 'Send invitation' }));
     const field = await screen.findByLabelText('Email address');
     await waitFor(() => expect(field).toHaveAttribute('aria-invalid', 'true'));
-    expect(screen.getByText('Invitations are limited to approved email domains. Use an approved address.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Invitations are limited to approved email domains. Use an approved address.',
+      ),
+    ).toBeInTheDocument();
     expect(field).toHaveValue('sam@gmail.com');
   });
 
@@ -224,38 +295,66 @@ describe('SCREEN-012 invitations and requests', () => {
     serve();
     mount();
     await ready();
-    server.use(http.post(`${API}/admin/invitations`, () => error(400, 'validation_failed', 'Check the highlighted fields.')));
+    server.use(
+      http.post(`${API}/admin/invitations`, () =>
+        error(400, 'validation_failed', 'Check the highlighted fields.'),
+      ),
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Invite person' }));
     await userEvent.type(await screen.findByLabelText('Email address'), 'a@b.co');
     await userEvent.click(screen.getByRole('button', { name: 'Send invitation' }));
-    await waitFor(() => expect(screen.getByLabelText('Email address')).toHaveAttribute('aria-invalid', 'true'));
+    await waitFor(() =>
+      expect(screen.getByLabelText('Email address')).toHaveAttribute('aria-invalid', 'true'),
+    );
   });
 
   it('Invite again on an expired invitation opens the dialog with the address filled in', async () => {
     serve();
     mount();
     const table = await ready();
-    await userEvent.click(within(table).getByRole('button', { name: 'Invite lena.brandt@shroomap.example again' }));
-    expect(await screen.findByLabelText('Email address')).toHaveValue('lena.brandt@shroomap.example');
+    await userEvent.click(
+      within(table).getByRole('button', { name: 'Invite lena.brandt@shroomap.example again' }),
+    );
+    expect(await screen.findByLabelText('Email address')).toHaveValue(
+      'lena.brandt@shroomap.example',
+    );
   });
 
   it('state_conflict on Resend: an alert above the tabs with Refresh, and the lists are reloaded', async () => {
     serve();
     mount();
     const table = await ready();
-    server.use(http.post(`${API}/admin/invitations/11111111-1111-4111-8111-111111111111/resend`, () => error(409, 'state_conflict')));
-    await userEvent.click(within(table).getByRole('button', { name: 'Resend to sam.okafor@shroomap.example' }));
-    expect(await screen.findByText('This cannot be done in its current state. Refresh to see what changed.')).toBeInTheDocument();
+    server.use(
+      http.post(`${API}/admin/invitations/11111111-1111-4111-8111-111111111111/resend`, () =>
+        error(409, 'state_conflict'),
+      ),
+    );
+    await userEvent.click(
+      within(table).getByRole('button', { name: 'Resend to sam.okafor@shroomap.example' }),
+    );
+    expect(
+      await screen.findByText(
+        'This cannot be done in its current state. Refresh to see what changed.',
+      ),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(screen.queryByText(/cannot be done in its current state/)).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByText(/cannot be done in its current state/)).toBeNull(),
+    );
   });
 
   it('recent_auth_required: opens the step-up dialog and does not submit anything on its own', async () => {
     serve();
     mount();
     const table = await ready();
-    server.use(http.post(`${API}/admin/invitations/11111111-1111-4111-8111-111111111111/resend`, () => error(403, 'recent_auth_required')));
-    await userEvent.click(within(table).getByRole('button', { name: 'Resend to sam.okafor@shroomap.example' }));
+    server.use(
+      http.post(`${API}/admin/invitations/11111111-1111-4111-8111-111111111111/resend`, () =>
+        error(403, 'recent_auth_required'),
+      ),
+    );
+    await userEvent.click(
+      within(table).getByRole('button', { name: 'Resend to sam.okafor@shroomap.example' }),
+    );
     expect(await screen.findByRole('dialog', { name: 'Confirm it is you' })).toBeInTheDocument();
   });
 
@@ -266,7 +365,9 @@ describe('SCREEN-012 invitations and requests', () => {
       http.get(`${API}/admin/settings`, () => error(403, 'forbidden_role')),
     );
     mount();
-    expect(await screen.findByRole('heading', { name: 'Administration is not available' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Administration is not available' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
   });
 
@@ -274,7 +375,9 @@ describe('SCREEN-012 invitations and requests', () => {
     serve();
     server.use(http.get(`${API}/admin/invitations`, () => error(503, 'service_unavailable')));
     mount();
-    expect(await screen.findByRole('button', { name: /^Try again/ }, { timeout: 8000 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /^Try again/ }, { timeout: 8000 }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Invitations' })).toBeNull();
   });
 
@@ -283,6 +386,8 @@ describe('SCREEN-012 invitations and requests', () => {
     mount();
     await ready();
     await waitFor(() => expect(calls.length).toBeGreaterThanOrEqual(3));
-    expect(new Set(calls)).toEqual(new Set(['GET /admin/invitations', 'GET /admin/access-requests', 'GET /admin/settings']));
+    expect(new Set(calls)).toEqual(
+      new Set(['GET /admin/invitations', 'GET /admin/access-requests', 'GET /admin/settings']),
+    );
   });
 });

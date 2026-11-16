@@ -17,7 +17,11 @@ const signedIn = async (context: BrowserContext, baseURL: string) =>
   context.addCookies([
     {
       name: LOCAL_SESSION_COOKIE,
-      value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + 600 }),
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      }),
       url: baseURL,
     },
   ]);
@@ -42,7 +46,11 @@ async function relay(page: Page, script: Handler, seen: string[] = []) {
     if (request.method() === 'OPTIONS') {
       return route.fulfill({
         status: 204,
-        headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*' },
+        headers: {
+          ...cors,
+          'access-control-allow-headers':
+            (await request.headerValue('access-control-request-headers')) ?? '*',
+        },
       });
     }
     seen.push(`${request.method()} ${path}`);
@@ -64,12 +72,20 @@ async function relay(page: Page, script: Handler, seen: string[] = []) {
 }
 
 const ok = (route: Route, data: unknown, metaData: unknown = meta, status = 200) =>
-  route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ success: true, data, metaData }) });
+  route.fulfill({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify({ success: true, data, metaData }),
+  });
 const fail = (route: Route, status: number, code: string, message = 'x') =>
   route.fulfill({
     status,
     contentType: 'application/json',
-    body: JSON.stringify({ success: false, error: { code, message }, metaData: { requestId: 'req-e2e-1' } }),
+    body: JSON.stringify({
+      success: false,
+      error: { code, message },
+      metaData: { requestId: 'req-e2e-1' },
+    }),
   });
 
 interface World {
@@ -87,17 +103,32 @@ const world = (w: World = {}): Handler => {
   return async (route, path, method) => {
     if (!path.startsWith('/admin/')) return false;
     if (method === 'GET') await w.gate;
-    if (method === 'GET' && path === '/admin/invitations') return void (await ok(route, invitations, metaPage(invitations.length))), true;
-    if (method === 'GET' && path === '/admin/access-requests') return void (await ok(route, requests, metaPage(requests.length))), true;
-    if (method === 'GET' && path === '/admin/settings') return void (await ok(route, settingsFixture(w.settings))), true;
+    if (method === 'GET' && path === '/admin/invitations')
+      return (void (await ok(route, invitations, metaPage(invitations.length))), true);
+    if (method === 'GET' && path === '/admin/access-requests')
+      return (void (await ok(route, requests, metaPage(requests.length))), true);
+    if (method === 'GET' && path === '/admin/settings')
+      return (void (await ok(route, settingsFixture(w.settings))), true);
     if (method === 'POST' && path === '/admin/invitations') {
-      if (w.inviteStatus) return void (await fail(route, w.inviteStatus.status, w.inviteStatus.code)), true;
-      return void (await ok(route, { email: 'new@shroomap.example', message: 'If this address can be invited, an invitation is on its way.' }, meta, 202)), true;
+      if (w.inviteStatus)
+        return (void (await fail(route, w.inviteStatus.status, w.inviteStatus.code)), true);
+      return (
+        void (await ok(
+          route,
+          {
+            email: 'new@shroomap.example',
+            message: 'If this address can be invited, an invitation is on its way.',
+          },
+          meta,
+          202,
+        )),
+        true
+      );
     }
     if (method === 'POST' && /\/admin\/invitations\/[^/]+\/(resend|revoke)$/.test(path))
-      return void (await ok(route, invitations[0])), true;
+      return (void (await ok(route, invitations[0])), true);
     if (method === 'POST' && /\/admin\/access-requests\/[^/]+\/(approve|decline)$/.test(path))
-      return void (await ok(route, requests[0])), true;
+      return (void (await ok(route, requests[0])), true);
     return false;
   };
 };
@@ -108,12 +139,25 @@ const settle = async (page: Page) => {
   await page.evaluate(() => document.fonts.ready);
 };
 
-async function capture(page: Page, state: string, size: { name: string }, info: { project: { name: string } }) {
+async function capture(
+  page: Page,
+  state: string,
+  size: { name: string },
+  info: { project: { name: string } },
+) {
   await settle(page);
-  await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-${state}-${size.name}.json`);
+  await expectNoAxeViolations(
+    page,
+    `${evidence}/axe/${info.project.name}-${state}-${size.name}.json`,
+  );
   mkdirSync(`${evidence}/screenshots`, { recursive: true });
-  await page.screenshot({ path: `${evidence}/screenshots/${state}-${size.name}.png`, fullPage: true });
-  await expect(page).toHaveScreenshot(`fe-screen-012-${state}-${size.name}.png`, { fullPage: true });
+  await page.screenshot({
+    path: `${evidence}/screenshots/${state}-${size.name}.png`,
+    fullPage: true,
+  });
+  await expect(page).toHaveScreenshot(`fe-screen-012-${state}-${size.name}.png`, {
+    fullPage: true,
+  });
 }
 
 type Arrange = (page: Page) => Promise<void>;
@@ -144,7 +188,9 @@ const STATES: { state: string; world: () => World; arrange: Arrange }[] = [
       await page.goto('/admin/invitations');
       await expect(page.getByText('sam.okafor@shroomap.example')).toBeVisible();
       await page.getByRole('tab', { name: /Access requests/ }).click();
-      await expect(page.getByRole('heading', { name: 'The request-access form is off' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'The request-access form is off' }),
+      ).toBeVisible();
     },
   },
   {
@@ -164,7 +210,11 @@ const STATES: { state: string; world: () => World; arrange: Arrange }[] = [
       await page.getByRole('button', { name: 'Invite person' }).click();
       await page.getByLabel('Email address').fill('sam@gmail.com');
       await page.getByRole('button', { name: 'Send invitation' }).click();
-      await expect(page.getByText('Invitations are limited to approved email domains. Use an approved address.')).toBeVisible();
+      await expect(
+        page.getByText(
+          'Invitations are limited to approved email domains. Use an approved address.',
+        ),
+      ).toBeVisible();
     },
   },
   {
@@ -173,7 +223,9 @@ const STATES: { state: string; world: () => World; arrange: Arrange }[] = [
     arrange: async (page) => {
       await page.goto('/admin/invitations');
       await page.getByRole('button', { name: 'Resend to sam.okafor@shroomap.example' }).click();
-      await expect(page.getByText('Invitation sent again. The 7-day period starts over.')).toBeVisible();
+      await expect(
+        page.getByText('Invitation sent again. The 7-day period starts over.'),
+      ).toBeVisible();
     },
   },
 ];
@@ -183,7 +235,9 @@ test.describe('@TASK-100 SCREEN-012 invitations and access requests through the 
 
   for (const size of SHOTS) {
     for (const { state, world: make, arrange } of STATES) {
-      test(`${state} at ${size.name} px: reachable, no axe violations, screenshot and baseline`, async ({ page }, info) => {
+      test(`${state} at ${size.name} px: reachable, no axe violations, screenshot and baseline`, async ({
+        page,
+      }, info) => {
         await page.setViewportSize({ width: size.width, height: size.height });
         await relay(page, world(make()));
         await arrange(page);
@@ -191,21 +245,31 @@ test.describe('@TASK-100 SCREEN-012 invitations and access requests through the 
       });
     }
 
-    test(`loading at ${size.name} px: skeleton with aria-busy, then the data replaces it`, async ({ page }, info) => {
+    test(`loading at ${size.name} px: skeleton with aria-busy, then the data replaces it`, async ({
+      page,
+    }, info) => {
       await page.setViewportSize({ width: size.width, height: size.height });
       let release!: () => void;
       const gate = new Promise<void>((resolve) => (release = resolve));
       await relay(page, world({ gate }));
       await page.goto('/admin/invitations');
-      await expect(page.getByRole('table', { name: 'Invitations' })).toHaveAttribute('aria-busy', 'true');
+      await expect(page.getByRole('table', { name: 'Invitations' })).toHaveAttribute(
+        'aria-busy',
+        'true',
+      );
       await capture(page, 'loading', size, info);
       release();
       await expect(page.getByText('sam.okafor@shroomap.example')).toBeVisible();
-      await expect(page.getByRole('table', { name: 'Invitations' })).not.toHaveAttribute('aria-busy', 'true');
+      await expect(page.getByRole('table', { name: 'Invitations' })).not.toHaveAttribute(
+        'aria-busy',
+        'true',
+      );
     });
   }
 
-  test('keyboard only: tabs by arrow keys, the invite dialog traps focus and Escape returns it, Resend by Enter', async ({ page }) => {
+  test('keyboard only: tabs by arrow keys, the invite dialog traps focus and Escape returns it, Resend by Enter', async ({
+    page,
+  }) => {
     const seen: string[] = [];
     await relay(page, world(), seen);
     await page.goto('/admin/invitations');
@@ -223,26 +287,34 @@ test.describe('@TASK-100 SCREEN-012 invitations and access requests through the 
     const invitationsTab = page.getByRole('tab', { name: /^Invitations/ });
     await invitationsTab.focus();
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByRole('tab', { name: /^Access requests/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: /^Access requests/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     await expect(page.getByText('nina.castellano@shroomap.example')).toBeVisible();
     await page.keyboard.press('ArrowLeft');
 
     await page.getByRole('button', { name: 'Resend to sam.okafor@shroomap.example' }).focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByText('Invitation sent again. The 7-day period starts over.')).toBeVisible();
+    await expect(
+      page.getByText('Invitation sent again. The 7-day period starts over.'),
+    ).toBeVisible();
     expect(seen.filter((c) => c.startsWith('POST'))).toEqual([
       'POST /admin/invitations/11111111-1111-4111-8111-111111111111/resend',
     ]);
   });
 
-  test('every call is one of the listed operations; invite, revoke, approve and decline reach the api with the contract shape', async ({ page }) => {
+  test('every call is one of the listed operations; invite, revoke, approve and decline reach the api with the contract shape', async ({
+    page,
+  }) => {
     const seen: string[] = [];
     const bodies: unknown[] = [];
     const inner = world();
     await relay(
       page,
       async (route, path, method) => {
-        if (method === 'POST' && path === '/admin/invitations') bodies.push(route.request().postDataJSON());
+        if (method === 'POST' && path === '/admin/invitations')
+          bodies.push(route.request().postDataJSON());
         return inner(route, path, method);
       },
       seen,
@@ -252,7 +324,9 @@ test.describe('@TASK-100 SCREEN-012 invitations and access requests through the 
     await page.getByRole('button', { name: 'Invite person' }).click();
     await page.getByLabel('Email address').fill('new@shroomap.example');
     await page.getByRole('button', { name: 'Send invitation' }).click();
-    await expect(page.getByText('If this address can be invited, an invitation is on its way.')).toBeVisible();
+    await expect(
+      page.getByText('If this address can be invited, an invitation is on its way.'),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Revoke sam.okafor@shroomap.example' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Revoke invitation' }).click();
     await expect(page.getByText('Invitation revoked.')).toBeVisible();
@@ -277,20 +351,34 @@ test.describe('@TASK-100 SCREEN-012 invitations and access requests through the 
     );
   });
 
-  test('the real api answers: without an administrator session the page shows a load error, never data', async ({ page }) => {
+  test('the real api answers: a call without an administrator token is refused and the visitor is sent to sign-in, never shown data', async ({
+    page,
+  }) => {
     const seen: string[] = [];
     await relay(page, async () => false, seen);
     await page.goto('/admin/invitations');
-    await expect(page.getByRole('heading', { level: 1, name: /Invitations and requests|Administration is not available/ })).toBeVisible();
-    await expect(page.getByText('sam.okafor@shroomap.example')).toHaveCount(0);
+    await page.waitForURL('**/sign-in**');
+    expect(new URL(page.url()).searchParams.get('return')).toBe('/admin/invitations');
     expect(seen).toContain('GET /admin/invitations');
-    expect(await page.title()).toMatch(/· ShrooMap$/);
+    await expect(page.getByText('sam.okafor@shroomap.example')).toHaveCount(0);
+  });
+
+  test('document title and noindex', async ({ page }) => {
+    await relay(page, world());
+    await page.goto('/admin/invitations');
+    await expect(page.getByText('sam.okafor@shroomap.example')).toBeVisible();
+    expect(await page.title()).toBe('Invitations and requests · ShrooMap');
     expect(
-      await page.locator('meta[name=robots]').evaluateAll((els) => els.map((e) => e.getAttribute('content'))),
+      await page
+        .locator('meta[name=robots]')
+        .evaluateAll((els) => els.map((e) => e.getAttribute('content'))),
     ).toEqual(expect.arrayContaining([expect.stringMatching(/noindex/)]));
   });
 
-  test('anonymous visitor is sent to sign-in with the return path', async ({ browser, baseURL }) => {
+  test('anonymous visitor is sent to sign-in with the return path', async ({
+    browser,
+    baseURL,
+  }) => {
     const anon = await browser.newContext({ baseURL });
     const page = await anon.newPage();
     await page.goto('/admin/invitations');
