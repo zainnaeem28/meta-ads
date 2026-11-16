@@ -68,7 +68,8 @@ export default defineConfig({
       // Waits for the first server, whose command builds the shared .next artifact.
       command: `until curl -sf http://127.0.0.1:${port} >/dev/null; do sleep 1; done; ${next(prodPort)}`,
       env: { GALLERY_ENABLED: 'true', APP_ENV: 'production' },
-      url: `http://127.0.0.1:${prodPort}`,
+      // A static file: a hosted deployment signs requests in through the identity provider, which has no keys here.
+      url: `http://127.0.0.1:${prodPort}/site.webmanifest`,
       reuseExistingServer: false,
       timeout: 60_000,
     },
