@@ -68,13 +68,13 @@ export default function FeLayoutSection() {
         </Cell>
         <Cell id="auth-error" label="CMP-032 sign-in, provider error">
           <ShellFrame>
-            <AuthShell landmark={false} title="AI UGC Ad Director" providerState="error" />
+            <AuthShell landmark={false} title="AI UGC Ad Director" providerState="error" providerAction={<Button variant="secondary">Try again</Button>} />
           </ShellFrame>
         </Cell>
         <Cell id="auth-message" label="CMP-032 message">
           <ShellFrame>
             <AuthShell landmark={false} variant="message" title="Page not found" description="This page is not available.">
-              <a href="#auth-message" className="text-ui underline">Go Home</a>
+              <a href="#auth-message" className="text-ui underline">Go home</a>
             </AuthShell>
           </ShellFrame>
         </Cell>
