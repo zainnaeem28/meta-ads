@@ -24,6 +24,16 @@ import { InvitationJobs, EXPIRE_INVITATIONS_QUEUE, INVITATION_JOB_OPTIONS } from
 import { INVITATION_OPTIONS, InvitationService, invitationOptionsFrom } from './application/invitations.service.js';
 import { INVITATION_ADMIN_STORE, InvitationAdminStore } from './application/invitations.store.js';
 import { InvitationsController } from './transport/invitations.controller.js';
+import {
+  ACCESS_REQUEST_OPTIONS,
+  AccessRequestService,
+  accessRequestOptionsFrom,
+} from './application/access-requests.service.js';
+import { ACCESS_REQUEST_STORE, AccessRequestAdminStore } from './application/access-requests.store.js';
+import { SETTINGS_OPTIONS, SettingsService, settingsOptionsFrom } from './application/settings.service.js';
+import { SETTINGS_ADMIN_STORE, SettingsAdminStore } from './application/settings.store.js';
+import { AccessRequestsController, AdminAccessRequestsController } from './transport/access-requests.controller.js';
+import { SettingsController } from './transport/settings.controller.js';
 import { DATABASE } from '../../platform/db/index.js';
 import type { Database } from '../../platform/db/index.js';
 import { RateLimiter } from '../../platform/rate-limit/index.js';
@@ -141,6 +151,12 @@ export class IdentityModule {
               },
               { provide: INVITATION_ADMIN_STORE, useClass: InvitationAdminStore },
               InvitationService,
+              { provide: ACCESS_REQUEST_STORE, useClass: AccessRequestAdminStore },
+              { provide: ACCESS_REQUEST_OPTIONS, useValue: accessRequestOptionsFrom(process.env) },
+              AccessRequestService,
+              { provide: SETTINGS_ADMIN_STORE, useClass: SettingsAdminStore },
+              { provide: SETTINGS_OPTIONS, useValue: settingsOptionsFrom(process.env) },
+              SettingsService,
               AdminUsersService,
               RevokeSessionsService,
               SessionService,
@@ -149,7 +165,14 @@ export class IdentityModule {
             ]),
       ],
       imports: auth === undefined ? [] : [auth.audit],
-      controllers: auth === undefined ? [] : [MeController, AdminUsersController, InvitationsController],
+      controllers: auth === undefined ? [] : [
+              MeController,
+              AdminUsersController,
+              InvitationsController,
+              AccessRequestsController,
+              AdminAccessRequestsController,
+              SettingsController,
+            ],
       exports: [IDENTITY_PORT, ...(auth === undefined ? [] : [AdminUsersService, RevokeSessionsService])],
     };
   }
