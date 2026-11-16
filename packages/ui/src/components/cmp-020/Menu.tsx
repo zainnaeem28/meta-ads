@@ -8,6 +8,8 @@ export interface MenuItem {
   disabled?: boolean;
   /** Destructive row action (delete, remove). */
   destructive?: boolean;
+  /** Render in the hover look (gallery state only). */
+  previewHover?: boolean;
   onSelect?: () => void;
 }
 
@@ -32,9 +34,10 @@ const ITEM_CLASS =
   'flex w-full items-center px-3 min-h-control max-md:min-h-control-touch text-left text-ui ' +
   'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring';
 
-/** CMP-020 menu button (phone: spans its nearest positioned ancestor less 12 px each side, so give that ancestor the page width): opens on click, Enter, Space or ArrowDown; arrows, Home and End move; Escape closes and returns focus. */
+/** CMP-020 menu button (phone: fixed to the viewport, full width less 12 px each side, just under the trigger): opens on click, Enter, Space or ArrowDown; arrows, Home and End move; Escape closes and returns focus. */
 export function Menu({ trigger, label, items, header, defaultOpen = false, initialFocus = false, align = 'start', className }: MenuProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const [phoneTop, setPhoneTop] = useState<number | undefined>(undefined);
   const base = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -58,6 +61,22 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
     pendingFocus.current = null;
     if (index !== undefined) itemRefs.current[index]?.focus();
   });
+
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const phone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches;
+      const rect = triggerRef.current?.getBoundingClientRect();
+      setPhoneTop(phone && rect ? rect.bottom + 4 : undefined);
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -97,7 +116,7 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
   };
 
   return (
-    <div ref={rootRef} className={['relative inline-block max-md:static', className].filter(Boolean).join(' ')}>
+    <div ref={rootRef} className={['relative inline-block', className].filter(Boolean).join(' ')}>
       <button
         ref={triggerRef}
         type="button"
@@ -118,7 +137,8 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
           role="menu"
           aria-labelledby={`${base}-trigger`}
           onKeyDown={onMenuKeyDown}
-          className={`absolute ${align === 'end' ? 'right-0' : 'left-0'} top-full z-40 mt-1 min-w-55 overflow-hidden rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-md max-md:inset-x-3 max-md:top-auto max-md:min-w-0`}
+          className={`absolute ${align === 'end' ? 'right-0' : 'left-0'} top-full z-40 mt-1 min-w-55 overflow-hidden rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-md max-md:fixed max-md:inset-x-3 max-md:mt-0 max-md:min-w-0`}
+          style={phoneTop === undefined ? undefined : { top: phoneTop }}
         >
           {header ? <div className="border-b border-border px-3 py-2 text-ui">{header}</div> : null}
           {items.map((item, i) => (
@@ -131,7 +151,7 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
               role="menuitem"
               tabIndex={-1}
               aria-disabled={item.disabled ? true : undefined}
-              data-state={item.disabled ? 'disabled' : 'default'}
+              data-state={item.disabled ? 'disabled' : item.previewHover ? 'hover' : 'default'}
               onClick={() => {
                 if (item.disabled) return;
                 item.onSelect?.();
@@ -140,7 +160,7 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
               className={`${ITEM_CLASS} ${
                 item.disabled
                   ? 'cursor-not-allowed text-disabled-foreground'
-                  : `hover:bg-accent focus-visible:bg-accent ${item.destructive ? 'text-destructive' : ''}`
+                  : `hover:bg-accent focus-visible:bg-accent ${item.previewHover ? 'bg-accent ' : ''}${item.destructive ? 'text-destructive' : ''}`
               }`}
             >
               {item.label}

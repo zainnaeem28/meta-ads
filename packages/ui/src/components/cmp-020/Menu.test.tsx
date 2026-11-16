@@ -98,3 +98,27 @@ describe('CMP-020 Menu', () => {
     expect(screen.getByRole('menuitem', { name: 'X' })).toHaveFocus();
   });
 });
+
+describe('CMP-020 Menu placement and hover look', () => {
+  it('on a phone viewport the open menu is fixed to the viewport just under a trigger inside a narrow container', () => {
+    const original = window.matchMedia as typeof window.matchMedia | undefined;
+    window.matchMedia = ((q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+    try {
+      render(
+        <div style={{ width: 120 }}>
+          <Menu label="Row" trigger="Row" items={[{ id: 'x', label: 'X' }]} defaultOpen />
+        </div>,
+      );
+      const menu = screen.getByRole('menu');
+      expect(menu.className).toContain('max-md:fixed');
+      expect(menu.style.top).toMatch(/px$/);
+    } finally {
+      window.matchMedia = original as typeof window.matchMedia;
+    }
+  });
+
+  it('previewHover renders the hover look', () => {
+    render(<Menu label="A" trigger="A" items={[{ id: 'x', label: 'X', previewHover: true }]} defaultOpen />);
+    expect(screen.getByRole('menuitem', { name: 'X' })).toHaveAttribute('data-state', 'hover');
+  });
+});

@@ -9,5 +9,5 @@
 `packages/ui/package.json` (subpath exports), `apps/web/e2e/comp-overlay.spec.ts`, the baselines above.
 
 ## Limitations
-- Item hover and focus on closed menu are reachable by pointer/keyboard; the item-focus state is baselined via `initialFocus`. Chromium only; 768 px not captured.
+- Item hover is baselined via `previewHover` (menu-hover cell) and item focus via `initialFocus`. Phone menu is fixed to the viewport under the trigger. Chromium only; 768 px not captured.
 - Phone menu is positioned against its nearest positioned ancestor (not the viewport).

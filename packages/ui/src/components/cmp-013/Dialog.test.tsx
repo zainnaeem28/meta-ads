@@ -158,6 +158,6 @@ describe('CMP-013 Dialog', () => {
 
   it('gallery menu states render', () => {
     render(<MenuStates />);
-    expect(screen.getAllByRole('menu')).toHaveLength(3);
+    expect(screen.getAllByRole('menu')).toHaveLength(4);
   });
 });

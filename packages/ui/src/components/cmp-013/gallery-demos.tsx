@@ -145,7 +145,7 @@ function MenuCell({ id, label, children }: { id: string; label: string; children
   return (
     <div
       data-cell={id}
-      className="relative flex min-h-64 flex-col items-start gap-2 rounded-md border border-border bg-card p-4 text-foreground"
+      className="relative flex min-h-80 flex-col items-start gap-2 rounded-md border border-border bg-card p-4 text-foreground"
     >
       <span className="text-caption text-muted-foreground">{label}</span>
       {children}
@@ -179,7 +179,15 @@ export function MenuStates() {
       <MenuCell id="menu-focus" label="CMP-020 row action menu, first item focused">
         <Menu label="Actions for Summer sale" trigger="Actions" items={ROW_ITEMS} defaultOpen initialFocus />
       </MenuCell>
-      <MenuCell id="menu-closed" label="CMP-020 closed (hover, open and focus by pointer or keyboard)">
+      <MenuCell id="menu-hover" label="CMP-020 row action menu, item hover">
+        <Menu
+          label="Actions for Winter sale"
+          trigger="Actions"
+          items={ROW_ITEMS.map((item, i) => (i === 0 ? { ...item, previewHover: true } : item))}
+          defaultOpen
+        />
+      </MenuCell>
+      <MenuCell id="menu-closed" label="CMP-020 closed (open and focus by pointer or keyboard)">
         <Menu label="Actions for Autumn promo" trigger="Actions" items={ROW_ITEMS} />
       </MenuCell>
     </>
