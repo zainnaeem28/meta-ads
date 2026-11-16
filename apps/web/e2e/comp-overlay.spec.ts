@@ -61,6 +61,15 @@ test.describe('@TASK-072 dialog and menu (CMP-013, CMP-020) through the built we
     await expect(trigger).toBeFocused();
   });
 
+  test('phone menu spans the viewport less 12 px each side although its cell is narrower', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openGallery(page);
+    const menu = page.locator('[data-cell=menu-row]').getByRole('menu');
+    const box = await menu.boundingBox();
+    expect(box?.x).toBeCloseTo(12, 0);
+    expect(box?.width).toBeCloseTo(366, 0);
+  });
+
   for (const { name, width, height } of VIEWPORTS.filter((v) => v.name !== '768')) {
     test(`gallery matches its baseline and has no axe violations at ${name} px`, async ({ page }, info) => {
       await page.setViewportSize({ width, height });

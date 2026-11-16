@@ -41,6 +41,7 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
   const base = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const enabled = items.map((item, i) => (item.disabled ? -1 : i)).filter((i) => i >= 0);
   const pendingFocus = useRef<'first' | 'last' | null>(defaultOpen && initialFocus ? 'first' : null);
@@ -65,7 +66,7 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
   useEffect(() => {
     if (!open) return;
     const place = () => {
-      const phone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches;
+      const phone = menuRef.current !== null && getComputedStyle(menuRef.current).position === 'fixed';
       const rect = triggerRef.current?.getBoundingClientRect();
       setPhoneTop(phone && rect ? rect.bottom + 4 : undefined);
     };
@@ -133,6 +134,7 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
       </button>
       {open ? (
         <div
+          ref={menuRef}
           id={`${base}-menu`}
           role="menu"
           aria-labelledby={`${base}-trigger`}

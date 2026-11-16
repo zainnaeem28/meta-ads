@@ -101,8 +101,9 @@ describe('CMP-020 Menu', () => {
 
 describe('CMP-020 Menu placement and hover look', () => {
   it('on a phone viewport the open menu is fixed to the viewport just under a trigger inside a narrow container', () => {
-    const original = window.matchMedia as typeof window.matchMedia | undefined;
-    window.matchMedia = ((q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+    const sheet = document.createElement('style');
+    sheet.textContent = '[role=menu]{position:fixed}'; // what max-md:fixed resolves to on a phone
+    document.head.append(sheet);
     try {
       render(
         <div style={{ width: 120 }}>
@@ -113,7 +114,7 @@ describe('CMP-020 Menu placement and hover look', () => {
       expect(menu.className).toContain('max-md:fixed');
       expect(menu.style.top).toMatch(/px$/);
     } finally {
-      window.matchMedia = original as typeof window.matchMedia;
+      sheet.remove();
     }
   });
 
