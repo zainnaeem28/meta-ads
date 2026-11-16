@@ -195,6 +195,7 @@ describe('negative probes', () => {
     const broken = join(dir, 'broken');
     mkdirSync(broken);
     writeFileSync(join(broken, '0001.sql'), 'DROP TABLE nonexistent;');
+    copyFileSync(join(compensating, '0010.sql'), join(broken, '0010.sql'));
     const failed = await checkRollback(env, migrations, broken, previous, [], '');
     expect(failed[0]).toContain('compensating migration for 0001_task-025-platform failed');
   });
