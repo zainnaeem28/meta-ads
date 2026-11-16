@@ -13,7 +13,12 @@ import {
 } from './application/ports.js';
 import type { AuthOptions } from './application/ports.js';
 import { SessionService } from './application/session.service.js';
+import { AdminUsersService } from './application/admin-users.service.js';
+import { ADMIN_USER_QUERIES, ADMIN_USER_STORE, CURSOR_KEY } from './application/admin.ports.js';
+import { RevokeSessionsService } from './application/revoke-sessions.service.js';
+import { AdminUserListQueries } from './infrastructure/admin-users.queries.js';
 import { AccessRequestQueries } from './infrastructure/identity.queries.js';
+import { AdminUsersController } from './transport/admin-users.controller.js';
 import { MeController } from './transport/me.controller.js';
 import { IDENTITY_PORT } from './domain/identity-port.js';
 import type { IdentityPort } from './domain/identity-port.js';
@@ -39,6 +44,10 @@ export {
 } from './domain/identity-port.js';
 export type { Claims, IdentityPort, IdentityUser } from './domain/identity-port.js';
 export { LocalIdentity } from './infrastructure/local-identity.js';
+export { AdminUsersService } from './application/admin-users.service.js';
+export type { AdminChange, AdminUserView, RoleChange } from './application/admin-users.service.js';
+export { REVOKE_SESSIONS_QUEUE } from './application/admin.ports.js';
+export { RevokeSessionsService, revokeSessionsHandler } from './application/revoke-sessions.service.js';
 
 /** The adapter the configuration selects: Clerk, or the local provider that needs no account. */
 export function createIdentityPort(
@@ -92,16 +101,21 @@ export class IdentityModule {
               { provide: INVITATION_STORE, useExisting: InvitationRepository },
               { provide: SETTINGS_STORE, useExisting: SettingsRepository },
               { provide: ACCESS_REQUEST_LOOKUP, useClass: AccessRequestQueries },
+              { provide: ADMIN_USER_STORE, useExisting: UserRepository },
+              { provide: ADMIN_USER_QUERIES, useClass: AdminUserListQueries },
+              { provide: CURSOR_KEY, useValue: process.env['CURSOR_SIGNING_KEY'] },
               LinkingService,
               MeService,
+              AdminUsersService,
+              RevokeSessionsService,
               SessionService,
               { provide: SESSION_AUTHENTICATOR, useExisting: SessionService },
               { provide: APP_GUARD, useClass: AuthGuard },
             ]),
       ],
       imports: auth === undefined ? [] : [auth.audit],
-      controllers: auth === undefined ? [] : [MeController],
-      exports: [IDENTITY_PORT],
+      controllers: auth === undefined ? [] : [MeController, AdminUsersController],
+      exports: [IDENTITY_PORT, ...(auth === undefined ? [] : [AdminUsersService, RevokeSessionsService])],
     };
   }
 }

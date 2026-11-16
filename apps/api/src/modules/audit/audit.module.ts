@@ -4,6 +4,7 @@ import type { Logger } from 'pino';
 import { AlertService, AuditService } from './application/audit.service.js';
 import { ALERT_PORT, ALERT_SINK, AUDIT_REPOSITORY } from './application/ports.js';
 import { DrizzleAuditRepository } from './infrastructure/audit.repository.js';
+import { ALERT_CURSOR_KEY, AlertsController, cursorKeyFrom } from './transport/alerts.controller.js';
 import { LogAlertSink } from './infrastructure/log-alert-sink.js';
 
 @Module({})
@@ -18,7 +19,9 @@ export class AuditModule {
         { provide: AUDIT_REPOSITORY, useClass: DrizzleAuditRepository },
         { provide: ALERT_SINK, useValue: new LogAlertSink(logger) },
         { provide: ALERT_PORT, useExisting: AlertService },
+        { provide: ALERT_CURSOR_KEY, useFactory: () => cursorKeyFrom(process.env) },
       ],
+      controllers: [AlertsController],
       exports: [AuditService, AlertService, ALERT_PORT],
     };
   }
