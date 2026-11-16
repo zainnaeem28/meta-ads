@@ -13,12 +13,20 @@ The api in the e2e run is the built api, but this environment has no administrat
 
 | # | Question | Choice | Reason |
 | --- | --- | --- | --- |
-| D1 | How does the page know sign-up mode / whether the form is on (`requests-off`)? None of the listed operations says. | Read-only `GET /admin/settings` (API-120), using `signupMode === 'open'` or `accessRequestFormEnabled === false` as "off"; the requests list (API-115) is not called when off. | UI-UX §8 requires the state; API-120 is the only operation that exposes it, and it is already in the contract. Adds one read call beyond the ticket's list; if rejected the page must be given the value another way. |
-| D2 | API-002 (`POST /access-requests`) is listed but is the requester's call, not an admin action. | Not called from this screen. | The screen only lists and decides requests (115-117). |
-| D3 | `invitedBy` is a user ID; `/me` is not in the listed operations, so "You" cannot be shown. | "Admin" plus the first 8 characters of the user ID ("System" when null). | UI-UX: user ID, never an email, outside the admin screens; no extra call. |
+| D1 | How does the page know sign-up mode / whether the form is on (`requests-off`)? None of the listed operations says. | Read-only `GET /admin/settings` (API-120), using `signupMode === 'open'` or `accessRequestFormEnabled === false` as "off"; the requests list (API-115) is not called when off. | UI-UX §8 requires the state; API-120 is the only operation that exposes it, and it is already in the contract. Adds one read call beyond the ticket's list. **Status: pending the Solution Architect's decision (review FR-3); if rejected the page must be given the value another way.** |
+| D2 | The ticket's "API-002" is `GET /me` (the access-request create call is the requester's, not an admin's). | `GET /me` is called once to learn the signed-in administrator's ID. | Listed in the ticket; it is the only listed operation that identifies the current administrator. |
+| D3 | `invitedBy` is a user ID; the frame shows "You" / a name. | "You" when it equals the `/me` ID, "Admin" for another administrator, "System" when null (no ID or email shown; the API has no name for another user). | Meaningful to the administrator and within the listed operations (review FR-2). |
 | D4 | Revoke is destructive and not in the frame. | Confirm dialog (CMP-013) before API-113. | Prevents an accidental revoke; same dialog component. |
 | D5 | Expired invitation action. | "Invite again" opens the invite dialog with the address filled in and calls API-111 (no resend of an expired invitation: API-112 returns `state_conflict`). | Matches the frame and the contract. |
 | D6 | Error mapping (UI-UX §9.1). | `invite_domain_not_allowed` and `validation_failed` on the field; `state_conflict` alert with Refresh; `recent_auth_required` step-up dialog (nothing resubmitted automatically); `forbidden_role` shows the shell's unavailable state; other failures use the shared error presentation. | §9.1 rows. |
 | D7 | Tab counts. | Number of rows in the first page (up to 50); no count while loading or when requests are off. | Honest counts; no extra count call exists. |
 
 Limitations: the admin shell layout is not shared via an `(admin)/layout.tsx` (outside the allowed paths), so the page renders `AdminShell` itself; the alert badge (API-125) is not fetched here (sidebar shows no count). Pagination beyond the first 50 rows is not built (API supports a cursor).
+
+## 768 px layout (review FR-1)
+
+The Actions column was clipped at 768 px. Addresses now wrap after the `@` (never inside a word), the two row actions stack at 768 px and sit side by side from 1024 px, and "Invited by" is short. `capture()` in the spec asserts every visible row action lies inside the viewport at all three widths. Baselines and screenshots were regenerated.
+
+## Paths outside the ticket's list (review FR-5)
+
+`apps/web/e2e/fe-screen-012.spec.ts` and `apps/web/e2e/__baselines__/chromium/fe-screen-012-*` follow the repository's Playwright convention (the ticket requires the `@TASK-100` Playwright run and baselines).

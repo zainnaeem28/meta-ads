@@ -86,3 +86,14 @@ export const metaPage = (count: number) => ({
   },
 });
 export const meta = { requestId: 'req-fixture', timestamp: new Date().toISOString() };
+
+/** API-002 `/me`: the signed-in administrator, who sent the first two invitations. */
+export const meFixture = () => ({
+  linkState: 'linked',
+  id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  role: 'admin',
+  status: 'active',
+  mfa: { required: true, satisfied: true },
+  recentAuth: { satisfied: true, maxAgeSeconds: 900 },
+  keyNotices: [],
+});

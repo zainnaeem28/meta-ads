@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Invitation } from '@shroomap/contracts';
 import type { InvitationStateView } from './copy';
 
@@ -55,6 +56,19 @@ export function invitationView(
   }
 }
 
-/** Who invited: an administrator's user ID (never an email outside the admin screens), or the system. */
-export const invitedByLabel = (id: string | null): string =>
-  id ? `Admin ${id.slice(0, 8)}` : 'System';
+/** Who invited: "You" for the signed-in administrator (from API-002 `/me`), another administrator, or the system. */
+export const invitedByLabel = (id: string | null, meId?: string): string =>
+  id === null ? 'System' : id === meId ? 'You' : 'Admin';
+
+/** An address that may wrap after the "@" only, so it never breaks inside a word on a narrow table. */
+export const emailBreaks = (email: string): ReactNode => {
+  const at = email.indexOf('@');
+  if (at < 0) return email;
+  return (
+    <>
+      {email.slice(0, at + 1)}
+      <wbr />
+      {email.slice(at + 1)}
+    </>
+  );
+};

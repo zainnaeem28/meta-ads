@@ -6,7 +6,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { server } from '../../lib/api/msw.setup';
 import { ApiProvider } from '../../providers/api-provider';
 import { InvitationsScreen } from './InvitationsScreen';
-import { invitationFixtures, meta, metaPage, requestFixtures, settingsFixture } from './fixtures';
+import {
+  invitationFixtures,
+  meFixture,
+  meta,
+  metaPage,
+  requestFixtures,
+  settingsFixture,
+} from './fixtures';
 
 const API = 'http://api.test/api/v1';
 
@@ -59,6 +66,9 @@ function serve({
     ),
     http.get(`${API}/admin/settings`, () =>
       HttpResponse.json({ success: true, data: settingsFixture(settings), metaData: meta }),
+    ),
+    http.get(`${API}/me`, () =>
+      HttpResponse.json({ success: true, data: meFixture(), metaData: meta }),
     ),
   );
 }

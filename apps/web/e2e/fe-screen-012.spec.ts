@@ -5,6 +5,7 @@ import { VIEWPORTS } from '../tests/support/visual';
 import { LOCAL_SESSION_COOKIE, signLocalSession } from '../src/lib/auth/local-session';
 import {
   invitationFixtures,
+  meFixture,
   meta,
   metaPage,
   requestFixtures,
@@ -101,6 +102,7 @@ const world = (w: World = {}): Handler => {
   const invitations = w.invitations ?? invitationFixtures();
   const requests = w.requests ?? requestFixtures();
   return async (route, path, method) => {
+    if (method === 'GET' && path === '/me') return (void (await ok(route, meFixture())), true);
     if (!path.startsWith('/admin/')) return false;
     if (method === 'GET') await w.gate;
     if (method === 'GET' && path === '/admin/invitations')
@@ -154,6 +156,19 @@ async function capture(
   info: { project: { name: string } },
 ) {
   await settle(page);
+  // Every row action must be reachable on screen, not clipped by the table's scroll area (768 px review finding FR-1).
+  const actions = page.getByRole('button', {
+    name: /^(Resend to|Revoke|Invite .* again|Approve|Decline)/,
+  });
+  const viewport = page.viewportSize()!;
+  for (const button of await actions.all()) {
+    if (!(await button.isVisible())) continue;
+    const box = (await button.boundingBox())!;
+    expect(box.x, 'row action starts inside the viewport').toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width, 'row action ends inside the viewport').toBeLessThanOrEqual(
+      viewport.width,
+    );
+  }
   await expectNoAxeViolations(
     page,
     `${evidence}/axe/${info.project.name}-${state}-${size.name}.json`,
@@ -354,6 +369,7 @@ test.describe('@TASK-100 SCREEN-012 invitations and access requests through the 
         'GET /admin/invitations',
         'GET /admin/access-requests',
         'GET /admin/settings',
+        'GET /me',
         'POST /admin/invitations',
         'POST /admin/invitations/:id/revoke',
         'POST /admin/access-requests/:id/approve',

@@ -11,6 +11,7 @@ import {
   useAdminListInvitations,
   useAdminResendInvitation,
   useAdminRevokeInvitation,
+  useGetMe,
   type AccessRequest,
   type Invitation,
 } from '@shroomap/contracts';
@@ -32,7 +33,7 @@ import { resolveError } from '../../lib/errors/resolve';
 import { ROUTES } from '../../lib/errors/routes';
 import { signInUrl } from '../../lib/errors/session';
 import { COLUMNS, COPY } from './copy';
-import { askedLabel, invitationView, invitedByLabel, relativeDays } from './format';
+import { askedLabel, emailBreaks, invitationView, invitedByLabel, relativeDays } from './format';
 
 export const PATH = '/admin/invitations';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -76,6 +77,10 @@ export function InvitationsScreen() {
   const requestsOff = settingsData
     ? settingsData.signupMode === 'open' || !settingsData.accessRequestFormEnabled
     : false;
+
+  const me = useGetMe();
+  const meData = me.data?.status === 200 ? me.data.data.data : undefined;
+  const meId = meData?.linkState === 'linked' ? meData.id : undefined;
 
   const invitations = useAdminListInvitations({ limit: 50 });
   // Waits for the settings: with requests off the list is never fetched.
@@ -167,7 +172,7 @@ export function InvitationsScreen() {
     {
       id: 'email',
       header: COLUMNS.invitations.email,
-      cell: (r) => <span className="font-semibold">{r.email}</span>,
+      cell: (r) => <span className="font-semibold">{emailBreaks(r.email)}</span>,
     },
     {
       id: 'state',
@@ -181,7 +186,7 @@ export function InvitationsScreen() {
         );
       },
     },
-    { id: 'by', header: COLUMNS.invitations.by, cell: (r) => invitedByLabel(r.invitedBy) },
+    { id: 'by', header: COLUMNS.invitations.by, cell: (r) => invitedByLabel(r.invitedBy, meId) },
     {
       id: 'expires',
       header: COLUMNS.invitations.expires,
@@ -195,7 +200,7 @@ export function InvitationsScreen() {
         const busy = pending.has(r.id);
         if (r.state === 'invited')
           return (
-            <span className="flex flex-wrap gap-2">
+            <span className="flex flex-row items-start gap-2 whitespace-nowrap md:flex-col lg:flex-row">
               <Button
                 variant="outline"
                 size="sm"
@@ -243,7 +248,7 @@ export function InvitationsScreen() {
     {
       id: 'email',
       header: COLUMNS.requests.email,
-      cell: (r) => <span className="font-semibold">{r.email}</span>,
+      cell: (r) => <span className="font-semibold">{emailBreaks(r.email)}</span>,
     },
     { id: 'note', header: COLUMNS.requests.note, cell: (r) => r.note || 'No note' },
     { id: 'asked', header: COLUMNS.requests.asked, cell: (r) => askedLabel(r.createdAt, now) },
@@ -253,7 +258,7 @@ export function InvitationsScreen() {
       cell: (r) => {
         const busy = pending.has(r.id);
         return (
-          <span className="flex flex-wrap gap-2">
+          <span className="flex flex-row items-start gap-2 whitespace-nowrap md:flex-col lg:flex-row">
             <Button
               size="sm"
               pending={busy}
