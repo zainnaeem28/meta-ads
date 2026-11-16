@@ -1,8 +1,8 @@
 # Submit check: PASS
 
-- Commit: `63e3e7f4b0a5dea4451d62a79b72666a9e547e46` on `feature/AIU-183-task-101-admin-settings-sign-up-mode-and-read-only-security-configuration-screen-013`
-- Base: `origin/dev` at `26ce9fd0fc77384d641199991107aa721cc9f3a3`
-- Run at: 2026-11-16 16:15 UTC
+- Commit: `10b938bde84152376933b692ba646a48416966b2` on `feature/AIU-183-task-101-admin-settings-sign-up-mode-and-read-only-security-configuration-screen-013`
+- Base: `origin/dev` at `039286dfd0500f5edf8b80130d1e846efe16f7ce`
+- Run at: 2026-11-16 16:51 UTC
 
 ## Checks
 
@@ -14,14 +14,14 @@
 
 | Report | Tests | Failed | Skipped | Result |
 | --- | --- | --- | --- | --- |
-| `apps/web/reports/fe-screen-013/junit.xml` | 183 | 0 | 0 | pass |
+| `apps/web/reports/fe-screen-013/junit.xml` | 194 | 0 | 0 | pass |
 | `apps/web/reports/fe-screen-013/e2e-junit.xml` | 15 | 0 | 0 | pass |
 
 ## Coverage
 
 | Report | Format | Lines | Branches | Functions | Statements |
 | --- | --- | --- | --- | --- | --- |
-| `apps/web/reports/fe-screen-013/lcov.info` | lcov | 95.18% (min 75) | 92.21% (min 70) | 88.95% | not measured |
+| `apps/web/reports/fe-screen-013/lcov.info` | lcov | 95.06% (min 75) | 90.86% (min 70) | 88.53% | not measured |
 
 ## Security reports (findings block at High and above; secrets always)
 
