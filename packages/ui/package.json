@@ -20,7 +20,11 @@
     "./cmp-014": "./src/components/cmp-014/index.ts",
     "./cmp-014/gallery-demos": "./src/components/cmp-014/gallery-demos.tsx",
     "./cmp-015": "./src/components/cmp-015/index.ts",
-    "./cmp-017": "./src/components/cmp-017/index.ts"
+    "./cmp-016": "./src/components/cmp-016/index.ts",
+    "./cmp-016/gallery-demos": "./src/components/cmp-016/gallery-demos.tsx",
+    "./cmp-017": "./src/components/cmp-017/index.ts",
+    "./cmp-018": "./src/components/cmp-018/index.ts",
+    "./cmp-019": "./src/components/cmp-019/index.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",
