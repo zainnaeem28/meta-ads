@@ -1,0 +1,5 @@
+{
+  "tag": null,
+  "lastMigration": 0,
+  "note": "First release: there is no previous release, so the snapshot and synthetic data are empty. At each release, regenerate snapshot.sql (schema, grants and the drizzle ledger of the released database, role names as app_*) and synthetic-data.sql, set tag to the release tag and lastMigration to the highest migration number it contains. Migrations numbered above lastMigration must follow the expand/contract rule."
+}
