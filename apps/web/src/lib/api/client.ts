@@ -32,6 +32,13 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 
 const asAbort = (err: unknown): boolean => isRecord(err) && err.name === 'AbortError';
 
+/** `Retry-After` as whole seconds (OpenAPI `RetryAfter`: integer, minimum 1); anything else is ignored. */
+const parseRetryAfter = (value: string | null): number | null => {
+  if (!value || !/^\d+$/.test(value.trim())) return null;
+  const seconds = Number(value);
+  return seconds >= 1 ? seconds : null;
+};
+
 const parseBody = (text: string): unknown => (text.length > 0 ? JSON.parse(text) : undefined);
 
 /** Builds the fetch used for every generated-client call: bearer, request id, error mapping, ETag capture. */
@@ -80,6 +87,7 @@ export const createApiFetch = (config: ApiClientConfig): typeof fetch => {
         requestId:
           requestId ??
           (isRecord(body) && isRecord(body.metaData) ? String(body.metaData.requestId) : null),
+        retryAfterSeconds: parseRetryAfter(response.headers.get('Retry-After')),
       });
     }
 
