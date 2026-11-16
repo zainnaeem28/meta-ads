@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import pg from 'pg';
-import { PgBoss } from 'pg-boss';
+import type { PgBoss } from 'pg-boss';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CRON_SCHEDULES, createWorkerApp } from '../../bootstrap/worker.module.js';
 import type { WorkerApp, WorkerConfig } from '../../bootstrap/worker.module.js';
@@ -152,8 +152,9 @@ describe('kill the worker mid-job', () => {
       });
     };
 
-    let a!: WorkerApp;
-    a = await start({ logger, handlers: { 'brief.generate': handlerFor(() => a) } });
+    const first: { app?: WorkerApp } = {};
+    const a = await start({ logger, handlers: { 'brief.generate': handlerFor(() => first.app!) } });
+    first.app = a;
     const jobId = await newJob();
     const boss = await apiBoss();
     await boss.send('brief.generate', { jobId });
@@ -166,10 +167,14 @@ describe('kill the worker mid-job', () => {
     apps.splice(apps.indexOf(a), 1);
 
     // a new worker starts; its start-up sweep settles the orphan
-    let b!: WorkerApp;
+    const second: { app?: WorkerApp } = {};
     const registry = new SweepRegistry();
     registry.register(submitOrphanHook('fake-orphans', jobs, 0));
-    b = await start({ logger, registry, handlers: { 'brief.generate': handlerFor(() => b) } });
+    second.app = await start({
+      logger,
+      registry,
+      handlers: { 'brief.generate': handlerFor(() => second.app!) },
+    });
     await vi.waitFor(
       async () => expect(await stateOf(jobId)).toEqual({ state: 'failed', cause_class: 'outcome_unknown' }),
       { timeout: 15_000 },
