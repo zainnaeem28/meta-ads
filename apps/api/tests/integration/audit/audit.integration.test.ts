@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Writable } from 'node:stream';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApiApp } from '../../../src/bootstrap/api.module.js';
@@ -76,7 +78,11 @@ describe('M0002 (TC-OPS-03, TC-AUD-02)', () => {
     expect(again.status, again.stdout + again.stderr).toBe(0);
     await withClient(env.urlFor('superuser'), async (c) => {
       const ledger = await c.query('SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations');
-      expect((ledger.rows[0] as { n: number }).n).toBe(3);
+      // One row per migration in the journal, whatever later tickets add.
+      const journal = JSON.parse(
+        readFileSync(join(dir, 'migrations', 'meta', '_journal.json'), 'utf8'),
+      ) as { entries: unknown[] };
+      expect((ledger.rows[0] as { n: number }).n).toBe(journal.entries.length);
     });
   });
 

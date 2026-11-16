@@ -22,6 +22,13 @@
       "when": 1794826278955,
       "tag": "0020_task-033-identity",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794833111051,
+      "tag": "0030_task-039-provider-keys",
+      "breakpoints": true
     }
   ]
 }
