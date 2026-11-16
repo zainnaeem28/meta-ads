@@ -13,7 +13,10 @@
     "./cmp-005": "./src/components/cmp-005/index.ts",
     "./cmp-006": "./src/components/cmp-006/index.ts",
     "./cmp-007": "./src/components/cmp-007/index.ts",
-    "./cmp-008": "./src/components/cmp-008/index.ts"
+    "./cmp-008": "./src/components/cmp-008/index.ts",
+    "./cmp-010": "./src/components/cmp-010/index.ts",
+    "./cmp-011": "./src/components/cmp-011/index.ts",
+    "./cmp-012": "./src/components/cmp-012/index.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",
