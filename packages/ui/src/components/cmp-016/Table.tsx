@@ -67,6 +67,7 @@ export function Table<T>({
   emptyAction,
   skeletonRows = 4,
 }: TableProps<T>) {
+  const sortable = columns.filter((c) => c.sortable);
   const span = columns.length + (rowAction ? 1 : 0);
   return (
     <div
@@ -75,14 +76,46 @@ export function Table<T>({
       aria-label={label}
       className="w-full overflow-x-auto rounded-md border border-border bg-card text-foreground max-md:overflow-x-visible"
     >
-      <table aria-label={label} aria-busy={state === 'loading' || undefined} className="w-full border-collapse text-ui max-md:block">
-        <thead className="bg-muted text-left max-md:sr-only">
-          <tr>
+      {sortable.length > 0 ? (
+        <div role="group" aria-label="Order list" className="flex flex-wrap gap-2 border-b border-border p-2 md:hidden">
+          {sortable.map((c) => {
+            const active = sort?.columnId === c.id ? sort.direction : undefined;
+            return (
+              <Button
+                key={c.id}
+                variant="outline"
+                size="sm"
+                aria-label={`Order by ${c.header}${active ? `, ${active}` : ''}`}
+                aria-pressed={active ? true : false}
+                onClick={() => onSortChange?.(c.id)}
+              >
+                {c.header}
+                <Icon
+                  name={active === 'ascending' ? 'chevron-up' : active === 'descending' ? 'chevron-down' : 'arrow-up-down'}
+                  size={16}
+                />
+              </Button>
+            );
+          })}
+        </div>
+      ) : null}
+      <div role="status" className="sr-only">
+        {state === 'loading' ? 'Loading' : ''}
+      </div>
+      <table
+        role="table"
+        aria-label={label}
+        aria-busy={state === 'loading' || undefined}
+        className="w-full border-collapse text-ui max-md:block"
+      >
+        <thead role="rowgroup" className="bg-muted text-left max-md:hidden">
+          <tr role="row">
             {columns.map((c) => {
               const active = sort?.columnId === c.id ? sort.direction : undefined;
               return (
                 <th
                   key={c.id}
+                  role="columnheader"
                   scope="col"
                   aria-sort={c.sortable ? (active ?? 'none') : undefined}
                   className="px-4 py-2 font-semibold"
@@ -107,31 +140,24 @@ export function Table<T>({
               );
             })}
             {rowAction ? (
-              <th scope="col" className="px-4 py-2 font-semibold">
+              <th role="columnheader" scope="col" className="px-4 py-2 font-semibold">
                 Actions
               </th>
             ) : null}
           </tr>
         </thead>
-        <tbody className="max-md:block">
+        <tbody role="rowgroup" className="max-md:block">
           {state === 'loading'
             ? Array.from({ length: skeletonRows }, (_, i) => (
-                <tr key={i} data-skeleton className="min-h-control-touch border-t border-border max-md:block max-md:p-4">
+                <tr key={i} role="row" data-skeleton className="min-h-control-touch border-t border-border max-md:block max-md:p-4">
                   {Array.from({ length: span }, (_, j) => (
-                    <td key={j} className={CELL}>
+                    <td key={j} role="cell" className={CELL}>
                       <span aria-hidden="true" className="block h-4 w-3/4 rounded-sm bg-muted motion-safe:animate-pulse" />
                     </td>
                   ))}
                 </tr>
               ))
             : null}
-          {state === 'loading' ? (
-            <tr className="sr-only">
-              <td colSpan={span} role="status">
-                Loading
-              </td>
-            </tr>
-          ) : null}
           {state === 'content'
             ? rows.map((row) => {
                 const key = rowKey(row);
@@ -140,12 +166,13 @@ export function Table<T>({
                 return (
                   <tr
                     key={key}
+                    role="row"
                     data-selected={selected || undefined}
                     aria-busy={pending || undefined}
                     className={`min-h-control-touch border-t border-border max-md:block max-md:p-4 ${selected ? 'bg-accent' : ''}`}
                   >
                     {columns.map((c, i) => (
-                      <td key={c.id} className={CELL}>
+                      <td key={c.id} role="cell" className={CELL}>
                         <span className="text-caption text-muted-foreground md:hidden">{c.header}</span>
                         <span className="block min-w-0 break-words">
                           {c.cell(row)}
@@ -154,7 +181,7 @@ export function Table<T>({
                       </td>
                     ))}
                     {rowAction ? (
-                      <td className={CELL}>
+                      <td role="cell" className={CELL}>
                         <Button
                           variant="outline"
                           size="sm"
@@ -171,8 +198,8 @@ export function Table<T>({
               })
             : null}
           {state === 'empty' || state === 'error' ? (
-            <tr className="border-t border-border max-md:block">
-              <td colSpan={span} className="max-md:block">
+            <tr role="row" className="border-t border-border max-md:block">
+              <td role="cell" colSpan={span} className="max-md:block">
                 {state === 'error' ? (
                   <EmptyState
                     variant="error"

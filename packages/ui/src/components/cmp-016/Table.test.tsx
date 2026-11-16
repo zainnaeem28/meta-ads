@@ -100,4 +100,21 @@ describe('gallery demos', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(screen.getByTestId('retry-count')).toHaveTextContent('retries: 1');
   });
+
+  it('offers a visible sort group for narrow screens and explicit table roles', async () => {
+    const onSort = vi.fn();
+    const { container } = render(<Table {...base} sort={{ columnId: 'name', direction: 'ascending' }} onSortChange={onSort} />);
+    const group = screen.getByRole('group', { name: 'Order list' });
+    expect(group.className).toContain('md:hidden');
+    const btn = within(group).getByRole('button', { name: 'Order by Name, ascending' });
+    expect(btn).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(btn);
+    expect(onSort).toHaveBeenCalledWith('name');
+    expect(container.querySelector('thead')?.className).toContain('max-md:hidden');
+    expect(container.querySelector('thead')?.className).not.toContain('sr-only');
+    expect(container.querySelector('tbody')).toHaveAttribute('role', 'rowgroup');
+    expect(container.querySelector('tbody tr')).toHaveAttribute('role', 'row');
+    expect(container.querySelector('tbody td')).toHaveAttribute('role', 'cell');
+    expect((await axe.run(container)).violations).toEqual([]);
+  });
 });
