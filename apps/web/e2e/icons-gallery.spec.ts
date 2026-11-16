@@ -63,7 +63,7 @@ test.describe('@harness visual and axe harness on a sample page', () => {
   for (const { name, width, height } of VIEWPORTS) {
     test(`home at ${name} px: baseline and axe`, async ({ page }, info) => {
       await page.setViewportSize({ width, height });
-      await page.goto('/');
+      await page.goto('/sign-in');
       await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-home-${name}.json`);
       await expectScreenshot(page, `home-${name}`);
     });
