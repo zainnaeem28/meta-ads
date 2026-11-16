@@ -148,7 +148,7 @@ describe('main.api.js (real entry point)', () => {
   });
 
   it('leaves the liveness probe raw', async () => {
-    expect(await (await fetch(`${base}/health/live`)).json()).toEqual({ status: 'ok' });
+    expect(await (await fetch(`${base}/health/live`)).json()).toMatchObject({ success: true, data: { status: 'ok' } });
   });
 });
 

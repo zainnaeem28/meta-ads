@@ -12,7 +12,7 @@
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
     "db:seed": "node dist/database/seed.js",
     "jobs:migrate": "node dist/database/jobs-migrate.js",
-    "test:unit": "vitest run --config vitest.config.ts --coverage; rc=$?; mkdir -p reports/egress && cp reports/http/lcov.info reports/egress/lcov.info; mkdir -p reports/db && cp reports/http/lcov.info reports/db/lcov.info; mkdir -p reports/limits && cp reports/http/lcov.info reports/limits/lcov.info; mkdir -p reports/jobs && cp reports/http/lcov.info reports/jobs/lcov.info; exit $rc",
+    "test:unit": "vitest run --config vitest.config.ts --coverage; rc=$?; mkdir -p reports/egress && cp reports/http/lcov.info reports/egress/lcov.info; mkdir -p reports/db && cp reports/http/lcov.info reports/db/lcov.info; mkdir -p reports/limits && cp reports/http/lcov.info reports/limits/lcov.info; mkdir -p reports/jobs && cp reports/http/lcov.info reports/jobs/lcov.info; mkdir -p reports/observability && cp reports/http/lcov.info reports/observability/lcov.info; exit $rc",
     "db:check-history": "bash ../../scripts/ci/db-check-history.sh",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:startup-config": "vitest run --config vitest.config.ts src/platform/config/schema.test.ts src/platform/config/example-env.test.ts; rc=$?; mkdir -p ../../reports/config && cp reports/config/junit.xml ../../reports/config/junit.xml; exit $rc"

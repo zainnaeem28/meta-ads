@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Controller, Get, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import helmet from '@fastify/helmet';
@@ -11,15 +11,19 @@ import { applyBounds } from '../platform/http/bounds.js';
 import { EgressModule } from '../platform/egress/index.js';
 import type { EgressModuleConfig } from '../platform/egress/index.js';
 import { corsOptions } from '../platform/http/cors.js';
-import { EnvelopeInterceptor, ErrorFilter, RawResponse } from '../platform/http/index.js';
+import { EnvelopeInterceptor, ErrorFilter } from '../platform/http/index.js';
 import { installMethodIndex } from '../platform/http/method-index.js';
 import type { MethodIndex } from '../platform/http/method-index.js';
 import { IdempotencyModule } from '../platform/idempotency/index.js';
 import { RateLimitModule } from '../platform/rate-limit/index.js';
-import { Scope, assertScopesDeclared } from '../platform/http/scope-registry.js';
+import { assertScopesDeclared } from '../platform/http/scope-registry.js';
 import { JobsModule } from '../platform/jobs/boss.js';
+import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
+import { MetricsModule } from '../platform/metrics/index.js';
+import type { MetricsConfig } from '../platform/metrics/index.js';
 
-export interface EdgeConfig extends EgressModuleConfig {
+export interface EdgeConfig extends EgressModuleConfig, MetricsConfig {
+  API_DRAIN_SECONDS?: number | undefined;
   WEB_ORIGIN?: string | undefined;
   APP_ENV: AppEnv;
   /** When present the application pool is opened and checked at startup (DATABASE_POOL_MAX and ACQUIRE_TIMEOUT too). */
@@ -31,17 +35,6 @@ export interface EdgeConfig extends EgressModuleConfig {
   JOB_CREATE_RATE_LIMIT?: number | undefined;
   JOB_CREATE_RATE_WINDOW_MIN?: number | undefined;
   IDEMPOTENCY_TTL_HOURS?: number | undefined;
-}
-
-/** Replaced by the health ticket (API-900/901). */
-@Controller('health')
-@Scope('Pub')
-export class HealthController {
-  @Get('live')
-  @RawResponse()
-  live(): { status: string } {
-    return { status: 'ok' };
-  }
 }
 
 /** Operations served at the root, not under `/api/v1` (health probes API-900/901, internal metrics API-902/903). */
@@ -69,8 +62,14 @@ function apiModule(
           IdempotencyModule.register(config),
         ];
   @Module({
-    imports: [logging.module(), EgressModule.register(config), ...database],
-    controllers: [HealthController, ...controllers],
+    imports: [
+      logging.module(),
+      EgressModule.register(config),
+      ...database,
+      HealthModule.register(healthOptionsFrom(process.env, config)),
+      MetricsModule.register(config),
+    ],
+    controllers,
   })
   class ApiModule {}
   return ApiModule;

@@ -85,7 +85,7 @@ describe('api process startup (real entry point, real PostgreSQL)', () => {
     });
     await db.end();
     const ran = await run(validEnv('api', { DATABASE_URL: databaseUrl }), 3921, true);
-    expect(ran.live).toEqual({ status: 'ok' });
+    expect(ran.live).toMatchObject({ success: true, data: { status: 'ok' } });
     expect(ran.stderr).toBe('');
   });
 
