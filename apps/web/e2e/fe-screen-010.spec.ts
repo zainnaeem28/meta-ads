@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync } from 'node:fs';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { expectNoAxeViolations } from '../tests/support/axe';
 import { VIEWPORTS } from '../tests/support/visual';
@@ -214,8 +214,10 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
         await settle(page);
         await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-${state}-${name}.json`);
         mkdirSync(`${evidence}/screenshots`, { recursive: true });
-        await page.screenshot({ path: `${evidence}/screenshots/${state}-${name}.png`, fullPage: true });
-        await expect(page).toHaveScreenshot(`fe-screen-010-${state}-${name}.png`, { fullPage: true });
+        const baseline = `fe-screen-010-${state}-${name}.png`;
+        await expect(page).toHaveScreenshot(baseline, { fullPage: true });
+        // The evidence copy is the verified baseline, so a rerun leaves the committed files unchanged (spinner jitter).
+        copyFileSync(info.snapshotPath(baseline), `${evidence}/screenshots/${state}-${name}.png`);
       });
     }
   }
