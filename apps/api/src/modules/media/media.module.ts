@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
+import { DATABASE } from '../../platform/db/index.js';
+import type { Database } from '../../platform/db/index.js';
+import { RateLimiter } from '../../platform/rate-limit/index.js';
 import { MediaService } from './application/media.service.js';
 import { MEDIA_CONFIG, MEDIA_REPOSITORY } from './application/ports.js';
 import type { MediaConfig } from './application/ports.js';
@@ -7,6 +10,8 @@ import { STORAGE_PORT } from './domain/storage.js';
 import { DrizzleMediaRepository } from './infrastructure/media.repository.js';
 import { createStorage } from './infrastructure/s3-storage.js';
 import type { S3StorageConfig } from './infrastructure/s3-storage.js';
+import { MediaUploadService } from './transport/media-upload.service.js';
+import { MediaController, MultipartSupport } from './transport/media.controller.js';
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -53,7 +58,7 @@ export function storageConfigFrom(env: Env): S3StorageConfig {
 }
 
 /**
- * Media, part 1 (TASK-041): quota, upload skeleton, object registration and signed URLs over StoragePort. The R2
+ * Media (TASK-041, TASK-042): quota, upload, object registration and signed URLs over StoragePort, and API-030 to API-032. The R2
  * adapter (token A in the api, token B in the worker) or the MinIO adapter is chosen from `R2_ENDPOINT`. Fails at
  * construction, so the process does not start, when a setting is missing or out of range.
  */
@@ -69,7 +74,11 @@ export class MediaModule {
         { provide: MEDIA_CONFIG, useValue: config },
         { provide: STORAGE_PORT, useValue: storage },
         { provide: MEDIA_REPOSITORY, useClass: DrizzleMediaRepository },
+        { provide: RateLimiter, useFactory: (database: Database) => new RateLimiter(database.db), inject: [DATABASE] },
+        MediaUploadService,
+        MultipartSupport,
       ],
+      controllers: [MediaController],
       exports: [MediaService, STORAGE_PORT],
     };
   }

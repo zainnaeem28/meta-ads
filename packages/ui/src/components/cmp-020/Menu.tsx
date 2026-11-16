@@ -28,6 +28,8 @@ export interface MenuProps {
   /** Which edge of the trigger the menu lines up with; `end` for triggers at the right edge (account menu). */
   align?: 'start' | 'end';
   className?: string;
+  /** Replaces the trigger's default shape classes (size, border, padding), e.g. the shell's account pill. */
+  triggerClassName?: string;
 }
 
 const ITEM_CLASS =
@@ -35,7 +37,7 @@ const ITEM_CLASS =
   'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring';
 
 /** CMP-020 menu button (phone: fixed to the viewport, full width less 12 px each side, just under the trigger): opens on click, Enter, Space or ArrowDown; arrows, Home and End move; Escape closes and returns focus. */
-export function Menu({ trigger, label, items, header, defaultOpen = false, initialFocus = false, align = 'start', className }: MenuProps) {
+export function Menu({ trigger, label, items, header, defaultOpen = false, initialFocus = false, align = 'start', className, triggerClassName }: MenuProps) {
   const [open, setOpen] = useState(defaultOpen);
   const [phoneTop, setPhoneTop] = useState<number | undefined>(undefined);
   const base = useId();
@@ -128,7 +130,7 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
         aria-label={label}
         onClick={() => (open ? close(false) : openWith('first'))}
         onKeyDown={onTriggerKeyDown}
-        className="inline-flex min-h-control max-md:min-h-control-touch items-center gap-2 rounded-md border border-input bg-card px-3 text-ui hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className={`inline-flex items-center text-ui hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${triggerClassName ?? 'min-h-control max-md:min-h-control-touch gap-2 rounded-md border border-input bg-card px-3'}`}
       >
         {trigger}
       </button>
