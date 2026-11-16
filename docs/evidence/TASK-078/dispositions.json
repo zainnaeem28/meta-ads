@@ -1,0 +1,9 @@
+[
+  {
+    "match": "openai-key-shaped",
+    "path": "docs/evidence/TASK-078/submit-check.md",
+    "reason": "False positive: the report's branch line contains a hyphenated word run from the branch name, not a key. The file holds no credentials.",
+    "owner": "Frontend Engineer",
+    "expires": "2026-12-16"
+  }
+]
