@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -182,11 +182,12 @@ describe('negative probes', () => {
     expect(await checkCleanHistory(env, dir)).toEqual([]);
     const previous: PreviousRelease = { tag: null, lastMigration: 0, snapshot: '', synthetic: '' };
     const missing = await checkRollback(env, migrations, join(dir, 'none'), previous, [], '');
-    expect(missing).toHaveLength(1);
+    expect(missing).toHaveLength(readJournal(migrations).length);
     expect(missing[0]).toContain('0001_task-025-platform has no compensating migration');
     const partial = join(dir, 'partial');
     mkdirSync(partial);
     writeFileSync(join(partial, '0001.sql'), 'DROP TABLE rate_limit_buckets;');
+    copyFileSync(join(compensating, '0010.sql'), join(partial, '0010.sql'));
     const left = await checkRollback(env, migrations, partial, previous, [], '');
     expect(
       left.some((f) => f.startsWith('rollback left structure behind: column idempotency_records')),
@@ -194,6 +195,7 @@ describe('negative probes', () => {
     const broken = join(dir, 'broken');
     mkdirSync(broken);
     writeFileSync(join(broken, '0001.sql'), 'DROP TABLE nonexistent;');
+    copyFileSync(join(compensating, '0010.sql'), join(broken, '0010.sql'));
     const failed = await checkRollback(env, migrations, broken, previous, [], '');
     expect(failed[0]).toContain('compensating migration for 0001_task-025-platform failed');
   });
