@@ -76,7 +76,7 @@ describe('M0002 (TC-OPS-03, TC-AUD-02)', () => {
     expect(again.status, again.stdout + again.stderr).toBe(0);
     await withClient(env.urlFor('superuser'), async (c) => {
       const ledger = await c.query('SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations');
-      expect((ledger.rows[0] as { n: number }).n).toBe(2);
+      expect((ledger.rows[0] as { n: number }).n).toBe(3);
     });
   });
 

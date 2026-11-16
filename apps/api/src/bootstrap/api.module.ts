@@ -18,6 +18,7 @@ import { IdempotencyModule } from '../platform/idempotency/index.js';
 import { RateLimitModule } from '../platform/rate-limit/index.js';
 import { assertScopesDeclared } from '../platform/http/scope-registry.js';
 import { AuditModule } from '../modules/audit/index.js';
+import { IdentityModule, identityConfigFrom } from '../modules/identity/identity.module.js';
 import { JobsModule } from '../platform/jobs/boss.js';
 import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
 import { MetricsModule } from '../platform/metrics/index.js';
@@ -67,6 +68,7 @@ function apiModule(
       logging.module(),
       EgressModule.register(config),
       AuditModule.register(logging.logger),
+      IdentityModule.register(identityConfigFrom(process.env, config.APP_ENV, config.WEB_ORIGIN)),
       ...database,
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),
