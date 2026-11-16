@@ -15,9 +15,17 @@ import type { AuthOptions } from './application/ports.js';
 import { SessionService } from './application/session.service.js';
 import { AccessRequestQueries } from './infrastructure/identity.queries.js';
 import { MeController } from './transport/me.controller.js';
+import { InvitationJobs, EXPIRE_INVITATIONS_QUEUE, INVITATION_JOB_OPTIONS } from './application/invitations.jobs.js';
+import { INVITATION_OPTIONS, InvitationService, invitationOptionsFrom } from './application/invitations.service.js';
+import { INVITATION_ADMIN_STORE, InvitationAdminStore } from './application/invitations.store.js';
+import { InvitationsController } from './transport/invitations.controller.js';
+import { DATABASE } from '../../platform/db/index.js';
+import type { Database } from '../../platform/db/index.js';
+import { RateLimiter } from '../../platform/rate-limit/index.js';
 import { IDENTITY_PORT } from './domain/identity-port.js';
 import type { IdentityPort } from './domain/identity-port.js';
 import { ClerkIdentity } from './infrastructure/clerk-identity.js';
+import { identityConfigFrom } from './infrastructure/identity.config.js';
 import type { IdentityConfig } from './infrastructure/identity.config.js';
 import {
   AccessRequestRepository,
@@ -29,7 +37,8 @@ import { LocalIdentity } from './infrastructure/local-identity.js';
 
 export { authOptionsFrom } from './application/ports.js';
 export type { AuthOptions } from './application/ports.js';
-export { identityConfigFrom } from './infrastructure/identity.config.js';
+export { identityConfigFrom };
+export { InvitationJobs };
 export type { IdentityConfig, IdentityMode } from './infrastructure/identity.config.js';
 export {
   IDENTITY_PORT,
@@ -58,6 +67,25 @@ export function createIdentityPort(
       ? {}
       : { authorizedParties: config.authorizedParties }),
   });
+}
+
+/** A worker job handler of this module (the worker composition root binds it to its queue). */
+export type IdentityJobHandler = (job: unknown, log: { info(fields: object, message: string): void }) => Promise<void>;
+
+/** The queue handlers of this module: `identity.expire-invitations` runs `InvitationJobs`, resolved when a job arrives. */
+export function identityJobHandlers(
+  resolve: () => InvitationJobs,
+): Readonly<Record<string, IdentityJobHandler>> {
+  return {
+    [EXPIRE_INVITATIONS_QUEUE]: async (_job, log) => {
+      const outcome = await resolve().run();
+      log.info(
+        { module: 'identity', outcome: 'ok' },
+        `expire-invitations: ${String(outcome.expired)} expired, ${String(outcome.staleSends)} stale sends, ` +
+          `${String(outcome.revoked)} provider revokes done, ${String(outcome.revokesOwed)} still owed`,
+      );
+    },
+  };
 }
 
 /** The guard's configuration and the audit module instance of the composition root (the audit trail is layer 1). */
@@ -94,14 +122,43 @@ export class IdentityModule {
               { provide: ACCESS_REQUEST_LOOKUP, useClass: AccessRequestQueries },
               LinkingService,
               MeService,
+              { provide: RateLimiter, useFactory: (database: Database) => new RateLimiter(database.db), inject: [DATABASE] },
+              {
+                provide: INVITATION_OPTIONS,
+                useValue: invitationOptionsFrom(process.env, auth.options.inviteEmailDomains, auth.options.webOrigin),
+              },
+              { provide: INVITATION_ADMIN_STORE, useClass: InvitationAdminStore },
+              InvitationService,
               SessionService,
               { provide: SESSION_AUTHENTICATOR, useExisting: SessionService },
               { provide: APP_GUARD, useClass: AuthGuard },
             ]),
       ],
       imports: auth === undefined ? [] : [auth.audit],
-      controllers: auth === undefined ? [] : [MeController],
+      controllers: auth === undefined ? [] : [MeController, InvitationsController],
       exports: [IDENTITY_PORT],
+    };
+  }
+
+  /**
+   * The worker side (REQ-003): the identity port and the hourly invitation job. `env` is the process environment
+   * (`IDENTITY_MODE`, `CLERK_*`, `INVITATION_SEND_STALE_MIN`); the database module is the worker's.
+   */
+  static registerWorker(env: Readonly<Record<string, string | undefined>>): DynamicModule {
+    const webOrigin = env['WEB_ORIGIN'];
+    const stale = invitationOptionsFrom(env, [], webOrigin).sendStaleMin;
+    return {
+      module: IdentityModule,
+      providers: [
+        {
+          provide: IDENTITY_PORT,
+          useValue: createIdentityPort(identityConfigFrom(env, env['APP_ENV'] ?? 'development', webOrigin), webOrigin),
+        },
+        { provide: INVITATION_JOB_OPTIONS, useValue: { sendStaleMin: stale } },
+        { provide: INVITATION_ADMIN_STORE, useClass: InvitationAdminStore },
+        InvitationJobs,
+      ],
+      exports: [InvitationJobs],
     };
   }
 }

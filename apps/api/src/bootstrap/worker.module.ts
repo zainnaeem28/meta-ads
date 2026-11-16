@@ -15,6 +15,7 @@ import { sweepRegistry } from '../platform/jobs/sweep-registry.js';
 import type { SweepRegistry } from '../platform/jobs/sweep-registry.js';
 import { EXIT_WATCHDOG, Watchdog } from '../platform/jobs/watchdog.js';
 import { AuditModule } from '../modules/audit/index.js';
+import { IdentityModule, InvitationJobs, identityJobHandlers } from '../modules/identity/index.js';
 import { KeyUnsealer } from '../modules/provider-keys/infrastructure/key-unsealer.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { runLoggedJob } from '../platform/logging/index.js';
@@ -196,21 +197,28 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
     env['KEK_PRIVATE_KEYS'] === undefined
       ? []
       : [{ provide: KeyUnsealer, useValue: KeyUnsealer.fromEnv(env) }];
+  // Queue handlers of the modules (the owning module's jobs); a handler a caller passes for the same queue wins.
+  const moduleHandlers = identityJobHandlers(() => context.get(InvitationJobs, { strict: false }));
+  const merged: WorkerOptions = {
+    ...options,
+    handlers: { ...(moduleHandlers as Record<string, JobHandler>), ...options.handlers },
+  };
   @Module({
     imports: [
       DatabaseModule.forRoot(dbConfigOf(config)),
       JobsModule.forRoot({ DATABASE_URL: dbConfigOf(config).DATABASE_URL, role: 'worker' }),
       AuditModule.register(options.logger),
+      IdentityModule.registerWorker(env),
       ...keys,
     ],
     providers: [
       ...unsealer,
-      { provide: OPTIONS, useValue: options },
+      { provide: OPTIONS, useValue: merged },
       { provide: CONFIG, useValue: config },
       WorkerRuntime,
     ],
   })
   class WorkerModule {}
-  const context = await NestFactory.createApplicationContext(WorkerModule, { logger: false });
+  const context: INestApplicationContext = await NestFactory.createApplicationContext(WorkerModule, { logger: false });
   return { context, runtime: context.get(WorkerRuntime) };
 }
