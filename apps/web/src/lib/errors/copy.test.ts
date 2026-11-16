@@ -267,6 +267,8 @@ describe('error copy table (UI-UX §9.1)', () => {
     const forbidden = resolveError(fail('forbidden_role'), { surface: 'context' });
     expect(forbidden.presentation).toBe('alert');
     expect(forbidden.message).toBe('You do not have permission to do this.');
+    expect(forbidden.action).toEqual({ kind: 'close', label: 'Close' });
+    expect(resolveError(fail('forbidden_role')).action.label).toBe('Go Home');
   });
 
   it('shows the Reference only for 500 and 503 (and the fallback)', () => {

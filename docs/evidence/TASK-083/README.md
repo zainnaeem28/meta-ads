@@ -12,7 +12,7 @@ Submit-check report for the submitted commit is attached to the task as `submit-
 | Table test, 36 codes + unknown fallback | `lib/errors/copy.test.ts` (each code: copy, action, presentation; unknown/plain/transport fall back) |
 | No status, stack, table name or provider detail in any message | `copy.test.ts` "copy lint" over every row, with and without server text and wait; server messages screened by `safeServerMessage` |
 | Countdown, announcements only at start and availability | `components/errors/RetryButton.test.tsx` (fake timers: exactly two distinct announcements) |
-| Through the real entry point | `e2e/error-presentation.spec.ts` (`@TASK-083`): built web (`next start`) against the running built api; real api `not_found` on GET /me; scripted contract-shaped 503/500/401/422 for the write endpoint |
+| Through the real entry point | `e2e/error-presentation.spec.ts` (`@TASK-083`): built web (`next start`) against the running built api; the real api's `401 unauthenticated` on GET /me (current `dev`, TASK-034 guard) redirects to `/sign-in?reason=session-expired&return=...` (the sign-in target is stubbed: that screen does not exist yet); scripted contract-shaped 404 `not_found` (GET /me) and 503/500/401/422 (write endpoint) |
 | Retry presentation | 503 + `Retry-After: 3`: disabled "Try again in Ns", "Check the list before you repeat this" (job-creating), Reference + Copy, retry sends the same `Idempotency-Key`; 500: three failures show the administrator hint |
 | Session expired | 401 redirects to `/sign-in?reason=session-expired&return=<safe path>`; unsafe returns collapse to `/` (`session.test.ts`) |
 
@@ -24,5 +24,5 @@ Screenshots (390 and 1440, real fonts) and axe results (WCAG 2.2 AA, zero violat
 
 ## Limitations
 - The `/sign-in`, `/access`, `/mfa` and campaign screens do not exist yet; their paths are the proposed routes of UI-UX §7 in `lib/errors/routes.ts`. The global wiring of 401 handling into the query client belongs with the screen tickets; this ticket supplies `ErrorNotice`, `redirectTarget` and `signInUrl`.
-- The write-endpoint answers in the e2e are scripted from the contract, not produced by the api; only the `not_found` case is a real api answer.
+- The write-endpoint answers in the e2e are scripted from the contract, not produced by the api; only the session-expired redirect on GET /me is a real api answer. `forbidden_role` in context offers Close (INT/F-1); Copy uses the 44 px phone target (UXV-3).
 - `reports/deps.json` is a copy of the dependency audit (`reports/audit.json`) so the ticket's flag resolves.

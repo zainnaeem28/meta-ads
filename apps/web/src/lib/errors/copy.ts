@@ -52,6 +52,8 @@ export interface ErrorRow {
   presentation: Presentation;
   /** Presentation when the failing call is an action inside a form or dialog and the row differs from `presentation`. */
   inContext?: Presentation;
+  /** Action when the failing call is an action inside a form, dialog or page and the row differs from `action`. */
+  inContextAction?: ErrorAction;
   tone: Tone;
   /** The 500/503 "Reference" line with the request ID and a Copy button. */
   reference?: boolean;
@@ -161,6 +163,7 @@ const rows: ErrorRow[] = [
     pageMessage: 'This page is not available.',
     message: () => 'You do not have permission to do this.',
     action: { kind: 'link', label: 'Go Home', href: ROUTES.home },
+    inContextAction: { kind: 'close', label: 'Close' },
     presentation: 'page',
     inContext: 'alert',
     tone: 'warning',

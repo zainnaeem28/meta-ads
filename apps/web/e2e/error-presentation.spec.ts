@@ -16,6 +16,7 @@ const VIEWPORTS = [
 async function relay(
   page: Page,
   assembly?: (fulfill: Fulfill, count: number, key: string | null) => Promise<void>,
+  scripted = '/assemblies',
 ) {
   const api = process.env.E2E_API_URL!;
   let count = 0;
@@ -36,7 +37,7 @@ async function relay(
         },
       });
     }
-    if (assembly && request.url().includes('/assemblies')) {
+    if (assembly && request.url().includes(scripted)) {
       count += 1;
       return assembly(
         (o) => route.fulfill({ ...o, headers: { ...(o?.headers ?? {}), ...cors } }),
@@ -57,21 +58,46 @@ const envelope = (code: string, message: string, extra: object = {}) =>
   });
 
 test.describe('@TASK-083 error presentation through the built web app', () => {
+  // The real api answers GET /me without a session with 401 unauthenticated: the session-expired row redirects to
+  // sign-in with a safe return path. The sign-in screen does not exist yet, so its target is stubbed.
+  test('real api unauthenticated on a page load redirects to sign-in with a safe return path', async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== 'chromium');
+    await relay(page);
+    await page.route('**/sign-in**', (route) =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<main>Sign in stub</main>' }),
+    );
+    await page.goto('/error-probe?scenario=load');
+    await expect(page).toHaveURL(
+      /\/sign-in\?reason=session-expired&return=%2Ferror-probe%3Fscenario%3Dload$/,
+    );
+    await expect(page.getByText('Sign in stub')).toBeVisible();
+  });
+
   for (const viewport of VIEWPORTS) {
-    test(`real api not_found renders the unavailable state with Go Home at ${viewport.name}`, async ({
+    test(`not_found on a page load renders the unavailable state with Go Home at ${viewport.name}`, async ({
       page,
     }, info) => {
       test.skip(info.project.name !== 'chromium');
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      await relay(page);
+      await relay(
+        page,
+        async (fulfill) =>
+          fulfill({
+            status: 404,
+            contentType: 'application/json',
+            body: envelope('not_found', 'no such row in table users'),
+          }),
+        '/api/v1/me',
+      );
       await page.goto('/error-probe?scenario=load');
       const alert = page
         .getByRole('alert')
         .filter({ hasText: 'This page or item is not available.' });
       await expect(alert).toBeVisible();
       await expect(alert.getByRole('link', { name: 'Go Home' })).toHaveAttribute('href', '/');
-      // Status, stack and the raw server message never reach the screen.
-      await expect(page.locator('main')).not.toContainText(/\b404\b|stack|not_found/i);
+      await expect(page.locator('main')).not.toContainText(/\b404\b|stack|not_found|table/i);
       await page.evaluate(() => document.fonts.ready);
       await expectNoAxeViolations(page, `${evidence}/axe/not-found-${viewport.name}.json`);
       mkdirSync(`${evidence}/screenshots`, { recursive: true });

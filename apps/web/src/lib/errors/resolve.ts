@@ -111,7 +111,7 @@ export function resolveError(error: unknown, options: ResolveOptions = {}): Erro
     tone: row.tone,
     title: row.title ?? null,
     message: text,
-    action: row.action,
+    action: surface === 'context' && row.inContextAction ? row.inContextAction : row.action,
     reference: row.reference ? (api?.requestId ?? null) : null,
     retry: row.retry === true,
     waitSeconds,

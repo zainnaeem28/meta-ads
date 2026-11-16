@@ -25,7 +25,7 @@ export function ReferenceLine({ requestId }: ReferenceLineProps) {
       <span>
         Reference: <code className="font-mono text-foreground">{requestId}</code>
       </span>
-      <Button variant="ghost" size="sm" onClick={copy} aria-label="Copy reference">
+      <Button variant="ghost" onClick={copy} aria-label="Copy reference">
         {copied ? 'Copied' : 'Copy'}
       </Button>
       <span role="status" className="sr-only">
