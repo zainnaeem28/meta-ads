@@ -19,6 +19,8 @@ export interface AuthShellProps {
   providerError?: string;
   /** Retry control for the error state. */
   providerAction?: ReactNode;
+  /** Brand-panel content (1024 px and up): product name, description and footer; the tagline shows when omitted. */
+  panel?: { name: string; description: string; footer?: string };
   /** Render the `main` landmark (default). Only the gallery turns it off, to embed several shells in one page. */
   landmark?: boolean;
   className?: string;
@@ -35,6 +37,7 @@ export function AuthShell({
   providerState = 'ready',
   providerError = 'We could not load sign-in. Try again.',
   providerAction,
+  panel,
   landmark = true,
   className,
 }: AuthShellProps) {
@@ -49,8 +52,16 @@ export function AuthShell({
         data-brand-panel=""
         className="hidden flex-col justify-between bg-surface-inverse p-12 text-surface-inverse-foreground lg:flex"
       >
-        <Logo surface="inverse" size={160} alt="" />
-        <p className="max-w-prose text-section text-surface-inverse-muted">{PANEL_COPY}</p>
+        <Logo surface="inverse" size={panel ? 240 : 160} alt="" />
+        {panel ? (
+          <div className="flex max-w-prose flex-col gap-2" data-panel-block="">
+            <p className="text-page font-semibold text-surface-inverse-foreground">{panel.name}</p>
+            <p className="text-section text-surface-inverse-muted">{panel.description}</p>
+          </div>
+        ) : (
+          <p className="max-w-prose text-section text-surface-inverse-muted">{PANEL_COPY}</p>
+        )}
+        {panel?.footer ? <p className="text-ui text-surface-inverse-muted">{panel.footer}</p> : null}
       </aside>
       <Main id={landmark ? 'main' : undefined} className="flex flex-col items-center justify-center gap-6 px-4 py-8 lg:px-8">
         <div className="lg:hidden" data-mobile-lockup="">
