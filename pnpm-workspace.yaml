@@ -6,6 +6,7 @@ packages:
   - tools/foundation-tests/media
   - tools/provider-stubs
   - scripts/ci/release-tests
+  - scripts/backup
 onlyBuiltDependencies:
   - esbuild
   - sharp

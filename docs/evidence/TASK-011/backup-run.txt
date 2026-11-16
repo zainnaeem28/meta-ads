@@ -1,0 +1,32 @@
+## run 1: node src/main.ts (the image command)
+exit status: 0
+{"level":"info","event":"dump_written","at":"2026-11-16T00:02:37.849Z","key":"db/2026-11-16/01M7GTKCZYVWCKPMR9MVTSQCXE.dump.age","bytes":61492}
+{"level":"info","event":"backup_run","at":"2026-11-16T00:02:37.918Z","runId":"01M7GTKCZYVWCKPMR9MVTSQCXE","startedAt":"2026-11-16T00:02:37.694Z","finishedAt":"2026-11-16T00:02:37.918Z","durationMs":224,"ok":true,"status":"ok","dump":{"key":"db/2026-11-16/01M7GTKCZYVWCKPMR9MVTSQCXE.dump.age","bytes":61492},"media":{"listed":3,"copied":3,"alreadyPresent":0,"vanished":0,"superseded":0,"deletedDetected":0,"movedToDeleted":0,"oldCopiesRemoved":0,"removalDeferred":0,"moveFailed":0,"copyFailed":0,"bytesCopied":205007},"mediaManifest":"manifests/2026-11-16.json","ledger":{"listed":1,"copied":1,"alreadyPresent":0,"vanished":0,"copyFailed":0},"failures":[],"heartbeat":"not-configured"}
+
+## backup bucket after run 1 (key, bytes)
+db/2026-11-16/01M7GTKCZYVWCKPMR9MVTSQCXE.dump.age  61492
+ledger/202611/01JTESTLEDGER0000000000000.json  78
+manifests/2026-11-16.json  807
+media/u/owner-1/c/camp-1/thumbnail/t-1.jpg/ab97eec87f3a5650207d673ad4c1bb32  7
+media/u/owner-1/media/clip-a.mp4/2f8a4ac450144c6ca948e86c1a8bf4c4  200000
+media/u/owner-2/media/clip-b.mp4/2908803efef8395966f9c2195e363ea6  5000
+
+## restore check: age --decrypt with the escrowed identity, pg_restore --list shows 49 tables (public and pgboss)
+
+## run 2 (a source was deleted, another added)
+exit status: 0
+{"level":"info","event":"dump_written","at":"2026-11-16T00:02:38.346Z","key":"db/2026-11-16/01M7GTKDEMXVB96K7MQ9V7J91D.dump.age","bytes":61492}
+{"level":"info","event":"backup_run","at":"2026-11-16T00:02:38.443Z","runId":"01M7GTKDEMXVB96K7MQ9V7J91D","startedAt":"2026-11-16T00:02:38.164Z","finishedAt":"2026-11-16T00:02:38.443Z","durationMs":279,"ok":true,"status":"ok","dump":{"key":"db/2026-11-16/01M7GTKDEMXVB96K7MQ9V7J91D.dump.age","bytes":61492},"media":{"listed":3,"copied":1,"alreadyPresent":2,"vanished":0,"superseded":0,"deletedDetected":1,"movedToDeleted":1,"oldCopiesRemoved":1,"removalDeferred":0,"moveFailed":0,"copyFailed":0,"bytesCopied":1000},"mediaManifest":"manifests/2026-11-16-01M7GTKDEMXVB96K7MQ9V7J91D.json","ledger":{"listed":1,"copied":0,"alreadyPresent":1,"vanished":0,"copyFailed":0},"failures":[],"heartbeat":"not-configured"}
+
+## backup bucket after run 2 (key, bytes)
+db/2026-11-16/01M7GTKCZYVWCKPMR9MVTSQCXE.dump.age  61492
+db/2026-11-16/01M7GTKDEMXVB96K7MQ9V7J91D.dump.age  61492
+ledger/202611/01JTESTLEDGER0000000000000.json  78
+manifests/2026-11-16-01M7GTKDEMXVB96K7MQ9V7J91D.json  1190
+manifests/2026-11-16.json  807
+media-deleted/2026-11-16/u/owner-2/media/clip-b.mp4/2908803efef8395966f9c2195e363ea6  5000
+media/u/owner-1/c/camp-1/thumbnail/t-1.jpg/ab97eec87f3a5650207d673ad4c1bb32  7
+media/u/owner-1/media/clip-a.mp4/2f8a4ac450144c6ca948e86c1a8bf4c4  200000
+media/u/owner-1/media/clip-c.mp4/193d16844d1be50b489aa50379030d08  1000
+
+## summary: run 1 224 ms, dump 61492 bytes, media {"listed":3,"copied":3,"alreadyPresent":0,"vanished":0,"superseded":0,"deletedDetected":0,"movedToDeleted":0,"oldCopiesRemoved":0,"removalDeferred":0,"moveFailed":0,"copyFailed":0,"bytesCopied":205007}, ledger {"listed":1,"copied":1,"alreadyPresent":0,"vanished":0,"copyFailed":0}
