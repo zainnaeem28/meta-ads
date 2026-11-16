@@ -156,7 +156,7 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
       await page.setViewportSize({ width, height });
       await watchViolations(page);
       await page.goto('/sign-in');
-      await expect(page.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'AI UGC Ad Director' })).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
       expect(await violations(page)).toEqual([]);
       mkdirSync(`${evidence}/screenshots`, { recursive: true });
