@@ -49,6 +49,7 @@ beforeAll(async () => {
       DATABASE_URL: env.urlFor('api'),
       DATABASE_POOL_MAX: 4,
       DATABASE_ACQUIRE_TIMEOUT_MS: 5000,
+      RATE_LIMIT_IP_KEY: 'r'.repeat(40),
     },
     createHttpLogging({ destination, level: 'info' }),
   ));
