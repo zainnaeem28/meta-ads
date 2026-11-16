@@ -89,6 +89,8 @@ describe('key page (REQ-019)', () => {
     const csp = directives(buildCsp({ nonce: 'N', pathname: '/settings/provider-keys', env }));
     const thirdParty = (list: string[]) => list.filter((v) => /^https?:/.test(v));
     expect(thirdParty(csp['script-src']!)).toEqual(['https://clerk.shroomap.example']);
+    // Every script-src entry is self, the request nonce or the provider origin: nothing else.
+    for (const v of csp['script-src']!) expect(v).toMatch(/^('self'|'nonce-N'|https:\/\/clerk\.shroomap\.example)$/);
     expect(csp['frame-src']).toEqual(["'none'"]);
     expect(csp['img-src']).not.toContain('https://img.clerk.com');
   });

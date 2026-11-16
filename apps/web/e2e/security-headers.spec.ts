@@ -25,6 +25,12 @@ const watchViolations = (page: Page) =>
   });
 const violations = (page: Page) => page.evaluate(() => (window as unknown as { __csp: string[] }).__csp);
 
+/** Not `networkidle`: the 404 screen's prefetch loop on unbuilt routes never goes idle. Load plus a fixed window for late violations. */
+const settle = async (page: Page) => {
+  await page.waitForLoadState('load');
+  await page.waitForTimeout(750);
+};
+
 const directives = (csp: string) =>
   Object.fromEntries(csp.split('; ').map((d) => [d.split(' ')[0]!, d.split(' ').slice(1)]));
 
@@ -56,7 +62,7 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
       expect(csp['script-src']).not.toContain("'unsafe-inline'");
       expect(csp['connect-src']).toContain(process.env.E2E_API_URL!);
       if (path === '/settings/provider-keys') expect(h['cache-control']).toContain('no-store');
-      await page.waitForLoadState('networkidle');
+      await settle(page);
       expect(await violations(page)).toEqual([]);
     });
   }
@@ -88,7 +94,7 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
     const consoleErrors: string[] = [];
     page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
     await page.goto('/settings/provider-keys');
-    await page.waitForLoadState('networkidle');
+    await settle(page);
     const executed = await page.evaluate(
       () =>
         new Promise<{ external: boolean; inline: boolean }>((resolve) => {
@@ -111,19 +117,39 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
 
   test('framing is refused: the page cannot be embedded', async ({ page, baseURL }) => {
     await page.goto('/sign-in');
-    const blocked = await page.evaluate(
+    const framed = await page.evaluate(
       (src) =>
-        new Promise<boolean>((resolve) => {
+        new Promise<{ loaded: boolean; body: string | null }>((resolve) => {
           const frame = document.createElement('iframe');
           frame.src = src;
-          frame.onload = () => resolve(frame.contentDocument?.body?.innerHTML === undefined || frame.contentDocument.body.innerHTML === '');
+          frame.onload = () => resolve({ loaded: true, body: frame.contentDocument?.body?.innerHTML ?? null });
           document.body.append(frame);
-          setTimeout(() => resolve(true), 3000);
+          setTimeout(() => resolve({ loaded: false, body: null }), 5000);
         }),
       `${baseURL}/sign-in`,
     );
-    expect(blocked).toBe(true);
+    // The refused frame fires `load` on an error document: no body content of the app.
+    expect(framed.loaded, 'the frame reported a load').toBe(true);
+    expect(framed.body === null || framed.body === '').toBe(true);
+    // The browser replaces a refused frame with its error document.
+    expect(page.frames().some((f) => f !== page.mainFrame() && f.url().startsWith('chrome-error:'))).toBe(true);
   });
+
+  for (const { name, width, height } of SHOTS) {
+    test(`evidence: key page and campaigns at ${name} px under the enforced policy`, async ({ page, context, baseURL }) => {
+      await signedIn(context, baseURL!);
+      await page.setViewportSize({ width, height });
+      await watchViolations(page);
+      for (const [slug, path] of [['provider-keys', '/settings/provider-keys'], ['signed-in-campaigns', '/campaigns']] as const) {
+        await page.goto(path);
+        await settle(page);
+        await page.evaluate(() => document.fonts.ready);
+        expect(await violations(page)).toEqual([]);
+        mkdirSync(`${evidence}/screenshots`, { recursive: true });
+        await page.screenshot({ path: `${evidence}/screenshots/${slug}-${name}.png` });
+      }
+    });
+  }
 
   for (const { name, width, height } of SHOTS) {
     test(`evidence: sign-in at ${name} px under the enforced policy`, async ({ page }) => {
