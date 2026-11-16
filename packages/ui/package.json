@@ -23,7 +23,9 @@
     "./cmp-014/gallery-demos": "./src/components/cmp-014/gallery-demos.tsx",
     "./cmp-020": "./src/components/cmp-020/index.ts",
     "./cmp-015": "./src/components/cmp-015/index.ts",
-    "./cmp-017": "./src/components/cmp-017/index.ts"
+    "./cmp-017": "./src/components/cmp-017/index.ts",
+    "./cmp-021": "./src/components/cmp-021/index.ts",
+    "./cmp-021/gallery-demos": "./src/components/cmp-021/gallery-demos.tsx"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",
