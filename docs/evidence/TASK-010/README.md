@@ -1,0 +1,12 @@
+# TASK-010 evidence: observability wiring (DO-06)
+
+Local, now (staging evidence is go-live):
+
+- `canary.txt`: TC-LOG-01/03. A per-run canary key, provider key, bearer and email go through the api logger (message, fields, error, child bindings, request headers, a failing job), the real `@sentry/node` SDK wired by the api's adapter to a local ingest, and `monitor`'s token and DSN paths; every sink is searched. A negative probe (redaction off) shows the detector can fail. Canary values are never written.
+- `health-contract.txt`: `scripts/ci/health-contract-check.sh` output. The built api (`dist/main.api.js`) on a throwaway database of the shared test PostgreSQL; API-900/901 validated against `HealthResponse`, 503 without detail, drain on SIGTERM.
+- `scripts/monitor/tests`: TC-ALR-04 (ALR-2, ALR-3), TC-ALR-05 (ALR-7), TC-ALR-06 (ALR-9) through the real `node src/main.ts` as a fresh process per body against an API-903 stub (insufficient data asserted as a state, 404/500/timeout/malformed/non-JSON, `telemetryDropped10m` versus `telemetryDroppedTotal`, api restart); dead-man switch (`deadman.test.ts`: the monitor heartbeat stops and the rule fires after expect + grace); alert lint (`lint-alerts.test.ts`: each of the six fields missing fails).
+- TC-OPS-10 (monitor side): `monitor` sends `METRICS_TOKEN` as a bearer to API-903 only, a wrong token is the api's 404 and becomes ALR-9, and the token is in no sink. The api side of TC-OPS-10 is TASK-061.
+
+Not done here (go-live or other tickets): live uptime vendor, Sentry projects and DSNs (adapter stays off until the T-14 vendor record, TASK-064), the live Render cron and its private route to the api (VERIFY), controlled alert to the email destination in staging, Sentry issue-alert auto-resolve settings (`infra/monitoring/sentry.json`, human-required).
+
+Changes outside the allowed paths (necessary): `pnpm-workspace.yaml` and `pnpm-lock.yaml` add the `scripts/monitor` package named `monitor` (required by `pnpm --filter monitor test`). Change requests for the Orchestrator: wire `health-contract-check.sh` and `pnpm --filter monitor test` into `.github/workflows/ci.yml` and the `monitor` cron into `infra/render/render.yaml` (command `node scripts/monitor/src/main.ts --api-url <private api URL>`), neither of which is in this ticket's paths; runbooks live in `docs/ops/runbooks/` as the ticket says (DEVOPS-PLAN 11.3 names `infra/monitoring/runbooks/`).

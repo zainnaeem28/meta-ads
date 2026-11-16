@@ -1,0 +1,11 @@
+
+PASS openapi declares /health/live
+PASS openapi declares /health/ready
+PASS API-900 answers 200 with the enveloped HealthResponse, whatever Authorization says
+PASS API-900 answers 200 with the enveloped HealthResponse, whatever Authorization says
+PASS API-901 answers 200 with a valid HealthResponse and no detail
+PASS API-901 answers 503 service_unavailable without detail when the schema head is out of range
+PASS API-900 stays 200 while API-901 is 503
+PASS API-901 is 200 before a stop signal
+PASS API-901 is 503 while draining after SIGTERM
+health-contract-check: PASS

@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import pg from 'pg';
 import type { Queue } from 'pg-boss';
 import { validEnv } from '../../../src/platform/config/test-env.js';
+import { migrateJobs } from '../../../src/database/jobs-migrate.js';
+import { QUEUES } from '../../../src/platform/jobs/queues.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   apiDir,
@@ -764,6 +766,8 @@ describe('real entry points on the migrated database', () => {
   });
 
   it('the built API (dist/main.api.js) starts as app_api on the migrated database and closes its pool', async () => {
+    // The release order: db:migrate, then jobs:migrate; the api fails closed without the pg-boss schema and queues.
+    await migrateJobs(env.urlFor('migrator'), QUEUES, { api: env.roles.api, worker: env.roles.worker });
     let stderr = '';
     child = spawn('node', ['dist/main.api.js'], {
       cwd: apiDir,

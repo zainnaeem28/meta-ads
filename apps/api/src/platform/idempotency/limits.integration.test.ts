@@ -5,6 +5,7 @@ import { Body, Controller, Headers, HttpCode, Post, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { migrateJobs } from '../../database/jobs-migrate.js';
 import { createApiApp } from '../../bootstrap/api.module.js';
 import type { ApiApp } from '../../bootstrap/api.module.js';
 import { validEnv } from '../config/test-env.js';
@@ -76,6 +77,9 @@ beforeAll(async () => {
     .filter((statement) => /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets)/.test(statement) || /^CREATE INDEX "idempotency_records_expiry_idx"/.test(statement));
   expect(ddl).toHaveLength(3);
   for (const statement of ddl) await direct.query(statement);
+  // The api fails closed without the pg-boss schema and queues (release order: db:migrate, then jobs:migrate).
+  await direct.query('CREATE SCHEMA pgboss');
+  await migrateJobs(testDb.url, undefined, null);
   const config = {
     ...validEnv('api', { DATABASE_URL: testDb.url }),
   };

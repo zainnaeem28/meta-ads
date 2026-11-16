@@ -3,6 +3,7 @@ import type { ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { migrateJobs } from '../../database/jobs-migrate.js';
 import { validEnv } from '../config/test-env.js';
 import { createTestDatabase } from './test-database.js';
 import type { TestDatabase } from './test-database.js';
@@ -69,6 +70,11 @@ describe('main.api.js (real entry point)', () => {
   });
 
   it('starts, holds its pool from the configuration and closes it on shutdown', async () => {
+    const owner = new pg.Client({ connectionString: database.url });
+    await owner.connect();
+    await owner.query('CREATE SCHEMA pgboss');
+    await owner.end();
+    await migrateJobs(database.url, undefined, null);
     child = spawn('node', ['dist/main.api.js'], {
       cwd: apiDir,
       env: {

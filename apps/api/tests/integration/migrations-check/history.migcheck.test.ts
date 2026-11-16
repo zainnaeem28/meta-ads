@@ -182,7 +182,7 @@ describe('negative probes', () => {
     expect(await checkCleanHistory(env, dir)).toEqual([]);
     const previous: PreviousRelease = { tag: null, lastMigration: 0, snapshot: '', synthetic: '' };
     const missing = await checkRollback(env, migrations, join(dir, 'none'), previous, [], '');
-    expect(missing).toHaveLength(1);
+    expect(missing).toHaveLength(readJournal(migrations).length);
     expect(missing[0]).toContain('0001_task-025-platform has no compensating migration');
     const partial = join(dir, 'partial');
     mkdirSync(partial);

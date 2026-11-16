@@ -1,0 +1,6 @@
+# TC-LOG-01 / TC-LOG-03 canary run (TASK-010). Canary values are minted per run and are never written here.
+CLEAN api logger: 758 bytes searched for 7 canaries, 0 found
+CLEAN error reporter (real SDK, ingest bodies): 7733 bytes searched for 7 canaries, 0 found
+CLEAN monitor stdout: 152 bytes searched for 7 canaries, 0 found
+CLEAN monitor stderr: 0 bytes searched for 7 canaries, 0 found
+CLEAN monitor Sentry events: 382 bytes searched for 7 canaries, 0 found

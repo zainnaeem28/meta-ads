@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { validEnv } from '../config/test-env.js';
+import { installJobs } from '../jobs/test-support.js';
 
 // TASK-023: the HTTP edge in the built apps/api/dist/main.api.js (real entry point) with a uniquely named database
 // of the shared test PostgreSQL; the failing startup check runs through the real composition function.
@@ -45,6 +46,7 @@ beforeAll(async () => {
   const url = new URL(adminUrl);
   url.pathname = `/${database}`;
   databaseUrl = url.toString();
+  await installJobs(databaseUrl);
   child = spawn('node', ['dist/main.api.js'], {
     cwd: apiDir,
     env: {
