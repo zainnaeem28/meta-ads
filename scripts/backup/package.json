@@ -1,0 +1,23 @@
+{
+  "name": "backup",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Daily backup service (DO-07a): pg_dump of public and pgboss as app_backup, age-encrypted, media and ledger mirror with delayed delete",
+  "scripts": {
+    "start": "node src/main.ts",
+    "test": "vitest run --config vitest.config.ts --coverage",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1169.0",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "5.1.0",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}
