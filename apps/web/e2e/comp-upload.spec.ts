@@ -29,9 +29,17 @@ test.describe('@TASK-075 file upload (CMP-021) through the built web app', () =>
     const zone = page.locator('[data-cell=upload-idle]').getByRole('button', { name: /Upload an image/ });
     await zone.focus();
     await expect(zone).toBeFocused();
-    const chooser = page.waitForEvent('filechooser');
-    await page.keyboard.press('Enter');
-    expect((await chooser).isMultiple()).toBe(true);
+    // Enter only opens the picker once React has hydrated the click handler, so press until it does.
+    await expect
+      .poll(
+        async () => {
+          const chooser = page.waitForEvent('filechooser', { timeout: 1500 }).catch(() => null);
+          await page.keyboard.press('Enter');
+          return (await chooser)?.isMultiple();
+        },
+        { timeout: 20000 },
+      )
+      .toBe(true);
   });
 
   for (const { name, width, height } of VIEWPORTS.filter((v) => v.name !== '768')) {
