@@ -69,7 +69,7 @@ export class UsageAggregator {
         ju: string;
       }>(sql`
         with scoped as (
-          select * from usage_events where at >= ${from.toISOString()}::timestamptz and at <= ${to.toISOString()}::timestamptz
+          select * from usage_events where at >= ${from.toISOString()}::timestamptz
         ), latest as (
           select distinct on (job_type, job_id) owner_id, provider, outcome
             from scoped order by job_type, job_id, call_seq desc

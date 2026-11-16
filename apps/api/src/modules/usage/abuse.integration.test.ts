@@ -198,7 +198,7 @@ describe('aggregate through the running app (TC-USG)', () => {
   const insert = (owner: string, provider: string, job: string, seq: number, outcome: string, cost: string, latency: number | null, daysAgo = 0) =>
     pool.query(
       `INSERT INTO usage_events (id, owner_id, provider, operation, job_type, job_id, call_seq, outcome, estimated_cost_usd, cost_basis, latency_ms, at)
-       VALUES ($1, $2, $3, 'm', 'video', $4, $5, $6, $7, $8, $9, now() - make_interval(days => $10))`,
+       VALUES ($1, $2, $3, 'm', 'video', $4, $5, $6, $7, $8, $9, now() - make_interval(days => $10) - interval '1 hour')`,
       [crypto.randomUUID(), owner, provider, job, seq, outcome, cost, outcome === 'rejected' ? 'zero_rejected' : outcome === 'unconfirmed' ? 'unconfirmed_estimate' : 'estimate', latency, daysAgo],
     );
 
