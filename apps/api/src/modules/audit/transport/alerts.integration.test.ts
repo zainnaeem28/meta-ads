@@ -8,8 +8,7 @@ import { REAL_MIGRATIONS, createTestDatabase } from '../../../platform/db/test-d
 import type { TestDatabase } from '../../../platform/db/test-database.js';
 import { installJobs } from '../../../platform/jobs/test-support.js';
 import { createHttpLogging } from '../../../platform/logging/index.js';
-import { IDENTITY_PORT } from '../../identity/index.js';
-import type { IdentityPort, LocalIdentity } from '../../identity/index.js';
+import { ModulesContainer } from '@nestjs/core';
 
 // TASK-038 through the real api composition root (`createApiApp`, the one `main.api.ts` runs) with `fastify.inject`
 // on real PostgreSQL: API-125 and API-126, admin only with recent authentication, audit on denial, first
@@ -21,7 +20,12 @@ const contractsDir = join(import.meta.dirname, '..', '..', '..', '..', '..', '..
 
 let testDb: TestDatabase;
 let app: Awaited<ReturnType<typeof createApiApp>>['app'];
-let local: LocalIdentity;
+/** The local identity provider (the audit layer never imports identity, so it is found in the container). */
+interface Local {
+  addUser(sub: string, email: string, verified: boolean): void;
+  issueToken(claims: { sub: string; azp: string; fva: [number, number] }): string;
+}
+let local: Local;
 let pool: pg.Pool;
 let seq = 0;
 
@@ -67,7 +71,10 @@ beforeAll(async () => {
     },
     createHttpLogging({ level: 'silent' }),
   ));
-  local = app.get<IdentityPort>(IDENTITY_PORT, { strict: false }) as LocalIdentity;
+  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [...m.providers.values()]);
+  const found = providers.map((p) => p.instance as Partial<Local> | undefined).find((i) => typeof i?.issueToken === 'function');
+  if (found === undefined) throw new Error('local identity provider not found');
+  local = found as Local;
 });
 
 afterAll(async () => {
