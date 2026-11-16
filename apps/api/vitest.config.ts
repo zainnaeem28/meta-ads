@@ -18,6 +18,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/access/junit.xml' }],
       ['junit', { outputFile: 'reports/identity-admin/junit.xml' }],
       ['junit', { outputFile: 'reports/keys-crypto/junit.xml' }],
+      ['junit', { outputFile: 'reports/media-core/junit.xml' }],
       ['junit', { outputFile: 'reports/keys/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
@@ -35,6 +36,7 @@ export default defineConfig({
         'src/modules/audit/**/*.ts',
         'src/modules/identity/**/*.ts',
         'src/modules/provider-keys/**/*.ts',
+        'src/modules/media/**/*.ts',
         'src/platform/jobs/**/*.ts',
         'src/platform/rate-limit/**/*.ts',
         'src/platform/idempotency/**/*.ts',
@@ -78,6 +80,13 @@ export default defineConfig({
         // Wiring is proven through the real composition roots on real PostgreSQL by provider-keys.integration.test.ts.
         'src/modules/provider-keys/provider-keys.module.ts',
         'src/modules/provider-keys/infrastructure/test-support.ts',
+        // The S3 adapter is proven on a real MinIO server by s3-storage.integration.test.ts, the Drizzle repository and
+        // the module wiring on real PostgreSQL through the api composition root by media.integration.test.ts.
+        'src/modules/media/index.ts',
+        'src/modules/media/media.module.ts',
+        'src/modules/media/infrastructure/s3-storage.ts',
+        'src/modules/media/infrastructure/media.repository.ts',
+        'src/modules/media/infrastructure/test-support.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',
