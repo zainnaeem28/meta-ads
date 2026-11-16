@@ -65,6 +65,7 @@ function apiModule(
           IdempotencyModule.register(config),
         ];
   const audit = AuditModule.register(logging.logger);
+  const egress = EgressModule.register(config);
   // The session guard needs the database; it is registered before the rate limiter so that guard sees the user.
   const auth =
     config.DATABASE_URL === undefined
@@ -73,17 +74,24 @@ function apiModule(
   @Module({
     imports: [
       logging.module(),
-      EgressModule.register(config),
+      egress,
       audit,
       IdentityModule.register(
         identityConfigFrom(process.env, config.APP_ENV, config.WEB_ORIGIN),
         auth,
       ),
       ...database,
-      // The seal side of the key custody (REQ-015); present whenever the KEK public keys are configured.
+      // The seal side of the key custody (REQ-015) whenever the KEK public keys are configured; with a database it also
+      // serves API-010 to API-013 (audit and egress are the instances above, not second copies).
       ...(process.env['KEK_PUBLIC_KEYS'] === undefined
         ? []
-        : [ProviderKeysModule.register(process.env, 'api')]),
+        : [
+            ProviderKeysModule.register(
+              process.env,
+              'api',
+              config.DATABASE_URL === undefined ? undefined : { audit, egress },
+            ),
+          ]),
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),
     ],
