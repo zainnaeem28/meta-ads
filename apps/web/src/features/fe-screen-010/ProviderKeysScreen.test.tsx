@@ -8,7 +8,7 @@ import { installApiClient } from '../../lib/api/client';
 import { server } from '../../lib/api/msw.setup';
 import { createQueryClient } from '../../lib/query/query-client';
 import { ProviderKeysScreen } from './ProviderKeysScreen';
-import { cardState, deleteBody, formatEvent, formatTested, presentEvent, replaceWarning, savedMessage } from './copy';
+import { cardState, deleteBody, formatEvent, formatAdded, formatLastUsed, presentEvent, replaceWarning, savedMessage } from './copy';
 
 const ORIGIN = 'http://api.test';
 const BASE = `${ORIGIN}/api/v1`;
@@ -72,8 +72,13 @@ describe('SCREEN-010 provider keys', () => {
     show();
     expect(await screen.findByRole('heading', { name: 'OpenAI' })).toBeInTheDocument();
     expect(screen.getByTestId('key-hint')).toHaveTextContent('…7Q2d');
-    expect(screen.getByText('4f9a1c07b21e')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Replace OpenAI key' })).toBeInTheDocument();
+    expect(screen.getByText('4f9a·1c07')).toBeInTheDocument();
+    const card = within(screen.getByRole('region', { name: 'OpenAI' }));
+    expect(card.getByText(/Used for briefs/)).toBeInTheDocument();
+    expect(card.getByText('3 Nov 2026')).toBeInTheDocument();
+    expect(card.getByText(/12 Nov 2026/)).toBeInTheDocument();
+    expect(card.getByText('Jobs running').nextElementSibling).toHaveTextContent('0');
+    expect(within(screen.getByRole('region', { name: 'OpenAI' })).getByRole('button', { name: 'Replace key' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add WaveSpeed key' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /show|reveal|copy/i })).toBeNull();
     expect(screen.getByText('Add both keys to create ads')).toBeInTheDocument();
@@ -197,7 +202,7 @@ describe('SCREEN-010 provider keys', () => {
     serve(status({ inFlightJobCount: 1 }), none('wavespeed'));
     server.use(http.put(`${BASE}/me/provider-keys/openai`, () => failure(422, 'key_invalid')));
     show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Replace OpenAI key' }));
+    fireEvent.click(within(await screen.findByRole('region', { name: 'OpenAI' })).getByRole('button', { name: 'Replace key' }));
     const dialog = await screen.findByRole('dialog', { name: 'Replace OpenAI key?' });
     expect(dialog).toHaveTextContent('1 job is running on the current key');
     expect(dialog).toHaveTextContent('revoke the old key at OpenAI');
@@ -298,7 +303,9 @@ describe('SCREEN-010 copy', () => {
       expect(presentEvent({ id: 'x', provider: 'openai', kind, at: '' } as never).label).toContain('OpenAI');
     }
     expect(formatEvent('nope')).toBe('');
-    expect(formatTested(null)).toBeUndefined();
-    expect(formatTested('nope')).toBeUndefined();
+    expect(formatLastUsed(null)).toBeNull();
+    expect(formatLastUsed('nope')).toBeNull();
+    expect(formatAdded(null)).toBeUndefined();
+    expect(formatAdded('nope')).toBeUndefined();
   });
 });

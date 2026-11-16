@@ -112,9 +112,16 @@ export function formatEvent(instant: string): string {
   return Number.isNaN(at.getTime()) ? '' : STAMP.format(at);
 }
 
-/** `12 Nov 2026, 09:41` for the card's "Last tested". */
-export function formatTested(instant: string | null): string | undefined {
+/** `3 Nov 2026` for the card's "Added" (`createdAt`); undefined for no or an unreadable instant. */
+export function formatAdded(instant: string | null): string | undefined {
   if (!instant) return undefined;
   const at = new Date(instant);
-  return Number.isNaN(at.getTime()) ? undefined : `${DAY.format(at)}, ${TIME.format(at)}`;
+  return Number.isNaN(at.getTime()) ? undefined : DAY.format(at);
+}
+
+/** `12 Nov 2026, 09:41` for the card's "Last used" (`lastValidatedAt`); null reads "Not yet" in the card. */
+export function formatLastUsed(instant: string | null): string | null {
+  if (!instant) return null;
+  const at = new Date(instant);
+  return Number.isNaN(at.getTime()) ? null : `${DAY.format(at)}, ${TIME.format(at)}`;
 }

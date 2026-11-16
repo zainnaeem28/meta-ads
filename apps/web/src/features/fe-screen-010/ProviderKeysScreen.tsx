@@ -37,7 +37,8 @@ import {
   deleteBody,
   disabledMessage,
   formatEvent,
-  formatTested,
+  formatAdded,
+  formatLastUsed,
   presentEvent,
   replaceWarning,
   savedMessage,
@@ -268,12 +269,13 @@ export function ProviderKeysScreen() {
                 state={state}
                 hint={key?.last4 ?? undefined}
                 fingerprint={key?.fingerprint ?? undefined}
-                lastTested={formatTested(key?.lastValidatedAt ?? null)}
-                eventTrailHref="#key-activity"
+                description={purpose}
+                added={formatAdded(key?.createdAt ?? null)}
+                lastUsed={formatLastUsed(key?.lastValidatedAt ?? null)}
+                jobsRunning={key?.inFlightJobCount}
                 onReplace={() => open('put', provider)}
                 onDelete={() => open('delete', provider)}
               />
-              <p className="px-1 text-ui text-muted-foreground">{purpose}</p>
               {key?.configured && key.status === 'untested' ? (
                 <p className="px-1 text-ui text-muted-foreground" data-testid={`untested-${provider}`}>
                   {COPY.untestedNote}
@@ -299,7 +301,7 @@ export function ProviderKeysScreen() {
       onDismissToast={() => setToasts([])}
       onSignOut={() => window.location.assign(ROUTES.signIn)}
     >
-      <div className="mx-auto flex max-w-3xl flex-col gap-4" data-screen="SCREEN-010" aria-busy={keys.isPending || undefined}>
+      <div className="mx-auto flex max-w-narrow flex-col gap-4" data-screen="SCREEN-010" aria-busy={keys.isPending || undefined}>
         <header className="flex flex-col gap-1">
           <h1 className="text-section font-semibold">{COPY.title}</h1>
           <p className="text-ui text-muted-foreground">{COPY.description}</p>
