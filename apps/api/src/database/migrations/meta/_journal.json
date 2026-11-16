@@ -15,6 +15,13 @@
       "when": 1794786729711,
       "tag": "0010_task-032-audit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794826278955,
+      "tag": "0020_task-033-identity",
+      "breakpoints": true
     }
   ]
 }
