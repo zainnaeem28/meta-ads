@@ -14,6 +14,7 @@ export default async function MfaPage({ searchParams }: { searchParams: Promise<
   return (
     <MfaScreen
       clerk={resolveAuthMode(process.env) === 'clerk'}
+      required={first(search['reason']) === 'mfa_required'}
       returnTo={safeReturnPath(first(search['return']))}
       step={first(search['step']) === 'enrol' ? 'enrol' : 'challenge'}
     />

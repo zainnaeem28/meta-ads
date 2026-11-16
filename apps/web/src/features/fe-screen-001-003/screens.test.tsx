@@ -45,6 +45,27 @@ describe('SCREEN-003 two-step verification', () => {
   });
 });
 
+describe('SCREEN-003 mfa_required message and brand panel', () => {
+  const required = 'Two-step verification is required. Set it up to continue.';
+  it('shows the mfa_required message on enrol or when arriving via mfa_required, not on a plain challenge', () => {
+    const { unmount } = render(<MfaScreen clerk={false} returnTo="/" step="challenge" />);
+    expect(screen.queryByText(required)).toBeNull();
+    unmount();
+    const second = render(<MfaScreen clerk={false} required returnTo="/" step="challenge" />);
+    expect(screen.getByText(required)).toBeInTheDocument();
+    second.unmount();
+    render(<MfaScreen clerk={false} returnTo="/" step="enrol" />);
+    expect(screen.getByText(required)).toBeInTheDocument();
+  });
+  it('brand panel carries the description and footer without a second h1', () => {
+    const { container } = render(<MfaScreen clerk={false} returnTo="/" step="challenge" />);
+    const panel = container.querySelector('[data-brand-panel]')!;
+    expect(panel).toHaveTextContent('Brief, generate and assemble brand-checked UGC video ads.');
+    expect(panel).toHaveTextContent('Access is by invitation.');
+    expect(h1()).toHaveLength(1);
+  });
+});
+
 describe('auth group loading and error', () => {
   it('loading shows the busy status', () => {
     render(<AuthLoading />);

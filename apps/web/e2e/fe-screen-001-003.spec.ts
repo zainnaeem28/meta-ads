@@ -42,7 +42,11 @@ test.describe('@TASK-087 SCREEN-001 and SCREEN-003 through the built web app (lo
     await page.goto('/mfa?step=enrol');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Set up two-step verification');
     await expect(page.getByTestId('mfa-recovery')).toContainText('Recovery needs another second factor');
+    await expect(page.getByText('Two-step verification is required. Set it up to continue.')).toBeVisible();
+    await page.goto('/mfa?reason=mfa_required');
+    await expect(page.getByText('Two-step verification is required. Set it up to continue.')).toBeVisible();
     await page.goto('/mfa');
+    await expect(page.getByText('Two-step verification is required.')).toHaveCount(0);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Two-step verification');
     await page.getByLabel('6-digit code').fill('111111');
     await page.getByRole('button', { name: 'Verify' }).click();
