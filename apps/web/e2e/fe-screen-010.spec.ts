@@ -213,6 +213,10 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
         await ready(page);
         await settle(page);
         await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-${state}-${name}.json`);
+        // Size the viewport to the page so the fixed bottom nav sits at the page bottom, not over the content.
+        const full = await page.evaluate(() => document.documentElement.scrollHeight);
+        await page.setViewportSize({ width, height: Math.max(height, full) });
+        await settle(page);
         mkdirSync(`${evidence}/screenshots`, { recursive: true });
         const baseline = `fe-screen-010-${state}-${name}.png`;
         await expect(page).toHaveScreenshot(baseline, { fullPage: true });

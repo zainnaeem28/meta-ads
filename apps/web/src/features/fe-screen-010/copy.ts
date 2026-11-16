@@ -68,9 +68,9 @@ export const savedMessage = (name: string, last4: string | null, probe: 'valid' 
   body: `It ends in …${last4 ?? ''}. ${SCREEN_010_COPY.reminder} If you replace it later, remember to revoke the old one at ${name}.${probe === 'unknown' ? ` ${SCREEN_010_COPY.untestedNote}` : ''}`,
 });
 
-export const disabledMessage = (name: string) => ({
+export const disabledMessage = (name: string, uses: string) => ({
   title: `Your ${name} key was disabled`,
-  body: 'It was refused by the provider several times in a row. Replace it to generate again. This notice stays until you do.',
+  body: `It failed authentication 5 times in a row. Replace it to generate ${uses} again. This notice stays until you do.`,
 });
 
 export const replaceWarning = (jobs: number): string =>

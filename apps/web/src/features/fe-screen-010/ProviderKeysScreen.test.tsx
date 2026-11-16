@@ -76,7 +76,7 @@ describe('SCREEN-010 provider keys', () => {
     expect(screen.getByRole('button', { name: 'Replace OpenAI key' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add WaveSpeed key' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /show|reveal|copy/i })).toBeNull();
-    expect(screen.getByText('Add both keys to create ads')).toBeInTheDocument();
+    expect(screen.queryByText('Add both keys to create ads')).toBeNull();
     expect(await screen.findByText('No key activity yet.')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[data-key-badge="missing"]')).not.toBeNull());
   });
@@ -240,7 +240,7 @@ describe('SCREEN-010 provider keys', () => {
     serve(status(), status({ provider: 'wavespeed', status: 'disabled', last4: '9fK2' }));
     show();
     expect(await screen.findByText('Your WaveSpeed key was disabled')).toBeInTheDocument();
-    expect(screen.getByText(/Replace it to generate again/)).toBeInTheDocument();
+    expect(screen.getByText(/failed authentication 5 times in a row\. Replace it to generate clips again/)).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'WaveSpeed' })).toHaveAttribute('data-state', 'disabled');
     await waitFor(() => expect(document.querySelector('[data-key-badge="disabled"]')).not.toBeNull());
   });

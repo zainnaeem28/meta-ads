@@ -135,8 +135,7 @@ function KeyDialog({ provider, current, pending, error, onSubmit, onClose }: Key
           </p>
         ) : null}
         <p id={helpId} className="text-caption text-muted-foreground">
-          {COPY.fieldHelp} {replacing ? `${COPY.replaceHelp} Afterwards, revoke the old key at ${name}. ` : ''}
-          {advice} {COPY.reminder}
+          {replacing ? `${COPY.replaceHelp} Afterwards, revoke the old key at ${name}.` : COPY.fieldHelp} {advice} {COPY.reminder}
         </p>
         {pending ? (
           <p role="status" className="text-ui text-muted-foreground">
@@ -226,7 +225,7 @@ export function ProviderKeysScreen() {
   const byProvider = (provider: ProviderName) => list.find((k) => k.provider === provider);
   const entries = events.data?.pages.flatMap((p) => p.data) ?? [];
   const role = me.data && me.data.data.linkState === 'linked' ? me.data.data.role : 'user';
-  const missing = keys.isSuccess && PROVIDERS.some((p) => !byProvider(p)?.configured);
+  const missing = keys.isSuccess && PROVIDERS.every((p) => !byProvider(p)?.configured);
   const disabled = PROVIDERS.filter((p) => byProvider(p)?.configured && byProvider(p)?.status === 'disabled');
 
   const open = (kind: 'put' | 'delete', provider: ProviderName) => {
@@ -311,8 +310,8 @@ export function ProviderKeysScreen() {
           </Alert>
         ) : null}
         {disabled.map((provider) => (
-          <Alert key={provider} variant="destructive" role="alert" title={disabledMessage(PROVIDER_COPY[provider].name).title}>
-            {disabledMessage(PROVIDER_COPY[provider].name).body}
+          <Alert key={provider} variant="destructive" role="alert" title={disabledMessage(PROVIDER_COPY[provider].name, PROVIDER_COPY[provider].uses).title}>
+            {disabledMessage(PROVIDER_COPY[provider].name, PROVIDER_COPY[provider].uses).body}
           </Alert>
         ))}
         {missing ? (
