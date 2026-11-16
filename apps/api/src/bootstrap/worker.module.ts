@@ -16,6 +16,7 @@ import type { SweepRegistry } from '../platform/jobs/sweep-registry.js';
 import { EXIT_WATCHDOG, Watchdog } from '../platform/jobs/watchdog.js';
 import { AuditModule } from '../modules/audit/index.js';
 import { IdentityModule, InvitationJobs, identityJobHandlers } from '../modules/identity/index.js';
+import { MediaModule, SanitizeJob, UnattachedSweep, mediaJobHandlers } from '../modules/media/media.module.js';
 import { KeyUnsealer } from '../modules/provider-keys/infrastructure/key-unsealer.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { runLoggedJob } from '../platform/logging/index.js';
@@ -197,11 +198,22 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
     env['KEK_PRIVATE_KEYS'] === undefined
       ? []
       : [{ provide: KeyUnsealer, useValue: KeyUnsealer.fromEnv(env) }];
+  // Media (TASK-043): the sanitize job, the hourly sweep and the deletion helpers, on the worker's own storage token.
+  const media = env['R2_ENDPOINT'] === undefined ? [] : [MediaModule.registerWorker(env)];
   // Queue handlers of the modules (the owning module's jobs); a handler a caller passes for the same queue wins.
   const moduleHandlers = identityJobHandlers(() => context.get(InvitationJobs, { strict: false }));
   const merged: WorkerOptions = {
     ...options,
-    handlers: { ...(moduleHandlers as Record<string, JobHandler>), ...options.handlers },
+    handlers: {
+      ...(moduleHandlers as Record<string, JobHandler>),
+      ...(media.length === 0
+        ? {}
+        : mediaJobHandlers({
+            sanitize: () => context.get(SanitizeJob, { strict: false }),
+            sweep: () => context.get(UnattachedSweep, { strict: false }),
+          })),
+      ...options.handlers,
+    },
   };
   @Module({
     imports: [
@@ -210,6 +222,7 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
       AuditModule.register(options.logger),
       IdentityModule.registerWorker(env),
       ...keys,
+      ...media,
     ],
     providers: [
       ...unsealer,
