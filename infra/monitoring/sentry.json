@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "source": "DEVOPS-PLAN 11.1, 11.4; ARCHITECTURE 6, 9.2; TD-D41, TD-D42",
+  "adapterState": "off until the vendor record exists in the compliance register (T-14 gate, TASK-064); no DSN is set before then",
+  "organisation": "one Sentry organisation shared by api, worker, web and monitor",
+  "projects": [
+    { "name": "shroomap-api", "platform": "node", "consumers": ["api"] },
+    { "name": "shroomap-worker", "platform": "node", "consumers": ["worker"] },
+    { "name": "shroomap-web", "platform": "javascript-nextjs", "consumers": ["web"] },
+    { "name": "shroomap-monitor", "platform": "node", "consumers": ["monitor"] }
+  ],
+  "environments": ["staging", "production"],
+  "consumers": { "monitor": ["SENTRY_DSN", "SENTRY_ENVIRONMENT"] },
+  "scrub": {
+    "sendDefaultPii": false,
+    "sessionReplay": false,
+    "userAndIpCollection": false,
+    "beforeSend": "createScrubHook (apps/api/src/platform/metrics/sentry.ts): scrubbed copy; user, request data, cookies, headers and query string removed; a hook failure drops the event",
+    "beforeBreadcrumb": "same hook",
+    "beforeSendTransaction": "same hook",
+    "serverSideRules": [
+      "scrub data: on",
+      "scrub IP addresses: on",
+      "default scrubbers: on",
+      "sensitive fields: authorization, cookie, token, key, secret, password, email"
+    ],
+    "monitorEvents": "message with the rule ID and numbers only; no URL, token or response body"
+  },
+  "issueAlerts": [
+    { "match": "tag rule = ALR-2", "action": "email owner and administrators now" },
+    {
+      "match": "tag rule in (ALR-3, ALR-7, ALR-9)",
+      "action": "email owner and administrators; auto-resolve after 30 minutes without a new event (ALR-3 recovery rule)"
+    }
+  ],
+  "fallback": "if Sentry issue alerts are not available on the free tier, the uptime vendor's webhook-to-email carries the monitor events (VERIFY)"
+}
