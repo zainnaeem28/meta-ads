@@ -24,6 +24,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/keys/junit.xml' }],
       ['junit', { outputFile: 'reports/usage/junit.xml' }],
       ['junit', { outputFile: 'reports/campaigns/junit.xml' }],
+      ['junit', { outputFile: 'reports/campaigns-list/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
