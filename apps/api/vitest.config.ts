@@ -13,6 +13,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/egress/junit.xml' }],
       ['junit', { outputFile: 'reports/audit/junit.xml' }],
       ['junit', { outputFile: 'reports/identity/junit.xml' }],
+      ['junit', { outputFile: 'reports/identity-auth/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -61,6 +62,9 @@ export default defineConfig({
         'src/modules/audit/application/ports.ts',
         // Wiring and the Drizzle repositories are proven on real PostgreSQL by identity.integration.test.ts.
         'src/modules/identity/identity.module.ts',
+        'src/modules/identity/index.ts',
+        'src/modules/identity/application/linking.service.ts',
+        'src/modules/identity/infrastructure/identity.queries.ts',
         'src/modules/identity/infrastructure/identity.repositories.ts',
         'src/modules/identity/infrastructure/test-support.ts',
       ],
