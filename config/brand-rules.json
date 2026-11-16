@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "rulesVersion": 1,
+  "note": "Claim and brand rules (REQ-007, REQ-008, BR-04..BR-09). Changed only by a reviewed PR and loaded into brand_rules by the release seed. The rule list rests on unseen brand code (PRD IN-05, IN-06): the brand approver confirms it at go-live and false positives are fixed here. high_risk rules are never clearable; other rules are cleared by the operator with a recorded reason.",
+  "rules": [
+    {
+      "id": "hr_treatment_cure",
+      "class": "high_risk",
+      "clearable": false,
+      "kind": "regex",
+      "params": {
+        "pattern": "\\b(?:cur(?:e|es|ed|ing)|heal(?:s|ed|ing)?|treat(?:s|ed|ing|ment)?|relie(?:ve|ves|ved|ving)|alleviat(?:e|es|ed|ing)|prevent(?:s|ed|ing)?|fix(?:es|ed|ing)?|ease(?:s|d)?)\\s+(?:(?:your|the|my|their|our)\\s+)?(?:anxiety|depression|ptsd|trauma|adhd|insomnia|addiction|cancer|diseases?|illness(?:es)?|disorders?|conditions?|symptoms?|pain|migraines?|stress|mental health)\\b|\\b(?:cures?|miracle cure|clinically (?:proven|tested)|medical(?:ly)? (?:grade|treatment|benefits?)|therapy|therapeutic|medicinal|prescription|medication)\\b"
+      },
+      "message": "Reads as a treatment or cure claim. Describe the experience, not a medical outcome.",
+      "active": true
+    },
+    {
+      "id": "hr_diagnosis",
+      "class": "high_risk",
+      "clearable": false,
+      "kind": "regex",
+      "params": {
+        "pattern": "\\byou(?:'re| are)? (?:probably |likely |may |might |could )?(?:have|has|suffer(?:ing)? from|struggle(?:s)? with|are (?:depressed|anxious|traumati[sz]ed|addicted|bipolar))\\b[^.!?]{0,30}?\\b(?:anxiety|depress\\w*|ptsd|trauma\\w*|adhd|insomnia|addiction|disorders?|condition)\\b|\\byou(?:'re| are) (?:depressed|anxious|traumati[sz]ed|addicted|bipolar)\\b"
+      },
+      "message": "Reads as a diagnosis addressed to the viewer. Do not tell the viewer what they have.",
+      "active": true
+    },
+    {
+      "id": "hr_dosing",
+      "class": "high_risk",
+      "clearable": false,
+      "kind": "regex",
+      "params": {
+        "pattern": "\\b\\d+(?:\\.\\d+)?\\s?(?:mg|mcg|ug|g|grams?|milligrams?|micrograms?|ml|capsules?|caps|pills?|tablets?|doses?|drops?)\\b|\\b(?:dose|doses|dosed|dosing|dosage|microdos\\w*|macrodos\\w*|overdos\\w*)\\b"
+      },
+      "message": "Contains dosing language. Remove amounts, doses and dosing terms.",
+      "active": true
+    },
+    {
+      "id": "hr_psychedelic",
+      "class": "high_risk",
+      "clearable": false,
+      "kind": "phrase",
+      "params": {
+        "phrases": [
+          "psychedelic",
+          "psychedelics",
+          "psilocybin",
+          "psilocin",
+          "hallucinogen",
+          "hallucinogens",
+          "hallucinogenic",
+          "mind-altering",
+          "magic mushroom",
+          "magic mushrooms",
+          "entheogen",
+          "entheogens",
+          "lsd",
+          "tripping"
+        ]
+      },
+      "message": "Contains psychedelic wording. Remove it.",
+      "active": true
+    },
+    {
+      "id": "other_word_count_min",
+      "class": "other",
+      "clearable": true,
+      "kind": "word_count_min",
+      "params": { "min": 32 },
+      "message": "Under the 32 word target for a 15 second segment.",
+      "active": true
+    },
+    {
+      "id": "other_word_count_max",
+      "class": "other",
+      "clearable": true,
+      "kind": "word_count_max_target",
+      "params": { "target": 42, "hardMax": 45 },
+      "message": "Over the 42 word target; 45 words is the hard maximum.",
+      "active": true
+    },
+    {
+      "id": "other_cta_exact",
+      "class": "other",
+      "clearable": true,
+      "kind": "cta_exact",
+      "params": { "text": "Take the free 2-minute quiz" },
+      "message": "The last segment must contain the exact call to action: Take the free 2-minute quiz.",
+      "active": true
+    },
+    {
+      "id": "other_age_framing",
+      "class": "other",
+      "clearable": true,
+      "kind": "age_framing",
+      "params": {
+        "patterns": ["\\b21\\s?\\+", "\\b21\\s(?:and|or)\\s(?:over|older|up)\\b", "\\badults?\\s(?:aged\\s)?21\\b", "\\bover\\s21\\b"]
+      },
+      "message": "The last segment should frame the product for adults 21 and over.",
+      "active": true
+    },
+    {
+      "id": "other_em_dash",
+      "class": "other",
+      "clearable": true,
+      "kind": "em_dash",
+      "params": {},
+      "message": "Contains an em dash. Public copy uses none.",
+      "active": true
+    },
+    {
+      "id": "other_tone_hype",
+      "class": "other",
+      "clearable": true,
+      "kind": "phrase",
+      "params": {
+        "phrases": ["game changer", "life-changing", "miracle", "guaranteed", "you won't believe", "secret they don't want you to know"]
+      },
+      "message": "Tone: keep the voice calm and modest, without hype.",
+      "active": true
+    }
+  ],
+  "sensitiveAttributeFilter": {
+    "terms": [
+      "ethnic", "ethnicity", "race", "racial", "black", "white", "asian", "latino", "hispanic", "caucasian",
+      "age", "aged", "young", "old", "elderly", "teen", "teenager", "senior", "years old",
+      "health", "healthy", "sick", "disease", "illness", "disability", "disabled", "pregnant", "pregnancy",
+      "body", "skin tone", "overweight", "obese", "thin", "fat", "medical", "medicine", "patient", "doctor", "clinic"
+    ]
+  }
+}

@@ -22,6 +22,7 @@ import { IdentityModule, authOptionsFrom, identityConfigFrom } from '../modules/
 import { MediaModule } from '../modules/media/media.module.js';
 import { CampaignsModule } from '../modules/campaigns/campaigns.module.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
+import { BriefModule } from '../modules/brief/brief.module.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { JobsModule } from '../platform/jobs/boss.js';
 import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
@@ -105,6 +106,8 @@ function apiModule(
       ...(media === undefined ? [] : [CampaignsModule.register(process.env, { audit, media })]),
       // Spend caps, reservations, usage events and the start-up price check (REQ-019, TD-D39); needs the database.
       ...(config.DATABASE_URL === undefined ? [] : [UsageModule.register(process.env)]),
+      // The claim-check rules (REQ-007, REQ-008): the rules file is checked at start-up; the rules are read from the database.
+      ...(config.DATABASE_URL === undefined ? [] : [BriefModule.register(process.env)]),
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),
     ],

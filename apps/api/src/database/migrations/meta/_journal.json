@@ -50,6 +50,13 @@
       "when": 1794865458618,
       "tag": "0070_task-046-campaigns",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794873499608,
+      "tag": "0080_task-048-brief",
+      "breakpoints": true
     }
   ]
 }
