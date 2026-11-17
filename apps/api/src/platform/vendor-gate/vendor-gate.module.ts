@@ -11,7 +11,7 @@ export const VENDOR_GATE = Symbol('VENDOR_GATE');
 class VendorGateStartup implements OnModuleInit, OnApplicationBootstrap {
   constructor(
     @Inject(VENDOR_GATE) private readonly gate: VendorGate,
-    private readonly discovery: DiscoveryService,
+    @Inject(DiscoveryService) private readonly discovery: DiscoveryService,
   ) {}
 
   /** Wraps every vendor adapter the root built so each call re-checks the gate (call-time refusal). */
