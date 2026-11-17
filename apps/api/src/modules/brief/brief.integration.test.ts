@@ -16,6 +16,7 @@ import { DATABASE } from '../../platform/db/index.js';
 import type { Database } from '../../platform/db/index.js';
 import { installJobs } from '../../platform/jobs/test-support.js';
 import { createHttpLogging } from '../../platform/logging/index.js';
+import { ClaimCountsService } from './application/claim-counts.service.js';
 import { BrandRulesInvalidError } from './domain/brand-rules.js';
 import { checkSegment } from './domain/claim-check.js';
 import {
@@ -367,5 +368,44 @@ describe('M0009 as written', () => {
       expect(await asRole(name, `insert into brand_rules (id, class, clearable, kind, params, message, rules_version) values ('z', 'other', true, 'phrase', '{}', 'm', 1)`)).toMatchObject({ ok: false, code: '42501' });
       expect(await asRole(name, 'delete from brand_rules')).toMatchObject({ ok: false, code: '42501' });
     }
+  });
+});
+
+describe('brief.claimCounts(window) through the api composition root', () => {
+  const U2 = '0197a1b2-0000-7000-8000-000000000002';
+  const from = new Date('2026-03-01T00:00:00Z');
+  const to = new Date('2026-03-08T00:00:00Z');
+  const event = (owner: string, cls: string, outcome: string, at: string) =>
+    pool.query(
+      `insert into claim_events (id, owner_id, brief_id, issue_id, class, outcome, at) values ($1, $2, $3, $4, $5, $6, $7)`,
+      [id(), owner, id(), id(), cls, outcome, at],
+    );
+
+  it('counts by event time in [from, to), by class, and leaves other accounts out when asked', async () => {
+    const service = app.get(ClaimCountsService, { strict: false });
+    const zero = [
+      { class: 'high_risk', raised: 0, closedByEdit: 0, clearedWithReason: 0 },
+      { class: 'other', raised: 0, closedByEdit: 0, clearedWithReason: 0 },
+    ];
+    expect(await service.claimCounts({ from, to })).toEqual(zero);
+    await event(U1, 'high_risk', 'raised', '2026-03-01T00:00:00Z'); // the lower bound is inside
+    await event(U1, 'high_risk', 'closed_by_edit', '2026-03-07T23:59:59Z');
+    await event(U1, 'other', 'raised', '2026-03-03T00:00:00Z');
+    await event(U1, 'other', 'cleared_with_reason', '2026-03-04T00:00:00Z');
+    await event(U1, 'other', 'raised', '2026-03-08T00:00:00Z'); // the upper bound is outside
+    await event(U1, 'other', 'raised', '2026-02-28T23:59:59Z'); // before the window
+    await event(U2, 'other', 'raised', '2026-03-05T00:00:00Z'); // another account
+    expect(await service.claimCounts({ from, to, ownerId: U1 })).toEqual([
+      { class: 'high_risk', raised: 1, closedByEdit: 1, clearedWithReason: 0 },
+      { class: 'other', raised: 1, closedByEdit: 0, clearedWithReason: 1 },
+    ]);
+    expect(await service.claimCounts({ from, to, ownerId: U2 })).toEqual([
+      zero[0],
+      { class: 'other', raised: 1, closedByEdit: 0, clearedWithReason: 0 },
+    ]);
+    expect(await service.claimCounts({ from, to })).toEqual([
+      { class: 'high_risk', raised: 1, closedByEdit: 1, clearedWithReason: 0 },
+      { class: 'other', raised: 2, closedByEdit: 0, clearedWithReason: 1 },
+    ]);
   });
 });

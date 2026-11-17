@@ -14,9 +14,11 @@ import {
 import type { BriefWorkerConfig, JobLog, KeyOpener } from './application/worker/ports.js';
 import { ProviderCallRunner } from './application/worker/provider-call.js';
 import { TEXT_AI_PORT } from './application/worker/text-ai.port.js';
-import { BRIEF_REPOSITORY, BRIEF_RULES } from './application/brief-ports.js';
+import { BRIEF_REPOSITORY, BRIEF_RULES, CLAIM_COUNTS_REPOSITORY } from './application/brief-ports.js';
 import { BriefService } from './application/brief.service.js';
+import { ClaimCountsService } from './application/claim-counts.service.js';
 import { IssuesService } from './application/issues.service.js';
+import { DrizzleClaimCountsRepository } from './infrastructure/repositories/claim-counts.repository.js';
 import { DrizzleBriefRepository } from './infrastructure/repositories/brief.repository.js';
 import { BriefController } from './transport/brief.controller.js';
 import { AnalysisController } from './transport/analysis.controller.js';
@@ -116,11 +118,13 @@ export class BriefModule {
         BrandRulesReader,
         { provide: BRIEF_REPOSITORY, useClass: DrizzleBriefRepository },
         { provide: BRIEF_RULES, useExisting: BrandRulesReader },
+        { provide: CLAIM_COUNTS_REPOSITORY, useClass: DrizzleClaimCountsRepository },
         BriefService,
         IssuesService,
+        ClaimCountsService,
       ],
       controllers: [BriefController, IssuesController, ...(jobs?.controllers ?? [])],
-      exports: [BrandRulesReader],
+      exports: [BrandRulesReader, ClaimCountsService],
     };
   }
 

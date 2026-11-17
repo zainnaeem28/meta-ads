@@ -558,6 +558,22 @@ describe('service operations and the campaign progress reader', () => {
     const stats = await service.jobStats(new Date(Date.now() - 60_000));
     expect(stats.videoCreated).toBeGreaterThanOrEqual(3);
     expect(stats.qcCreated).toBeGreaterThanOrEqual(1);
+    // jobStatsWindow: [from, to) boundaries, empty window and tenant isolation.
+    const ids = [pending.body.data.id, sent.body.data.id, done.body.data.id];
+    const stamp = new Date('2031-03-01T00:00:00.000Z');
+    await pool.query(`update video_jobs set created_at = $2, updated_at = $2 where id = $1`, [ids[0], stamp.toISOString()]);
+    await pool.query(`update video_jobs set created_at = $2, updated_at = $2 where id = $1`, [ids[2], new Date(stamp.getTime() + 1000).toISOString()]);
+    const end = new Date(stamp.getTime() + 1000);
+    const w1 = await service.jobStatsWindow(stamp, end, a.id);
+    expect(w1.videoCreated).toBe(1); // `from` inclusive, `to` exclusive
+    expect(w1.windowStart).toBe(stamp.toISOString());
+    expect(w1.windowEnd).toBe(end.toISOString());
+    expect((await service.jobStatsWindow(stamp, new Date(end.getTime() + 1), a.id)).videoCompleted).toBe(1);
+    expect((await service.jobStatsWindow(new Date(stamp.getTime() + 1), end, a.id)).videoCreated).toBe(0);
+    const empty = await service.jobStatsWindow(new Date('2040-01-01T00:00:00Z'), new Date('2040-01-02T00:00:00Z'), a.id);
+    expect(empty).toMatchObject({ videoCreated: 0, videoCompleted: 0, videoFailed: 0, videoCancelled: 0, qcCreated: 0 });
+    const other = await account();
+    expect((await service.jobStatsWindow(stamp, new Date(end.getTime() + 1), other.id)).videoCreated).toBe(0);
     const cancelled = await withTx((tx) => service.cancelForCampaign(tx, a.id, c.campaign));
     expect(cancelled).toBe(3);
     const rows = (await pool.query(`select id, state, cause_class from video_jobs where owner_id = $1`, [a.id])).rows as { id: string; state: string; cause_class: string | null }[];

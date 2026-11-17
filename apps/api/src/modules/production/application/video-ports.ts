@@ -59,6 +59,11 @@ export interface SegmentJobsEntry {
 
 export type CancelCause = 'cancelled_campaign_deleted' | 'cancelled_account_suspended' | 'cancelled_account_removed';
 
+/** `JobStats` over [windowStart, windowEnd): every counter is counted by its own event time inside the window. */
+export interface JobStatsWindow extends JobStats {
+  readonly windowEnd: string;
+}
+
 export interface JobStats {
   readonly windowStart: string;
   readonly videoCreated: number;
