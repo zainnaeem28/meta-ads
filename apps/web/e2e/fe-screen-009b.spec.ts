@@ -82,17 +82,6 @@ const ok = (route: Route, data: unknown, status = 200) =>
     contentType: 'application/json',
     body: JSON.stringify({ success: true, data, metaData: meta }),
   });
-const fail = (route: Route, status: number, code: string, message = 'x') =>
-  route.fulfill({
-    status,
-    contentType: 'application/json',
-    body: JSON.stringify({
-      success: false,
-      error: { code, message, details: [] },
-      metaData: { requestId: 'req-e2e-1' },
-    }),
-  });
-
 const keyRows = (wavespeed: 'active' | 'disabled' | 'missing') =>
   ['openai', 'wavespeed'].map((provider) => ({
     provider,

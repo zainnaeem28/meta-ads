@@ -1,0 +1,9 @@
+[
+  {
+    "match": "CVE-2026-112366",
+    "path": "pnpm-lock.yaml",
+    "reason": "picomatch@4.0.7 (ReDoS on attacker-supplied extglob patterns) is reached only through development tooling (dependency-cruiser, typescript-eslint, vite via tinyglobby) and is not in the web or api runtime bundle. No untrusted glob reaches it. Published after TASK-096 passed; the lockfile is shared and unchanged by this ticket, so the upgrade belongs to the dependency owner. Not a change of this ticket.",
+    "owner": "Frontend Engineer",
+    "expires": "2026-12-16"
+  }
+]
