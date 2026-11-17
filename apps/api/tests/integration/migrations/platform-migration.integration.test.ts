@@ -748,15 +748,22 @@ describe('real entry points on the migrated database', () => {
     child?.kill('SIGTERM');
   });
 
-  it('db:seed (dist/database/seed.js) runs as app_migrator against the migrated database, twice', () => {
+  it('db:seed (dist/database/seed.js) runs as app_migrator against the migrated database, twice', async () => {
     const build = spawnSync('pnpm', ['build'], { cwd: apiDir, encoding: 'utf8' });
     expect(build.status, build.stdout + build.stderr).toBe(0);
+    // The reference dataset writes price_table, brand_rules and platform_settings: bring the schema to the latest migration.
+    // A fresh database: the suites above leave this one deliberately altered.
+    const { env: seedEnv } = await setUp();
+    const fullDir = renderMigrations(seedEnv);
+    dirs.push(fullDir);
+    const rest = drizzleMigrate(seedEnv, fullDir);
+    expect(rest.status, rest.stdout + rest.stderr).toBe(0);
     for (let run = 0; run < 2; run += 1) {
       const result = spawnSync('node', ['dist/database/seed.js', '--dataset=reference'], {
         cwd: apiDir,
         env: {
           PATH: process.env['PATH'] ?? '',
-          ...validEnv('release', { MIGRATION_DATABASE_URL: env.urlFor('migrator') }),
+          ...validEnv('release', { MIGRATION_DATABASE_URL: seedEnv.urlFor('migrator') }),
         },
         encoding: 'utf8',
         timeout: 60_000,

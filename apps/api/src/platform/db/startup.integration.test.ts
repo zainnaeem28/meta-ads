@@ -136,11 +136,12 @@ describe('db:seed (real entry point)', () => {
     expect(node(['dist/database/seed.js'], release({})).out).toContain('--dataset must be one of');
   });
 
-  it('runs the reference dataset in one transaction and prints counts only, twice', () => {
+  it('fails the reference dataset on an unmigrated database, in one transaction, leaving nothing behind', () => {
+    // The migrated run (3 steps, twice) is proven in tests/integration/migrations and tests/integration/seeds.
     for (let run = 0; run < 2; run += 1) {
       const result = node(['dist/database/seed.js', '--dataset=reference'], release({}));
-      expect(result.status, result.out).toBe(0);
-      expect(result.out).toBe('seed reference done: 0 steps\n');
+      expect(result.status, result.out).not.toBe(0);
+      expect(result.out).not.toContain('seed reference done');
     }
   });
 });
