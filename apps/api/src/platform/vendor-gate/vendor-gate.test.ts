@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { PROVIDER_VENDORS, complianceRegister } from '../config/index.js';
-import { VendorGate, VendorGateError, gatedAdapter } from './gate.js';
+import { VendorGate, VendorGateError, gateInstance, gatedAdapter } from './gate.js';
 import { EMPTY_REGISTER, REQUIRED_VENDOR_IDS, diffRegister, loadRegister, locateRegister, parseRegister } from './register.js';
 import type { VendorRegister } from './register.js';
 
@@ -56,7 +56,6 @@ describe('the shipped register', () => {
 describe('register parsing fails closed', () => {
   it('a missing path, bad JSON and bad shapes yield the empty register', () => {
     expect(loadRegister('/nonexistent/vendor-register.json')).toBe(EMPTY_REGISTER);
-    expect(loadRegister(undefined) === EMPTY_REGISTER || loadRegister(undefined).vendors.length > 0).toBe(true);
     expect(parseRegister('not json')).toBe(EMPTY_REGISTER);
     expect(parseRegister('{}')).toBe(EMPTY_REGISTER);
     expect(parseRegister('{"vendors":[1],"absentAdapters":[]}')).toBe(EMPTY_REGISTER);
@@ -71,6 +70,35 @@ describe('register parsing fails closed', () => {
     expect(bad({}, [1])).toBe(EMPTY_REGISTER);
     expect(bad({}).vendors).toHaveLength(1);
     expect(bad({ contractStatus: 'recorded', contractRecord: { reference: 'r', recordedOn: 'd' } }).vendors[0]!.contractRecord).not.toBeNull();
+  });
+
+  for (const [vendor, key] of Object.entries(MODE_KEY)) {
+    it(`an empty register refuses to start with ${key}=real, and with no mode set`, () => {
+      expect(() => new VendorGate(EMPTY_REGISTER, { [key]: 'real' }).assertStartup()).toThrow(VendorGateError);
+      expect(() => new VendorGate(EMPTY_REGISTER, {}).assertStartup()).toThrow(/register-incomplete/);
+      expect(vendor).toBeTruthy();
+    });
+  }
+
+  it('a mode key for a vendor the register does not know is refused', () => {
+    expect(() => new VendorGate(shipped, { PROVIDER_DATA_MODE_ACME: 'real' }).assertStartup()).toThrowError(
+      new VendorGateError('acme', 'unknown-vendor'),
+    );
+  });
+
+  it('gateInstance wraps a live class instance (inherited methods too) and refuses once the env turns real', () => {
+    class Base { ping(): string { return 'pong'; } }
+    class Adapter extends Base { value = 1; send(x: string): string { return x; } }
+    const env: Record<string, string | undefined> = {};
+    const gate = new VendorGate(shipped, env);
+    const a = new Adapter();
+    gateInstance(gate, 'openai', a);
+    gateInstance(gate, 'openai', a);
+    expect(a.send('ok')).toBe('ok');
+    expect(a.value).toBe(1);
+    env['PROVIDER_DATA_MODE_OPENAI'] = 'real';
+    expect(() => a.send('x')).toThrow(VendorGateError);
+    expect(() => a.ping()).toThrow(VendorGateError);
   });
 
   it('with an empty register every real mode is refused', () => {

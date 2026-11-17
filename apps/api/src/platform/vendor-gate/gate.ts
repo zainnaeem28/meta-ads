@@ -1,4 +1,4 @@
-import { hasRecordedContract } from './register.js';
+import { REQUIRED_VENDOR_IDS, diffRegister, hasRecordedContract } from './register.js';
 import type { VendorEntry, VendorRegister } from './register.js';
 
 export type DataMode = 'synthetic' | 'real';
@@ -6,7 +6,7 @@ export type DataMode = 'synthetic' | 'real';
 export class VendorGateError extends Error {
   constructor(
     readonly vendor: string,
-    readonly reason: 'no-contract-record' | 'adapter-absent' | 'invalid-mode' | 'unknown-vendor',
+    readonly reason: 'no-contract-record' | 'adapter-absent' | 'invalid-mode' | 'unknown-vendor' | 'register-incomplete',
   ) {
     super(`vendor gate: ${vendor} refused (${reason})`);
     this.name = 'VendorGateError';
@@ -52,6 +52,14 @@ export class VendorGate {
 
   /** The start-up check: every vendor with a mode key, plus any absent adapter that is asked for. */
   assertStartup(): void {
+    // Fail closed: a missing, malformed or partial register must not let any vendor start.
+    const { missing } = diffRegister(this.register, REQUIRED_VENDOR_IDS);
+    if (missing.length > 0) throw new VendorGateError(missing.join(','), 'register-incomplete');
+    const known = new Set(this.register.vendors.map((v) => v.dataModeKey));
+    for (const key of Object.keys(this.env)) {
+      const match = /^PROVIDER_DATA_MODE_(.+)$/.exec(key);
+      if (match !== null && !known.has(key)) throw new VendorGateError((match[1] ?? key).toLowerCase(), 'unknown-vendor');
+    }
     for (const v of this.register.vendors) {
       if (v.dataModeKey !== null) this.assertAllowed(v.id);
     }
@@ -78,4 +86,41 @@ export function gatedAdapter<A extends object>(gate: VendorGate, vendor: string,
       };
     },
   });
+}
+
+/** Vendor adapter class names (as built by the composition roots) and the vendor each one talks to. */
+export const ADAPTER_VENDORS: Readonly<Record<string, string>> = {
+  OpenAiTextAi: 'openai',
+  OpenAiTranscribe: 'openai',
+  OpenAiImageGen: 'openai',
+  OpenAiKeyAuthReporter: 'openai',
+  WaveSpeedVideoGen: 'wavespeed',
+  WaveSpeedKeyAuthReporter: 'wavespeed',
+  S3Storage: 'cloudflare-r2',
+  R2Storage: 'cloudflare-r2',
+  ClerkIdentity: 'clerk',
+};
+
+/** Replaces each function of a live adapter instance with one that passes the call-time check first. Idempotent. */
+export function gateInstance(gate: VendorGate, vendor: string, instance: object): void {
+  const marked = instance as { __vendorGated?: boolean };
+  if (marked.__vendorGated === true) return;
+  const names = new Set<string>();
+  for (let proto: object | null = instance; proto !== null && proto !== Object.prototype; proto = Object.getPrototypeOf(proto) as object | null) {
+    for (const name of Object.getOwnPropertyNames(proto)) names.add(name);
+  }
+  for (const name of names) {
+    if (name === 'constructor') continue;
+    const value: unknown = Reflect.get(instance, name);
+    if (typeof value !== 'function') continue;
+    Object.defineProperty(instance, name, {
+      configurable: true,
+      writable: true,
+      value: (...args: unknown[]) => {
+        gate.assertAllowed(vendor);
+        return (value as (...a: unknown[]) => unknown).apply(instance, args);
+      },
+    });
+  }
+  Object.defineProperty(instance, '__vendorGated', { value: true });
 }
