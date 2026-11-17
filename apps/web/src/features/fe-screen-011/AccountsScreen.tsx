@@ -55,6 +55,12 @@ function rowsOf<T>(result: { status: number; data: unknown } | undefined): T[] {
   return (result.data as { data: T[] }).data;
 }
 
+/** Sign-in, MFA and account-state answers send the visitor elsewhere (UI-UX §9.1): `ErrorNotice` does that. */
+const redirects = (error: unknown): boolean => {
+  const { presentation } = resolveError(error, { surface: 'page' });
+  return presentation === 'redirect' || presentation === 'message-page';
+};
+
 const readUrl = () => {
   if (typeof window === 'undefined') return { q: '', status: '' };
   const p = new URLSearchParams(window.location.search);
@@ -420,7 +426,9 @@ export function AccountsScreen() {
         onStatusChange={(status) => setFilter({ status })}
         onClearAll={() => setFilter({ q: '', status: '' })}
       />
-      {listFailed ? (
+      {listFailed && redirects(users.error) ? (
+        <ErrorNotice error={users.error} />
+      ) : listFailed ? (
         <div className="rounded-md border border-border bg-card">
           <EmptyState
             variant="error"
