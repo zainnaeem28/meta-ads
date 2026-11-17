@@ -210,6 +210,15 @@ export default defineConfig({
         'src/modules/production/infrastructure/openai-transcribe/qc.repository.ts',
         'src/modules/production/infrastructure/openai-transcribe/key-auth.reporter.ts',
         'src/modules/production/transport/qc.controller.ts',
+        // The thumbstopper service (API-075, API-076), its job, the sweep hooks, the SQL repository, the controller and the port file are
+        // proven on real PostgreSQL through the api and worker composition roots by thumb-api.integration.test.ts and
+        // thumb-worker.integration.test.ts (TC-THM-01 to 08); the adapter, the call-out check, the view and the settings are unit tested.
+        'src/modules/production/application/thumb-ports.ts',
+        'src/modules/production/application/thumb.service.ts',
+        'src/modules/production/application/thumb-submit.job.ts',
+        'src/modules/production/application/thumb-recovery.ts',
+        'src/modules/production/infrastructure/openai-image/thumb.repository.ts',
+        'src/modules/production/transport/thumb.controller.ts',
         // The ops-cli SQL of the four commands, their production binding and the barrel are proven on real PostgreSQL through
         // `runOps` with the production `executeCommand`, the real worker composition root and the compiled `dist/bin/ops.js` by
         // ops-cli.integration.test.ts; the argument rules, the runner and the key cryptography are unit tested here.
