@@ -18,8 +18,12 @@ import { EgressModule } from '../platform/egress/index.js';
 import type { EgressModuleConfig } from '../platform/egress/index.js';
 import { AuditModule } from '../modules/audit/index.js';
 import { BriefGenerationJob, BriefModule, ImageAnalysisJob, briefJobHandlers } from '../modules/brief/brief.module.js';
-import { STORAGE_PORT } from '../modules/media/index.js';
+import { MediaService, STORAGE_PORT } from '../modules/media/index.js';
 import type { StoragePort } from '../modules/media/index.js';
+import { MEDIA_REPOSITORY } from '../modules/media/application/ports.js';
+import type { MediaRepository } from '../modules/media/application/ports.js';
+import { mediaConfigFrom } from '../modules/media/media.module.js';
+import { ProductionWorkerModule, ProviderCopyCleanup, VideoCopyJob, VideoPollJob, VideoSubmitJob, productionJobHandlers } from '../modules/production/production.module.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
 import { IdentityModule, InvitationJobs, identityJobHandlers } from '../modules/identity/index.js';
 import { MediaModule, SanitizeJob, UnattachedSweep, mediaJobHandlers } from '../modules/media/media.module.js';
@@ -78,6 +82,8 @@ export interface WorkerOptions {
   readonly exit?: (code: number) => void;
   /** Replaces the egress module instance (tests point the OpenAI host at a local server); the product never sets it. */
   readonly egress?: DynamicModule;
+  /** Replaces the WaveSpeed API origin with a local server's (tests); the product never sets it. */
+  readonly wavespeedBaseUrl?: string;
   /** Replaces the OpenAI chat completions URL with a local server's (tests); the product never sets it. */
   readonly openAiChatUrl?: string;
 }
@@ -217,18 +223,49 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
     media.length > 0 &&
     env['OPENAI_TEXT_MODEL'] !== undefined &&
     env['OPENAI_VISION_MODEL'] !== undefined;
+  // Production (TASK-053): the WaveSpeed clip jobs. Like brief it needs the key custody and the object storage.
+  const productionEnabled = keyUnsealer !== undefined && media.length > 0;
+  // One usage module instance serves both, so the start-up price check runs once.
+  const usage = briefEnabled || productionEnabled ? UsageModule.register(env) : undefined;
   const brief = briefEnabled
     ? [
         BriefModule.registerWorker(env, {
           audit,
           egress: options.egress ?? EgressModule.register(config),
-          usage: UsageModule.register(env),
+          usage: usage as DynamicModule,
           opener: keyUnsealer,
           storage: () => context.get<StoragePort>(STORAGE_PORT, { strict: false }),
           ...(options.openAiChatUrl === undefined ? {} : { chatUrl: options.openAiChatUrl }),
         }),
       ]
     : [];
+  const production =
+    productionEnabled
+      ? [
+          ProductionWorkerModule.register(env, {
+            audit,
+            egress: options.egress ?? EgressModule.register(config),
+            usage: usage as DynamicModule,
+            opener: keyUnsealer,
+            storage: () => context.get<StoragePort>(STORAGE_PORT, { strict: false }),
+            media: () => mediaService(),
+            registry: options.registry ?? sweepRegistry,
+            ...(options.wavespeedBaseUrl === undefined ? {} : { baseUrl: options.wavespeedBaseUrl }),
+          }),
+        ]
+      : [];
+  // The media module's public service for the clip copy (signed reference URL, object registration), built on the worker's
+  // own repository and storage; the media worker module does not carry it.
+  let media$: MediaService | undefined;
+  const mediaService = (): MediaService => {
+    media$ ??= new MediaService(
+      context.get(DATABASE, { strict: false }),
+      context.get<MediaRepository>(MEDIA_REPOSITORY, { strict: false }),
+      context.get<StoragePort>(STORAGE_PORT, { strict: false }),
+      mediaConfigFrom(env),
+    );
+    return media$;
+  };
   // Queue handlers of the modules (the owning module's jobs); a handler a caller passes for the same queue wins.
   const moduleHandlers = identityJobHandlers(() => context.get(InvitationJobs, { strict: false }));
   const merged: WorkerOptions = {
@@ -247,6 +284,14 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
             generate: () => context.get(BriefGenerationJob, { strict: false }),
             analyze: () => context.get(ImageAnalysisJob, { strict: false }),
           })),
+      ...(production.length === 0
+        ? {}
+        : productionJobHandlers({
+            submit: () => context.get(VideoSubmitJob, { strict: false }),
+            poll: () => context.get(VideoPollJob, { strict: false }),
+            copy: () => context.get(VideoCopyJob, { strict: false }),
+            cleanup: () => context.get(ProviderCopyCleanup, { strict: false }),
+          })),
       ...options.handlers,
     },
   };
@@ -259,6 +304,7 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
       ...keys,
       ...media,
       ...brief,
+      ...production,
     ],
     providers: [
       ...unsealer,
