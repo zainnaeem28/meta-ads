@@ -6,6 +6,13 @@
       "reason": "False positive: the file is a generated report whose branch name (task-076-...) matches the key-shaped rule. The file is deleted from the tree; only the earlier commit in history remains. No credential exists.",
       "owner": "Frontend Engineer",
       "expires": "2026-12-16"
+    },
+    {
+      "match": "openai-key-shaped",
+      "path": "docs/evidence/TASK-103/submit-check.md",
+      "reason": "False positive: generated report whose branch name (task-103-...) matches the key-shaped rule. The branch name is redacted in the tree; only the earlier commit in history carries it. No credential exists.",
+      "owner": "Integrator",
+      "expires": "2026-12-16"
     }
   ]
 }
