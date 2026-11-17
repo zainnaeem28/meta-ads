@@ -29,9 +29,9 @@ import type { StoragePort } from '../../../src/modules/media/index.js';
 import { IDENTITY_PORT } from '../../../src/modules/identity/index.js';
 import type { LocalIdentity } from '../../../src/modules/identity/index.js';
 import { priceTableSeedStep } from '../../../src/modules/usage/index.js';
-import { brandRulesSeedStep } from '../../../src/modules/brief/infrastructure/repositories/brand-rules-file.js';
+import { brandRulesSeedStep } from '../../../src/modules/brief/test-support.js';
 import { AccountErasureJob } from '../../../src/modules/lifecycle/lifecycle.module.js';
-import { generateKek, kekEnv } from '../../../src/modules/provider-keys/infrastructure/test-support.js';
+import { generateKek, kekEnv } from '../../../src/modules/provider-keys/test-support.js';
 import type { PgBoss } from 'pg-boss';
 
 // Shared harness of the security suite (TASK-116): the real api composition root (`createApiApp`, the one `main.api.ts`
