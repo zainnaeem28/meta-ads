@@ -168,7 +168,7 @@ export function ClipRow({
         aria-label={`Segment ${p} clip`}
         data-state={state}
         data-cause={cause}
-        className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-card p-4 md:grid-cols-[200px_minmax(0,1fr)]"
+        className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-card p-4 md:grid-cols-(--clip-thumb-col)"
       >
         {hasClip ? (
           <div className="relative grid aspect-9/16 max-h-90 w-full place-items-center overflow-hidden rounded-md bg-surface-inverse text-surface-inverse-foreground max-md:max-w-55">
