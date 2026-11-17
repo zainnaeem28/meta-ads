@@ -390,11 +390,15 @@ async function up(stateDir) {
     AUTH_MODE: 'local',
     WEB_ORIGIN: webUrl,
     NEXT_PUBLIC_API_ORIGIN: apiUrl,
+    // Local sessions: no identity-provider script. With the placeholder key the page loads clerk-js from an unreachable
+    // host and spins on the main thread (TBT of a minute), which would measure the sandbox, not the product.
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: '',
   };
+  const buildTag = `${apiUrl}|no-clerk-key`;
   const marker = join(webDir, '.next', '.baseline-api-origin');
-  if (!existsSync(marker) || readFileSync(marker, 'utf8') !== apiUrl) {
+  if (!existsSync(marker) || readFileSync(marker, 'utf8') !== buildTag) {
     run('pnpm', ['exec', 'next', 'build'], { cwd: webDir, env: webEnv });
-    writeFileSync(marker, apiUrl);
+    writeFileSync(marker, buildTag);
   }
   state.pids.web = startProcess(
     'web',
