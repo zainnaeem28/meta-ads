@@ -1,0 +1,120 @@
+
+=== environment
+node v24.22.2, pnpm 10.34.9, psql 17.12, run suffix g19482, commit 30e861d
+docker: absent (the compose stack of step 3 is not started here)
+
+=== 1. clone and install (guide section 1; the clone itself is this checkout)
+$ pnpm install --frozen-lockfile
+Scope: all 12 workspace projects
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 1.3s using pnpm v10.34.9
+
+=== 2. local configuration
+$ node scripts/ci/config-consistency.mjs --local-env .env.local.d
+wrote 6 per-process env files to <repo>/.env.local.d (generated key material, never committed)
+
+=== 4. provision the database roles: the guide's SQL, renamed with the run suffix
+$ psql -X -v ON_ERROR_STOP=1 postgres://postgres@test-db:5432/postgres -f /tmp/paperclip-run-aiu-192-85aaf04f-1b3-QNs9Zb/tmp.Hxur3V5Ac4/provision.sql
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+ALTER ROLE
+ALTER ROLE
+ALTER ROLE
+ALTER ROLE
+ALTER DATABASE
+REVOKE
+GRANT
+$ psql -X -v ON_ERROR_STOP=1 postgres://postgres@test-db:5432/shroomap_g19482 -f /tmp/paperclip-run-aiu-192-85aaf04f-1b3-QNs9Zb/tmp.Hxur3V5Ac4/schema.sql
+ALTER SCHEMA
+(the four override files of the guide were written with these role names; API_PORT=4010 added)
+
+=== 5. build
+apps/web build: ├ ƒ /gallery
+apps/web build: ├ ƒ /mfa/[[...mfa]]
+apps/web build: ├ ƒ /not-found
+apps/web build: ├ ƒ /settings/provider-keys
+apps/web build: └ ƒ /sign-in/[[...sign-in]]
+apps/web build: ƒ Proxy (Middleware)
+apps/web build: ƒ  (Dynamic)  server-rendered on demand
+apps/web build: Done
+
+=== 6. migrate (the guide's command, with migration 0001's role names renamed in a copy for the shared server)
+$ CI=1 drizzle-kit migrate (the command behind `pnpm --filter @shroomap/api db:migrate`, config pointing at the renamed copy)
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[✓] migrations applied successfully!applied migrations: 10 of 10
+$ node --env-file=../../.env.local.d/release.env --env-file=../../.env.local.d/db-release.env dist/database/jobs-migrate.js
+jobs:migrate done: 17 created, 0 updated
+$ node --env-file=../../.env.local.d/release.env --env-file=../../.env.local.d/db-release.env dist/database/seed.js --dataset=reference
+seed reference done: 0 steps
+-- rerun (must change nothing):
+$ node --env-file=../../.env.local.d/release.env --env-file=../../.env.local.d/db-release.env dist/database/seed.js --dataset=reference
+seed reference done: 0 steps
+
+=== 6. the two steps a clean database needs (CR-017-1 price table, CR-017-2 ledger grant), from the guide
+$ bash -c bash '/tmp/paperclip-run-aiu-192-85aaf04f-1b3-QNs9Zb/tmp.Hxur3V5Ac4/price.sh' | psql -X -q -v ON_ERROR_STOP=1 'postgres://app_migrator_g19482:shroomap-local@test-db:5432/shroomap_g19482'
+$ psql -X -q -v ON_ERROR_STOP=1 postgres://app_migrator_g19482:shroomap-local@test-db:5432/shroomap_g19482 -c GRANT USAGE ON SCHEMA drizzle TO app_api_g19482 -c GRANT SELECT ON drizzle.__drizzle_migrations TO app_api_g19482
+price_table rows: 7
+
+=== 7. run the api, worker and web
+live 200 (expected 200)
+ready 200 (expected 200)
+protected route without a session 401 (expected 401)
+web sign-in 200 (expected 200)
+worker log: 2 lines; last: {"level":"info","time":"2026-11-17T12:45:21.424Z","releaseSha":"unknown","module":"worker","outcome":"ok","durationMs":53,"msg":"recovery sw
+
+=== 8. operator commands
+$ node --env-file=../../.env.local.d/api.env --env-file=../../.env.local.d/db-api.env dist/bin/ops.js first-admin:reopen --env=development
+ops first-admin:reopen: done
+reopened=0
+$ node --env-file=../../.env.local.d/api.env --env-file=../../.env.local.d/db-api.env dist/bin/ops.js keys:disable-all --env=development
+ops keys:disable-all: done
+disabled=0
+alerts_raised=1
+-- wrong environment must be refused with exit 2:
+ops refused: --env does not match APP_ENV
+exit 2
+$ node --env-file=../../.env.local.d/worker.env --env-file=../../.env.local.d/db-worker.env dist/bin/ops.js kek:rewrap --env=development
+ops kek:rewrap: done
+rewrapped=0
+failed=0
+already_current=0
+-- erasure:resume with an unknown run id: audit event with outcome failed, exit 1:
+ops erasure:resume: incomplete
+resumed=0
+not_found=1
+exit 1
+audit events written by the operator commands (actor_type, action, outcome):
+operator|erasure.resumed|failed
+operator|first_admin.reopened|allowed
+operator|kek.rewrapped|allowed
+operator|key.disabled_all|allowed
+
+=== 9. checks that need no service
+$ node scripts/ci/config-consistency.mjs
+registry.json: 119 keys (22 secret); schema.ts: 104 keys; container files checked: docker/Dockerfile, docker/compose.dev.yml, docker/compose.ci.yml
+config-consistency: registry, schema, .env.example, secrets doc and container definitions agree
+$ scripts/ci/docs-check.sh
+ok   sections: files exist
+ok   sections: README sections
+ok   sections: RUN-GUIDE sections
+ok   sections: ROLLBACK-RUNBOOK sections
+ok   sections: OPERATIONS-HANDOFF sections
+ok   rollback: DEVOPS-PLAN 14.5 names
+ok   names: every named script, file and folder exists
+ok   names: relative links resolve
+ok   commands: every pnpm command names an existing script
+ok   commands: every file a command names exists
+ok   commands: README quick start equals RUN-GUIDE.md
+ok   operator: commands, roles and audit events equal the code
+ok   operator: every alert row names its runbook
+ok   config: README lists every .env.example variable
+ok   owner-items: IDs and statuses equal the register
+ok   owner-items: every default applied (autonomous) entry is listed
+ok   config: registry, schema and .env.example agree
+17 of 17 documentation checks passed
+
+=== cleanup: processes stopped, database shroomap_g19482 and the four app_*_g19482 roles dropped

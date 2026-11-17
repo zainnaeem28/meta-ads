@@ -1,0 +1,11 @@
+caught  owner item dropped from the list  (FAIL owner-items: IDs and statuses equal the register)
+caught  owner item restated (status changed)  (FAIL owner-items: IDs and statuses equal the register)
+caught  audit event renamed in the runbook  (FAIL operator: commands, roles and audit events equal the code)
+caught  operator command dropped from the runbook  (FAIL operator: commands, roles and audit events equal the code)
+caught  variable missing from the README table  (FAIL config: README lists every .env.example variable)
+caught  script that does not exist is named  (FAIL names: every named script, file and folder exists)
+caught  pnpm script that does not exist  (FAIL commands: every pnpm command names an existing script)
+caught  README command drifts from the guide  (FAIL commands: README quick start equals RUN-GUIDE.md)
+caught  required README section removed  (FAIL sections: README sections)
+caught  alert row points at the wrong runbook  (FAIL names: every named script, file and folder exists)
+restored files pass again: 17 of 17 documentation checks passed

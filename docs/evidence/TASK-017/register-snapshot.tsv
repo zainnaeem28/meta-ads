@@ -1,0 +1,37 @@
+# Closed owner decision register, DELIVERY-PLAN.md section 5 (AIU-19 delivery-plan revision cdd276f7-a482-434f-9e68-1fce0a116da0, sha256 5e17e54fe5f8b830dab396c265033b906e313bbeef23bc3ba8e61b23da6ff01e).
+# One line per register row: ID<TAB>Status at G2. docs-check.sh diffs docs/ops/owner-items.md against this file.
+OD-01	default applied (autonomous)
+OD-02	decided (autonomous)
+OD-03	descoped (Animated, profile, creator reference, console panels beyond REQ-021); in-scope items answered
+OD-04	answered
+OD-04a	decided (autonomous)
+OD-05	decided (autonomous)
+OD-06 / OI-TIER	default applied (autonomous)
+OD-07 / DOP-OI-1	default accepted (fixed at G2)
+OD-08	default accepted; Shotstack, KMS, Resend, Supabase descoped
+OD-09 / OI-RET	default applied (autonomous)
+OD-10	default applied (autonomous)
+OD-11	decided (autonomous)
+OD-12	default applied (autonomous)
+OD-13	decided (autonomous)
+OD-14	answered; CMS descoped
+OD-15	default applied (autonomous)
+OD-16	default applied (autonomous)
+OD-17	default accepted
+OD-18	decided (autonomous)
+OD-19	decided (autonomous)
+OI-ADMIN	default applied; value is the owner's
+OI-DOMAIN	default applied (autonomous)
+OI-CAPS	default applied (autonomous)
+OI-ASM	default applied (autonomous)
+G-1	default applied (autonomous)
+G-2	default applied (autonomous)
+G-3	default applied (autonomous)
+G-4	default applied (autonomous)
+G-5	default applied (autonomous)
+OI-OD02	default applied (autonomous)
+L-1	default applied (autonomous)
+DOP-OI-2 / 2b / 2c	default applied; gap recorded
+DOP-OI-3	default applied (autonomous)
+DOP-OI-4 / 5	default applied (autonomous)
+DOP-OI-6 / 7 / 8	default applied (autonomous)
