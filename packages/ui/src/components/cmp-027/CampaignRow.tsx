@@ -86,10 +86,10 @@ export function CampaignRow({
           <Icon name={variant === 'draft' ? 'file-text' : 'film'} size={20} />
         )}
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-40 flex-1 flex-col gap-1">
         <a
           href={href}
-          className="truncate text-body font-semibold text-foreground no-underline after:absolute after:inset-0 hover:underline focus-visible:outline-none"
+          className="break-words text-body font-semibold md:truncate text-foreground no-underline after:absolute after:inset-0 hover:underline focus-visible:outline-none"
         >
           {name}
         </a>
