@@ -196,11 +196,15 @@ export function Table<T>({
                     className={`min-h-control-touch border-t border-border max-md:block max-md:p-4 ${selected ? 'bg-accent' : ''}`}
                   >
                     {columns.map((c, i) => (
-                      <td key={c.id} role="cell" className={CELL}>
+                      <td
+                        key={c.id}
+                        role="cell"
+                        className={`${CELL} max-md:flex max-md:items-center max-md:justify-between max-md:gap-4`}
+                      >
                         <span className="text-caption text-muted-foreground md:hidden">
                           {c.header}
                         </span>
-                        <span className="block min-w-0 break-words">
+                        <span className="block min-w-0 break-words max-md:text-right">
                           {c.cell(row)}
                           {i === 0 && selected ? (
                             <span className="sr-only"> (selected)</span>
