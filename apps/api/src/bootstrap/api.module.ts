@@ -24,6 +24,7 @@ import { CampaignsModule } from '../modules/campaigns/campaigns.module.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
 import { BriefModule } from '../modules/brief/brief.module.js';
 import { ProductionModule, progressBridge } from '../modules/production/production.module.js';
+import { ReportingModule } from '../modules/reporting/reporting.module.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { JobsModule } from '../platform/jobs/boss.js';
 import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
@@ -83,6 +84,11 @@ function apiModule(
   const usage = config.DATABASE_URL === undefined ? undefined : UsageModule.register(process.env);
   // Campaigns (layer 4) reads job progress through a port that production (layer 6) fills once the database is open.
   const progress = progressBridge();
+  const brief =
+    config.DATABASE_URL === undefined
+      ? undefined
+      : BriefModule.register(process.env, media === undefined || usage === undefined ? undefined : { media, usage });
+  const production = usage === undefined ? undefined : ProductionModule.register(process.env, { usage }, progress.bind);
   @Module({
     imports: [
       logging.module(),
@@ -112,11 +118,11 @@ function apiModule(
       ...(usage === undefined ? [] : [usage]),
       // The claim-check rules (REQ-007, REQ-008): the rules file is checked at start-up; the rules are read from the database.
       // With media and usage it also serves the job-creating operations: draft submit, image analysis, regenerate (SB-D14).
-      ...(config.DATABASE_URL === undefined
-        ? []
-        : [BriefModule.register(process.env, media === undefined || usage === undefined ? undefined : { media, usage })]),
+      ...(brief === undefined ? [] : [brief]),
       // Segment clips (API-060 to API-063) and the campaign progress reader; need the database, the job queue and usage.
-      ...(usage === undefined ? [] : [ProductionModule.register(process.env, { usage }, progress.bind)]),
+      ...(production === undefined ? [] : [production]),
+      // The usage report and its CSV (API-130, API-131); read-only over usage events, job counters and claim counts.
+      ...(brief === undefined || production === undefined ? [] : [ReportingModule.register(process.env, { audit, brief, production })]),
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),
     ],
