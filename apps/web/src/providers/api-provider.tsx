@@ -14,9 +14,18 @@ export interface ApiProviderProps {
   /** Stable id of the signed-in user, or null when signed out. A change clears every cached query. */
   identity: string | null;
   client?: QueryClient;
+  /** False when the identity becomes known only after queries have started (local mode): the first user is not a change. */
+  clearOnFirstIdentity?: boolean;
 }
 
-export function ApiProvider({ children, origin, getToken, identity, client }: ApiProviderProps) {
+export function ApiProvider({
+  children,
+  origin,
+  getToken,
+  identity,
+  client,
+  clearOnFirstIdentity = true,
+}: ApiProviderProps) {
   const [queryClient] = useState(() => client ?? createQueryClient());
   const tokenRef = useRef(getToken);
   tokenRef.current = getToken;
@@ -31,10 +40,11 @@ export function ApiProvider({ children, origin, getToken, identity, client }: Ap
 
   useEffect(() => {
     if (previous.current !== identity) {
+      const first = previous.current === null;
       previous.current = identity;
-      void clearForIdentityChange(queryClient);
+      if (!first || clearOnFirstIdentity) void clearForIdentityChange(queryClient);
     }
-  }, [identity, queryClient]);
+  }, [identity, queryClient, clearOnFirstIdentity]);
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

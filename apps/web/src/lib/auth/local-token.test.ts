@@ -29,4 +29,16 @@ describe('createLocalTokenGetter', () => {
       expect(await createLocalTokenGetter(f as unknown as typeof fetch)()).toBeNull();
     }
   });
+  it('exposes the user the token was issued for, and forgets it on failure', async () => {
+    let t = 0;
+    let res: Response = ok({ token: 'tok', sub: 'user_local_a', expiresInSeconds: 100 });
+    const get = createLocalTokenGetter((async () => res) as unknown as typeof fetch, () => t);
+    expect(get.userId()).toBeNull();
+    await get();
+    expect(get.userId()).toBe('user_local_a');
+    t = 200 * 1000;
+    res = new Response(null, { status: 401 });
+    expect(await get()).toBeNull();
+    expect(get.userId()).toBeNull();
+  });
 });

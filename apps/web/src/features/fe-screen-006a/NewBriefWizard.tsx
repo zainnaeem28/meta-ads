@@ -260,6 +260,22 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
     return () => clearTimeout(timer);
   }, [rev, blocked, advancing, save]);
 
+  /** Edits still inside the debounce window are written when the user leaves (route change, tab hidden or closed). */
+  const flushRef = useRef<() => void>(() => undefined);
+  flushRef.current = () => {
+    if (revRef.current === savedRev.current || blocked || advancing) return;
+    if (validateStep(stepRef.current, valuesRef.current).length > 0) return;
+    void save(stepRef.current);
+  };
+  useEffect(() => {
+    const onHide = () => flushRef.current();
+    window.addEventListener('pagehide', onHide);
+    return () => {
+      window.removeEventListener('pagehide', onHide);
+      onHide();
+    };
+  }, []);
+
   useEffect(() => {
     if (focusHeading.current) {
       focusHeading.current = false;
