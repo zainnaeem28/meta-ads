@@ -1,6 +1,6 @@
 # Submit check: PASS
 
-- Commit: `447b2581dff79cbd5dd264a3e146fb41c878ee65` on `feature/AIU-171-task-105-flow-flow-02-end-to-end-brief-generation-edit-accept`
+- Commit: `447b2581dff79cbd5dd264a3e146fb41c878ee65` on `TASK-105 branch`
 - Base: `origin/dev` at `2e5dd95ddab2ff335eb6d0f9a510d9289dc09d38`
 - Run at: 2026-11-17 17:10 UTC
 
@@ -38,7 +38,7 @@
 
 ### Dismissed in `reports/deps.sarif`
 
-- High `CVE-2026-112366` at `file:///paperclip/instances/default/projects/49d7702a-17ba-48f6-936a-6f2503a0a47e/1a1eae3f-76eb-4c97-b304-6407a3ae88d7/meta-ads/.paperclip/worktrees/feature/AIU-171-task-105-flow-flow-02-end-to-end-brief-generation-edit-accept/pnpm-lock.yaml`: picomatch@4.0.7 (ReDoS on attacker-supplied extglob patterns) is reached only through development tooling (dependency-cruiser, typescript-eslint, vite via tinyglobby) and is not in the web or api runtime bundle. No untrusted glob reaches it. Published after the TASK-089 check passed; verified with pnpm why (devDependencies only); the lockfile is shared and unchanged by this ticket, so the upgrade belongs to the dependency owner. Not a change of this ticket. (Frontend Engineer, until 2026-12-16)
+- High `CVE-2026-112366` at `file:///paperclip/instances/default/projects/49d7702a-17ba-48f6-936a-6f2503a0a47e/1a1eae3f-76eb-4c97-b304-6407a3ae88d7/meta-ads/.paperclip/worktrees/TASK-105 branch/pnpm-lock.yaml`: picomatch@4.0.7 (ReDoS on attacker-supplied extglob patterns) is reached only through development tooling (dependency-cruiser, typescript-eslint, vite via tinyglobby) and is not in the web or api runtime bundle. No untrusted glob reaches it. Published after the TASK-089 check passed; verified with pnpm why (devDependencies only); the lockfile is shared and unchanged by this ticket, so the upgrade belongs to the dependency owner. Not a change of this ticket. (Frontend Engineer, until 2026-12-16)
 
 ## Evidence in the commit
 
