@@ -21,7 +21,14 @@ describe('GET /local-token', () => {
   it('exchanges the local session for the api local-mode token', async () => {
     vi.stubEnv('AUTH_MODE', 'local');
     const f = vi.fn(
-      async () => new Response(JSON.stringify({ token: 'tok', expiresInSeconds: 3600 })),
+      async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: { token: 'tok', expiresInSeconds: 3600 },
+            metaData: { requestId: 'r1' },
+          }),
+        ),
     );
     vi.stubGlobal('fetch', f);
     const { GET } = await import('./route');
@@ -30,6 +37,17 @@ describe('GET /local-token', () => {
     const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toMatch(/\/api\/v1\/dev\/token$/);
     expect(JSON.parse(init.body as string)).toEqual({ email: 'o@example.test' });
+  });
+  it('is 502 with no token when the api answers a top-level (non-envelope) body', async () => {
+    vi.stubEnv('AUTH_MODE', 'local');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ token: 'tok', expiresInSeconds: 3600 }))),
+    );
+    const { GET } = await import('./route');
+    const res = await GET(await req());
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ token: null });
   });
   it('is 401 without a session and calls nothing', async () => {
     vi.stubEnv('AUTH_MODE', 'local');

@@ -38,13 +38,35 @@ describe('@shroomap/contracts public surface', () => {
 describe('httpClient mutator', () => {
   it('returns data, status and headers and parses JSON bodies', async () => {
     const original = globalThis.fetch;
-    globalThis.fetch = (async () => new Response('{"ok":true}', { status: 200 })) as typeof fetch;
+    const seen: (RequestInit | undefined)[] = [];
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      seen.push(init);
+      return new Response('{"ok":true}', { status: 200 });
+    }) as typeof fetch;
     try {
       const result = await httpClient<{ data: unknown; status: number }>('/health/live');
       expect(result.status).toBe(200);
       expect(result.data).toEqual({ ok: true });
+      expect(seen[0]?.credentials).toBe('omit');
+      await httpClient('/x', { credentials: 'same-origin' });
+      expect(seen[1]?.credentials).toBe('same-origin');
       globalThis.fetch = (async () => new Response(null, { status: 204 })) as typeof fetch;
       expect((await httpClient<{ data: unknown }>('/x')).data).toBeUndefined();
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it('sends no credentials, matching the API CORS policy (credentials: false)', async () => {
+    const original = globalThis.fetch;
+    let seen: RequestInit | undefined;
+    globalThis.fetch = (async (_url: string, init?: RequestInit) => {
+      seen = init;
+      return new Response('{}', { status: 200 });
+    }) as typeof fetch;
+    try {
+      await httpClient('/x');
+      expect(seen?.credentials).toBe('omit');
     } finally {
       globalThis.fetch = original;
     }
