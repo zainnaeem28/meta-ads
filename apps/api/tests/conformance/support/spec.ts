@@ -59,8 +59,13 @@ function load(): { spec: RawSpec; operations: Operation[] } {
         id: String(raw['x-api-id']),
         method: method.toUpperCase() as Operation['method'],
         path,
-        scopes: String(raw['x-scope'] ?? '').split(',').map((s) => s.trim()).filter((s) => s !== ''),
-        statuses: Object.keys(raw.responses).map(Number).sort((a, b) => a - b),
+        scopes: String(raw['x-scope'] ?? '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s !== ''),
+        statuses: Object.keys(raw.responses)
+          .map(Number)
+          .sort((a, b) => a - b),
         codes: raw['x-error-codes'] ?? [],
         pathParams: [...path.matchAll(/\{([^}]+)\}/g)].map((m) => m[1] as string),
         jobCreating: raw['x-job-creating'] === true,
@@ -80,9 +85,11 @@ export const operations = (): readonly Operation[] => load().operations;
 /** The 36 registry codes of the contract (`components.schemas.ErrorCode`). */
 export const errorCodes = (): readonly string[] => load().spec.components.schemas.ErrorCode.enum;
 
-export const cellName = (op: Pick<Operation, 'id'>, status: number): string => `${op.id} ${String(status)}`;
+export const cellName = (op: Pick<Operation, 'id'>, status: number): string =>
+  `${op.id} ${String(status)}`;
 
-export const isGuarded = (op: Operation): boolean => !op.scopes.includes('Pub') && !op.scopes.includes('M');
+export const isGuarded = (op: Operation): boolean =>
+  !op.scopes.includes('Pub') && !op.scopes.includes('M');
 export const isAdmin = (op: Operation): boolean => op.scopes.includes('A');
 
 /** A request for an operation: the URL under the API prefix (or the root), with ids filled in. */
@@ -97,9 +104,15 @@ export interface Params {
   readonly [name: string]: string;
 }
 
-const DEFAULT_PARAM: Record<string, () => string> = { position: () => '1', provider: () => 'openai' };
+const DEFAULT_PARAM: Record<string, () => string> = {
+  position: () => '1',
+  provider: () => 'openai',
+};
 
 export function urlFor(op: Operation, params: Params = {}): string {
-  const filled = op.path.replace(/\{([^}]+)\}/g, (_m, name: string) => params[name] ?? DEFAULT_PARAM[name]?.() ?? randomUUID());
+  const filled = op.path.replace(
+    /\{([^}]+)\}/g,
+    (_m, name: string) => params[name] ?? DEFAULT_PARAM[name]?.() ?? randomUUID(),
+  );
   return op.root ? filled : `/api/v1${filled}`;
 }

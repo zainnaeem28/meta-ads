@@ -21,13 +21,30 @@ beforeAll(async () => {
   victim = await w.account('victim');
   boss = await w.admin('zt-boss');
 }, 300_000);
-afterAll(async () => { await w?.close(); });
+afterAll(async () => {
+  await w?.close();
+});
 
 const guarded = operations().filter(isGuarded);
-const TABLES = ['users', 'campaigns', 'drafts', 'media_objects', 'brief_jobs', 'video_jobs', 'assembly_jobs', 'provider_keys', 'invitations', 'access_requests', 'platform_settings'];
+const TABLES = [
+  'users',
+  'campaigns',
+  'drafts',
+  'media_objects',
+  'brief_jobs',
+  'video_jobs',
+  'assembly_jobs',
+  'provider_keys',
+  'invitations',
+  'access_requests',
+  'platform_settings',
+];
 const state = async (): Promise<string> => {
   const parts: string[] = [];
-  for (const table of TABLES) parts.push(`${table}:${String((await w.pool.query(`select md5(coalesce(string_agg(t::text, '|' order by t::text), '')) as h from ${table} t`)).rows[0].h)}`);
+  for (const table of TABLES)
+    parts.push(
+      `${table}:${String((await w.pool.query(`select md5(coalesce(string_agg(t::text, '|' order by t::text), '')) as h from ${table} t`)).rows[0].h)}`,
+    );
   return parts.join(',');
 };
 
@@ -45,11 +62,15 @@ describe('forged and invalid tokens are 401 on every guarded operation with no s
     expect(await state(), 'a refused call changed state').toBe(before);
   });
 
-  openDefect('CONF065-F6', 'a 401 carries WWW-Authenticate: Bearer (components.responses.Unauthenticated)', async () => {
-    const res = await send(w, guarded[0] as (typeof guarded)[number], undefined);
-    expect(res.status).toBe(401);
-    expect(String(res.headers['www-authenticate'])).toMatch(/^Bearer/i);
-  });
+  openDefect(
+    'CONF065-F6',
+    'a 401 carries WWW-Authenticate: Bearer (components.responses.Unauthenticated)',
+    async () => {
+      const res = await send(w, guarded[0] as (typeof guarded)[number], undefined);
+      expect(res.status).toBe(401);
+      expect(String(res.headers['www-authenticate'])).toMatch(/^Bearer/i);
+    },
+  );
 
   it('the same identity with a good token is served (the refusals were the tokens, not the account)', async () => {
     expect((await w.call('GET', '/me', user.token)).status).toBe(200);
@@ -78,7 +99,14 @@ describe('an over-privileged identity is held to the role in the database (TC-ZT
   });
 
   it('forged identity headers and body fields widen nothing', async () => {
-    const headers = { 'x-role': 'admin', 'x-user-role': 'admin', 'x-user-id': victim.id, 'x-tenant-id': victim.id, 'x-forwarded-user': 'admin', 'x-owner-id': victim.id };
+    const headers = {
+      'x-role': 'admin',
+      'x-user-role': 'admin',
+      'x-user-id': victim.id,
+      'x-tenant-id': victim.id,
+      'x-forwarded-user': 'admin',
+      'x-owner-id': victim.id,
+    };
     for (const op of operations().filter(isAdmin)) {
       const res = await send(w, op, user.token, { extra: headers });
       expect([op.id, res.status, res.code]).toEqual([op.id, 403, 'forbidden_role']);
@@ -97,17 +125,36 @@ describe('an over-privileged identity is held to the role in the database (TC-ZT
     }
   });
 
-  openDefect('SEC116-F2', 'an administrator token with an old sign-in is refused recent_auth_required on every administrator operation (scope A promises a recent sign-in)', async () => {
-    const stale = w.local.issueToken({ sub: boss.sub, azp: 'http://localhost:3000', fva: [600, 600] });
-    for (const op of operations().filter(isAdmin)) {
-      const res = await send(w, op, stale);
-      expect([op.id, res.status, res.code]).toEqual([op.id, 403, 'recent_auth_required']);
-    }
-  });
+  openDefect(
+    'SEC116-F2',
+    'an administrator token with an old sign-in is refused recent_auth_required on every administrator operation (scope A promises a recent sign-in)',
+    async () => {
+      const stale = w.local.issueToken({
+        sub: boss.sub,
+        azp: 'http://localhost:3000',
+        fva: [600, 600],
+      });
+      for (const op of operations().filter(isAdmin)) {
+        const res = await send(w, op, stale);
+        expect([op.id, res.status, res.code]).toEqual([op.id, 403, 'recent_auth_required']);
+      }
+    },
+  );
 });
 
 describe('input is data (TC-ZT-04)', () => {
-  const needles = ["' OR '1'='1", "'; drop table users; --", '%', '_', '\\', '" or ""="', '${jndi:ldap://x}', '<script>alert(1)</script>', '%27%20OR%201=1', 'a%00b'];
+  const needles = [
+    "' OR '1'='1",
+    "'; drop table users; --",
+    '%',
+    '_',
+    '\\',
+    '" or ""="',
+    '${jndi:ldap://x}',
+    '<script>alert(1)</script>',
+    '%27%20OR%201=1',
+    'a%00b',
+  ];
   it('search text that is SQL, a wildcard or markup finds nothing it should not and breaks nothing', async () => {
     await fx.campaign(w, user);
     await fx.campaign(w, victim);
@@ -118,21 +165,31 @@ describe('input is data (TC-ZT-04)', () => {
     }
     const wildcard = await w.call('GET', `/campaigns?q=${encodeURIComponent('%%')}`, user.token);
     expect(wildcard.body.data, 'a wildcard is text, not a match-all').toEqual([]);
-    expect((await w.pool.query(`select count(*)::int as n from users`)).rows[0].n).toBeGreaterThan(3);
+    expect((await w.pool.query(`select count(*)::int as n from users`)).rows[0].n).toBeGreaterThan(
+      3,
+    );
   });
 
   it('a filter, a cursor and a limit that are SQL are refused as invalid shapes; the list has no sort key to inject into', async () => {
     const ignored = await w.call('GET', '/campaigns?sort=created_at;drop table users', user.token);
     expect(ignored.status, 'an unknown query name is not read').toBe(200);
-    for (const query of ["filter=' or 1=1", "cursor=' or 1=1 --", "limit=1;select 1"]) {
+    for (const query of ["filter=' or 1=1", "cursor=' or 1=1 --", 'limit=1;select 1']) {
       const res = await w.call('GET', `/campaigns?${query}`, user.token);
-      expect([query, res.status, res.body.error?.code, res.raw.slice(0, 100)]).toEqual([query, 400, 'validation_failed', res.raw.slice(0, 100)]);
+      expect([query, res.status, res.body.error?.code, res.raw.slice(0, 100)]).toEqual([
+        query,
+        400,
+        'validation_failed',
+        res.raw.slice(0, 100),
+      ]);
     }
   });
 
   it('stored markup comes back as the same JSON text, never as a page, with nosniff', async () => {
     const markup = '<img src=x onerror=alert(1)>"\'</script><svg/onload=alert(1)>';
-    const made = await w.call('POST', '/drafts', user.token, { productName: markup, concept: markup });
+    const made = await w.call('POST', '/drafts', user.token, {
+      productName: markup,
+      concept: markup,
+    });
     expect(made.status).toBe(201);
     const read = await w.call('GET', `/drafts/${made.body.data.id}`, user.token);
     expect(read.body.data.productName).toBe(markup);
@@ -142,7 +199,16 @@ describe('input is data (TC-ZT-04)', () => {
 });
 
 describe('closed DTOs: no field the contract does not name is applied (TC-ZT-06)', () => {
-  const fields = { role: 'admin', owner_id: '00000000-0000-0000-0000-000000000001', ownerId: '00000000-0000-0000-0000-000000000001', status: 'removed', campaign_id: '00000000-0000-0000-0000-000000000002', campaignId: '00000000-0000-0000-0000-000000000002', key_id: '00000000-0000-0000-0000-000000000003', version: 99 };
+  const fields = {
+    role: 'admin',
+    owner_id: '00000000-0000-0000-0000-000000000001',
+    ownerId: '00000000-0000-0000-0000-000000000001',
+    status: 'removed',
+    campaign_id: '00000000-0000-0000-0000-000000000002',
+    campaignId: '00000000-0000-0000-0000-000000000002',
+    key_id: '00000000-0000-0000-0000-000000000003',
+    version: 99,
+  };
   it('every extra field on API-023, 051, 011 and 104 is 400 validation_failed and nothing is applied', async () => {
     const draft = (await w.call('POST', '/drafts', user.token, { productName: 'Mass' })).body.data;
     const c = await fx.campaign(w, user, { briefState: 'draft' });
@@ -150,15 +216,37 @@ describe('closed DTOs: no field the contract does not name is applied (TC-ZT-06)
     const before = await state();
     for (const [name, value] of Object.entries(fields)) {
       const cases: [string, string, unknown, Record<string, string>][] = [
-        ['PATCH', `/drafts/${draft.id}`, { productName: 'Changed', [name]: value }, { 'if-match': '"1"' }],
-        ['PATCH', `/campaigns/${c.id}/brief`, { segments: [{ position: 1, dialogue: 'Changed line.' }], [name]: value }, { 'if-match': '"1"' }],
+        [
+          'PATCH',
+          `/drafts/${draft.id}`,
+          { productName: 'Changed', [name]: value },
+          { 'if-match': '"1"' },
+        ],
+        [
+          'PATCH',
+          `/campaigns/${c.id}/brief`,
+          { segments: [{ position: 1, dialogue: 'Changed line.' }], [name]: value },
+          { 'if-match': '"1"' },
+        ],
         ['PUT', '/me/provider-keys/openai', { apiKey: FAKE_KEY, [name]: value }, {}],
       ];
       for (const [method, path, body, extra] of cases) {
         const res = await w.call(method as 'PATCH', path, user.token, body, extra);
-        expect([name, method, path, res.status, res.body.error?.code]).toEqual([name, method, path, 400, 'validation_failed']);
+        expect([name, method, path, res.status, res.body.error?.code]).toEqual([
+          name,
+          method,
+          path,
+          400,
+          'validation_failed',
+        ]);
       }
-      const role = await w.call('PUT', `/admin/users/${target.id}/role`, boss.token, { ...(name === 'role' ? { roles: ['admin'] } : { role: 'admin', [name]: value }) }, { 'if-match': '"1"' });
+      const role = await w.call(
+        'PUT',
+        `/admin/users/${target.id}/role`,
+        boss.token,
+        { ...(name === 'role' ? { roles: ['admin'] } : { role: 'admin', [name]: value }) },
+        { 'if-match': '"1"' },
+      );
       expect([name, role.status, role.body.error?.code]).toEqual([name, 400, 'validation_failed']);
     }
     expect(await state()).toBe(before);
@@ -166,9 +254,17 @@ describe('closed DTOs: no field the contract does not name is applied (TC-ZT-06)
 
   it('a body that is not an object, and unknown fields in a create, are refused as well', async () => {
     for (const body of [[], 'text', 42, null]) {
-      const res = await w.raw('POST', '/api/v1/drafts', { authorization: `Bearer ${user.token}`, 'content-type': 'application/json' }, JSON.stringify(body));
+      const res = await w.raw(
+        'POST',
+        '/api/v1/drafts',
+        { authorization: `Bearer ${user.token}`, 'content-type': 'application/json' },
+        JSON.stringify(body),
+      );
       expect([JSON.stringify(body), res.status]).toEqual([JSON.stringify(body), 400]);
     }
-    expect((await w.call('POST', '/drafts', user.token, { productName: 'X', ownerId: victim.id })).status).toBe(400);
+    expect(
+      (await w.call('POST', '/drafts', user.token, { productName: 'X', ownerId: victim.id }))
+        .status,
+    ).toBe(400);
   });
 });
