@@ -1,5 +1,6 @@
 // A throwaway database on the shared test PostgreSQL with the pg-boss schema and queues the built api needs to start.
 // `node database.mjs create` prints its URL; `node database.mjs drop <name>` removes it.
+import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
