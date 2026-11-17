@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { BriefScreen } from '../../../../../features/fe-screen-007a/BriefScreen';
-import { SCREEN_007_COPY } from '../../../../../features/fe-screen-007a/copy';
+import { BriefScreen } from '../../../../../features/fe-screen-007b/BriefScreen';
+import { SCREEN_007_COPY } from '../../../../../features/fe-screen-007b/copy';
 
 export const metadata: Metadata = {
   title: `${SCREEN_007_COPY.title} · ShrooMap`,
