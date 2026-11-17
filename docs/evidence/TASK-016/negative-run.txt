@@ -1,0 +1,4 @@
+PASS load: rejected with exit 1 (401s)
+PASS dast: rejected with exit 1 (not a baseline)
+PASS lighthouse: rejected with exit 1 (valid samples)
+EXIT 0
