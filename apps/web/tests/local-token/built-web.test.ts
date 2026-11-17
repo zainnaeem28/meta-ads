@@ -1,7 +1,6 @@
 // @vitest-environment node
 // Built web (`next start`) against a stub api that answers the real envelope. Run with `pnpm test:built`.
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -44,7 +43,8 @@ beforeAll(async () => {
     NODE_ENV: 'production',
     NEXT_PUBLIC_API_ORIGIN: apiOrigin,
   };
-  if (!existsSync('.next/BUILD_ID')) {
+  // NEXT_PUBLIC_API_ORIGIN is inlined at build time, so the build is always made for this run's stub api.
+  {
     const b = spawnSync('pnpm', ['exec', 'next', 'build'], { env, stdio: 'inherit' });
     if (b.status !== 0) throw new Error('next build failed');
   }
