@@ -259,6 +259,12 @@ describe('SCREEN-005 campaigns', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('a long product name is cut in the delete button so the row stays inside the screen', async () => {
+    serve({ campaigns: () => ok([campaign(1, { productName: 'Cordyceps Trail Mix, spring launch with the long working title' })], page(1, null)) });
+    mount();
+    expect(await screen.findByRole('button', { name: 'Delete Cordyceps Trail Mix, spring…' })).toBeVisible();
+  });
+
   it('cancel keeps the record and calls nothing', async () => {
     serve();
     mount();

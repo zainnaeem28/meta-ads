@@ -57,5 +57,9 @@ export const SCREEN_005_COPY = {
   untitledDraft: 'Untitled draft',
   draftStatus: 'Draft',
   steps: ['Format', 'Product', 'Audience and direction', 'Concept and script'],
-  deleteLabel: (name: string, draft: boolean) => (draft ? `Delete draft ${name}` : `Delete ${name}`),
+  /** CMP-027 shows an action's name as its text, so a long product name is cut to keep the row inside a phone. */
+  deleteLabel: (name: string, draft: boolean) => {
+    const short = name.length > 28 ? `${name.slice(0, 27).trimEnd()}…` : name;
+    return draft ? `Delete draft ${short}` : `Delete ${short}`;
+  },
 } as const;
