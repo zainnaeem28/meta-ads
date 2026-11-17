@@ -1054,6 +1054,19 @@
       }
     },
     {
+      "name": "WORKER_PROVIDER_ORIGIN_OVERRIDE",
+      "group": "Jobs and provider calls",
+      "class": "public",
+      "services": ["worker"],
+      "requiredIn": [],
+      "default": null,
+      "schema": "schema",
+      "validation": "Test seam: https origin (a name, port 443, no path) that replaces api.wavespeed.ai and api.openai.com for the WaveSpeed and QC calls; only when APP_ENV is development or test (refused in staging and production); its host must be named exactly under both openai and wavespeed in EGRESS_ALLOWED_HOSTS.",
+      "local": {
+        "unset": true
+      }
+    },
+    {
       "name": "WAVESPEED_MODEL_I2V",
       "group": "Providers and models",
       "class": "public",
