@@ -19,6 +19,7 @@ import type {
   CancelCause,
   JobRecord,
   JobStats,
+  JobStatsWindow,
   QcRecord,
   SegmentJobsEntry,
   VideoConfig,
@@ -229,6 +230,43 @@ export class VideoJobsService {
         .where(sql`${qcRuns.createdAt} >= ${since.toISOString()}::timestamptz`);
       return {
         windowStart: since.toISOString(),
+        videoCreated: video?.created ?? 0,
+        videoCompleted: video?.completed ?? 0,
+        videoFailed: video?.failed ?? 0,
+        videoCancelled: video?.cancelled ?? 0,
+        qcCreated: qc?.created ?? 0,
+      };
+    });
+  }
+
+  /**
+   * Counts of clips and QC runs in the half-open window [from, to), each counter by its own event time: created by
+   * `created_at`, completed/failed/cancelled by the row's last change (`updated_at`, when it entered the terminal state).
+   * `ownerId` scopes every counter to one tenant; without it the counts are platform-wide, like `jobStats`.
+   */
+  async jobStatsWindow(from: Date, to: Date, ownerId?: string): Promise<JobStatsWindow> {
+    const f = from.toISOString();
+    const t = to.toISOString();
+    return this.database.uow.run(async (tx) => {
+      const videoOwner = ownerId === undefined ? sql`true` : sql`${videoJobs.ownerId} = ${ownerId}`;
+      const qcOwner = ownerId === undefined ? sql`true` : sql`${qcRuns.ownerId} = ${ownerId}`;
+      const inWindow = (column: unknown) => sql`${column} >= ${f}::timestamptz and ${column} < ${t}::timestamptz`;
+      const [video] = await tx
+        .select({
+          created: sql<number>`count(*) filter (where ${inWindow(videoJobs.createdAt)})::int`,
+          completed: sql<number>`count(*) filter (where ${videoJobs.state} = 'completed' and ${inWindow(videoJobs.updatedAt)})::int`,
+          failed: sql<number>`count(*) filter (where ${videoJobs.state} = 'failed' and ${inWindow(videoJobs.updatedAt)})::int`,
+          cancelled: sql<number>`count(*) filter (where ${videoJobs.state} = 'cancelled' and ${inWindow(videoJobs.updatedAt)})::int`,
+        })
+        .from(videoJobs)
+        .where(videoOwner);
+      const [qc] = await tx
+        .select({ created: sql<number>`count(*) filter (where ${inWindow(qcRuns.createdAt)})::int` })
+        .from(qcRuns)
+        .where(qcOwner);
+      return {
+        windowStart: f,
+        windowEnd: t,
         videoCreated: video?.created ?? 0,
         videoCompleted: video?.completed ?? 0,
         videoFailed: video?.failed ?? 0,
