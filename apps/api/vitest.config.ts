@@ -42,6 +42,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
       ['junit', { outputFile: 'reports/reporting/junit.xml' }],
+      ['junit', { outputFile: 'reports/vendor-gate/junit.xml' }],
     ],
     coverage: {
       provider: 'v8',
@@ -68,9 +69,13 @@ export default defineConfig({
         'src/platform/health/**/*.ts',
         'src/platform/metrics/**/*.ts',
         'src/platform/ops-cli/**/*.ts',
+        'src/platform/vendor-gate/**/*.ts',
       ],
       exclude: [
         'src/**/*.test.ts',
+        // The Nest wiring is proven through the api and worker composition roots on real PostgreSQL by vendor-gate.integration.test.ts.
+        'src/platform/vendor-gate/index.ts',
+        'src/platform/vendor-gate/vendor-gate.module.ts',
         'src/platform/config/test-env.ts',
         'src/platform/config/index.ts',
         'src/platform/logging/index.ts',

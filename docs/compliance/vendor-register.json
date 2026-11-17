@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "source": "ARCHITECTURE §12 integration records, SECURITY-DESIGN §10.7",
+  "note": "A vendor's data mode may be `real` only when its entry has contractStatus `recorded` and a contractRecord. Recording a contract is a reviewed change to this file (T-14). Adapters absent by ruling are listed in absentAdapters and must have no code.",
+  "vendors": [
+    {
+      "id": "clerk",
+      "name": "Clerk",
+      "service": "Sign-in, invitations, MFA, sessions",
+      "receives": "Email addresses, session and identity tokens",
+      "classification": "personal",
+      "contractNeeded": "Data processing agreement (G-5)",
+      "dataModeKey": "PROVIDER_DATA_MODE_CLERK",
+      "contractStatus": "not-recorded",
+      "contractRecord": null
+    },
+    {
+      "id": "cloudflare-r2",
+      "name": "Cloudflare R2",
+      "service": "Private media storage",
+      "receives": "All uploaded and generated media (product images, clips, thumbnails)",
+      "classification": "personal",
+      "contractNeeded": "Cloudflare data processing addendum for the owner account",
+      "dataModeKey": "PROVIDER_DATA_MODE_R2",
+      "contractStatus": "not-recorded",
+      "contractRecord": null
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "service": "Brief, image analysis, QC transcription, thumbstopper image, key probe",
+      "receives": "Brief inputs, product image bytes (inline, no URL), audio, callout text",
+      "classification": "personal",
+      "contractNeeded": "User's own account terms; provider retention recorded in the compliance register (CREG)",
+      "dataModeKey": "PROVIDER_DATA_MODE_OPENAI",
+      "contractStatus": "not-recorded",
+      "contractRecord": null
+    },
+    {
+      "id": "wavespeed",
+      "name": "WaveSpeed (Seedance)",
+      "service": "Segment video generation, key probe",
+      "receives": "Prompt and reference image URL (likeness)",
+      "classification": "personal",
+      "contractNeeded": "User's own account terms; provider copy deletion and retention recorded in CREG",
+      "dataModeKey": "PROVIDER_DATA_MODE_WAVESPEED",
+      "contractStatus": "not-recorded",
+      "contractRecord": null
+    },
+    {
+      "id": "render",
+      "name": "Render",
+      "service": "Hosting of api, worker, web and database",
+      "receives": "All application data in transit and at rest",
+      "classification": "personal",
+      "contractNeeded": "Render data processing addendum",
+      "dataModeKey": null,
+      "contractStatus": "not-recorded",
+      "contractRecord": null
+    },
+    {
+      "id": "sentry",
+      "name": "Sentry",
+      "service": "Error and trace monitoring",
+      "receives": "Scrubbed error events and traces (no request bodies, no secrets)",
+      "classification": "personal",
+      "contractNeeded": "Sentry data processing addendum",
+      "dataModeKey": null,
+      "contractStatus": "not-recorded",
+      "contractRecord": null
+    },
+    {
+      "id": "uptime-monitor",
+      "name": "Uptime monitor",
+      "service": "Heartbeat and health probe monitoring",
+      "receives": "Heartbeat pings and health endpoint status only",
+      "classification": "none",
+      "contractNeeded": "Terms of service review; no personal data sent",
+      "dataModeKey": null,
+      "contractStatus": "not-recorded",
+      "contractRecord": null
+    },
+    {
+      "id": "shotstack",
+      "name": "Shotstack",
+      "service": "Assembly alternative, off (descoped by ruling)",
+      "receives": "Clips (would be personal)",
+      "classification": "personal",
+      "contractNeeded": "Contract required before any adapter is built",
+      "dataModeKey": "PROVIDER_DATA_MODE_SHOTSTACK",
+      "contractStatus": "off",
+      "contractRecord": null
+    }
+  ],
+  "absentAdapters": ["shotstack", "kms"]
+}
