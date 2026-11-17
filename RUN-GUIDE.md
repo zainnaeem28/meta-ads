@@ -104,6 +104,8 @@ curl -s http://localhost:4000/api/v1/me -H "authorization: Bearer <jwt>"
 
 The body is `{ "email": "<address>", "secondFactor": true|false }` (`secondFactor` defaults to `true`; `false` mints a token with no second-factor evidence, `fva` `[0,-1]`). The route mints a token for that address (one stable subject per address) and registers it with the local provider; the account is then linked by the normal first-token rules (`OWNER_EMAIL` becomes the first administrator, `INVITE_EMAIL_DOMAINS`, invitations and signup mode apply). Tokens carry the same claims as real ones (`iss`, `sub`, `sid`, `iat`, `exp` one hour, `fva`, `azp` = `WEB_ORIGIN`), and every check still runs: signature, issuer, expiry, `azp`, role and status read from the database, MFA, recent authentication and rate limits. The route is not mounted with `IDENTITY_MODE=clerk`, and the process refuses to start with `IDENTITY_MODE=local` when `APP_ENV` is `staging` or `production`. It lives in the api process only: the worker has its own local provider and does not accept these tokens.
 
+The local-mode web (`AUTH_MODE=local`, no Clerk key) uses this route for you: its own `GET /local-token` (answers only in local mode, 404 otherwise) exchanges the signed-in local session for the api token server-side, and the browser sends it as the bearer, cached until shortly before it expires. Run the api with `IDENTITY_MODE=local` and set `NEXT_PUBLIC_API_ORIGIN` to it (default `http://localhost:4000`); nothing else changes in the web steps. With a Clerk key the Clerk session token is the bearer and `/local-token` does not exist in effect.
+
 ## 6. Migrate and seed
 
 Order is fixed (release order, `docs/ops/release.md`): `db:migrate`, `jobs:migrate`, `db:seed`.
