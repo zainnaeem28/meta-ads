@@ -1,20 +1,20 @@
 # Submit check: PASS
 
-- Commit: `05002060a5c93b50d5a55bfdba2b372985c63762` on the ticket branch
-- Base: `origin/dev` at `b818035788493bdeef2dff6f61134bbb49d6fd89`
-- Run at: 2026-11-17 18:55 UTC
+- Commit: `d0f1c307487e9dd6f24d68313d9d9b973973e51d` on `feature/AIU-175-task-108-flow-flow-05-end-to-end-sign-in-and-mfa`
+- Base: `origin/dev` at `7668b0bf43685eda96d4025484dabbcda9e430d6`
+- Run at: 2026-11-17 19:36 UTC
 
 ## Checks
 
 | Command | Exit | Seconds |
 | --- | --- | --- |
-| `pnpm build` | 0 | 32 |
-| `cd apps/web && REPORT_DIR=reports/flow-05 NODE_ENV=test pnpm exec vitest run --config vitest.config.ts --coverage` | 0 | 47 |
-| `cd apps/web && REPORT_DIR=reports/flow-05 pnpm exec playwright test --config tests/e2e/flow-05/playwright.config.ts --project=chromium` | 0 | 60 |
-| `scripts/ci/token-lint.sh; scripts/ci/layers.sh` | 0 | 4 |
-| `scripts/ci/sast.sh` | 0 | 10 |
-| `scripts/ci/deps.sh || true` | 0 | 3 |
-| `scripts/ci/secrets.sh` | 0 | 1 |
+| `pnpm build` | 0 | 46 |
+| `cd apps/web && REPORT_DIR=reports/flow-05 NODE_ENV=test pnpm exec vitest run --config vitest.config.ts --coverage` | 0 | 55 |
+| `cd apps/web && REPORT_DIR=reports/flow-05 pnpm exec playwright test --config tests/e2e/flow-05/playwright.config.ts --project=chromium` | 0 | 89 |
+| `scripts/ci/token-lint.sh; scripts/ci/layers.sh` | 0 | 7 |
+| `scripts/ci/sast.sh` | 0 | 48 |
+| `scripts/ci/deps.sh || true` | 0 | 5 |
+| `scripts/ci/secrets.sh` | 0 | 3 |
 
 ## Test reports
 
@@ -27,7 +27,7 @@
 
 | Report | Format | Lines | Branches | Functions | Statements |
 | --- | --- | --- | --- | --- | --- |
-| `apps/web/reports/flow-05/lcov.info` | lcov | 91.15% (min 75) | 84.86% (min 70) | 85.31% | not measured |
+| `apps/web/reports/flow-05/lcov.info` | lcov | 90.60% (min 75) | 84.86% (min 70) | 85.31% | not measured |
 
 ## Security reports (findings block at High and above; secrets always)
 
@@ -39,7 +39,7 @@
 
 ### Dismissed in `reports/deps.sarif`
 
-- High `CVE-2026-112366` at `pnpm-lock.yaml (workspace root)`: picomatch@4.0.7 (ReDoS on attacker-supplied extglob patterns) is reached only through development tooling (dependency-cruiser, typescript-eslint, vite via tinyglobby) and is not in the web or api runtime bundle. No untrusted glob reaches it. Published after the TASK-089 check passed; verified with pnpm why (devDependencies only); the lockfile is shared and unchanged by this ticket, so the upgrade belongs to the dependency owner. Not a change of this ticket. (Frontend Engineer, until 2026-12-16)
+- High `CVE-2026-112366` at `file:///paperclip/instances/default/projects/49d7702a-17ba-48f6-936a-6f2503a0a47e/1a1eae3f-76eb-4c97-b304-6407a3ae88d7/meta-ads/.paperclip/worktrees/feature/AIU-175-task-108-flow-flow-05-end-to-end-sign-in-and-mfa/pnpm-lock.yaml`: picomatch@4.0.7 (ReDoS on attacker-supplied extglob patterns) is reached only through development tooling (dependency-cruiser, typescript-eslint, vite via tinyglobby) and is not in the web or api runtime bundle. No untrusted glob reaches it. Published after the TASK-089 check passed; verified with pnpm why (devDependencies only); the lockfile is shared and unchanged by this ticket, so the upgrade belongs to the dependency owner. Not a change of this ticket. (Frontend Engineer, until 2026-12-16)
 
 ## Evidence in the commit
 
