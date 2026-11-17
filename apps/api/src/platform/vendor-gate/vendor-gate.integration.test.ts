@@ -15,7 +15,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import pg from 'pg';
 import { runSeed } from '../../database/seed.js';
-import { priceTableSeedStep } from '../../modules/usage/index.js';
+import type { SeedStep } from '../../database/index.js';
+import { sql } from 'drizzle-orm';
 import { DiscoveryService, NestFactory } from '@nestjs/core';
 import { VENDOR_GATE, VendorGateError, VendorGateModule } from './index.js';
 import type { VendorGate } from './index.js';
@@ -54,6 +55,26 @@ afterEach(async () => {
 afterAll(async () => {
   await database.drop();
 });
+
+/** The release seed's price-table step, read straight from `config/price-table.json` (platform code does not import modules). */
+function priceTableStep(): SeedStep {
+  const file = join(REAL_MIGRATIONS, '..', '..', '..', '..', '..', 'config', 'price-table.json');
+  const rows = (JSON.parse(readFileSync(file, 'utf8')) as { rows: Array<Record<string, string | number>> }).rows;
+  return {
+    name: 'price_table',
+    datasets: ['reference'],
+    run: async (tx) => {
+      for (const row of rows) {
+        await tx.execute(sql`
+          insert into price_table (provider, operation, effective_from, unit, unit_price_usd, units_per_call)
+          values (${row['provider']}, ${row['operation']}, ${row['effectiveFrom']}::date, ${row['unit']},
+                  ${row['unitPriceUsd']}::numeric, ${row['unitsPerCall']}::numeric)
+          on conflict do nothing`);
+      }
+      return rows.length;
+    },
+  };
+}
 
 describe('worker composition root', () => {
   it('starts on stubs in the default configuration and holds the gate', async () => {
@@ -131,7 +152,7 @@ describe('worker composition root: call-time refusal on real adapter instances',
       await pool.end();
     }
     await installJobs(fullDb.url);
-    await runSeed({ dataset: 'reference', appEnv: 'development', databaseUrl: fullDb.url, steps: [priceTableSeedStep()] });
+    await runSeed({ dataset: 'reference', appEnv: 'development', databaseUrl: fullDb.url, steps: [priceTableStep()] });
   });
   afterAll(async () => {
     await fullDb.drop();
