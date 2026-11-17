@@ -6,7 +6,8 @@ import { EM_DASH, countWords } from './words.js';
 
 /** The rule id of the issue raised when generation had to trim a segment (not a text rule). */
 export const WORD_COUNT_TRIMMED_RULE_ID = 'word_count_trimmed';
-export const WORD_COUNT_TRIMMED_MESSAGE = 'The dialogue was trimmed to the 45 word maximum. Read it again.';
+export const WORD_COUNT_TRIMMED_MESSAGE =
+  'The dialogue was trimmed to the 45 word maximum. Read it again.';
 
 export interface SegmentText {
   readonly dialogue: string;
@@ -35,7 +36,10 @@ export interface PositionedFinding extends Finding {
   readonly position: number;
 }
 
-type Matcher = (text: string, segment: SegmentText) => { start: number; end: number } | 'whole' | null;
+type Matcher = (
+  text: string,
+  segment: SegmentText,
+) => { start: number; end: number } | 'whole' | null;
 
 interface CompiledRule {
   readonly rule: BrandRule;
@@ -73,11 +77,21 @@ function compileOne(rule: BrandRule): CompiledRule {
       return { rule, fields, lastOnly: false, match: firstMatch(params['pattern'] as string) };
     case 'word_count_min': {
       const min = params['min'] as number;
-      return { rule, fields: ['dialogue'], lastOnly: false, match: (text) => (countWords(text) < min ? 'whole' : null) };
+      return {
+        rule,
+        fields: ['dialogue'],
+        lastOnly: false,
+        match: (text) => (countWords(text) < min ? 'whole' : null),
+      };
     }
     case 'word_count_max_target': {
       const target = params['target'] as number;
-      return { rule, fields: ['dialogue'], lastOnly: false, match: (text) => (countWords(text) > target ? 'whole' : null) };
+      return {
+        rule,
+        fields: ['dialogue'],
+        lastOnly: false,
+        match: (text) => (countWords(text) > target ? 'whole' : null),
+      };
     }
     case 'cta_exact': {
       const text = params['text'] as string;
@@ -98,7 +112,9 @@ function compileOne(rule: BrandRule): CompiledRule {
         lastOnly: true,
         // Framing in the prompt counts too: it is what the video is generated from.
         match: (_text, segment) =>
-          patterns.some((pattern) => pattern.test(segment.dialogue) || pattern.test(segment.prompt)) ? null : 'whole',
+          patterns.some((pattern) => pattern.test(segment.dialogue) || pattern.test(segment.prompt))
+            ? null
+            : 'whole',
       };
     }
   }
@@ -119,7 +135,8 @@ export function checkSegment(rules: CompiledRules, segment: SegmentText): Findin
     for (const field of compiled.fields) {
       const found = compiled.match(segment[field], segment);
       if (found === null) continue;
-      const span = found === 'whole' ? { start: null, end: null } : { start: found.start, end: found.end };
+      const span =
+        found === 'whole' ? { start: null, end: null } : { start: found.start, end: found.end };
       findings.push({
         ruleId: compiled.rule.id,
         class: compiled.rule.class,
@@ -134,7 +151,10 @@ export function checkSegment(rules: CompiledRules, segment: SegmentText): Findin
 }
 
 /** Runs the rules over a brief's active segments; the one with the highest position is the last. */
-export function checkBrief(rules: CompiledRules, segments: readonly BriefSegmentText[]): PositionedFinding[] {
+export function checkBrief(
+  rules: CompiledRules,
+  segments: readonly BriefSegmentText[],
+): PositionedFinding[] {
   const lastPosition = Math.max(0, ...segments.map((segment) => segment.position));
   return segments.flatMap((segment) =>
     checkSegment(rules, {

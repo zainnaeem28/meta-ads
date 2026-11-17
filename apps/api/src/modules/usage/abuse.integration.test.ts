@@ -71,24 +71,44 @@ beforeAll(async () => {
     roleNames[role] = `app_${role}_t045_${suffix}`;
     rolePasswords[role] = randomBytes(12).toString('hex');
     await withClient(adminUrl(), (c) =>
-      c.query(`CREATE ROLE "${roleNames[role]}" LOGIN NOSUPERUSER PASSWORD '${rolePasswords[role]}'`),
+      c.query(
+        `CREATE ROLE "${roleNames[role]}" LOGIN NOSUPERUSER PASSWORD '${rolePasswords[role]}'`,
+      ),
     );
   }
   const platform = readFileSync(join(REAL_MIGRATIONS, '0001_task-025-platform.sql'), 'utf8');
   for (const statement of platform.split('-- Grants')[0]?.split('--> statement-breakpoint') ?? []) {
-    if (/^\s*CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(statement)) {
+    if (
+      /^\s*CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(
+        statement,
+      )
+    ) {
       await pool.query(statement);
     }
   }
-  for (const file of ['0010_task-032-audit.sql', '0020_task-033-identity.sql', '0050_task-044-usage.sql']) {
+  for (const file of [
+    '0010_task-032-audit.sql',
+    '0020_task-033-identity.sql',
+    '0050_task-044-usage.sql',
+  ]) {
     for (const statement of statementsOf(file, 'tables')) await pool.query(statement);
   }
-  for (const statement of statementsOf('0050_task-044-usage.sql', 'grants')) await pool.query(statement);
+  for (const statement of statementsOf('0050_task-044-usage.sql', 'grants'))
+    await pool.query(statement);
   await pool.query(`GRANT USAGE ON SCHEMA public TO "${roleNames.api}", "${roleNames.worker}"`);
   const { installJobs } = await import('../../platform/jobs/test-support.js');
   await installJobs(testDb.url);
-  for (const [n, id] of [['1', U1], ['2', U2], ['3', U3], ['4', U4], ['5', U5]] as const) {
-    await pool.query(`INSERT INTO users (id, idp_subject, email, linked_via) VALUES ($1, $2, $3, 'first_admin')`, [id, `sub_${n}`, `u${n}@example.test`]);
+  for (const [n, id] of [
+    ['1', U1],
+    ['2', U2],
+    ['3', U3],
+    ['4', U4],
+    ['5', U5],
+  ] as const) {
+    await pool.query(
+      `INSERT INTO users (id, idp_subject, email, linked_via) VALUES ($1, $2, $3, 'first_admin')`,
+      [id, `sub_${n}`, `u${n}@example.test`],
+    );
   }
   // Rows of the price table the tests use, besides the file's own (seeded below through the release seed step).
   await pool.query(
@@ -140,10 +160,12 @@ afterAll(async () => {
   await pool?.end();
   await testDb?.drop();
   for (const name of Object.values(roleNames)) {
-    if (name !== '') await withClient(adminUrl(), (c) => c.query(`DROP ROLE IF EXISTS "${name}"`)).catch(() => undefined);
+    if (name !== '')
+      await withClient(adminUrl(), (c) => c.query(`DROP ROLE IF EXISTS "${name}"`)).catch(
+        () => undefined,
+      );
   }
 });
-
 
 // TASK-045 (usage 2/2) on real PostgreSQL through the real api composition root (`createApiApp`, the one `main.api.ts`
 // runs): abuse thresholds raising alerts through the audit module's AlertPort, and the usage aggregate.
@@ -151,11 +173,25 @@ afterAll(async () => {
 const uuid = (n: number): string => `0197a1b2-0000-7000-a000-${n.toString(16).padStart(12, '0')}`;
 const monitor = (): AbuseMonitor => apiApp.get(AbuseMonitor, { strict: false });
 const alertsOf = async (kind: string, owner: string): Promise<number> =>
-  Number((await pool.query(`SELECT count(*) AS n FROM admin_alerts WHERE kind = $1 AND subject_user_id = $2`, [kind, owner])).rows[0]?.n);
+  Number(
+    (
+      await pool.query(
+        `SELECT count(*) AS n FROM admin_alerts WHERE kind = $1 AND subject_user_id = $2`,
+        [kind, owner],
+      )
+    ).rows[0]?.n,
+  );
 
 async function reservations(owner: string, from: number, n: number): Promise<void> {
   for (let i = 0; i < n; i += 1) {
-    await database.uow.run((tx) => usage.reserve(tx, { ownerId: owner, jobType: 'brief_generation', jobId: uuid(from + i), calls: [CHEAP] }));
+    await database.uow.run((tx) =>
+      usage.reserve(tx, {
+        ownerId: owner,
+        jobType: 'brief_generation',
+        jobId: uuid(from + i),
+        calls: [CHEAP],
+      }),
+    );
   }
 }
 
@@ -168,7 +204,12 @@ describe('abuse thresholds through the running app (TC-ALR-01..03)', () => {
     expect(await monitor().checkAbuseThresholds(U1)).toMatchObject({ jobs: 21, jobBurst: true });
     expect((await monitor().checkAbuseThresholds(U1)).jobBurst).toBe(false);
     expect(await alertsOf('job_burst', U1)).toBe(1);
-    const row = (await pool.query(`SELECT counts FROM admin_alerts WHERE kind = 'job_burst' AND subject_user_id = $1`, [U1])).rows[0] as { counts: unknown };
+    const row = (
+      await pool.query(
+        `SELECT counts FROM admin_alerts WHERE kind = 'job_burst' AND subject_user_id = $1`,
+        [U1],
+      )
+    ).rows[0] as { counts: unknown };
     expect(row.counts).toEqual({ jobs: 21, window_min: 10 });
   });
 
@@ -188,18 +229,45 @@ describe('abuse thresholds through the running app (TC-ALR-01..03)', () => {
     expect((await monitor().checkAbuseThresholds(U3)).providerAuthSpike).toBe(false);
     expect(await alertsOf('provider_auth_spike', U3)).toBe(0);
     monitor().noteProviderAuthResponse(U3, 429);
-    expect(await monitor().checkAbuseThresholds(U3)).toMatchObject({ providerAuthSpike: true, authResponses: 5 });
+    expect(await monitor().checkAbuseThresholds(U3)).toMatchObject({
+      providerAuthSpike: true,
+      authResponses: 5,
+    });
     expect(await alertsOf('provider_auth_spike', U3)).toBe(1);
   });
 });
 
 describe('aggregate through the running app (TC-USG)', () => {
   const aggregator = (): UsageAggregator => apiApp.get(UsageAggregator, { strict: false });
-  const insert = (owner: string, provider: string, job: string, seq: number, outcome: string, cost: string, latency: number | null, daysAgo = 0) =>
+  const insert = (
+    owner: string,
+    provider: string,
+    job: string,
+    seq: number,
+    outcome: string,
+    cost: string,
+    latency: number | null,
+    daysAgo = 0,
+  ) =>
     pool.query(
       `INSERT INTO usage_events (id, owner_id, provider, operation, job_type, job_id, call_seq, outcome, estimated_cost_usd, cost_basis, latency_ms, at)
        VALUES ($1, $2, $3, 'm', 'video', $4, $5, $6, $7, $8, $9, now() - make_interval(days => $10) - interval '1 hour')`,
-      [crypto.randomUUID(), owner, provider, job, seq, outcome, cost, outcome === 'rejected' ? 'zero_rejected' : outcome === 'unconfirmed' ? 'unconfirmed_estimate' : 'estimate', latency, daysAgo],
+      [
+        crypto.randomUUID(),
+        owner,
+        provider,
+        job,
+        seq,
+        outcome,
+        cost,
+        outcome === 'rejected'
+          ? 'zero_rejected'
+          : outcome === 'unconfirmed'
+            ? 'unconfirmed_estimate'
+            : 'estimate',
+        latency,
+        daysAgo,
+      ],
     );
 
   it('is empty (not zeros) for an account-less window, then sums per account and provider without personal data', async () => {
@@ -212,10 +280,30 @@ describe('aggregate through the running app (TC-USG)', () => {
     const result = await aggregator().aggregate();
     const mine = result.rows.filter((r) => r.ownerId === U4);
     expect(mine).toEqual([
-      { ownerId: U4, provider: 'openai', calls: 3, successes: 2, failures: 1, rejected: 0, unconfirmed: 0, estimatedCostUsd: '1.0000', averageLatencyMs: 200,
-        jobStates: { succeeded: 1, failed: 1, rejected: 0, unconfirmed: 0 } },
-      { ownerId: U4, provider: 'wavespeed', calls: 1, successes: 0, failures: 0, rejected: 1, unconfirmed: 0, estimatedCostUsd: '0.0000', averageLatencyMs: 50,
-        jobStates: { succeeded: 0, failed: 0, rejected: 1, unconfirmed: 0 } },
+      {
+        ownerId: U4,
+        provider: 'openai',
+        calls: 3,
+        successes: 2,
+        failures: 1,
+        rejected: 0,
+        unconfirmed: 0,
+        estimatedCostUsd: '1.0000',
+        averageLatencyMs: 200,
+        jobStates: { succeeded: 1, failed: 1, rejected: 0, unconfirmed: 0 },
+      },
+      {
+        ownerId: U4,
+        provider: 'wavespeed',
+        calls: 1,
+        successes: 0,
+        failures: 0,
+        rejected: 1,
+        unconfirmed: 0,
+        estimatedCostUsd: '0.0000',
+        averageLatencyMs: 50,
+        jobStates: { succeeded: 0, failed: 0, rejected: 1, unconfirmed: 0 },
+      },
     ]);
     expect(JSON.stringify(result)).not.toContain('example.test');
     const wide = await aggregator().aggregate(60);
@@ -223,7 +311,12 @@ describe('aggregate through the running app (TC-USG)', () => {
   });
 
   it('refuses a window above 366 days at the service naming the limit', async () => {
-    const error = await aggregator().aggregate(367).then(() => undefined, (e: unknown) => e);
+    const error = await aggregator()
+      .aggregate(367)
+      .then(
+        () => undefined,
+        (e: unknown) => e,
+      );
     expect(error).toBeInstanceOf(DomainError);
     expect((error as DomainError).code).toBe('report_window_too_large');
     expect(JSON.stringify((error as DomainError).details)).toContain('366');

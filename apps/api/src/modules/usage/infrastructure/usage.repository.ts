@@ -38,7 +38,11 @@ export class DrizzleUsageRepository implements UsageRepository, PriceRepository 
     return result.rows.length === 1;
   }
 
-  async findReservation(tx: DbTx, jobType: JobType, jobId: string): Promise<ReservationRecord | null> {
+  async findReservation(
+    tx: DbTx,
+    jobType: JobType,
+    jobId: string,
+  ): Promise<ReservationRecord | null> {
     const row = first(
       await tx.execute<{
         id: string;
@@ -72,7 +76,12 @@ export class DrizzleUsageRepository implements UsageRepository, PriceRepository 
     return result.rows.length === 1;
   }
 
-  async reduceReservation(tx: DbTx, jobType: JobType, jobId: string, units: Units): Promise<boolean> {
+  async reduceReservation(
+    tx: DbTx,
+    jobType: JobType,
+    jobId: string,
+    units: Units,
+  ): Promise<boolean> {
     const deleted = await tx.execute(sql`
       delete from spend_reservations
        where job_type = ${jobType} and job_id = ${jobId} and remaining_calls <= 1

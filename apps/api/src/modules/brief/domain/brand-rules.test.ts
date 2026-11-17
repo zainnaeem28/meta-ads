@@ -3,8 +3,19 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BrandRulesInvalidError, parseBrandRules, parseStoredRule } from './brand-rules.js';
 
-const FILE = join(import.meta.dirname, '..', '..', '..', '..', '..', '..', 'config', 'brand-rules.json');
-const good = (): Record<string, unknown> => JSON.parse(readFileSync(FILE, 'utf8')) as Record<string, unknown>;
+const FILE = join(
+  import.meta.dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'config',
+  'brand-rules.json',
+);
+const good = (): Record<string, unknown> =>
+  JSON.parse(readFileSync(FILE, 'utf8')) as Record<string, unknown>;
 const rule = (over: Record<string, unknown>): Record<string, unknown> => ({
   id: 'x_rule',
   class: 'other',
@@ -15,7 +26,10 @@ const rule = (over: Record<string, unknown>): Record<string, unknown> => ({
   active: true,
   ...over,
 });
-const withRules = (...rules: Record<string, unknown>[]): Record<string, unknown> => ({ ...good(), rules });
+const withRules = (...rules: Record<string, unknown>[]): Record<string, unknown> => ({
+  ...good(),
+  rules,
+});
 const issuesOf = (content: unknown): string => {
   try {
     parseBrandRules(content);
@@ -34,7 +48,9 @@ describe('parseBrandRules', () => {
   });
 
   it('refuses a clearable high-risk rule and a non-clearable other rule', () => {
-    expect(issuesOf(withRules(rule({ class: 'high_risk', clearable: true })))).toContain('rules.0.clearable');
+    expect(issuesOf(withRules(rule({ class: 'high_risk', clearable: true })))).toContain(
+      'rules.0.clearable',
+    );
     expect(issuesOf(withRules(rule({ clearable: false })))).toContain('rules.0.clearable');
   });
 
@@ -47,11 +63,14 @@ describe('parseBrandRules', () => {
     expect(issuesOf(withRules(rule({ extra: 1 })))).toContain('rules.0');
     expect(issuesOf(withRules(rule({}), rule({})))).toContain('duplicate id');
     expect(issuesOf('not an object')).toContain('(file)');
-    expect(issuesOf({ ...good(), sensitiveAttributeFilter: { terms: [] } })).toContain('sensitiveAttributeFilter');
+    expect(issuesOf({ ...good(), sensitiveAttributeFilter: { terms: [] } })).toContain(
+      'sensitiveAttributeFilter',
+    );
   });
 
   it('checks the parameters of each kind', () => {
-    const bad = (kind: string, params: unknown): string => issuesOf(withRules(rule({ kind, params })));
+    const bad = (kind: string, params: unknown): string =>
+      issuesOf(withRules(rule({ kind, params })));
     expect(bad('phrase', { phrases: [] })).toContain('params.phrases');
     expect(bad('phrase', { phrases: ['a'], fields: [] })).toContain('params.fields');
     expect(bad('regex', { pattern: '(' })).toContain('valid regular expression');
@@ -67,7 +86,16 @@ describe('parseBrandRules', () => {
 });
 
 describe('parseStoredRule', () => {
-  const row = { id: 'r', class: 'other' as const, clearable: true, kind: 'em_dash' as const, params: {}, message: 'm', rulesVersion: 3, active: true };
+  const row = {
+    id: 'r',
+    class: 'other' as const,
+    clearable: true,
+    kind: 'em_dash' as const,
+    params: {},
+    message: 'm',
+    rulesVersion: 3,
+    active: true,
+  };
 
   it('reads a stored row back with its version', () => {
     expect(parseStoredRule(row)).toEqual(row);

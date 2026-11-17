@@ -1,7 +1,11 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { users } from '../../../database/schema/identity.js';
-import type { AdminUserListed, AdminUserQueries, AdminUserQuery } from '../application/admin.ports.js';
+import type {
+  AdminUserListed,
+  AdminUserQueries,
+  AdminUserQuery,
+} from '../application/admin.ports.js';
 import type { Db } from '../application/ports.js';
 
 /** Read side of the admin account list (API-100); served by `users_created_idx`. */

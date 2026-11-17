@@ -21,20 +21,59 @@ const words = (n: number): string => `${Array.from({ length: n }, () => 'tea').j
 const CLEAN = words(33);
 const LAST = `${words(28)} Adults 21+ only. Take the free 2-minute quiz`;
 
-const rules = compileRules(
-  [
-    { id: 'hr_cure', class: 'high_risk', clearable: false, kind: 'phrase', params: { phrases: ['cures'] }, message: 'No cure claims.', rulesVersion: 1, active: true },
-    { id: 'other_min', class: 'other', clearable: true, kind: 'word_count_min', params: { min: 32 }, message: 'Too short.', rulesVersion: 1, active: true },
-  ] as never,
-);
+const rules = compileRules([
+  {
+    id: 'hr_cure',
+    class: 'high_risk',
+    clearable: false,
+    kind: 'phrase',
+    params: { phrases: ['cures'] },
+    message: 'No cure claims.',
+    rulesVersion: 1,
+    active: true,
+  },
+  {
+    id: 'other_min',
+    class: 'other',
+    clearable: true,
+    kind: 'word_count_min',
+    params: { min: 32 },
+    message: 'Too short.',
+    rulesVersion: 1,
+    active: true,
+  },
+] as never);
 
 /** An in-memory brief repository that keeps the same rules as the SQL one (owner scoping, in-place revisions). */
 class Memory implements BriefRepository {
-  brief: BriefRecord = { id: 'b1', campaignId: CAMPAIGN, state: 'draft', version: 1, acceptedAt: null, updatedAt: 't' };
+  brief: BriefRecord = {
+    id: 'b1',
+    campaignId: CAMPAIGN,
+    state: 'draft',
+    version: 1,
+    acceptedAt: null,
+    updatedAt: 't',
+  };
   owner = OWNER;
   segs: SegmentRecord[] = [
-    { id: 's1', position: 1, state: 'active', revision: 1, dialogue: CLEAN, prompt: 'p', wordCount: 33 },
-    { id: 's2', position: 2, state: 'active', revision: 1, dialogue: LAST, prompt: 'p', wordCount: 36 },
+    {
+      id: 's1',
+      position: 1,
+      state: 'active',
+      revision: 1,
+      dialogue: CLEAN,
+      prompt: 'p',
+      wordCount: 33,
+    },
+    {
+      id: 's2',
+      position: 2,
+      state: 'active',
+      revision: 1,
+      dialogue: LAST,
+      prompt: 'p',
+      wordCount: 36,
+    },
   ];
   rows: (IssueRecord & { owner: string })[] = [];
   events: { issueId: string; outcome: ClaimOutcome }[] = [];
@@ -43,31 +82,70 @@ class Memory implements BriefRepository {
   findBrief(_tx: DbTx, ownerId: string, campaignId: string) {
     return Promise.resolve(ownerId === this.owner && campaignId === CAMPAIGN ? this.brief : null);
   }
-  segments() { return Promise.resolve(this.segs.map((s) => ({ ...s }))); }
-  issues(_tx: DbTx, _b: string, _a: string | null, limit: number) { return Promise.resolve(this.rows.slice(0, limit)); }
-  liveIssues() { return Promise.resolve(this.rows.filter((r) => r.resolution !== 'closed_by_edit')); }
-  openIssueCount() { return Promise.resolve(this.rows.filter((r) => r.resolution === 'open').length); }
-  latestGenerationJob() { return Promise.resolve(this.job); }
+  segments() {
+    return Promise.resolve(this.segs.map((s) => ({ ...s })));
+  }
+  issues(_tx: DbTx, _b: string, _a: string | null, limit: number) {
+    return Promise.resolve(this.rows.slice(0, limit));
+  }
+  liveIssues() {
+    return Promise.resolve(this.rows.filter((r) => r.resolution !== 'closed_by_edit'));
+  }
+  openIssueCount() {
+    return Promise.resolve(this.rows.filter((r) => r.resolution === 'open').length);
+  }
+  latestGenerationJob() {
+    return Promise.resolve(this.job);
+  }
   updateSegment(_tx: DbTx, w: SegmentWrite) {
-    this.segs = this.segs.map((s) => (s.id === w.id ? { ...s, dialogue: w.dialogue, prompt: w.prompt, wordCount: w.wordCount, revision: s.revision + 1 } : s));
+    this.segs = this.segs.map((s) =>
+      s.id === w.id
+        ? {
+            ...s,
+            dialogue: w.dialogue,
+            prompt: w.prompt,
+            wordCount: w.wordCount,
+            revision: s.revision + 1,
+          }
+        : s,
+    );
     return Promise.resolve();
   }
   saveBrief(_tx: DbTx, _id: string, state: 'draft' | 'accepted') {
-    this.brief = { ...this.brief, state, version: this.brief.version + 1, acceptedAt: state === 'accepted' ? 'now' : null };
+    this.brief = {
+      ...this.brief,
+      state,
+      version: this.brief.version + 1,
+      acceptedAt: state === 'accepted' ? 'now' : null,
+    };
     return Promise.resolve(this.brief);
   }
   insertIssues(_tx: DbTx, ownerId: string, briefId: string, issues: readonly NewIssue[]) {
     for (const issue of issues) {
       const position = this.segs.find((s) => s.id === issue.segmentId)?.position ?? 0;
-      this.rows.push({ ...issue, briefId, segmentPosition: position, resolution: 'open', clearReason: null, owner: ownerId });
+      this.rows.push({
+        ...issue,
+        briefId,
+        segmentPosition: position,
+        resolution: 'open',
+        clearReason: null,
+        owner: ownerId,
+      });
     }
     return Promise.resolve();
   }
   closeIssues(_tx: DbTx, ids: readonly string[]) {
-    this.rows = this.rows.map((r) => (ids.includes(r.id) ? { ...r, resolution: 'closed_by_edit' } : r));
+    this.rows = this.rows.map((r) =>
+      ids.includes(r.id) ? { ...r, resolution: 'closed_by_edit' } : r,
+    );
     return Promise.resolve();
   }
-  recordEvents(_tx: DbTx, _o: string, _b: string, events: readonly { issueId: string; class: 'high_risk' | 'other'; outcome: ClaimOutcome }[]) {
+  recordEvents(
+    _tx: DbTx,
+    _o: string,
+    _b: string,
+    events: readonly { issueId: string; class: 'high_risk' | 'other'; outcome: ClaimOutcome }[],
+  ) {
     this.events.push(...events);
     return Promise.resolve();
   }
@@ -75,7 +153,9 @@ class Memory implements BriefRepository {
     return Promise.resolve(this.rows.find((r) => r.id === issueId && r.owner === ownerId) ?? null);
   }
   clearIssue(_tx: DbTx, issueId: string, _u: string, reason: string) {
-    this.rows = this.rows.map((r) => (r.id === issueId ? { ...r, resolution: 'cleared_with_reason', clearReason: reason } : r));
+    this.rows = this.rows.map((r) =>
+      r.id === issueId ? { ...r, resolution: 'cleared_with_reason', clearReason: reason } : r,
+    );
     return Promise.resolve(this.rows.find((r) => r.id === issueId)!);
   }
 }
@@ -83,13 +163,18 @@ class Memory implements BriefRepository {
 function setup() {
   const repo = new Memory();
   const database = { uow: { run: <T>(fn: (tx: DbTx) => Promise<T>) => fn({} as DbTx) } };
-  const brief = new BriefService(database as never, repo, { activeRules: () => Promise.resolve(rules) });
+  const brief = new BriefService(database as never, repo, {
+    activeRules: () => Promise.resolve(rules),
+  });
   const issues = new IssuesService(database as never, repo);
   return { repo, brief, issues };
 }
 
 const code = async (promise: Promise<unknown>): Promise<string> => {
-  const error: unknown = await promise.then(() => undefined, (e: unknown) => e);
+  const error: unknown = await promise.then(
+    () => undefined,
+    (e: unknown) => e,
+  );
   expect(error).toBeInstanceOf(DomainError);
   return (error as DomainError).code;
 };
@@ -97,7 +182,15 @@ const code = async (promise: Promise<unknown>): Promise<string> => {
 describe('BriefService', () => {
   it('reads the brief with segments, issues and the generation job, owner-scoped', async () => {
     const { brief, repo } = setup();
-    repo.job = { id: 'j', state: 'completed', causeClass: null, causeMessage: null, createdAt: 'a', updatedAt: 'b', deadlineAt: 'c' };
+    repo.job = {
+      id: 'j',
+      state: 'completed',
+      causeClass: null,
+      causeMessage: null,
+      createdAt: 'a',
+      updatedAt: 'b',
+      deadlineAt: 'c',
+    };
     const view = await brief.get(OWNER, CAMPAIGN);
     expect(view.segments).toHaveLength(2);
     expect(view.generationJob?.id).toBe('j');
@@ -106,12 +199,18 @@ describe('BriefService', () => {
 
   it('refuses a stale version and a brief that is generating or failed', async () => {
     const { brief, repo } = setup();
-    expect(await code(brief.edit(OWNER, CAMPAIGN, 9, [{ position: 1, dialogue: 'x' }]))).toBe('version_conflict');
+    expect(await code(brief.edit(OWNER, CAMPAIGN, 9, [{ position: 1, dialogue: 'x' }]))).toBe(
+      'version_conflict',
+    );
     expect(await code(brief.accept(OWNER, CAMPAIGN, 9))).toBe('version_conflict');
-    expect(await code(brief.edit('other', CAMPAIGN, 1, [{ position: 1, dialogue: 'x' }]))).toBe('not_found');
+    expect(await code(brief.edit('other', CAMPAIGN, 1, [{ position: 1, dialogue: 'x' }]))).toBe(
+      'not_found',
+    );
     for (const state of ['generating', 'failed'] as const) {
       repo.brief = { ...repo.brief, state };
-      expect(await code(brief.edit(OWNER, CAMPAIGN, 1, [{ position: 1, dialogue: 'x' }]))).toBe('state_conflict');
+      expect(await code(brief.edit(OWNER, CAMPAIGN, 1, [{ position: 1, dialogue: 'x' }]))).toBe(
+        'state_conflict',
+      );
       expect(await code(brief.accept(OWNER, CAMPAIGN, 1))).toBe('state_conflict');
     }
   });
@@ -142,11 +241,28 @@ describe('BriefService', () => {
 
   it('rejects unknown, duplicate and retired positions and too many words', async () => {
     const { brief, repo } = setup();
-    expect(await code(brief.edit(OWNER, CAMPAIGN, 1, [{ position: 4, dialogue: 'x' }]))).toBe('validation_failed');
-    expect(await code(brief.edit(OWNER, CAMPAIGN, 1, [{ position: 1, dialogue: 'x' }, { position: 1, prompt: 'y' }]))).toBe('validation_failed');
-    expect(await code(brief.edit(OWNER, CAMPAIGN, 1, [{ position: 1, dialogue: Array.from({ length: 121 }, () => 'a').join(' ') }]))).toBe('validation_failed');
+    expect(await code(brief.edit(OWNER, CAMPAIGN, 1, [{ position: 4, dialogue: 'x' }]))).toBe(
+      'validation_failed',
+    );
+    expect(
+      await code(
+        brief.edit(OWNER, CAMPAIGN, 1, [
+          { position: 1, dialogue: 'x' },
+          { position: 1, prompt: 'y' },
+        ]),
+      ),
+    ).toBe('validation_failed');
+    expect(
+      await code(
+        brief.edit(OWNER, CAMPAIGN, 1, [
+          { position: 1, dialogue: Array.from({ length: 121 }, () => 'a').join(' ') },
+        ]),
+      ),
+    ).toBe('validation_failed');
     repo.segs[1] = { ...repo.segs[1]!, state: 'retired' };
-    expect(await code(brief.edit(OWNER, CAMPAIGN, 1, [{ position: 2, dialogue: 'x' }]))).toBe('state_conflict');
+    expect(await code(brief.edit(OWNER, CAMPAIGN, 1, [{ position: 2, dialogue: 'x' }]))).toBe(
+      'state_conflict',
+    );
   });
 
   it('accepts a draft with no open issue, is idempotent when accepted, and is blocked by an open issue', async () => {
@@ -184,7 +300,9 @@ describe('IssuesService', () => {
     expect(repo.events.filter((e) => e.outcome === 'cleared_with_reason')).toHaveLength(1);
     expect((await issues.clear(OWNER, other.id, 'other reason')).clearReason).toBe('reason');
     expect(repo.events.filter((e) => e.outcome === 'cleared_with_reason')).toHaveLength(1);
-    repo.rows = repo.rows.map((r) => (r.id === other.id ? { ...r, resolution: 'closed_by_edit' } : r));
+    repo.rows = repo.rows.map((r) =>
+      r.id === other.id ? { ...r, resolution: 'closed_by_edit' } : r,
+    );
     expect(await code(issues.clear(OWNER, other.id, 'again'))).toBe('state_conflict');
   });
 });

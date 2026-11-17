@@ -19,7 +19,10 @@ export interface SecurityContext {
 }
 
 /** One nonce and policy per request. */
-export function securityContext(request: NextRequest, env: SecurityEnv = securityEnv()): SecurityContext {
+export function securityContext(
+  request: NextRequest,
+  env: SecurityEnv = securityEnv(),
+): SecurityContext {
   const nonce = newNonce();
   const headers = {
     ...STATIC_SECURITY_HEADERS,
@@ -36,7 +39,10 @@ export function passThrough(request: NextRequest, context: SecurityContext): Nex
   return withSecurityHeaders(NextResponse.next({ request: { headers: forwarded } }), context);
 }
 
-export function withSecurityHeaders<T extends { headers: Headers }>(response: T, context: SecurityContext): T {
+export function withSecurityHeaders<T extends { headers: Headers }>(
+  response: T,
+  context: SecurityContext,
+): T {
   for (const [name, value] of Object.entries(context.headers)) response.headers.set(name, value);
   return response;
 }

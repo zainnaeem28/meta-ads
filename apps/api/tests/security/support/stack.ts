@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -43,7 +44,16 @@ import type { PgBoss } from 'pg-boss';
 export const ORIGIN = 'http://localhost:3000';
 export const APP_BUCKET = 'app';
 export const LEDGER_BUCKET = 'ledger';
-export const contractsDir = join(import.meta.dirname, '..', '..', '..', '..', '..', 'packages', 'contracts');
+export const contractsDir = join(
+  import.meta.dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'packages',
+  'contracts',
+);
 
 export interface Stand {
   readonly endpoint: string;
@@ -59,13 +69,18 @@ export interface Stand {
 export async function startStand(): Promise<Stand> {
   const objects = new Map<string, Buffer>();
   const requests: Stand['requests'] = [];
-  const stand = { objects, requests, failDeletes: false } as { objects: Map<string, Buffer>; requests: Stand['requests']; failDeletes: boolean };
+  const stand = { objects, requests, failDeletes: false } as {
+    objects: Map<string, Buffer>;
+    requests: Stand['requests'];
+    failDeletes: boolean;
+  };
   const xml = (res: ServerResponse, status: number, body: string): void => {
     res.statusCode = status;
     res.setHeader('content-type', 'application/xml');
     res.end(`<?xml version="1.0" encoding="UTF-8"?>${body}`);
   };
-  const error = (res: ServerResponse, status: number, code: string): void => xml(res, status, `<Error><Code>${code}</Code><Message>${code}</Message></Error>`);
+  const error = (res: ServerResponse, status: number, code: string): void =>
+    xml(res, status, `<Error><Code>${code}</Code><Message>${code}</Message></Error>`);
   const server = createHttpServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://local');
     const [, bucket = '', ...rest] = url.pathname.split('/');
@@ -77,18 +92,31 @@ export async function startStand(): Promise<Stand> {
       const body = Buffer.concat(parts);
       if (key === '' && req.method === 'GET') {
         const prefix = url.searchParams.get('prefix') ?? '';
-        const listed = [...objects.entries()].filter(([name]) => name.startsWith(`${bucket}/${prefix}`)).sort(([a], [b]) => a.localeCompare(b));
-        const contents = listed.map(([name, o]) => `<Contents><Key>${name.slice(bucket.length + 1)}</Key><Size>${String(o.length)}</Size><LastModified>${new Date().toISOString()}</LastModified></Contents>`).join('');
-        return xml(res, 200, `<ListBucketResult><Name>${bucket}</Name><Prefix>${prefix}</Prefix><KeyCount>${String(listed.length)}</KeyCount><IsTruncated>false</IsTruncated>${contents}</ListBucketResult>`);
+        const listed = [...objects.entries()]
+          .filter(([name]) => name.startsWith(`${bucket}/${prefix}`))
+          .sort(([a], [b]) => a.localeCompare(b));
+        const contents = listed
+          .map(
+            ([name, o]) =>
+              `<Contents><Key>${name.slice(bucket.length + 1)}</Key><Size>${String(o.length)}</Size><LastModified>${new Date().toISOString()}</LastModified></Contents>`,
+          )
+          .join('');
+        return xml(
+          res,
+          200,
+          `<ListBucketResult><Name>${bucket}</Name><Prefix>${prefix}</Prefix><KeyCount>${String(listed.length)}</KeyCount><IsTruncated>false</IsTruncated>${contents}</ListBucketResult>`,
+        );
       }
       if (key === '' && req.method === 'POST' && url.searchParams.has('delete')) {
         if (stand.failDeletes) return error(res, 500, 'InternalError');
-        for (const match of body.toString().matchAll(/<Key>([^<]+)<\/Key>/g)) objects.delete(`${bucket}/${match[1] as string}`);
+        for (const match of body.toString().matchAll(/<Key>([^<]+)<\/Key>/g))
+          objects.delete(`${bucket}/${match[1] as string}`);
         return xml(res, 200, '<DeleteResult></DeleteResult>');
       }
       const name = `${bucket}/${key}`;
       if (req.method === 'PUT') {
-        if (req.headers['if-none-match'] === '*' && objects.has(name)) return error(res, 412, 'PreconditionFailed');
+        if (req.headers['if-none-match'] === '*' && objects.has(name))
+          return error(res, 412, 'PreconditionFailed');
         objects.set(name, body);
         res.setHeader('etag', '"stub"');
         res.statusCode = 200;
@@ -114,7 +142,11 @@ export async function startStand(): Promise<Stand> {
   const port = (server.address() as AddressInfo).port;
   return Object.assign(stand, {
     endpoint: `http://127.0.0.1:${String(port)}`,
-    stop: () => new Promise<void>((resolve) => { server.closeAllConnections(); server.close(() => resolve()); }),
+    stop: () =>
+      new Promise<void>((resolve) => {
+        server.closeAllConnections();
+        server.close(() => resolve());
+      }),
   }) as Stand;
 }
 
@@ -127,7 +159,10 @@ class Probe {
 }
 // Applied by hand: the test transform does not read the decorator flags of the source tsconfig.
 Controller('probe')(Probe);
-const boomDescriptor = Object.getOwnPropertyDescriptor(Probe.prototype, 'boom') as PropertyDescriptor;
+const boomDescriptor = Object.getOwnPropertyDescriptor(
+  Probe.prototype,
+  'boom',
+) as PropertyDescriptor;
 Get('boom')(Probe.prototype, 'boom', boomDescriptor);
 Scope('U')(Probe.prototype, 'boom', boomDescriptor);
 
@@ -138,9 +173,9 @@ export function failWith(message: string): void {
 
 export interface Body {
   success: boolean;
-  data?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  error?: { code: string; message: string; details?: any[] }; // eslint-disable-line @typescript-eslint/no-explicit-any
-  metaData: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  data?: any;
+  error?: { code: string; message: string; details?: any[] };
+  metaData: any;
 }
 
 export interface Reply {
@@ -174,13 +209,25 @@ export interface Stack {
   readonly erasure: AccountErasureJob;
   readonly boss: PgBoss;
   /** What the OpenAI stand-in answers (worker side) and what it saw. */
-  readonly openai: { seen: { auth: string | undefined; body: Record<string, any> }[]; reply: (n: number) => Reply }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  readonly openai: {
+    seen: { auth: string | undefined; body: Record<string, any> }[];
+    reply: (n: number) => Reply;
+  };
   /** What the provider probe stand-in (api side) answers, and the calls it saw. */
-  readonly probe: { answer: number | 'timeout'; calls: { provider: string; url: string; authorization: string | undefined }[] };
-  call(method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', url: string, token?: string, payload?: unknown, extra?: Record<string, string>): Promise<{ status: number; raw: string; headers: Record<string, unknown>; body: Body }>;
+  readonly probe: {
+    answer: number | 'timeout';
+    calls: { provider: string; url: string; authorization: string | undefined }[];
+  };
+  call(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+    url: string,
+    token?: string,
+    payload?: unknown,
+    extra?: Record<string, string>,
+  ): Promise<{ status: number; raw: string; headers: Record<string, unknown>; body: Body }>;
   account(label?: string): Promise<Account>;
   admin(label?: string): Promise<Account>;
-  one<T = any>(text: string, params?: unknown[]): Promise<T>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  one<T = any>(text: string, params?: unknown[]): Promise<T>;
   count(table: string, where: string, params?: unknown[]): Promise<number>;
   until(check: () => Promise<boolean>, what: string, timeoutMs?: number): Promise<void>;
   close(): Promise<void>;
@@ -206,7 +253,13 @@ const REFERENCE_MIGRATIONS = [
 function statements(file: string): string[] {
   return (readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants')[0] ?? '')
     .split('--> statement-breakpoint')
-    .map((statement) => statement.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim())
+    .map((statement) =>
+      statement
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n')
+        .trim(),
+    )
     .filter((statement) => statement !== '');
 }
 
@@ -220,10 +273,18 @@ function parseBody(text: string, status: number): Body {
   }
 }
 
-export async function bootStack(label: string, opts: { mfa?: 'all' | 'admins' } = {}): Promise<Stack> {
+export async function bootStack(
+  label: string,
+  opts: { mfa?: 'all' | 'admins' } = {},
+): Promise<Stack> {
   const saved: Record<string, string | undefined> = {};
   const logs: string[] = [];
-  const sink = new Writable({ write(chunk: Buffer, _e, done) { logs.push(chunk.toString()); done(); } });
+  const sink = new Writable({
+    write(chunk: Buffer, _e, done) {
+      logs.push(chunk.toString());
+      done();
+    },
+  });
   const stand = await startStand();
   const openai: Stack['openai'] = { seen: [], reply: () => ({}) };
   const probe: Stack['probe'] = { answer: 200, calls: [] };
@@ -231,7 +292,10 @@ export async function bootStack(label: string, opts: { mfa?: 'all' | 'admins' } 
     const parts: Buffer[] = [];
     req.on('data', (chunk: Buffer) => parts.push(chunk));
     req.on('end', () => {
-      openai.seen.push({ auth: req.headers['authorization'], body: JSON.parse(Buffer.concat(parts).toString() || '{}') as Record<string, any> }); // eslint-disable-line @typescript-eslint/no-explicit-any
+      openai.seen.push({
+        auth: req.headers['authorization'],
+        body: JSON.parse(Buffer.concat(parts).toString() || '{}') as Record<string, any>,
+      });
       const answer = openai.reply(openai.seen.length);
       res.statusCode = answer.status ?? 200;
       res.setHeader('content-type', 'application/json');
@@ -242,12 +306,23 @@ export async function bootStack(label: string, opts: { mfa?: 'all' | 'admins' } 
   const testDb = await createTestDatabase({ label, migrations: false });
   const pool = new pg.Pool({ connectionString: testDb.url, max: 8 });
   for (const statement of statements('0001_task-025-platform.sql')) {
-    if (/^CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(statement)) await pool.query(statement);
+    if (
+      /^CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(
+        statement,
+      )
+    )
+      await pool.query(statement);
   }
   await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
-  for (const file of REFERENCE_MIGRATIONS) for (const statement of statements(file)) await pool.query(statement);
+  for (const file of REFERENCE_MIGRATIONS)
+    for (const statement of statements(file)) await pool.query(statement);
   await installJobs(testDb.url);
-  await runSeed({ dataset: 'reference', appEnv: 'development', databaseUrl: testDb.url, steps: [priceTableSeedStep(), brandRulesSeedStep()] });
+  await runSeed({
+    dataset: 'reference',
+    appEnv: 'development',
+    databaseUrl: testDb.url,
+    steps: [priceTableSeedStep(), brandRulesSeedStep()],
+  });
 
   const kek = generateKek();
   const workerEnv: Record<string, string | undefined> = {
@@ -289,37 +364,69 @@ export async function bootStack(label: string, opts: { mfa?: 'all' | 'admins' } 
   }
 
   const { app, index } = await createApiApp(
-    { WEB_ORIGIN: ORIGIN, APP_ENV: 'development', DATABASE_URL: testDb.url, DATABASE_POOL_MAX: 8, DATABASE_ACQUIRE_TIMEOUT_MS: 5000, RATE_LIMIT_IP_KEY: 'r'.repeat(40) },
+    {
+      WEB_ORIGIN: ORIGIN,
+      APP_ENV: 'development',
+      DATABASE_URL: testDb.url,
+      DATABASE_POOL_MAX: 8,
+      DATABASE_ACQUIRE_TIMEOUT_MS: 5000,
+      RATE_LIMIT_IP_KEY: 'r'.repeat(40),
+    },
     createHttpLogging({ level: 'debug', destination: sink }),
     [Probe],
   );
-  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [...m.providers.values()]);
-  const found = providers.map((p) => p.instance as Partial<LocalIdentity> | undefined).find((i) => typeof i?.issueToken === 'function');
+  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [
+    ...m.providers.values(),
+  ]);
+  const found = providers
+    .map((p) => p.instance as Partial<LocalIdentity> | undefined)
+    .find((i) => typeof i?.issueToken === 'function');
   if (found === undefined) throw new Error('local identity provider not found');
   const local = found as LocalIdentity;
   // The provider key probe goes to a stand-in behind the real egress client; its answer echoes the key (TC-KEY-06).
   const apiEgress = app.get<Pick<EgressType, 'fetch'>>(EGRESS, { strict: false });
   vi.spyOn(apiEgress, 'fetch').mockImplementation((provider, req) => {
     probe.calls.push({ provider, url: req.url, authorization: req.headers?.['authorization'] });
-    if (probe.answer === 'timeout') return Promise.reject(new EgressError('timeout', 'after_send', 'the time limit passed'));
-    return Promise.resolve({ status: probe.answer, headers: {}, body: Buffer.from(JSON.stringify({ error: `bad key ${req.headers?.['authorization'] ?? ''}` })) });
+    if (probe.answer === 'timeout')
+      return Promise.reject(new EgressError('timeout', 'after_send', 'the time limit passed'));
+    return Promise.resolve({
+      status: probe.answer,
+      headers: {},
+      body: Buffer.from(
+        JSON.stringify({ error: `bad key ${req.headers?.['authorization'] ?? ''}` }),
+      ),
+    });
   });
 
   class StubEgress {}
   Module({})(StubEgress);
   const egressModule: DynamicModule = {
     module: StubEgress,
-    providers: [{ provide: EGRESS, useValue: new Egress({
-      allowedHosts: { openai: ['api.openai.com'] },
-      timeoutMs: 1500,
-      maxBytes: 5_000_000,
-      resolver: async () => ['127.0.0.1'],
-      testing: { isBlockedAddress: () => false, tls: { ca: tls.ca }, port: tls.port },
-    }) }],
+    providers: [
+      {
+        provide: EGRESS,
+        useValue: new Egress({
+          allowedHosts: { openai: ['api.openai.com'] },
+          timeoutMs: 1500,
+          maxBytes: 5_000_000,
+          resolver: async () => ['127.0.0.1'],
+          testing: { isBlockedAddress: () => false, tls: { ca: tls.ca }, port: tls.port },
+        }),
+      },
+    ],
     exports: [EGRESS],
   };
   const worker = await createWorkerApp(
-    { DATABASE_URL: testDb.url, DATABASE_POOL_MAX: 8, DATABASE_ACQUIRE_TIMEOUT_MS: 5000, WORKER_WATCHDOG_SECONDS: 180, WORKER_DRAIN_SECONDS: 5, WORKER_CONCURRENCY_PROVIDER: 2, WORKER_CONCURRENCY_SANITIZE: 1, WORKER_CONCURRENCY_DELETION: 2 },
+    {
+      DATABASE_URL: testDb.url,
+      DATABASE_POOL_MAX: 8,
+      DATABASE_ACQUIRE_TIMEOUT_MS: 5000,
+      WORKER_WATCHDOG_SECONDS: 180,
+      WORKER_DRAIN_SECONDS: 5,
+      WORKER_CONCURRENCY_PROVIDER: 2,
+      WORKER_CONCURRENCY_SANITIZE: 1,
+      WORKER_CONCURRENCY_DELETION: 2,
+    },
     {
       logger: buildLogger({ level: 'debug', destination: sink }).logger,
       egress: egressModule,
@@ -338,12 +445,35 @@ export async function bootStack(label: string, opts: { mfa?: 'all' | 'admins' } 
   const fastify = () => app.getHttpAdapter().getInstance();
   let seq = 0;
   const stack: Stack = {
-    pool, stand, testDb, logs, app, index, worker, local, workerIdentity, storage, erasure, boss, openai, probe,
+    pool,
+    stand,
+    testDb,
+    logs,
+    app,
+    index,
+    worker,
+    local,
+    workerIdentity,
+    storage,
+    erasure,
+    boss,
+    openai,
+    probe,
     async call(method, url, token, payload, extra = {}) {
       const headers: Record<string, string> = { ...extra };
       if (token !== undefined) headers['authorization'] = `Bearer ${token}`;
-      const res = await fastify().inject({ method, url: `/api/v1${url}`, headers, ...(payload === undefined ? {} : { payload: payload as object }) });
-      return { status: res.statusCode, raw: res.body, headers: res.headers as Record<string, unknown>, body: parseBody(res.body, res.statusCode) };
+      const res = await fastify().inject({
+        method,
+        url: `/api/v1${url}`,
+        headers,
+        ...(payload === undefined ? {} : { payload: payload as object }),
+      });
+      return {
+        status: res.statusCode,
+        raw: res.body,
+        headers: res.headers as Record<string, unknown>,
+        body: parseBody(res.body, res.statusCode),
+      };
     },
     async account(labelPart = 'u') {
       const n = ++seq;
@@ -351,11 +481,16 @@ export async function bootStack(label: string, opts: { mfa?: 'all' | 'admins' } 
       const email = `${labelPart}${String(n)}.person@example.test`;
       local.addUser(sub, email, true);
       workerIdentity.addUser(sub, email, true);
-      await pool.query(`insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`, [email]);
+      await pool.query(
+        `insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`,
+        [email],
+      );
       const token = local.issueToken({ sub, azp: ORIGIN, fva: [1, 1] });
       const linked = await stack.call('GET', '/me', token);
-      if (linked.status !== 200) throw new Error(`account link failed: ${String(linked.status)} ${linked.raw}`);
-      const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0].id as string;
+      if (linked.status !== 200)
+        throw new Error(`account link failed: ${String(linked.status)} ${linked.raw}`);
+      const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0]
+        .id as string;
       return { id, sub, email, token, noFactor: local.issueToken({ sub, azp: ORIGIN }) };
     },
     async admin(labelPart = 'adm') {
@@ -363,8 +498,17 @@ export async function bootStack(label: string, opts: { mfa?: 'all' | 'admins' } 
       await pool.query(`update users set role = 'admin' where id = $1`, [a.id]);
       return a;
     },
-    async one<T>(text: string, params: unknown[] = []) { return (await pool.query(text, params)).rows[0] as T; },
-    async count(table, where, params = []) { return (await stack.one<{ n: number }>(`select count(*)::int as n from ${table} where ${where}`, params)).n; },
+    async one<T>(text: string, params: unknown[] = []) {
+      return (await pool.query(text, params)).rows[0] as T;
+    },
+    async count(table, where, params = []) {
+      return (
+        await stack.one<{ n: number }>(
+          `select count(*)::int as n from ${table} where ${where}`,
+          params,
+        )
+      ).n;
+    },
     async until(check, what, timeoutMs = 20_000) {
       const end = Date.now() + timeoutMs;
       while (Date.now() < end) {
@@ -394,17 +538,44 @@ export async function bootStack(label: string, opts: { mfa?: 'all' | 'admins' } 
 }
 
 /** Counts, per `table.column`, the rows that hold `text` in any text, varchar or jsonb column of the application schema. */
-export async function rowsHolding(pool: pg.Pool, text: string, schemas: readonly string[] = ['public']): Promise<Record<string, number>> {
-  const columns = (await pool.query<{ table_schema: string; table_name: string; column_name: string; data_type: string }>(
-    `select table_schema, table_name, column_name, data_type from information_schema.columns where table_schema = any($1) and data_type in ('text', 'character varying', 'jsonb', 'character', 'json', 'bytea')`,
-    [schemas],
-  )).rows;
+export async function rowsHolding(
+  pool: pg.Pool,
+  text: string,
+  schemas: readonly string[] = ['public'],
+): Promise<Record<string, number>> {
+  const columns = (
+    await pool.query<{
+      table_schema: string;
+      table_name: string;
+      column_name: string;
+      data_type: string;
+    }>(
+      `select table_schema, table_name, column_name, data_type from information_schema.columns where table_schema = any($1) and data_type in ('text', 'character varying', 'jsonb', 'character', 'json', 'bytea')`,
+      [schemas],
+    )
+  ).rows;
   const found: Record<string, number> = {};
   for (const { table_schema, table_name, column_name, data_type } of columns) {
-    const expr = data_type === 'jsonb' || data_type === 'json' || data_type === 'bytea' ? `convert_from("${column_name}"::text::bytea, 'UTF8')` : `"${column_name}"`;
-    const safe = data_type === 'bytea' ? `encode("${column_name}", 'escape')` : data_type === 'jsonb' || data_type === 'json' ? `"${column_name}"::text` : expr;
-    const n = (await pool.query<{ n: number }>(`select count(*)::int as n from "${table_schema}"."${table_name}" where ${safe} ilike $1`, [`%${text}%`])).rows[0]?.n ?? 0;
-    if (n > 0) found[`${table_schema === 'public' ? '' : `${table_schema}.`}${table_name}.${column_name}`] = n;
+    const expr =
+      data_type === 'jsonb' || data_type === 'json' || data_type === 'bytea'
+        ? `convert_from("${column_name}"::text::bytea, 'UTF8')`
+        : `"${column_name}"`;
+    const safe =
+      data_type === 'bytea'
+        ? `encode("${column_name}", 'escape')`
+        : data_type === 'jsonb' || data_type === 'json'
+          ? `"${column_name}"::text`
+          : expr;
+    const n =
+      (
+        await pool.query<{ n: number }>(
+          `select count(*)::int as n from "${table_schema}"."${table_name}" where ${safe} ilike $1`,
+          [`%${text}%`],
+        )
+      ).rows[0]?.n ?? 0;
+    if (n > 0)
+      found[`${table_schema === 'public' ? '' : `${table_schema}.`}${table_name}.${column_name}`] =
+        n;
   }
   return found;
 }
@@ -415,7 +586,12 @@ export const newId = (): string => randomUUID();
  * A case for a product defect this suite found (a finding with a stable ID in docs/evidence/TASK-116). `it.fails` keeps the
  * suite green while the defect is open and turns red the day the product is fixed, so the marker cannot outlive the defect.
  */
-export function openDefect(id: string, name: string, body: () => Promise<void>, timeout = 60_000): void {
+export function openDefect(
+  id: string,
+  name: string,
+  body: () => Promise<void>,
+  timeout = 60_000,
+): void {
   it.fails(`[${id} open] ${name}`, body, timeout);
 }
 
@@ -429,7 +605,9 @@ async function settleConnections(url: string): Promise<void> {
   try {
     await client.connect();
     for (let i = 0; i < 100; i += 1) {
-      const { rows } = await client.query<{ n: string }>(`select count(*)::text as n from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid()`);
+      const { rows } = await client.query<{ n: string }>(
+        `select count(*)::text as n from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid()`,
+      );
       if (rows[0]?.n === '0') return;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }

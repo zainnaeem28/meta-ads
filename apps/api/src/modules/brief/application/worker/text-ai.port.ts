@@ -48,7 +48,11 @@ export interface TextAIPort {
     maxWords: number,
   ): Promise<readonly DraftSegment[]>;
   /** Describes the product in the image; the bytes go inline in the request, never as a URL (REQ-020, TD-D26). */
-  describeProduct(credential: ProviderCredential, imageBytes: Buffer, contentType: string): Promise<string>;
+  describeProduct(
+    credential: ProviderCredential,
+    imageBytes: Buffer,
+    contentType: string,
+  ): Promise<string>;
 }
 
 /** The provider answered but the body is not the JSON the schema asks for. The call was made and is billed. */

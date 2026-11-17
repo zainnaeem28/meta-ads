@@ -2,7 +2,8 @@ import { Readable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import { peekMp4 } from './mp4.js';
 
-const mp4 = (extra: number): Buffer => Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypisom'), Buffer.alloc(12 + extra, 9)]);
+const mp4 = (extra: number): Buffer =>
+  Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypisom'), Buffer.alloc(12 + extra, 9)]);
 const read = async (stream: Readable): Promise<Buffer> => {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(chunk as Buffer);
@@ -22,7 +23,9 @@ describe('peekMp4', () => {
   });
 
   it('refuses a body that is not an MP4 and a body shorter than a box header', async () => {
-    expect((await peekMp4(Readable.from([Buffer.from('<html><body>not a video</body></html>')]))).ok).toBe(false);
+    expect(
+      (await peekMp4(Readable.from([Buffer.from('<html><body>not a video</body></html>')]))).ok,
+    ).toBe(false);
     expect((await peekMp4(Readable.from([Buffer.from('short')]))).ok).toBe(false);
     expect((await peekMp4(Readable.from([]))).ok).toBe(false);
   });

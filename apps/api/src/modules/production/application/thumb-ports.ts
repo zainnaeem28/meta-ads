@@ -20,7 +20,10 @@ export interface GeneratedImage {
  * type is `ProviderInvalidResponse` (the call was made and is billed).
  */
 export interface ImageGenPort {
-  generate(credential: ProviderCredential, input: { readonly prompt: string }): Promise<GeneratedImage>;
+  generate(
+    credential: ProviderCredential,
+    input: { readonly prompt: string },
+  ): Promise<GeneratedImage>;
 }
 export const IMAGE_GEN_PORT = Symbol('IMAGE_GEN_PORT');
 
@@ -61,7 +64,15 @@ export interface ThumbJobContext {
   readonly campaignActive: boolean;
 }
 
-export type ThumbCause = 'temporary' | 'configuration' | 'credit' | 'provider_timeout' | 'key_replaced' | 'key_deleted' | 'output_unreachable' | 'outcome_unknown';
+export type ThumbCause =
+  | 'temporary'
+  | 'configuration'
+  | 'credit'
+  | 'provider_timeout'
+  | 'key_replaced'
+  | 'key_deleted'
+  | 'output_unreachable'
+  | 'outcome_unknown';
 
 /** What the job handler reads and writes of `thumbstopper_jobs`; every method runs in the caller's transaction. */
 export interface ThumbRepository {
@@ -72,12 +83,23 @@ export interface ThumbRepository {
   /** Counts the one call on a `submitting` job. False when a cancel or the sweep already settled it. */
   startCall(tx: DbTx, jobId: string): Promise<boolean>;
   /** `submitting` to `failed`. False when the job left `submitting` (cancelled, swept). */
-  fail(tx: DbTx, jobId: string, cause: ThumbCause, message: string, errorCode: string | null): Promise<boolean>;
+  fail(
+    tx: DbTx,
+    jobId: string,
+    cause: ThumbCause,
+    message: string,
+    errorCode: string | null,
+  ): Promise<boolean>;
   /**
    * `submitting` to `completed` with the registered image, guarded in the same transaction: the job must still be
    * `submitting` and the campaign `active`. `register` records the stored object. False when the guard refuses.
    */
-  complete(tx: DbTx, job: ThumbJobContext, mediaId: string, register: (tx: DbTx) => Promise<void>): Promise<boolean>;
+  complete(
+    tx: DbTx,
+    job: ThumbJobContext,
+    mediaId: string,
+    register: (tx: DbTx) => Promise<void>,
+  ): Promise<boolean>;
 }
 export const THUMB_REPOSITORY = Symbol('THUMB_REPOSITORY');
 
@@ -85,7 +107,14 @@ export const THUMB_REPOSITORY = Symbol('THUMB_REPOSITORY');
 export interface ThumbMedia {
   registerImage(
     tx: DbTx,
-    input: { readonly id: string; readonly ownerId: string; readonly campaignId: string; readonly storageKey: string; readonly bytes: number; readonly contentType: ImageType },
+    input: {
+      readonly id: string;
+      readonly ownerId: string;
+      readonly campaignId: string;
+      readonly storageKey: string;
+      readonly bytes: number;
+      readonly contentType: ImageType;
+    },
   ): Promise<void>;
 }
 export const THUMB_MEDIA = Symbol('THUMB_MEDIA');

@@ -20,7 +20,11 @@ describe('CMP-030 OperatorShell', () => {
   it('renders a disabled nav item as non-link, not focusable', () => {
     shell({ previewDisabled: 'new-brief' });
     const nav = screen.getByRole('navigation', { name: 'Main' });
-    expect(within(nav).getAllByRole('link').map((l) => l.textContent)).toEqual(['Campaigns', 'Provider keys']);
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((l) => l.textContent),
+    ).toEqual(['Campaigns', 'Provider keys']);
     const item = nav.querySelector('[aria-disabled=true]');
     expect(item).toHaveTextContent('New brief');
     expect(item).not.toHaveAttribute('href');
@@ -32,7 +36,9 @@ describe('CMP-030 OperatorShell', () => {
     expect(screen.getByRole('link', { name: 'Provider keys' }).className).toContain('outline-2');
     cleanup();
     shell({ keyState: 'missing', previewFocus: 'key-badge' });
-    expect(screen.getByRole('link', { name: 'Add provider keys' }).className).toContain('outline-2');
+    expect(screen.getByRole('link', { name: 'Add provider keys' }).className).toContain(
+      'outline-2',
+    );
   });
 
   it('has the skip link first, header, Main nav and main landmarks, and no axe violations', async () => {
@@ -89,9 +95,20 @@ describe('CMP-030 OperatorShell', () => {
     const { rerender } = shell({ keyState: 'ok' });
     expect(screen.queryByText('Add provider keys')).toBeNull();
     const props = { role: 'user', path: '/campaigns' } as const;
-    rerender(<OperatorShell {...props} keyState="missing"><p /></OperatorShell>);
-    expect(screen.getByRole('link', { name: 'Add provider keys' })).toHaveAttribute('href', '/settings/provider-keys');
-    rerender(<OperatorShell {...props} keyState="disabled"><p /></OperatorShell>);
+    rerender(
+      <OperatorShell {...props} keyState="missing">
+        <p />
+      </OperatorShell>,
+    );
+    expect(screen.getByRole('link', { name: 'Add provider keys' })).toHaveAttribute(
+      'href',
+      '/settings/provider-keys',
+    );
+    rerender(
+      <OperatorShell {...props} keyState="disabled">
+        <p />
+      </OperatorShell>,
+    );
     const badge = screen.getByRole('link', { name: 'Key disabled' });
     expect(badge).toHaveAttribute('data-key-badge', 'disabled');
     expect(badge.querySelector('[data-variant=destructive]')).not.toBeNull();
@@ -106,7 +123,10 @@ describe('CMP-030 OperatorShell', () => {
     await user.click(screen.getByRole('button', { name: /account menu/ }));
     expect(screen.getByText('Signed in as Administrator')).toBeInTheDocument();
     expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
-      'Provider keys', 'Switch to administration', 'Account and security', 'Sign out',
+      'Provider keys',
+      'Switch to administration',
+      'Account and security',
+      'Sign out',
     ]);
     await user.click(screen.getByRole('menuitem', { name: 'Switch to administration' }));
     expect(onNavigate).toHaveBeenCalledWith('/admin/accounts');
@@ -132,7 +152,9 @@ describe('CMP-030 OperatorShell', () => {
     expect(screen.getByRole('link', { name: 'Key disabled' }).querySelector('svg')).not.toBeNull();
     unmount();
     shell({ role: 'admin' });
-    expect(screen.getByRole('button', { name: 'Administrator account menu' })).toHaveTextContent('Administrator');
+    expect(screen.getByRole('button', { name: 'Administrator account menu' })).toHaveTextContent(
+      'Administrator',
+    );
     cleanup();
     shell({ layout: 'rail' });
     expect(screen.queryByText('Workspace')).toBeNull();
@@ -179,7 +201,10 @@ describe('CMP-030 OperatorShell', () => {
 });
 
 describe('deriveKeyState and currentItem', () => {
-  const k = (configured: boolean, status: 'active' | 'untested' | 'disabled' | null) => ({ configured, status });
+  const k = (configured: boolean, status: 'active' | 'untested' | 'disabled' | null) => ({
+    configured,
+    status,
+  });
   it('maps the API-010 list', () => {
     expect(deriveKeyState(undefined)).toBe('ok');
     expect(deriveKeyState([])).toBe('ok');

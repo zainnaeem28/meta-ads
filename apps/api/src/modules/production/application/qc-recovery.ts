@@ -51,7 +51,11 @@ interface Settled {
  *   may have been sent keeps its estimate counted (unconfirmed), and it is never repeated.
  * Each settled run releases its reservation and the clip's QC part. The two hooks that touch the ledger settle one owner per run.
  */
-export function qcRecoveryHooks(deps: { readonly boss: Boss; readonly usage: Usage; readonly config: QcConfig }): SweepHook[] {
+export function qcRecoveryHooks(deps: {
+  readonly boss: Boss;
+  readonly usage: Usage;
+  readonly config: QcConfig;
+}): SweepHook[] {
   const { boss, usage, config } = deps;
   const requeue: SweepHook = {
     name: 'production.qc-requeue',
@@ -65,7 +69,8 @@ export function qcRecoveryHooks(deps: { readonly boss: Boss; readonly usage: Usa
       );
       let enqueued = 0;
       for (const { id } of waiting.rows as { id: string }[]) {
-        if ((await enqueue(boss, tx, QC_RUN_QUEUE, { runId: id }, { singletonKey: id })) !== null) enqueued += 1;
+        if ((await enqueue(boss, tx, QC_RUN_QUEUE, { runId: id }, { singletonKey: id })) !== null)
+          enqueued += 1;
       }
       return { swept: enqueued };
     },
@@ -73,7 +78,13 @@ export function qcRecoveryHooks(deps: { readonly boss: Boss; readonly usage: Usa
   const finish = async (tx: DbTx, ownerId: string, settled: readonly Settled[]): Promise<void> => {
     for (const run of settled) {
       if (run.call_count > 0) {
-        await usage.convertUnconfirmed(tx, { ownerId, call: { provider: 'openai', operation: config.transcribeModel }, jobType: 'qc', jobId: run.id, callSeq: 1 });
+        await usage.convertUnconfirmed(tx, {
+          ownerId,
+          call: { provider: 'openai', operation: config.transcribeModel },
+          jobType: 'qc',
+          jobId: run.id,
+          callSeq: 1,
+        });
       }
       await usage.release(tx, { ownerId, jobType: 'qc', jobId: run.id });
       await usage.release(tx, { ownerId, jobType: 'video', jobId: run.video_job_id });
@@ -82,7 +93,11 @@ export function qcRecoveryHooks(deps: { readonly boss: Boss; readonly usage: Usa
   const orphaned = sql`state = 'submitting' and submitting_at <= now() - make_interval(secs => ${config.orphanAfterSec})`;
   const orphans = perOwner(
     'production.qc-orphans',
-    (tx) => ownerOf(tx, sql`select owner_id::text as owner_id from qc_runs where ${orphaned} order by submitting_at limit 1`),
+    (tx) =>
+      ownerOf(
+        tx,
+        sql`select owner_id::text as owner_id from qc_runs where ${orphaned} order by submitting_at limit 1`,
+      ),
     async (tx, ownerId) => {
       const settled = await tx.execute(
         sql`update qc_runs set state = 'completed', qc_state = 'skipped', reason = ${INTERRUPTED}, last_error_code = 'outcome_unknown', updated_at = now()
@@ -95,7 +110,11 @@ export function qcRecoveryHooks(deps: { readonly boss: Boss; readonly usage: Usa
   const late = sql`state = 'pending' and deadline_at <= now()`;
   const expired = perOwner(
     'production.qc-expired',
-    (tx) => ownerOf(tx, sql`select owner_id::text as owner_id from qc_runs where ${late} order by deadline_at limit 1`),
+    (tx) =>
+      ownerOf(
+        tx,
+        sql`select owner_id::text as owner_id from qc_runs where ${late} order by deadline_at limit 1`,
+      ),
     async (tx, ownerId) => {
       const settled = await tx.execute(
         sql`update qc_runs set state = 'completed', qc_state = 'skipped', reason = ${NOT_STARTED}, last_error_code = 'provider_timeout', updated_at = now()
@@ -120,7 +139,11 @@ export class QcRecovery implements OnModuleInit {
 
   onModuleInit(): void {
     const known = new Set(this.registry.names());
-    for (const hook of qcRecoveryHooks({ boss: this.boss, usage: this.usage, config: this.config })) {
+    for (const hook of qcRecoveryHooks({
+      boss: this.boss,
+      usage: this.usage,
+      config: this.config,
+    })) {
       if (!known.has(hook.name)) this.registry.register(hook);
     }
   }

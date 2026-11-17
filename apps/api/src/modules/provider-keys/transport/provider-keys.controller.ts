@@ -1,5 +1,17 @@
 import { randomBytes } from 'node:crypto';
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Put, Query, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Put,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import {
@@ -106,7 +118,8 @@ export class ProviderKeysController {
     try {
       return await this.keys.storeKey(ownerId, provider, apiKey, { requestId: request.id });
     } catch (error) {
-      if (error instanceof RateLimitedError) void reply.header('Retry-After', String(error.retryAfterSeconds));
+      if (error instanceof RateLimitedError)
+        void reply.header('Retry-After', String(error.retryAfterSeconds));
       throw error;
     }
   }
@@ -134,13 +147,21 @@ export class ProviderKeysController {
     const query = parseWith(EventsQuery, rawQuery);
     const scope = { owner: ownerId, filters: { provider: query.provider ?? null } };
     const after =
-      query.cursor === undefined ? undefined : parsePosition(decodeCursor(this.cursorKey, query.cursor, scope));
+      query.cursor === undefined
+        ? undefined
+        : parsePosition(decodeCursor(this.cursorKey, query.cursor, scope));
     const rows = await this.keys.listEvents(ownerId, {
       limit: query.limit + 1,
       ...(query.provider === undefined ? {} : { provider: query.provider }),
       ...(after === undefined ? {} : { after }),
     });
-    const page = buildPage(rows, query.limit, (e) => JSON.stringify([e.at, e.id]), this.cursorKey, scope);
+    const page = buildPage(
+      rows,
+      query.limit,
+      (e) => JSON.stringify([e.at, e.id]),
+      this.cursorKey,
+      scope,
+    );
     return new PageResult(page.items.map(eventView), page.pagination);
   }
 }

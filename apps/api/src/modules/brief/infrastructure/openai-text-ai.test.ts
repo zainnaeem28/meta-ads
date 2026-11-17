@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Egress } from '../../../platform/egress/egress.js';
 import { startServer } from '../../../platform/egress/test-support.js';
@@ -10,21 +11,28 @@ import { OpenAiTextAi } from './openai-text-ai.js';
 // TC-BRF-01, TC-BRF-05 (provider classes), TC-UPL analysis (inline bytes), TC-KEY-06 (the key stays out of errors).
 
 const KEY = 'test-openai-secret-that-must-not-leak-0000';
-let handler: Handler = (_req, res) => { res.end('{}'); };
+let handler: Handler = (_req, res) => {
+  res.end('{}');
+};
 let server: Awaited<ReturnType<typeof startServer>>;
-let seen: { auth: string | undefined; body: Record<string, any> }[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
+let seen: { auth: string | undefined; body: Record<string, any> }[] = [];
 
 beforeAll(async () => {
   server = await startServer((req, res) => {
     const parts: Buffer[] = [];
     req.on('data', (chunk: Buffer) => parts.push(chunk));
     req.on('end', () => {
-      seen.push({ auth: req.headers['authorization'], body: JSON.parse(Buffer.concat(parts).toString() || '{}') as Record<string, any> }); // eslint-disable-line @typescript-eslint/no-explicit-any
+      seen.push({
+        auth: req.headers['authorization'],
+        body: JSON.parse(Buffer.concat(parts).toString() || '{}') as Record<string, any>,
+      });
       handler(req, res);
     });
   });
 });
-afterAll(async () => { await server.close(); });
+afterAll(async () => {
+  await server.close();
+});
 
 function adapter(timeoutMs = 5000): OpenAiTextAi {
   const egress = new Egress({
@@ -41,12 +49,16 @@ function adapter(timeoutMs = 5000): OpenAiTextAi {
   });
 }
 
-const reply = (content: unknown, status = 200): Handler => (_req, res) => {
-  res.statusCode = status;
-  res.setHeader('content-type', 'application/json');
-  res.end(typeof content === 'string' ? content : JSON.stringify(content));
-};
-const completion = (content: unknown) => ({ choices: [{ message: { role: 'assistant', content: JSON.stringify(content), refusal: null } }] });
+const reply =
+  (content: unknown, status = 200): Handler =>
+  (_req, res) => {
+    res.statusCode = status;
+    res.setHeader('content-type', 'application/json');
+    res.end(typeof content === 'string' ? content : JSON.stringify(content));
+  };
+const completion = (content: unknown) => ({
+  choices: [{ message: { role: 'assistant', content: JSON.stringify(content), refusal: null } }],
+});
 const credential = { apiKey: Buffer.from(KEY) };
 const input: BriefInput = {
   productName: 'Calm Cap',
@@ -60,13 +72,23 @@ const input: BriefInput = {
 };
 
 async function failure(promise: Promise<unknown>): Promise<unknown> {
-  return promise.then(() => undefined, (error: unknown) => error);
+  return promise.then(
+    () => undefined,
+    (error: unknown) => error,
+  );
 }
 
 describe('generateBrief', () => {
   it('sends structured output against a JSON schema and returns the segments in order', async () => {
     seen = [];
-    handler = reply(completion({ segments: [{ position: 2, dialogue: 'B', prompt: 'pb' }, { position: 1, dialogue: 'A', prompt: 'pa' }] }));
+    handler = reply(
+      completion({
+        segments: [
+          { position: 2, dialogue: 'B', prompt: 'pb' },
+          { position: 1, dialogue: 'A', prompt: 'pa' },
+        ],
+      }),
+    );
     const draft = await adapter().generateBrief(credential, input);
     expect(draft.segments.map((s) => s.position)).toEqual([1, 2]);
     const sent = seen[0];
@@ -81,14 +103,59 @@ describe('generateBrief', () => {
 
   it.each([
     ['text that is not JSON', reply('<html>nope</html>')],
-    ['a message that is not JSON', (_q: unknown, res: { setHeader(name: string, value: string): void; end(body: string): void }) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: 'not json', refusal: null } }] })); }],
-    ['a refusal with no content', reply({ choices: [{ message: { content: null, refusal: 'I cannot help with that' } }] })],
+    [
+      'a message that is not JSON',
+      (
+        _q: unknown,
+        res: { setHeader(name: string, value: string): void; end(body: string): void },
+      ) => {
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ choices: [{ message: { content: 'not json', refusal: null } }] }));
+      },
+    ],
+    [
+      'a refusal with no content',
+      reply({ choices: [{ message: { content: null, refusal: 'I cannot help with that' } }] }),
+    ],
     ['no choices', reply({ choices: [] })],
     ['the wrong shape', reply(completion({ segments: [{ position: 1, dialogue: 'A' }] }))],
-    ['too few segments', reply(completion({ segments: [{ position: 1, dialogue: 'A', prompt: 'p' }] }))],
-    ['repeated positions', reply(completion({ segments: [{ position: 1, dialogue: 'A', prompt: 'p' }, { position: 1, dialogue: 'B', prompt: 'p' }] }))],
-    ['positions out of range', reply(completion({ segments: [{ position: 1, dialogue: 'A', prompt: 'p' }, { position: 3, dialogue: 'B', prompt: 'p' }] }))],
-    ['an empty dialogue', reply(completion({ segments: [{ position: 1, dialogue: ' ', prompt: 'p' }, { position: 2, dialogue: 'B', prompt: 'p' }] }))],
+    [
+      'too few segments',
+      reply(completion({ segments: [{ position: 1, dialogue: 'A', prompt: 'p' }] })),
+    ],
+    [
+      'repeated positions',
+      reply(
+        completion({
+          segments: [
+            { position: 1, dialogue: 'A', prompt: 'p' },
+            { position: 1, dialogue: 'B', prompt: 'p' },
+          ],
+        }),
+      ),
+    ],
+    [
+      'positions out of range',
+      reply(
+        completion({
+          segments: [
+            { position: 1, dialogue: 'A', prompt: 'p' },
+            { position: 3, dialogue: 'B', prompt: 'p' },
+          ],
+        }),
+      ),
+    ],
+    [
+      'an empty dialogue',
+      reply(
+        completion({
+          segments: [
+            { position: 1, dialogue: ' ', prompt: 'p' },
+            { position: 2, dialogue: 'B', prompt: 'p' },
+          ],
+        }),
+      ),
+    ],
   ])('invalid JSON or schema is ProviderInvalidResponse: %s', async (_name, next) => {
     handler = next as Handler;
     const error = await failure(adapter().generateBrief(credential, input));
@@ -126,16 +193,29 @@ describe('classification of provider errors (ARCHITECTURE §5.10)', () => {
   });
 
   it('a timeout after the request was sent is outcome_unknown, unconfirmed', async () => {
-    handler = () => { /* never answers */ };
-    const error = (await failure(adapter(300).generateBrief(credential, input))) as ProviderCallFailed;
+    handler = () => {
+      /* never answers */
+    };
+    const error = (await failure(
+      adapter(300).generateBrief(credential, input),
+    )) as ProviderCallFailed;
     expect(error).toBeInstanceOf(ProviderCallFailed);
     expect(error.classification.causeClass).toBe('outcome_unknown');
     expect(error.classification.usageEvent).toBe('unconfirmed');
   });
 
   it('a host that is not allow-listed never leaves: temporary, no usage event', async () => {
-    const egress = new Egress({ allowedHosts: { openai: ['other.example.net'] }, timeoutMs: 1000, maxBytes: 1000, resolver: async () => ['127.0.0.1'] });
-    const ai = new OpenAiTextAi(egress, { textModel: 'm', visionModel: 'v', chatUrl: `https://api.openai.com:${String(server.port)}/v1/chat/completions` });
+    const egress = new Egress({
+      allowedHosts: { openai: ['other.example.net'] },
+      timeoutMs: 1000,
+      maxBytes: 1000,
+      resolver: async () => ['127.0.0.1'],
+    });
+    const ai = new OpenAiTextAi(egress, {
+      textModel: 'm',
+      visionModel: 'v',
+      chatUrl: `https://api.openai.com:${String(server.port)}/v1/chat/completions`,
+    });
     const error = (await failure(ai.generateBrief(credential, input))) as ProviderCallFailed;
     expect(error.classification.causeClass).toBe('temporary');
     expect(error.classification.usageEvent).toBe('none');
@@ -145,13 +225,19 @@ describe('classification of provider errors (ARCHITECTURE §5.10)', () => {
 describe('shortenSegments', () => {
   it('returns the shortened segments for the positions it was given', async () => {
     handler = reply(completion({ segments: [{ position: 3, dialogue: 'Shorter', prompt: 'p3' }] }));
-    const out = await adapter().shortenSegments(credential, [{ position: 3, dialogue: 'Much longer', prompt: 'p3' }], 45);
+    const out = await adapter().shortenSegments(
+      credential,
+      [{ position: 3, dialogue: 'Much longer', prompt: 'p3' }],
+      45,
+    );
     expect(out).toEqual([{ position: 3, dialogue: 'Shorter', prompt: 'p3' }]);
   });
 
   it('refuses an answer for other positions than the ones sent', async () => {
     handler = reply(completion({ segments: [{ position: 2, dialogue: 'x', prompt: 'p' }] }));
-    const error = await failure(adapter().shortenSegments(credential, [{ position: 3, dialogue: 'long', prompt: 'p' }], 45));
+    const error = await failure(
+      adapter().shortenSegments(credential, [{ position: 3, dialogue: 'long', prompt: 'p' }], 45),
+    );
     expect(error).toBeInstanceOf(ProviderInvalidResponse);
   });
 });
@@ -166,14 +252,18 @@ describe('describeProduct (REQ-020, TD-D26)', () => {
     expect(text).toBe('A small glass jar.');
     const body = seen[0]?.body;
     expect(body?.['model']).toBe('local-stub-vision');
-    const part = body?.['messages'][1].content.find((p: { type: string }) => p.type === 'image_url');
+    const part = body?.['messages'][1].content.find(
+      (p: { type: string }) => p.type === 'image_url',
+    );
     expect(part.image_url.url).toBe(`data:image/png;base64,${bytes.toString('base64')}`);
     expect(JSON.stringify(body?.['messages'])).not.toMatch(/https?:/u);
     expect(body?.['response_format'].json_schema.schema.required).toEqual(['productDescription']);
   });
 
   it('refuses a content type that is not an image the product accepts', async () => {
-    await expect(adapter().describeProduct(credential, bytes, 'application/pdf')).rejects.toThrow(RangeError);
+    await expect(adapter().describeProduct(credential, bytes, 'application/pdf')).rejects.toThrow(
+      RangeError,
+    );
   });
 
   it.each([
@@ -181,6 +271,8 @@ describe('describeProduct (REQ-020, TD-D26)', () => {
     ['extra fields', completion({ productDescription: 'x', ethnicity: 'y' })],
   ])('%s is ProviderInvalidResponse', async (_name, content) => {
     handler = reply(content);
-    expect(await failure(adapter().describeProduct(credential, bytes, 'image/png'))).toBeInstanceOf(ProviderInvalidResponse);
+    expect(await failure(adapter().describeProduct(credential, bytes, 'image/png'))).toBeInstanceOf(
+      ProviderInvalidResponse,
+    );
   });
 });

@@ -95,7 +95,12 @@
       "clearable": true,
       "kind": "age_framing",
       "params": {
-        "patterns": ["\\b21\\s?\\+", "\\b21\\s(?:and|or)\\s(?:over|older|up)\\b", "\\badults?\\s(?:aged\\s)?21\\b", "\\bover\\s21\\b"]
+        "patterns": [
+          "\\b21\\s?\\+",
+          "\\b21\\s(?:and|or)\\s(?:over|older|up)\\b",
+          "\\badults?\\s(?:aged\\s)?21\\b",
+          "\\bover\\s21\\b"
+        ]
       },
       "message": "The last segment should frame the product for adults 21 and over.",
       "active": true
@@ -115,7 +120,14 @@
       "clearable": true,
       "kind": "phrase",
       "params": {
-        "phrases": ["game changer", "life-changing", "miracle", "guaranteed", "you won't believe", "secret they don't want you to know"]
+        "phrases": [
+          "game changer",
+          "life-changing",
+          "miracle",
+          "guaranteed",
+          "you won't believe",
+          "secret they don't want you to know"
+        ]
       },
       "message": "Tone: keep the voice calm and modest, without hype.",
       "active": true
@@ -123,10 +135,45 @@
   ],
   "sensitiveAttributeFilter": {
     "terms": [
-      "ethnic", "ethnicity", "race", "racial", "black", "white", "asian", "latino", "hispanic", "caucasian",
-      "age", "aged", "young", "old", "elderly", "teen", "teenager", "senior", "years old",
-      "health", "healthy", "sick", "disease", "illness", "disability", "disabled", "pregnant", "pregnancy",
-      "body", "skin tone", "overweight", "obese", "thin", "fat", "medical", "medicine", "patient", "doctor", "clinic"
+      "ethnic",
+      "ethnicity",
+      "race",
+      "racial",
+      "black",
+      "white",
+      "asian",
+      "latino",
+      "hispanic",
+      "caucasian",
+      "age",
+      "aged",
+      "young",
+      "old",
+      "elderly",
+      "teen",
+      "teenager",
+      "senior",
+      "years old",
+      "health",
+      "healthy",
+      "sick",
+      "disease",
+      "illness",
+      "disability",
+      "disabled",
+      "pregnant",
+      "pregnancy",
+      "body",
+      "skin tone",
+      "overweight",
+      "obese",
+      "thin",
+      "fat",
+      "medical",
+      "medicine",
+      "patient",
+      "doctor",
+      "clinic"
     ]
   }
 }

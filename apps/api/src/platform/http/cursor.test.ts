@@ -24,7 +24,9 @@ function expectCursorRefusal(fn: () => unknown): void {
   const error = rejected(fn);
   expect(error.code).toBe('validation_failed');
   expect(error.status).toBe(400);
-  expect(error.details).toEqual([expect.objectContaining({ field: 'cursor', code: 'cursor_invalid' })]);
+  expect(error.details).toEqual([
+    expect.objectContaining({ field: 'cursor', code: 'cursor_invalid' }),
+  ]);
 }
 
 describe('cursor (ADR-011)', () => {
@@ -36,13 +38,24 @@ describe('cursor (ADR-011)', () => {
   });
 
   it('is independent of filter key order', () => {
-    expect(filterHash({ a: 1, b: [1, { y: 2, x: undefined }] })).toBe(filterHash({ b: [1, { y: 2 }], a: 1 }));
-    expect(decodeCursor(KEY, token, { owner: OWNER, filters: { sort: 'created', status: 'open' } }, at(0))).toBeTruthy();
+    expect(filterHash({ a: 1, b: [1, { y: 2, x: undefined }] })).toBe(
+      filterHash({ b: [1, { y: 2 }], a: 1 }),
+    );
+    expect(
+      decodeCursor(
+        KEY,
+        token,
+        { owner: OWNER, filters: { sort: 'created', status: 'open' } },
+        at(0),
+      ),
+    ).toBeTruthy();
   });
 
   it('rejects a tampered payload and a tampered signature', () => {
     const [body = '', mac = ''] = token.split('.');
-    const forged = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(body, 'base64url').toString()), s: 'zzz' })).toString('base64url');
+    const forged = Buffer.from(
+      JSON.stringify({ ...JSON.parse(Buffer.from(body, 'base64url').toString()), s: 'zzz' }),
+    ).toString('base64url');
     expectCursorRefusal(() => decodeCursor(KEY, `${forged}.${mac}`, scope, at(0)));
     expectCursorRefusal(() => decodeCursor(KEY, `${body}.${mac.slice(0, -2)}AA`, scope, at(0)));
     expectCursorRefusal(() => decodeCursor(OTHER_KEY, token, scope, at(0)));
@@ -54,17 +67,31 @@ describe('cursor (ADR-011)', () => {
   });
 
   it('rejects another owner and other filters', () => {
-    expectCursorRefusal(() => decodeCursor(KEY, token, { ...scope, owner: '0198a5e0-0000-7000-8000-000000000002' }, at(0)));
-    expectCursorRefusal(() => decodeCursor(KEY, token, { ...scope, filters: { status: 'closed', sort: 'created' } }, at(0)));
+    expectCursorRefusal(() =>
+      decodeCursor(KEY, token, { ...scope, owner: '0198a5e0-0000-7000-8000-000000000002' }, at(0)),
+    );
+    expectCursorRefusal(() =>
+      decodeCursor(KEY, token, { ...scope, filters: { status: 'closed', sort: 'created' } }, at(0)),
+    );
     expectCursorRefusal(() => decodeCursor(KEY, token, { owner: OWNER }, at(0)));
   });
 
   it('rejects garbage of every shape', () => {
-    for (const bad of [undefined, null, 5, '', 'abc', 'a.b.c', 'x'.repeat(513), '.', `${'e30'}.${token.split('.')[1]}`]) {
+    for (const bad of [
+      undefined,
+      null,
+      5,
+      '',
+      'abc',
+      'a.b.c',
+      'x'.repeat(513),
+      '.',
+      `${'e30'}.${token.split('.')[1]}`,
+    ]) {
       expectCursorRefusal(() => decodeCursor(KEY, bad, scope, at(0)));
     }
     const body = Buffer.from('not json').toString('base64url');
-    
+
     const mac = createHmac('sha256', KEY).update(body).digest('base64url');
     expectCursorRefusal(() => decodeCursor(KEY, `${body}.${mac}`, scope, at(0)));
   });
@@ -83,7 +110,13 @@ describe('buildPage', () => {
 
   it('N rows give one page; N+1 give two pages with no repeat and no gap', () => {
     const exact = buildPage(rows.slice(0, 10), 10, (r) => r.id, KEY, scope, at(0));
-    expect(exact.pagination).toEqual({ type: 'cursor', limit: 10, returnedCount: 10, hasNextPage: false, nextCursor: null });
+    expect(exact.pagination).toEqual({
+      type: 'cursor',
+      limit: 10,
+      returnedCount: 10,
+      hasNextPage: false,
+      nextCursor: null,
+    });
 
     const first = buildPage(rows, 10, (r) => r.id, KEY, scope, at(0));
     expect(first.items.map((r) => r.id)).toEqual(rows.slice(0, 10).map((r) => r.id));
@@ -93,10 +126,18 @@ describe('buildPage', () => {
     const rest = rows.filter((r) => r.id > after);
     const second = buildPage(rest, 10, (r) => r.id, KEY, scope, at(1));
     expect(second.items.map((r) => r.id)).toEqual(['010']);
-    expect(second.pagination).toMatchObject({ hasNextPage: false, nextCursor: null, returnedCount: 1 });
+    expect(second.pagination).toMatchObject({
+      hasNextPage: false,
+      nextCursor: null,
+      returnedCount: 1,
+    });
   });
 
   it('an empty result has no next page', () => {
-    expect(buildPage([], 10, () => '', KEY, scope).pagination).toMatchObject({ returnedCount: 0, hasNextPage: false, nextCursor: null });
+    expect(buildPage([], 10, () => '', KEY, scope).pagination).toMatchObject({
+      returnedCount: 0,
+      hasNextPage: false,
+      nextCursor: null,
+    });
   });
 });

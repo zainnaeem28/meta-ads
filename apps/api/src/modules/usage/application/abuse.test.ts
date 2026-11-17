@@ -12,7 +12,10 @@ const CONFIG = { jobBurstCount: 20, authSpikeCount: 5, windowMinutes: 10 };
 
 function databaseReturning(rows: Record<string, unknown>[]): Pick<Database, 'uow'> {
   const tx = { execute: () => Promise.resolve({ rows }) } as unknown as DbTx;
-  return { uow: new UnitOfWork({ transaction: (fn) => fn(tx) }) } as unknown as Pick<Database, 'uow'>;
+  return { uow: new UnitOfWork({ transaction: (fn) => fn(tx) }) } as unknown as Pick<
+    Database,
+    'uow'
+  >;
 }
 
 function monitor(jobs: number, now: { value: Date }, raised = true) {
@@ -22,7 +25,12 @@ function monitor(jobs: number, now: { value: Date }, raised = true) {
   return {
     raiseAlert,
     announce,
-    abuse: new AbuseMonitor(databaseReturning([{ jobs: String(jobs) }]), CONFIG, () => now.value, modules),
+    abuse: new AbuseMonitor(
+      databaseReturning([{ jobs: String(jobs) }]),
+      CONFIG,
+      () => now.value,
+      modules,
+    ),
   };
 }
 
@@ -30,9 +38,16 @@ describe('checkAbuseThresholds (TC-ALR-01..03)', () => {
   it('raises one job_burst alert at 21 jobs and none at 20', async () => {
     const now = { value: new Date('2026-05-01T10:00:00Z') };
     const over = monitor(21, now);
-    expect(await over.abuse.checkAbuseThresholds(OWNER)).toMatchObject({ jobBurst: true, providerAuthSpike: false, jobs: 21 });
+    expect(await over.abuse.checkAbuseThresholds(OWNER)).toMatchObject({
+      jobBurst: true,
+      providerAuthSpike: false,
+      jobs: 21,
+    });
     expect(over.raiseAlert).toHaveBeenCalledTimes(1);
-    expect(over.raiseAlert).toHaveBeenCalledWith(expect.anything(), 'job_burst', OWNER, { jobs: 21, window_min: 10 });
+    expect(over.raiseAlert).toHaveBeenCalledWith(expect.anything(), 'job_burst', OWNER, {
+      jobs: 21,
+      window_min: 10,
+    });
     expect(over.announce).toHaveBeenCalledTimes(1);
     const at = monitor(20, now);
     expect(await at.abuse.checkAbuseThresholds(OWNER)).toMatchObject({ jobBurst: false });
@@ -46,8 +61,14 @@ describe('checkAbuseThresholds (TC-ALR-01..03)', () => {
     expect((await m.abuse.checkAbuseThresholds(OWNER)).providerAuthSpike).toBe(false);
     expect(m.raiseAlert).not.toHaveBeenCalled();
     m.abuse.noteProviderAuthResponse(OWNER, 401);
-    expect(await m.abuse.checkAbuseThresholds(OWNER)).toMatchObject({ providerAuthSpike: true, authResponses: 5 });
-    expect(m.raiseAlert).toHaveBeenCalledWith(expect.anything(), 'provider_auth_spike', OWNER, { responses: 5, window_min: 10 });
+    expect(await m.abuse.checkAbuseThresholds(OWNER)).toMatchObject({
+      providerAuthSpike: true,
+      authResponses: 5,
+    });
+    expect(m.raiseAlert).toHaveBeenCalledWith(expect.anything(), 'provider_auth_spike', OWNER, {
+      responses: 5,
+      window_min: 10,
+    });
     now.value = new Date('2026-05-01T10:11:00Z');
     expect((await m.abuse.checkAbuseThresholds(OWNER)).authResponses).toBe(0);
   });
@@ -68,7 +89,10 @@ describe('aggregate (TC-USG)', () => {
   it('refuses a window above 366 days (or not a positive whole number) naming the limit', async () => {
     const aggregator = new UsageAggregator(databaseReturning([]), clock);
     for (const days of [367, 0, 1.5, -1]) {
-      const error: unknown = await aggregator.aggregate(days).then(() => undefined, (e: unknown) => e);
+      const error: unknown = await aggregator.aggregate(days).then(
+        () => undefined,
+        (e: unknown) => e,
+      );
       expect(error).toBeInstanceOf(DomainError);
       expect(JSON.stringify((error as DomainError).details)).toContain(String(MAX_WINDOW_DAYS));
     }
@@ -82,13 +106,49 @@ describe('aggregate (TC-USG)', () => {
 
   it('maps rows to counts, cost, latency and job states only', async () => {
     const database = databaseReturning([
-      { owner_id: OWNER, provider: 'openai', calls: '3', successes: '2', failures: '1', rejected: '0', unconfirmed: '0', cost: '0.75', latency: '120', js: '2', jf: '1', jr: '0', ju: '0' },
-      { owner_id: OWNER, provider: 'wavespeed', calls: '1', successes: '0', failures: '0', rejected: '1', unconfirmed: '0', cost: '0', latency: null, js: '0', jf: '0', jr: '1', ju: '0' },
+      {
+        owner_id: OWNER,
+        provider: 'openai',
+        calls: '3',
+        successes: '2',
+        failures: '1',
+        rejected: '0',
+        unconfirmed: '0',
+        cost: '0.75',
+        latency: '120',
+        js: '2',
+        jf: '1',
+        jr: '0',
+        ju: '0',
+      },
+      {
+        owner_id: OWNER,
+        provider: 'wavespeed',
+        calls: '1',
+        successes: '0',
+        failures: '0',
+        rejected: '1',
+        unconfirmed: '0',
+        cost: '0',
+        latency: null,
+        js: '0',
+        jf: '0',
+        jr: '1',
+        ju: '0',
+      },
     ]);
     const { rows } = await new UsageAggregator(database, clock).aggregate(MAX_WINDOW_DAYS);
     expect(rows[0]).toEqual({
-      ownerId: OWNER, provider: 'openai', calls: 3, successes: 2, failures: 1, rejected: 0, unconfirmed: 0,
-      estimatedCostUsd: '0.7500', averageLatencyMs: 120, jobStates: { succeeded: 2, failed: 1, rejected: 0, unconfirmed: 0 },
+      ownerId: OWNER,
+      provider: 'openai',
+      calls: 3,
+      successes: 2,
+      failures: 1,
+      rejected: 0,
+      unconfirmed: 0,
+      estimatedCostUsd: '0.7500',
+      averageLatencyMs: 120,
+      jobStates: { succeeded: 2, failed: 1, rejected: 0, unconfirmed: 0 },
     });
     expect(rows[1]?.averageLatencyMs).toBeNull();
     expect(JSON.stringify(rows)).not.toMatch(/email|content|key/i);

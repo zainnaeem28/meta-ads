@@ -47,7 +47,9 @@ function stuckBody(who: string, counts: Alert['counts']): string {
   const left = count(counts, 'remaining_objects');
   const attempts = count(counts, 'attempts');
   const objects =
-    left === null ? 'Stored objects could not be removed' : `${plural(left, 'stored object', 'stored objects')} could not be removed`;
+    left === null
+      ? 'Stored objects could not be removed'
+      : `${plural(left, 'stored object', 'stored objects')} could not be removed`;
   const tries = attempts === null ? '' : ` after ${plural(attempts, 'attempt', 'attempts')}`;
   return `${who}: ${objects}${tries}. It keeps retrying. Check storage access.`;
 }
@@ -59,36 +61,97 @@ export function presentAlert(alert: Alert): AlertPresentation {
   const kind: AlertKind = alert.kind;
   switch (kind) {
     case 'account_erasure_stuck':
-      return { icon: 'circle-alert', tone: 'text-destructive', badge: NEEDS_ACTION, title: 'Account erasure is stuck', body: stuckBody(who, c) };
+      return {
+        icon: 'circle-alert',
+        tone: 'text-destructive',
+        badge: NEEDS_ACTION,
+        title: 'Account erasure is stuck',
+        body: stuckBody(who, c),
+      };
     case 'campaign_deletion_stuck':
-      return { icon: 'circle-alert', tone: 'text-destructive', badge: NEEDS_ACTION, title: 'Campaign deletion is stuck', body: stuckBody(who, c) };
+      return {
+        icon: 'circle-alert',
+        tone: 'text-destructive',
+        badge: NEEDS_ACTION,
+        title: 'Campaign deletion is stuck',
+        body: stuckBody(who, c),
+      };
     case 'job_burst': {
       const jobs = count(c, 'jobs');
       const minutes = count(c, 'window_minutes');
       const limit = count(c, 'limit');
-      const made = jobs === null ? 'created many provider jobs' : `created ${plural(jobs, 'provider job', 'provider jobs')}`;
+      const made =
+        jobs === null
+          ? 'created many provider jobs'
+          : `created ${plural(jobs, 'provider job', 'provider jobs')}`;
       const within = minutes === null ? '' : ` in ${plural(minutes, 'minute', 'minutes')}`;
-      return { icon: 'triangle-alert', tone: 'text-warning', badge: CHECK, title: 'Unusual job volume', body: `${who} ${made}${within}${limit === null ? '' : ` (limit ${String(limit)})`}.` };
+      return {
+        icon: 'triangle-alert',
+        tone: 'text-warning',
+        badge: CHECK,
+        title: 'Unusual job volume',
+        body: `${who} ${made}${within}${limit === null ? '' : ` (limit ${String(limit)})`}.`,
+      };
     }
     case 'provider_auth_spike': {
       const failures = count(c, 'failures');
       const minutes = count(c, 'window_minutes');
-      return { icon: 'triangle-alert', tone: 'text-warning', badge: CHECK, title: 'Provider key failures are rising', body: `${failures === null ? 'Several' : String(failures)} provider calls were refused for ${who}${minutes === null ? '' : ` in ${plural(minutes, 'minute', 'minutes')}`}. Check the key.` };
+      return {
+        icon: 'triangle-alert',
+        tone: 'text-warning',
+        badge: CHECK,
+        title: 'Provider key failures are rising',
+        body: `${failures === null ? 'Several' : String(failures)} provider calls were refused for ${who}${minutes === null ? '' : ` in ${plural(minutes, 'minute', 'minutes')}`}. Check the key.`,
+      };
     }
     case 'admin_role_changed':
-      return { icon: 'info', tone: 'text-info', badge: NOTICE, title: 'Administrator role changed', body: `The administrator role of ${who} was changed.` };
+      return {
+        icon: 'info',
+        tone: 'text-info',
+        badge: NOTICE,
+        title: 'Administrator role changed',
+        body: `The administrator role of ${who} was changed.`,
+      };
     case 'reservation_inconsistency':
-      return { icon: 'triangle-alert', tone: 'text-warning', badge: CHECK, title: 'Usage reservation mismatch', body: `A usage reservation for ${who} does not match its jobs. It is being reconciled.` };
+      return {
+        icon: 'triangle-alert',
+        tone: 'text-warning',
+        badge: CHECK,
+        title: 'Usage reservation mismatch',
+        body: `A usage reservation for ${who} does not match its jobs. It is being reconciled.`,
+      };
     case 'key_unseal_failed':
-      return { icon: 'circle-alert', tone: 'text-destructive', badge: NEEDS_ACTION, title: 'A stored key could not be opened', body: `The key of ${who} could not be opened. Check the encryption configuration.` };
+      return {
+        icon: 'circle-alert',
+        tone: 'text-destructive',
+        badge: NEEDS_ACTION,
+        title: 'A stored key could not be opened',
+        body: `The key of ${who} could not be opened. Check the encryption configuration.`,
+      };
     case 'keys_disabled_all':
-      return { icon: 'circle-alert', tone: 'text-destructive', badge: NEEDS_ACTION, title: 'All provider keys were disabled', body: `${who}: every provider key was disabled after repeated refusals.` };
+      return {
+        icon: 'circle-alert',
+        tone: 'text-destructive',
+        badge: NEEDS_ACTION,
+        title: 'All provider keys were disabled',
+        body: `${who}: every provider key was disabled after repeated refusals.`,
+      };
     default:
-      return { icon: 'info', tone: 'text-info', badge: NOTICE, title: 'Administrator alert', body: `${who}: see the audit trail.` };
+      return {
+        icon: 'info',
+        tone: 'text-info',
+        badge: NOTICE,
+        title: 'Administrator alert',
+        body: `${who}: see the audit trail.`,
+      };
   }
 }
 
-const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+const TIME = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 

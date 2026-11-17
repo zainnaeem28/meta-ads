@@ -16,7 +16,9 @@ const ROWS: Row[] = [
   { id: '1', name: 'Alpha' },
   { id: '2', name: 'Beta' },
 ];
-const COLS: TableColumn<Row>[] = [{ id: 'name', header: 'Name', cell: (r) => r.name, sortable: true }];
+const COLS: TableColumn<Row>[] = [
+  { id: 'name', header: 'Name', cell: (r) => r.name, sortable: true },
+];
 
 const base = { label: 'Campaigns', columns: COLS, rows: ROWS, rowKey: (r: Row) => r.id };
 
@@ -72,9 +74,13 @@ describe('CMP-016 Table', () => {
 
   it('empty and no-matches use the empty state; error is an alert with Try again', async () => {
     const onRetry = vi.fn();
-    const { container, rerender } = render(<Table {...base} rows={[]} state="empty" emptyTitle="Nothing" />);
+    const { container, rerender } = render(
+      <Table {...base} rows={[]} state="empty" emptyTitle="Nothing" />,
+    );
     expect(screen.getByRole('heading', { name: 'Nothing' })).toBeInTheDocument();
-    rerender(<Table {...base} rows={[]} state="empty" emptyVariant="no-matches" emptyTitle="None match" />);
+    rerender(
+      <Table {...base} rows={[]} state="empty" emptyVariant="no-matches" emptyTitle="None match" />,
+    );
     expect(container.querySelector('[data-variant=no-matches]')).not.toBeNull();
     rerender(<Table {...base} state="error" onRetry={onRetry} />);
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -103,7 +109,9 @@ describe('gallery demos', () => {
 
   it('offers a visible sort group for narrow screens and explicit table roles', async () => {
     const onSort = vi.fn();
-    const { container } = render(<Table {...base} sort={{ columnId: 'name', direction: 'ascending' }} onSortChange={onSort} />);
+    const { container } = render(
+      <Table {...base} sort={{ columnId: 'name', direction: 'ascending' }} onSortChange={onSort} />,
+    );
     const group = screen.getByRole('group', { name: 'Order list' });
     expect(group.className).toContain('md:hidden');
     const btn = within(group).getByRole('button', { name: 'Order by Name, ascending' });

@@ -37,7 +37,17 @@ const ITEM_CLASS =
   'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring';
 
 /** CMP-020 menu button (phone: fixed to the viewport, full width less 12 px each side, just under the trigger): opens on click, Enter, Space or ArrowDown; arrows, Home and End move; Escape closes and returns focus. */
-export function Menu({ trigger, label, items, header, defaultOpen = false, initialFocus = false, align = 'start', className, triggerClassName }: MenuProps) {
+export function Menu({
+  trigger,
+  label,
+  items,
+  header,
+  defaultOpen = false,
+  initialFocus = false,
+  align = 'start',
+  className,
+  triggerClassName,
+}: MenuProps) {
   const [open, setOpen] = useState(defaultOpen);
   const [phoneTop, setPhoneTop] = useState<number | undefined>(undefined);
   const base = useId();
@@ -46,7 +56,9 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
   const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const enabled = items.map((item, i) => (item.disabled ? -1 : i)).filter((i) => i >= 0);
-  const pendingFocus = useRef<'first' | 'last' | null>(defaultOpen && initialFocus ? 'first' : null);
+  const pendingFocus = useRef<'first' | 'last' | null>(
+    defaultOpen && initialFocus ? 'first' : null,
+  );
 
   const close = (returnFocus: boolean) => {
     setOpen(false);
@@ -68,7 +80,8 @@ export function Menu({ trigger, label, items, header, defaultOpen = false, initi
   useEffect(() => {
     if (!open) return;
     const place = () => {
-      const phone = menuRef.current !== null && getComputedStyle(menuRef.current).position === 'fixed';
+      const phone =
+        menuRef.current !== null && getComputedStyle(menuRef.current).position === 'fixed';
       const rect = triggerRef.current?.getBoundingClientRect();
       setPhoneTop(phone && rect ? rect.bottom + 4 : undefined);
     };

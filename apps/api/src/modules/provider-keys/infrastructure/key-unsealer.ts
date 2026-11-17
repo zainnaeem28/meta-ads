@@ -43,7 +43,10 @@ export class KeyUnsealer implements KeyUnwrapPort {
       });
       decipher.setAAD(aadBytes(aad));
       decipher.setAuthTag(sealed.ciphertext.subarray(split));
-      return Buffer.concat([decipher.update(sealed.ciphertext.subarray(0, split)), decipher.final()]);
+      return Buffer.concat([
+        decipher.update(sealed.ciphertext.subarray(0, split)),
+        decipher.final(),
+      ]);
     } catch {
       throw new UnsealFailed();
     } finally {

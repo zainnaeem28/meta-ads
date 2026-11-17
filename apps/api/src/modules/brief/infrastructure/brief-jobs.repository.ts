@@ -27,7 +27,8 @@ import type {
 import { CALL_TO_ACTION } from '../application/worker/post-process.js';
 
 const MESSAGE_MAX = 300;
-const clip = (text: string): string => (text.length <= MESSAGE_MAX ? text : text.slice(0, MESSAGE_MAX));
+const clip = (text: string): string =>
+  text.length <= MESSAGE_MAX ? text : text.slice(0, MESSAGE_MAX);
 
 /** Drizzle access to the brief jobs and what a generation writes (SB-D11: segments are updated in place). */
 export class DrizzleBriefJobs implements BriefJobRepository {
@@ -60,7 +61,12 @@ export class DrizzleBriefJobs implements BriefJobRepository {
       provider: row.provider as SealedKeyRow['provider'],
       status: row.status as SealedKeyRow['status'],
       version: row.version,
-      sealed: { ciphertext: row.ciphertext, nonce: row.nonce, wrappedDek: row.wrappedDek, kekVersion: row.kekVersion },
+      sealed: {
+        ciphertext: row.ciphertext,
+        nonce: row.nonce,
+        wrappedDek: row.wrappedDek,
+        kekVersion: row.kekVersion,
+      },
     };
   }
 
@@ -83,11 +89,19 @@ export class DrizzleBriefJobs implements BriefJobRepository {
     const [brief] = await tx.select().from(briefs).where(eq(briefs.campaignId, campaignId));
     const [draft] = await tx.select().from(drafts).where(eq(drafts.campaignId, campaignId));
     if (campaign === undefined || brief === undefined || draft === undefined) return null;
-    const segments = await tx.select().from(briefSegments).where(eq(briefSegments.briefId, brief.id));
+    const segments = await tx
+      .select()
+      .from(briefSegments)
+      .where(eq(briefSegments.briefId, brief.id));
     const issues = await tx
       .select()
       .from(claimIssues)
-      .where(and(eq(claimIssues.briefId, brief.id), inArray(claimIssues.resolution, ['open', 'cleared_with_reason'])));
+      .where(
+        and(
+          eq(claimIssues.briefId, brief.id),
+          inArray(claimIssues.resolution, ['open', 'cleared_with_reason']),
+        ),
+      );
     const mode = draft.intakeMode === 'script' ? 'script' : 'description';
     return {
       briefId: brief.id,
@@ -118,15 +132,13 @@ export class DrizzleBriefJobs implements BriefJobRepository {
           prompt: row.prompt,
         }))
         .sort((a, b) => a.position - b.position),
-      issues: issues.map(
-        (row): IssueRow => ({
-          id: row.id,
-          segmentId: row.segmentId,
-          field: row.field as IssueRow['field'],
-          ruleId: row.ruleId,
-          resolution: row.resolution as IssueRow['resolution'],
-        }),
-      ),
+      issues: issues.map((row): IssueRow => ({
+        id: row.id,
+        segmentId: row.segmentId,
+        field: row.field as IssueRow['field'],
+        ruleId: row.ruleId,
+        resolution: row.resolution as IssueRow['resolution'],
+      })),
     };
   }
 
@@ -138,7 +150,12 @@ export class DrizzleBriefJobs implements BriefJobRepository {
   async failPending(tx: DbTx, jobId: string, cause: JobCause, message: string): Promise<boolean> {
     const rows = await tx
       .update(briefJobs)
-      .set({ state: 'failed', causeClass: cause, causeMessage: clip(message), updatedAt: sql`now()` })
+      .set({
+        state: 'failed',
+        causeClass: cause,
+        causeMessage: clip(message),
+        updatedAt: sql`now()`,
+      })
       .where(and(eq(briefJobs.id, jobId), eq(briefJobs.state, 'pending')))
       .returning({ id: briefJobs.id });
     return rows.length === 1;
@@ -169,7 +186,13 @@ export class DrizzleBriefJobs implements BriefJobRepository {
     const rows = await tx
       .update(briefJobs)
       .set({ callCount: seq, updatedAt: sql`now()` })
-      .where(and(eq(briefJobs.id, jobId), eq(briefJobs.state, 'submitting'), eq(briefJobs.callCount, seq - 1)))
+      .where(
+        and(
+          eq(briefJobs.id, jobId),
+          eq(briefJobs.state, 'submitting'),
+          eq(briefJobs.callCount, seq - 1),
+        ),
+      )
       .returning({ id: briefJobs.id });
     return rows.length === 1;
   }
@@ -178,7 +201,11 @@ export class DrizzleBriefJobs implements BriefJobRepository {
     tx: DbTx,
     job: BriefJobRow,
     context: BriefContext,
-    write: { segments: readonly WrittenSegment[]; close: readonly string[]; raise: readonly NewIssue[] },
+    write: {
+      segments: readonly WrittenSegment[];
+      close: readonly string[];
+      raise: readonly NewIssue[];
+    },
   ): Promise<GenerationWrite> {
     const done = await tx
       .update(briefJobs)
@@ -192,7 +219,11 @@ export class DrizzleBriefJobs implements BriefJobRepository {
       .where(eq(briefs.id, context.briefId))
       .for('update');
     const brief = locked[0];
-    if (brief === undefined || brief.state !== 'generating' || brief.generationSeq !== job.generationSeq) {
+    if (
+      brief === undefined ||
+      brief.state !== 'generating' ||
+      brief.generationSeq !== job.generationSeq
+    ) {
       return { kind: 'superseded' };
     }
     const existing = new Map(context.segments.map((segment) => [segment.id, segment]));
@@ -222,12 +253,23 @@ export class DrizzleBriefJobs implements BriefJobRepository {
         .where(eq(briefSegments.id, segment.id));
     }
     const written = new Set(write.segments.map((segment) => segment.id));
-    const retired = context.segments.filter((segment) => segment.state === 'active' && !written.has(segment.id));
+    const retired = context.segments.filter(
+      (segment) => segment.state === 'active' && !written.has(segment.id),
+    );
     if (retired.length > 0) {
       await tx
         .update(briefSegments)
-        .set({ state: 'retired', revision: sql`${briefSegments.revision} + 1`, updatedAt: sql`now()` })
-        .where(inArray(briefSegments.id, retired.map((segment) => segment.id)));
+        .set({
+          state: 'retired',
+          revision: sql`${briefSegments.revision} + 1`,
+          updatedAt: sql`now()`,
+        })
+        .where(
+          inArray(
+            briefSegments.id,
+            retired.map((segment) => segment.id),
+          ),
+        );
     }
     if (write.close.length > 0) {
       const closed = await tx
@@ -289,11 +331,21 @@ export class DrizzleBriefJobs implements BriefJobRepository {
     return rows.length === 1;
   }
 
-  async settleBriefAfterFailure(tx: DbTx, campaignId: string, generationSeq: number): Promise<void> {
+  async settleBriefAfterFailure(
+    tx: DbTx,
+    campaignId: string,
+    generationSeq: number,
+  ): Promise<void> {
     const [brief] = await tx
       .select({ id: briefs.id })
       .from(briefs)
-      .where(and(eq(briefs.campaignId, campaignId), eq(briefs.generationSeq, generationSeq), eq(briefs.state, 'generating')))
+      .where(
+        and(
+          eq(briefs.campaignId, campaignId),
+          eq(briefs.generationSeq, generationSeq),
+          eq(briefs.state, 'generating'),
+        ),
+      )
       .for('update');
     if (brief === undefined) return;
     const text = await tx

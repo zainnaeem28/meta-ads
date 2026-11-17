@@ -6,8 +6,15 @@ import { newId } from '../../../platform/shared-kernel/index.js';
 import { AuditService } from '../../audit/index.js';
 import { VideoJobsService } from '../../production/index.js';
 import { UsageService } from '../../usage/index.js';
-import { CAMPAIGN_BRIEF_TEXT_MODEL, CAMPAIGN_DELETION_QUEUEING, CAMPAIGN_DELETION_REPOSITORY } from './campaign-deletion-ports.js';
-import type { CampaignDeletionQueueing, CampaignDeletionRepository } from './campaign-deletion-ports.js';
+import {
+  CAMPAIGN_BRIEF_TEXT_MODEL,
+  CAMPAIGN_DELETION_QUEUEING,
+  CAMPAIGN_DELETION_REPOSITORY,
+} from './campaign-deletion-ports.js';
+import type {
+  CampaignDeletionQueueing,
+  CampaignDeletionRepository,
+} from './campaign-deletion-ports.js';
 
 export interface DeletionAccepted {
   readonly deletionRunId: string;
@@ -31,7 +38,11 @@ export class CampaignDeletionService {
     @Inject(CAMPAIGN_BRIEF_TEXT_MODEL) private readonly textModel: string,
   ) {}
 
-  async request(ownerId: string, campaignId: string, requestId: string | null): Promise<DeletionAccepted> {
+  async request(
+    ownerId: string,
+    campaignId: string,
+    requestId: string | null,
+  ): Promise<DeletionAccepted> {
     const accepted = await this.database.uow.run(async (tx): Promise<DeletionAccepted | null> => {
       if (!(await this.repository.markDeleting(tx, ownerId, campaignId))) return null;
       await this.video.cancelForCampaign(tx, ownerId, campaignId);

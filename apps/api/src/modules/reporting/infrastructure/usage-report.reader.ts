@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import type { DbTx } from '../../../platform/db/index.js';
-import type { AccountUsageRow, ProviderUsageRow, UsageReportReader, UsageTotals } from '../application/ports.js';
+import type {
+  AccountUsageRow,
+  ProviderUsageRow,
+  UsageReportReader,
+  UsageTotals,
+} from '../application/ports.js';
 
 interface Raw extends Record<string, unknown> {
   owner_id: string | null;

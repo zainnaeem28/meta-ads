@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import { spawn, spawnSync } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -12,12 +13,12 @@ import { installJobs } from '../jobs/test-support.js';
 // TASK-061: API-900..903 through the built apps/api/dist/main.api.js (the real entry point) against the shared test
 // PostgreSQL, validated against OpenAPI design.5 (packages/contracts/openapi.yaml). TC-OPS-01, TC-OPS-10.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Json = Record<string, any>;
 
 const apiDir = join(import.meta.dirname, '..', '..', '..');
 const contractsDir = join(apiDir, '..', '..', 'packages', 'contracts');
-const adminUrl = process.env['TEST_DATABASE_ADMIN_URL'] ?? 'postgres://postgres@test-db:5432/postgres';
+const adminUrl =
+  process.env['TEST_DATABASE_ADMIN_URL'] ?? 'postgres://postgres@test-db:5432/postgres';
 const suffix = randomBytes(4).toString('hex');
 const database = `task061_${suffix}`;
 const METRICS = 'm'.repeat(20) + 'T'.repeat(30);
@@ -35,7 +36,10 @@ async function start(port: number, env: Record<string, string>): Promise<Running
   let err = '';
   const child = spawn('node', ['dist/main.api.js'], {
     cwd: apiDir,
-    env: { PATH: process.env['PATH'] ?? '', ...validEnv('api', { DATABASE_URL: databaseUrl, API_PORT: String(port), ...env }) },
+    env: {
+      PATH: process.env['PATH'] ?? '',
+      ...validEnv('api', { DATABASE_URL: databaseUrl, API_PORT: String(port), ...env }),
+    },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
   child.stderr?.on('data', (chunk: Buffer) => (err += chunk.toString()));
@@ -55,8 +59,10 @@ async function start(port: number, env: Record<string, string>): Promise<Running
 type Validate = ((value: unknown) => boolean) & { errors?: unknown };
 function contractValidator(schema: string): Validate {
   const requireFromContracts = createRequire(join(contractsDir, 'package.json'));
-  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any }).default; // eslint-disable-line @typescript-eslint/no-explicit-any
-  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void }).default;
+  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any })
+    .default;
+  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void })
+    .default;
   const yaml = requireFromContracts('js-yaml') as { load(text: string): Json };
   const spec = yaml.load(readFileSync(join(contractsDir, 'openapi.yaml'), 'utf8'));
   const ajv = new Ajv2020({ strict: false, allErrors: true });
@@ -98,7 +104,11 @@ afterAll(async () => {
 describe('API-900 / API-901 (public)', () => {
   it('answers live with the enveloped HealthResponse and ignores any Authorization header', async () => {
     const validate = contractValidator('HealthResponse');
-    for (const headers of [{}, { authorization: `Bearer ${METRICS}` }, { authorization: 'Bearer junk' }]) {
+    for (const headers of [
+      {},
+      { authorization: `Bearer ${METRICS}` },
+      { authorization: 'Bearer junk' },
+    ]) {
       const res = await fetch(`${api.base}/health/live`, { headers });
       expect(res.status).toBe(200);
       const json = await body(res);
@@ -140,7 +150,10 @@ describe('API-902 / API-903 (scope M, TC-OPS-10)', () => {
   const unknown = async (res: Response): Promise<void> => {
     expect(res.status).toBe(404);
     const json = await body(res);
-    expect(json).toMatchObject({ success: false, error: { code: 'not_found', message: 'Not found.' } });
+    expect(json).toMatchObject({
+      success: false,
+      error: { code: 'not_found', message: 'Not found.' },
+    });
   };
   const wrong: [string, Record<string, string>][] = [
     ['no token', {}],
@@ -153,17 +166,22 @@ describe('API-902 / API-903 (scope M, TC-OPS-10)', () => {
 
   for (const path of ['/internal/metrics', '/internal/metrics/window']) {
     for (const [name, headers] of wrong) {
-      it(`${path} answers the unknown-path 404 for ${name}`, async () => unknown(await fetch(`${api.base}${path}`, { headers })));
+      it(`${path} answers the unknown-path 404 for ${name}`, async () =>
+        unknown(await fetch(`${api.base}${path}`, { headers })));
     }
     it(`${path} answers 404 for every request when METRICS_TOKEN is unset`, async () => {
-      await unknown(await fetch(`${noToken.base}${path}`, { headers: { authorization: `Bearer ${METRICS}` } }));
+      await unknown(
+        await fetch(`${noToken.base}${path}`, { headers: { authorization: `Bearer ${METRICS}` } }),
+      );
       await unknown(await fetch(`${noToken.base}${path}`));
     });
   }
 
   it('serves the Prometheus exposition with the right token, bounded labels and no IDs', async () => {
     await fetch(`${api.base}/api/v1/nowhere/0198a5e0-0000-7000-8000-000000000001`);
-    const res = await fetch(`${api.base}/internal/metrics`, { headers: { authorization: `Bearer ${METRICS}` } });
+    const res = await fetch(`${api.base}/internal/metrics`, {
+      headers: { authorization: `Bearer ${METRICS}` },
+    });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/plain');
     const text = await res.text();
@@ -179,7 +197,9 @@ describe('API-902 / API-903 (scope M, TC-OPS-10)', () => {
   it('serves a MetricsWindowResponse valid against OpenAPI design.5, not counting the probes or itself', async () => {
     const validate = contractValidator('MetricsWindowResponse');
     const read = async (): Promise<Json> => {
-      const res = await fetch(`${api.base}/internal/metrics/window`, { headers: { authorization: `Bearer ${METRICS}` } });
+      const res = await fetch(`${api.base}/internal/metrics/window`, {
+        headers: { authorization: `Bearer ${METRICS}` },
+      });
       expect(res.status).toBe(200);
       return body(res);
     };
@@ -195,7 +215,9 @@ describe('API-902 / API-903 (scope M, TC-OPS-10)', () => {
     expect(second['data']['windows'][0]['requests']).toBe(first['data']['windows'][0]['requests']);
     await fetch(`${api.base}/api/v1/nowhere`);
     const third = await read();
-    expect(third['data']['windows'][0]['requests']).toBe(first['data']['windows'][0]['requests'] + 1);
+    expect(third['data']['windows'][0]['requests']).toBe(
+      first['data']['windows'][0]['requests'] + 1,
+    );
     expect(third['data']['processStartedAt']).toBe(first['data']['processStartedAt']);
     expect(api.stderr()).not.toContain(METRICS);
   });

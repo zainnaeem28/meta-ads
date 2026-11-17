@@ -258,16 +258,22 @@ describe('render.sh: backup, schema read and smoke', () => {
   });
 
   it('waits until the on-demand backup is ready before returning its id', async () => {
-    const { f, result } = await adapter({ exportStatuses: ['pending', 'running', 'completed'] }, ['backup'], {
-      RENDER_POLL_SECONDS: '0',
-    });
+    const { f, result } = await adapter(
+      { exportStatuses: ['pending', 'running', 'completed'] },
+      ['backup'],
+      {
+        RENDER_POLL_SECONDS: '0',
+      },
+    );
     expect(result.code).toBe(0);
     expect(result.stdout.trim()).toBe('exp-2');
     expect(f.calls('GET', /export$/).length).toBe(3);
   });
 
   it('fails when the backup fails or never becomes ready', async () => {
-    const failed = await adapter({ exportStatuses: ['pending', 'failed'] }, ['backup'], { RENDER_POLL_SECONDS: '0' });
+    const failed = await adapter({ exportStatuses: ['pending', 'failed'] }, ['backup'], {
+      RENDER_POLL_SECONDS: '0',
+    });
     expect(failed.result.code).toBe(1);
     expect(failed.result.stderr).toContain('backup exp-2 ended as failed');
     const slow = await adapter({ exportStatuses: ['pending'] }, ['backup'], {
@@ -357,7 +363,20 @@ describe('render.sh: alert, observe and record', () => {
   });
 
   it('runs the observation window through observe.sh', async () => {
-    const { result } = await adapter({ metrics: { requests: 10, errors5xx: 0, p95Ms: 100, stuckSubmitting: 0, kekUnsealFailures: 0, workerHeartbeatAgeSeconds: 60 } }, ['observe'], { OBSERVE_WINDOW_SECONDS: '0' });
+    const { result } = await adapter(
+      {
+        metrics: {
+          requests: 10,
+          errors5xx: 0,
+          p95Ms: 100,
+          stuckSubmitting: 0,
+          kekUnsealFailures: 0,
+          workerHeartbeatAgeSeconds: 60,
+        },
+      },
+      ['observe'],
+      { OBSERVE_WINDOW_SECONDS: '0' },
+    );
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('window of 0s passed');
   });
@@ -424,7 +443,14 @@ describe('release-with-recovery.sh with the render adapter (real entry point)', 
       'srv-web': [digest('old-web')],
     };
   }
-  const metricsOk = { requests: 10, errors5xx: 0, p95Ms: 100, stuckSubmitting: 0, kekUnsealFailures: 0, workerHeartbeatAgeSeconds: 60 };
+  const metricsOk = {
+    requests: 10,
+    errors5xx: 0,
+    p95Ms: 100,
+    stuckSubmitting: 0,
+    kekUnsealFailures: 0,
+    workerHeartbeatAgeSeconds: 60,
+  };
 
   it('migrates, deploys api, worker and web by digest, smokes, observes and records', async () => {
     const { f, evidence, result, outcome } = await release({ metrics: metricsOk });
@@ -468,7 +494,9 @@ describe('release-with-recovery.sh with the render adapter (real entry point)', 
   });
 
   it('aborts the observation window and rolls back on a 5xx spike', async () => {
-    const { result, outcome } = await release({ metrics: { ...metricsOk, requests: 500, errors5xx: 100 } });
+    const { result, outcome } = await release({
+      metrics: { ...metricsOk, requests: 500, errors5xx: 100 },
+    });
     expect(result.code).toBe(1);
     expect(outcome()).toMatchObject({ status: 'rolled-back' });
   });

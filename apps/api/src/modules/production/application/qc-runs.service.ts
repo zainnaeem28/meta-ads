@@ -50,9 +50,16 @@ export class QcRunsService {
     @Inject(VIDEO_CONFIG) private readonly config: VideoConfig,
   ) {}
 
-  async rerun(ownerId: string, videoJobId: string, key: string, requestHash: Buffer): Promise<QcRunOutcome> {
+  async rerun(
+    ownerId: string,
+    videoJobId: string,
+    key: string,
+    requestHash: Buffer,
+  ): Promise<QcRunOutcome> {
     try {
-      return await this.database.uow.run((tx) => this.rerunIn(tx, ownerId, videoJobId, key, requestHash));
+      return await this.database.uow.run((tx) =>
+        this.rerunIn(tx, ownerId, videoJobId, key, requestHash),
+      );
     } catch (error) {
       // Two creators raced for the unique run row: the retry finds the winner's live run and reuses it.
       if (!isUniqueViolation(error, 'qc_runs_reuse_uq')) throw error;
@@ -60,25 +67,44 @@ export class QcRunsService {
     }
   }
 
-  private async rerunIn(tx: DbTx, ownerId: string, videoJobId: string, key: string, requestHash: Buffer): Promise<QcRunOutcome> {
+  private async rerunIn(
+    tx: DbTx,
+    ownerId: string,
+    videoJobId: string,
+    key: string,
+    requestHash: Buffer,
+  ): Promise<QcRunOutcome> {
     const [job] = await tx
       .select({ state: videoJobs.state })
       .from(videoJobs)
       .innerJoin(campaigns, eq(campaigns.id, videoJobs.campaignId))
-      .where(and(eq(videoJobs.id, videoJobId), eq(videoJobs.ownerId, ownerId), eq(campaigns.state, 'active')))
+      .where(
+        and(
+          eq(videoJobs.id, videoJobId),
+          eq(videoJobs.ownerId, ownerId),
+          eq(campaigns.state, 'active'),
+        ),
+      )
       .for('update', { of: videoJobs });
     if (job === undefined) throw new DomainError('not_found', 'This video job does not exist.');
     const scope = { ownerId, operationId: 'API-064', key, requestHash } as const;
     const record = await lookupRecord(tx, scope);
     if (record !== undefined) {
       if (!record.requestHash.equals(requestHash)) {
-        throw new DomainError('idempotency_key_reused', 'This request key was already used for a different request.');
+        throw new DomainError(
+          'idempotency_key_reused',
+          'This request key was already used for a different request.',
+        );
       }
       return { run: await this.runById(tx, ownerId, record.resourceId), reused: true };
     }
     if (job.state !== 'completed') {
       throw new DomainError('clip_not_completed', 'Only a finished clip can be checked.', [
-        { field: 'videoJobId', code: 'clip_not_completed', message: 'This clip is not finished yet.' },
+        {
+          field: 'videoJobId',
+          code: 'clip_not_completed',
+          message: 'This clip is not finished yet.',
+        },
       ]);
     }
     const [live] = await tx
@@ -88,7 +114,12 @@ export class QcRunsService {
     const outcome = await withIdempotency(
       tx,
       scope,
-      { resourceType: 'qc_run', responseStatus: 202, ttlHours: this.config.idempotencyTtlHours, resourceId: live?.id },
+      {
+        resourceType: 'qc_run',
+        responseStatus: 202,
+        ttlHours: this.config.idempotencyTtlHours,
+        resourceId: live?.id,
+      },
       async (id) => {
         if (live !== undefined) return { id: live.id, reused: true };
         await this.create(tx, ownerId, videoJobId, id);
@@ -129,20 +160,36 @@ export class QcRunsService {
       .where(and(eq(providerKeys.ownerId, ownerId), eq(providerKeys.provider, 'openai')));
     if (key === undefined) {
       throw new DomainError('key_missing', 'Add your OpenAI key in Settings, then try again.', [
-        { field: 'openaiKey', code: 'missing', message: 'No OpenAI key is stored for your account.' },
+        {
+          field: 'openaiKey',
+          code: 'missing',
+          message: 'No OpenAI key is stored for your account.',
+        },
       ]);
     }
     if (key.status === 'disabled') {
-      throw new DomainError('key_disabled', 'Your OpenAI key is disabled. Enter it again in Settings, then try again.', [
-        { field: 'openaiKey', code: 'disabled', message: 'Your OpenAI key was disabled after repeated authentication failures.' },
-      ]);
+      throw new DomainError(
+        'key_disabled',
+        'Your OpenAI key is disabled. Enter it again in Settings, then try again.',
+        [
+          {
+            field: 'openaiKey',
+            code: 'disabled',
+            message: 'Your OpenAI key was disabled after repeated authentication failures.',
+          },
+        ],
+      );
     }
     return key;
   }
 
   private async runById(tx: DbTx, ownerId: string, id: string): Promise<QcRecord> {
-    const [run] = await tx.select(RUN_COLUMNS).from(qcRuns).where(and(eq(qcRuns.id, id), eq(qcRuns.ownerId, ownerId)));
-    if (run === undefined) throw new DomainError('not_found', 'This request no longer has a result.');
+    const [run] = await tx
+      .select(RUN_COLUMNS)
+      .from(qcRuns)
+      .where(and(eq(qcRuns.id, id), eq(qcRuns.ownerId, ownerId)));
+    if (run === undefined)
+      throw new DomainError('not_found', 'This request no longer has a result.');
     return run;
   }
 }

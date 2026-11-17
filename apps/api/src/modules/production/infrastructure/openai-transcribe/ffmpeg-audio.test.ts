@@ -30,7 +30,9 @@ describe('FfmpegAudio', () => {
     const probe = script('probe-audio', `echo "$@" >> ${calls}\nprintf '1\\n'`);
     const ffmpeg = script('ffmpeg-ok', `echo "$@" >> ${calls}\nprintf 'RIFFwavbytes'`);
     const before = qcTemp().length;
-    const out = await new FfmpegAudio({ ffmpeg, ffprobe: probe }).extract(Readable.from([Buffer.from('mp4-bytes')]));
+    const out = await new FfmpegAudio({ ffmpeg, ffprobe: probe }).extract(
+      Readable.from([Buffer.from('mp4-bytes')]),
+    );
     expect(out).toEqual({ kind: 'audio', wav: Buffer.from('RIFFwavbytes') });
     const log = readFileSync(calls, 'utf8');
     expect(log).toContain('-select_streams a');
@@ -41,19 +43,27 @@ describe('FfmpegAudio', () => {
   it('answers none for a file with no audio stream, without decoding', async () => {
     const probe = script('probe-none', 'printf ""');
     const ffmpeg = script('ffmpeg-never', 'exit 9');
-    expect(await new FfmpegAudio({ ffmpeg, ffprobe: probe }).extract(Readable.from([Buffer.from('x')]))).toEqual({ kind: 'none' });
+    expect(
+      await new FfmpegAudio({ ffmpeg, ffprobe: probe }).extract(Readable.from([Buffer.from('x')])),
+    ).toEqual({ kind: 'none' });
   });
 
   it('answers none when the decode yields no bytes', async () => {
     const probe = script('probe-one', "printf '1'");
     const ffmpeg = script('ffmpeg-empty', 'printf ""');
-    expect(await new FfmpegAudio({ ffmpeg, ffprobe: probe }).extract(Readable.from([Buffer.from('x')]))).toEqual({ kind: 'none' });
+    expect(
+      await new FfmpegAudio({ ffmpeg, ffprobe: probe }).extract(Readable.from([Buffer.from('x')])),
+    ).toEqual({ kind: 'none' });
   });
 
   it('throws when a tool fails, and still removes the file', async () => {
     const probe = script('probe-bad', 'exit 1');
     const before = qcTemp().length;
-    await expect(new FfmpegAudio({ ffmpeg: 'ffmpeg', ffprobe: probe }).extract(Readable.from([Buffer.from('x')]))).rejects.toThrow('failed');
+    await expect(
+      new FfmpegAudio({ ffmpeg: 'ffmpeg', ffprobe: probe }).extract(
+        Readable.from([Buffer.from('x')]),
+      ),
+    ).rejects.toThrow('failed');
     expect(qcTemp().length).toBe(before);
   });
 });

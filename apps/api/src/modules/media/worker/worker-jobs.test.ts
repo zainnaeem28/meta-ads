@@ -21,9 +21,20 @@ const log: JobLog = { info: vi.fn(), warn: vi.fn() };
 
 function record(over: Partial<MediaRecord> = {}): MediaRecord {
   return {
-    id: ID, ownerId: OWNER, kind: 'upload', state: 'processing', storageKey: quarantineKey(OWNER, ID), bytes: 100,
-    contentType: 'image/png', width: null, height: null, campaignId: null, attachedAt: null, rejectReason: null,
-    createdAt: new Date('2026-01-01T00:00:00Z'), ...over,
+    id: ID,
+    ownerId: OWNER,
+    kind: 'upload',
+    state: 'processing',
+    storageKey: quarantineKey(OWNER, ID),
+    bytes: 100,
+    contentType: 'image/png',
+    width: null,
+    height: null,
+    campaignId: null,
+    attachedAt: null,
+    rejectReason: null,
+    createdAt: new Date('2026-01-01T00:00:00Z'),
+    ...over,
   };
 }
 
@@ -37,17 +48,41 @@ function world(initial: MediaRecord[] = [record()]) {
   const repository = {
     find: (_t: never, id: string) => Promise.resolve(rows.get(id) ?? null),
     lockUsage: () => Promise.resolve(usage.bytes),
-    addUsage: (_t: never, _o: string, delta: number) => { usage.bytes += delta; return Promise.resolve(); },
-    remove: (_t: never, id: string) => { calls.push(`row:${id}`); const r = rows.get(id) ?? null; rows.delete(id); return Promise.resolve(r); },
+    addUsage: (_t: never, _o: string, delta: number) => {
+      usage.bytes += delta;
+      return Promise.resolve();
+    },
+    remove: (_t: never, id: string) => {
+      calls.push(`row:${id}`);
+      const r = rows.get(id) ?? null;
+      rows.delete(id);
+      return Promise.resolve(r);
+    },
   } as unknown as MediaRepository;
   const maintenance = {
     lockRow: (_t: never, id: string) => Promise.resolve(rows.get(id) ?? null),
-    markReady: (_t: never, id: string, r: Partial<MediaRecord> & { storageKey: string }) => { rows.set(id, { ...rows.get(id)!, ...r, state: 'ready' }); return Promise.resolve(); },
-    markRejected: (_t: never, id: string, reason: MediaRecord['rejectReason']) => { rows.set(id, { ...rows.get(id)!, state: 'rejected', rejectReason: reason, bytes: 0 }); return Promise.resolve(); },
+    markReady: (_t: never, id: string, r: Partial<MediaRecord> & { storageKey: string }) => {
+      rows.set(id, { ...rows.get(id)!, ...r, state: 'ready' });
+      return Promise.resolve();
+    },
+    markRejected: (_t: never, id: string, reason: MediaRecord['rejectReason']) => {
+      rows.set(id, { ...rows.get(id)!, state: 'rejected', rejectReason: reason, bytes: 0 });
+      return Promise.resolve();
+    },
     listUnattachedBefore: (_t: never, cutoff: Date, limit: number) =>
-      Promise.resolve([...rows.values()].filter((r) => r.kind === 'upload' && r.attachedAt === null && r.createdAt < cutoff).slice(0, limit)),
-    listByCampaign: (_t: never, c: string, limit: number) => Promise.resolve([...rows.values()].filter((r) => r.campaignId === c).slice(0, limit)),
-    jobAttempts: vi.fn(() => Promise.resolve({ retryCount: 0, retryLimit: 3 } as { retryCount: number; retryLimit: number } | null)),
+      Promise.resolve(
+        [...rows.values()]
+          .filter((r) => r.kind === 'upload' && r.attachedAt === null && r.createdAt < cutoff)
+          .slice(0, limit),
+      ),
+    listByCampaign: (_t: never, c: string, limit: number) =>
+      Promise.resolve([...rows.values()].filter((r) => r.campaignId === c).slice(0, limit)),
+    jobAttempts: vi.fn(() =>
+      Promise.resolve({ retryCount: 0, retryLimit: 3 } as {
+        retryCount: number;
+        retryLimit: number;
+      } | null),
+    ),
   } as unknown as MediaMaintenanceRepository & { jobAttempts: ReturnType<typeof vi.fn> };
   const storage = {
     put: vi.fn((key: string, body: Buffer) => {
@@ -57,12 +92,25 @@ function world(initial: MediaRecord[] = [record()]) {
     }),
     get: vi.fn((key: string) => {
       const o = objects.get(key);
-      return o === undefined ? Promise.reject(new StorageNotFound()) : Promise.resolve(Readable.from([o]));
+      return o === undefined
+        ? Promise.reject(new StorageNotFound())
+        : Promise.resolve(Readable.from([o]));
     }),
-    delete: vi.fn((key: string) => { calls.push(`object:${key}`); objects.delete(key); return Promise.resolve(); }),
+    delete: vi.fn((key: string) => {
+      calls.push(`object:${key}`);
+      objects.delete(key);
+      return Promise.resolve();
+    }),
     deletePrefix: vi.fn(() => Promise.resolve(3)),
-  } as unknown as StoragePort & { put: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
-  const sanitizer: ImageSanitizePort & { inspect: ReturnType<typeof vi.fn>; reencode: ReturnType<typeof vi.fn> } = {
+  } as unknown as StoragePort & {
+    put: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+  };
+  const sanitizer: ImageSanitizePort & {
+    inspect: ReturnType<typeof vi.fn>;
+    reencode: ReturnType<typeof vi.fn>;
+  } = {
     inspect: vi.fn(() => Promise.resolve({ format: 'png', width: 7, height: 5 })),
     reencode: vi.fn(() => Promise.resolve(Buffer.from('clean'))),
   } as never;
@@ -71,14 +119,22 @@ function world(initial: MediaRecord[] = [record()]) {
 
 const sanitizeJob = (w: ReturnType<typeof world>) =>
   new SanitizeJob(w.database as never, w.repository, w.maintenance, w.storage, w.sanitizer);
-const deletion = (w: ReturnType<typeof world>) => new MediaDeletion(w.database as never, w.repository, w.maintenance, w.storage);
+const deletion = (w: ReturnType<typeof world>) =>
+  new MediaDeletion(w.database as never, w.repository, w.maintenance, w.storage);
 
 describe('SanitizeJob', () => {
   it('stores the clean copy, marks the row ready with its facts and the quota delta, then drops quarantine', async () => {
     const w = world();
     w.objects.set(quarantineKey(OWNER, ID), Buffer.from('dirty-original'));
     expect(await sanitizeJob(w).handle({ id: 'j1', data: { mediaId: ID } }, log)).toBe('ready');
-    expect(w.rows.get(ID)).toMatchObject({ state: 'ready', storageKey: uploadKey(OWNER, ID), bytes: 5, width: 7, height: 5, contentType: 'image/png' });
+    expect(w.rows.get(ID)).toMatchObject({
+      state: 'ready',
+      storageKey: uploadKey(OWNER, ID),
+      bytes: 5,
+      width: 7,
+      height: 5,
+      contentType: 'image/png',
+    });
     expect(w.usage.bytes).toBe(1000 + 5 - 100);
     expect(w.objects.has(quarantineKey(OWNER, ID))).toBe(false);
     expect(w.objects.get(uploadKey(OWNER, ID))?.toString()).toBe('clean');
@@ -89,7 +145,11 @@ describe('SanitizeJob', () => {
     w.objects.set(quarantineKey(OWNER, ID), Buffer.from('x'));
     w.sanitizer.inspect.mockRejectedValue(new ImageRejected('pixel_cap_exceeded'));
     expect(await sanitizeJob(w).run(ID, false, log)).toBe('rejected');
-    expect(w.rows.get(ID)).toMatchObject({ state: 'rejected', rejectReason: 'pixel_cap_exceeded', bytes: 0 });
+    expect(w.rows.get(ID)).toMatchObject({
+      state: 'rejected',
+      rejectReason: 'pixel_cap_exceeded',
+      bytes: 0,
+    });
     expect(w.usage.bytes).toBe(900);
     expect(w.objects.size).toBe(0);
   });
@@ -98,7 +158,9 @@ describe('SanitizeJob', () => {
     const w = world();
     w.objects.set(quarantineKey(OWNER, ID), Buffer.from('x'));
     w.sanitizer.reencode.mockRejectedValue(new Error('timeout'));
-    await expect(sanitizeJob(w).handle({ id: 'j1', data: { mediaId: ID } }, log)).rejects.toThrow('timeout');
+    await expect(sanitizeJob(w).handle({ id: 'j1', data: { mediaId: ID } }, log)).rejects.toThrow(
+      'timeout',
+    );
     expect(w.rows.get(ID)?.state).toBe('processing');
     w.maintenance.jobAttempts.mockResolvedValue({ retryCount: 3, retryLimit: 3 });
     expect(await sanitizeJob(w).handle({ id: 'j1', data: { mediaId: ID } }, log)).toBe('rejected');
@@ -110,13 +172,17 @@ describe('SanitizeJob', () => {
     w.objects.set(quarantineKey(OWNER, ID), Buffer.from('left'));
     expect(await sanitizeJob(w).run(ID, false, log)).toBe('skipped');
     expect(w.objects.has(quarantineKey(OWNER, ID))).toBe(false);
-    expect(await sanitizeJob(w).run('0197a1b2-0000-7000-8000-0000000000ff', false, log)).toBe('skipped');
+    expect(await sanitizeJob(w).run('0197a1b2-0000-7000-8000-0000000000ff', false, log)).toBe(
+      'skipped',
+    );
     w.rows.set(ID, record({ state: 'rejected', rejectReason: 'decode_failed', bytes: 0 }));
     expect(await sanitizeJob(w).run(ID, false, log)).toBe('skipped');
   });
 
   it('a job without a mediaId is a bug and fails', async () => {
-    await expect(sanitizeJob(world()).handle({ id: 'j', data: {} }, log)).rejects.toThrow(TypeError);
+    await expect(sanitizeJob(world()).handle({ id: 'j', data: {} }, log)).rejects.toThrow(
+      TypeError,
+    );
   });
 
   it('reuses a clean copy an earlier attempt stored (conditional put found the key taken)', async () => {
@@ -202,19 +268,41 @@ describe('MediaDeletion and UnattachedSweep', () => {
 
   it('the sweep removes only unattached uploads past the TTL, re-checks under the lock, and counts failures', async () => {
     const now = new Date('2026-01-03T00:00:00Z');
-    const old = record({ id: '0197a1b2-0000-7000-8000-0000000000a1', createdAt: new Date('2026-01-01T00:00:00Z') });
-    const w = world([old, record({ id: '0197a1b2-0000-7000-8000-0000000000a2', createdAt: new Date('2026-01-02T23:00:00Z') })]);
-    const sweep = new UnattachedSweep(w.database as never, w.maintenance, deletion(w), { unattachedTtlHours: 24 });
+    const old = record({
+      id: '0197a1b2-0000-7000-8000-0000000000a1',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    });
+    const w = world([
+      old,
+      record({
+        id: '0197a1b2-0000-7000-8000-0000000000a2',
+        createdAt: new Date('2026-01-02T23:00:00Z'),
+      }),
+    ]);
+    const sweep = new UnattachedSweep(w.database as never, w.maintenance, deletion(w), {
+      unattachedTtlHours: 24,
+    });
     expect(await sweep.run(now)).toEqual({ deleted: 1, failed: 0 });
     expect([...w.rows.keys()]).toEqual(['0197a1b2-0000-7000-8000-0000000000a2']);
     // attached between the list and the lock: kept
     const racy = world([old]);
     const lock = racy.maintenance.lockRow.bind(racy.maintenance);
-    racy.maintenance.lockRow = async (t, id) => { const r = await lock(t, id); return r === null ? r : { ...r, attachedAt: now }; };
-    expect(await new UnattachedSweep(racy.database as never, racy.maintenance, deletion(racy), { unattachedTtlHours: 24 }).run(now)).toEqual({ deleted: 0, failed: 0 });
+    racy.maintenance.lockRow = async (t, id) => {
+      const r = await lock(t, id);
+      return r === null ? r : { ...r, attachedAt: now };
+    };
+    expect(
+      await new UnattachedSweep(racy.database as never, racy.maintenance, deletion(racy), {
+        unattachedTtlHours: 24,
+      }).run(now),
+    ).toEqual({ deleted: 0, failed: 0 });
     const failing = world([old]);
     failing.storage.delete.mockRejectedValue(new Error('down'));
-    expect(await new UnattachedSweep(failing.database as never, failing.maintenance, deletion(failing), { unattachedTtlHours: 24 }).run(now)).toEqual({ deleted: 0, failed: 1 });
+    expect(
+      await new UnattachedSweep(failing.database as never, failing.maintenance, deletion(failing), {
+        unattachedTtlHours: 24,
+      }).run(now),
+    ).toEqual({ deleted: 0, failed: 1 });
   });
 });
 
@@ -222,18 +310,29 @@ describe('worker wiring', () => {
   it('maps the two queues to the two jobs; a sweep with failures fails the job', async () => {
     const sanitize = { handle: vi.fn(() => Promise.resolve('ready')) };
     const sweep = { run: vi.fn(() => Promise.resolve({ deleted: 2, failed: 0 })) };
-    const handlers = mediaJobHandlers({ sanitize: () => sanitize as never, sweep: () => sweep as never });
+    const handlers = mediaJobHandlers({
+      sanitize: () => sanitize as never,
+      sweep: () => sweep as never,
+    });
     expect(Object.keys(handlers).sort()).toEqual(['media.sanitize', 'media.unattached-sweep']);
     await handlers['media.sanitize']!({ id: 'j', data: { mediaId: ID } }, log);
     expect(sanitize.handle).toHaveBeenCalled();
     await handlers['media.unattached-sweep']!({ id: 'j', data: {} }, log);
     sweep.run.mockResolvedValue({ deleted: 0, failed: 2 });
-    await expect(handlers['media.unattached-sweep']!({ id: 'j', data: {} }, log)).rejects.toThrow('2 uploads');
+    await expect(handlers['media.unattached-sweep']!({ id: 'j', data: {} }, log)).rejects.toThrow(
+      '2 uploads',
+    );
   });
 
   it('reads the worker settings with defaults and refuses a value out of range', () => {
-    expect(workerMediaConfigFrom({})).toEqual({ maxDimension: 8000, maxPixels: 40_000_000, unattachedTtlHours: 24 });
-    expect(() => workerMediaConfigFrom({ MEDIA_UNATTACHED_TTL_HOURS: '0' })).toThrow('MEDIA_UNATTACHED_TTL_HOURS');
+    expect(workerMediaConfigFrom({})).toEqual({
+      maxDimension: 8000,
+      maxPixels: 40_000_000,
+      unattachedTtlHours: 24,
+    });
+    expect(() => workerMediaConfigFrom({ MEDIA_UNATTACHED_TTL_HOURS: '0' })).toThrow(
+      'MEDIA_UNATTACHED_TTL_HOURS',
+    );
     expect(() => workerMediaConfigFrom({ MEDIA_MAX_PIXELS: 'many' })).toThrow('MEDIA_MAX_PIXELS');
   });
 });

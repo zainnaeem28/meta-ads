@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -8,7 +9,11 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApiApp } from '../../../bootstrap/api.module.js';
-import { REAL_MIGRATIONS, adminUrl, createTestDatabase } from '../../../platform/db/test-database.js';
+import {
+  REAL_MIGRATIONS,
+  adminUrl,
+  createTestDatabase,
+} from '../../../platform/db/test-database.js';
 import type { TestDatabase } from '../../../platform/db/test-database.js';
 import { EGRESS, EgressError } from '../../../platform/egress/index.js';
 import type { Egress } from '../../../platform/egress/index.js';
@@ -32,7 +37,17 @@ import { generateKek, kekEnv } from '../infrastructure/test-support.js';
 // TC-KEY-01..06, 15..17, 19..21; TC-KEY-13 (canary).
 
 const ORIGIN = 'http://localhost:3000';
-const contractsDir = join(import.meta.dirname, '..', '..', '..', '..', '..', '..', 'packages', 'contracts');
+const contractsDir = join(
+  import.meta.dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'packages',
+  'contracts',
+);
 const PEPPER = randomBytes(32).toString('base64');
 const OPENAI_KEY = ['sk', 'canary-OPENAI-0123456789abcdefghij'].join('-'); // assembled so no scanner reads it as a real key
 const OPENAI_KEY_2 = ['sk', 'canary-OPENAI-second-9876543210zz'].join('-');
@@ -60,8 +75,10 @@ const probeCalls: { provider: string; url: string; authorization: string | undef
 type Validate = ((value: unknown) => boolean) & { errors?: unknown };
 function contractValidator(schema: string): Validate {
   const requireFromContracts = createRequire(join(contractsDir, 'package.json'));
-  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any }).default; // eslint-disable-line @typescript-eslint/no-explicit-any
-  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void }).default;
+  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any })
+    .default;
+  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void })
+    .default;
   const yaml = requireFromContracts('js-yaml') as { load(text: string): { components: unknown } };
   const spec = yaml.load(readFileSync(join(contractsDir, 'openapi.yaml'), 'utf8'));
   const ajv = new Ajv2020({ strict: false, allErrors: true });
@@ -70,8 +87,14 @@ function contractValidator(schema: string): Validate {
   return ajv.compile({ $ref: `spec#/components/schemas/${schema}` }) as Validate;
 }
 
-async function applyStatements(file: string, part: 'tables' | 'grants', only?: RegExp): Promise<void> {
-  const [tables = '', grants = ''] = readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants');
+async function applyStatements(
+  file: string,
+  part: 'tables' | 'grants',
+  only?: RegExp,
+): Promise<void> {
+  const [tables = '', grants = ''] = readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split(
+    '-- Grants',
+  );
   const body = part === 'tables' ? tables : grants.slice(grants.indexOf('\n'));
   for (const statement of body.split('--> statement-breakpoint')) {
     const text = statement
@@ -93,12 +116,20 @@ beforeAll(async () => {
   await admin.connect();
   await admin.query(`CREATE ROLE "${roleName}" LOGIN NOSUPERUSER PASSWORD '${rolePassword}'`);
   await admin.end();
-  await applyStatements('0001_task-025-platform.sql', 'tables', /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets|idempotency_records_expiry_idx)/);
+  await applyStatements(
+    '0001_task-025-platform.sql',
+    'tables',
+    /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets|idempotency_records_expiry_idx)/,
+  );
   await applyStatements('0010_task-032-audit.sql', 'tables');
   await applyStatements('0020_task-033-identity.sql', 'tables');
   await applyStatements('0030_task-039-provider-keys.sql', 'tables');
   await pool.query(`GRANT USAGE ON SCHEMA public TO "${roleName}"`);
-  await applyStatements('0030_task-039-provider-keys.sql', 'grants', new RegExp(`TO "?${roleName}`));
+  await applyStatements(
+    '0030_task-039-provider-keys.sql',
+    'grants',
+    new RegExp(`TO "?${roleName}`),
+  );
   await installJobs(testDb.url);
   Object.assign(process.env, {
     ...kekEnv({ 1: kek }, 1, false),
@@ -127,20 +158,27 @@ beforeAll(async () => {
       }),
     }),
   ));
-  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [...m.providers.values()]);
-  const found = providers.map((p) => p.instance as Partial<Local> | undefined).find((i) => typeof i?.issueToken === 'function');
+  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [
+    ...m.providers.values(),
+  ]);
+  const found = providers
+    .map((p) => p.instance as Partial<Local> | undefined)
+    .find((i) => typeof i?.issueToken === 'function');
   if (found === undefined) throw new Error('local identity provider not found');
   local = found as Local;
   // The provider is a stub behind the real egress client: the probe adapter, its URL and its headers are the real ones.
   const egress = app.get<Pick<Egress, 'fetch'>>(EGRESS, { strict: false });
   vi.spyOn(egress, 'fetch').mockImplementation((provider, req) => {
     probeCalls.push({ provider, url: req.url, authorization: req.headers?.['authorization'] });
-    if (providerAnswer === 'timeout') return Promise.reject(new EgressError('timeout', 'after_send', 'the time limit passed'));
+    if (providerAnswer === 'timeout')
+      return Promise.reject(new EgressError('timeout', 'after_send', 'the time limit passed'));
     return Promise.resolve({
       status: providerAnswer,
       headers: {},
       // A provider error body that echoes the key (TC-KEY-06).
-      body: Buffer.from(JSON.stringify({ error: `bad key ${req.headers?.['authorization'] ?? ''}` })),
+      body: Buffer.from(
+        JSON.stringify({ error: `bad key ${req.headers?.['authorization'] ?? ''}` }),
+      ),
     });
   });
 }, 240_000);
@@ -168,8 +206,18 @@ afterAll(async () => {
 });
 
 const fastify = () => app.getHttpAdapter().getInstance();
-interface Body { success: boolean; data?: any; error?: { code: string; details?: any[] }; metaData: any } // eslint-disable-line @typescript-eslint/no-explicit-any
-async function call(method: 'GET' | 'PUT' | 'DELETE', url: string, tok?: string, payload?: unknown) {
+interface Body {
+  success: boolean;
+  data?: any;
+  error?: { code: string; details?: any[] };
+  metaData: any;
+}
+async function call(
+  method: 'GET' | 'PUT' | 'DELETE',
+  url: string,
+  tok?: string,
+  payload?: unknown,
+) {
   const headers: Record<string, string> = {};
   if (tok !== undefined) headers['authorization'] = `Bearer ${tok}`;
   const res = await fastify().inject({
@@ -192,26 +240,40 @@ async function account() {
   const sub = `user_t40_${String(++seq)}`;
   const email = `k${String(seq)}@example.test`;
   local.addUser(sub, email, true);
-  await pool.query(`insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`, [email]);
+  await pool.query(
+    `insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`,
+    [email],
+  );
   const tok = (f: [number, number] = [1, 1]) => local.issueToken({ sub, azp: ORIGIN, fva: f });
   expect((await call('GET', '/me', tok())).status).toBe(200);
-  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0].id as string;
+  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0]
+    .id as string;
   return { id, token: tok(), stale: tok([30, 30]) };
 }
 
-const put = (token: string, provider: string, apiKey: unknown) => call('PUT', `/me/provider-keys/${provider}`, token, { apiKey });
+const put = (token: string, provider: string, apiKey: unknown) =>
+  call('PUT', `/me/provider-keys/${provider}`, token, { apiKey });
 const row = async (owner: string, provider: string) =>
-  (await pool.query(`select * from provider_keys where owner_id = $1 and provider = $2`, [owner, provider])).rows[0] as
-    | Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
-    | undefined;
+  (
+    await pool.query(`select * from provider_keys where owner_id = $1 and provider = $2`, [
+      owner,
+      provider,
+    ])
+  ).rows[0] as Record<string, any> | undefined;
 const kinds = async (owner: string, provider?: string) =>
-  (await pool.query(`select kind from key_events where owner_id = $1 and ($2::text is null or provider = $2) order by at, id`, [owner, provider ?? null])).rows.map(
-    (r: { kind: string }) => r.kind,
-  );
+  (
+    await pool.query(
+      `select kind from key_events where owner_id = $1 and ($2::text is null or provider = $2) order by at, id`,
+      [owner, provider ?? null],
+    )
+  ).rows.map((r: { kind: string }) => r.kind);
 const audits = async (owner: string) =>
-  (await pool.query(`select action from audit_events where actor_id = $1 and action like 'key.%' order by id`, [owner])).rows.map(
-    (r: { action: string }) => r.action,
-  );
+  (
+    await pool.query(
+      `select action from audit_events where actor_id = $1 and action like 'key.%' order by id`,
+      [owner],
+    )
+  ).rows.map((r: { action: string }) => r.action);
 const service = () => app.get(ProviderKeysService, { strict: false });
 
 describe('API-010 to API-013 through the api composition root', () => {
@@ -234,7 +296,12 @@ describe('API-010 to API-013 through the api composition root', () => {
     const before = await call('GET', '/me/provider-keys', a.token);
     expect(before.status).toBe(200);
     expect(isList(before.body)).toBe(true);
-    expect(before.body.data.map((k: { provider: string; configured: boolean }) => [k.provider, k.configured])).toEqual([
+    expect(
+      before.body.data.map((k: { provider: string; configured: boolean }) => [
+        k.provider,
+        k.configured,
+      ]),
+    ).toEqual([
       ['openai', false],
       ['wavespeed', false],
     ]);
@@ -254,16 +321,30 @@ describe('API-010 to API-013 through the api composition root', () => {
     });
     expect(stored.body.data.fingerprint).toMatch(/^[0-9a-f]{12}$/);
     expect(probeCalls).toEqual([
-      { provider: 'openai', url: 'https://api.openai.com/v1/models', authorization: `Bearer ${OPENAI_KEY}` },
+      {
+        provider: 'openai',
+        url: 'https://api.openai.com/v1/models',
+        authorization: `Bearer ${OPENAI_KEY}`,
+      },
     ]);
     const after = await call('GET', '/me/provider-keys', a.token);
     expect(isList(after.body)).toBe(true);
-    expect(after.body.data[0]).toMatchObject({ provider: 'openai', status: 'active', last4: OPENAI_KEY.slice(-4) });
-    expect(after.body.data[1]).toMatchObject({ provider: 'wavespeed', configured: false, status: null, fingerprint: null });
+    expect(after.body.data[0]).toMatchObject({
+      provider: 'openai',
+      status: 'active',
+      last4: OPENAI_KEY.slice(-4),
+    });
+    expect(after.body.data[1]).toMatchObject({
+      provider: 'wavespeed',
+      configured: false,
+      status: null,
+      fingerprint: null,
+    });
     expect(await kinds(a.id)).toEqual(['test_passed', 'added']);
     expect(await audits(a.id)).toEqual(['key.added']);
     // Sealed for real: the stored bytes are not the key, and only the worker-side unsealer opens them, bound to the row.
-    const stored1 = (await pool.query(`select * from provider_keys where owner_id = $1`, [a.id])).rows[0];
+    const stored1 = (await pool.query(`select * from provider_keys where owner_id = $1`, [a.id]))
+      .rows[0];
     expect(stored1.ciphertext.toString('latin1')).not.toContain(OPENAI_KEY);
     expect(stored1.fingerprint).toHaveLength(64);
     const sealed: Sealed = {
@@ -312,11 +393,20 @@ describe('API-010 to API-013 through the api composition root', () => {
     ];
     for (const [provider, key, code] of cases) {
       const r = await put(a.token, provider, key);
-      expect([r.status, r.body.error?.code, r.body.error?.details?.[0]?.code]).toEqual([422, 'key_invalid', code]);
+      expect([r.status, r.body.error?.code, r.body.error?.details?.[0]?.code]).toEqual([
+        422,
+        'key_invalid',
+        code,
+      ]);
       expect(r.raw).not.toContain(key.trim() === '' ? 'never' : key.trim());
     }
     expect(probeCalls.length).toBe(calls); // refused before any provider call
-    for (const bad of [{}, { apiKey: 5 }, { apiKey: 'x'.repeat(513) }, { apiKey: OPENAI_KEY, extra: 1 }]) {
+    for (const bad of [
+      {},
+      { apiKey: 5 },
+      { apiKey: 'x'.repeat(513) },
+      { apiKey: OPENAI_KEY, extra: 1 },
+    ]) {
       const r = await call('PUT', '/me/provider-keys/openai', a.token, bad);
       expect([r.status, r.body.error?.code]).toEqual([400, 'validation_failed']);
       expect(r.raw).not.toContain(OPENAI_KEY);
@@ -336,7 +426,12 @@ describe('API-010 to API-013 through the api composition root', () => {
       providerAnswer = answer;
       const r = await put(a.token, provider, key);
       expect(r.status).toBe(200);
-      expect(r.body.data).toMatchObject({ provider, status: 'untested', probe: 'unknown', lastValidatedAt: null });
+      expect(r.body.data).toMatchObject({
+        provider,
+        status: 'untested',
+        probe: 'unknown',
+        lastValidatedAt: null,
+      });
       expect((await row(a.id, provider))?.status).toBe('untested');
     }
     const b = await account();
@@ -346,13 +441,19 @@ describe('API-010 to API-013 through the api composition root', () => {
       expect(r.body.data).toMatchObject({ status: 'untested', probe: 'unknown' });
     }
     expect(await kinds(a.id, 'openai')).toEqual(['stored_untested', 'added']);
-    expect(await kinds(b.id, 'openai')).toEqual(['stored_untested', 'added', 'stored_untested', 'replaced']);
+    expect(await kinds(b.id, 'openai')).toEqual([
+      'stored_untested',
+      'added',
+      'stored_untested',
+      'replaced',
+    ]);
   });
 
   it('allows five attempts in ten minutes, refuses the sixth with 429 and one event, and allows again after the window (TC-KEY-04)', async () => {
     const a = await account();
     providerAnswer = 401;
-    for (let i = 0; i < 5; i += 1) expect((await put(a.token, 'openai', OPENAI_KEY)).status).toBe(422);
+    for (let i = 0; i < 5; i += 1)
+      expect((await put(a.token, 'openai', OPENAI_KEY)).status).toBe(422);
     const sixth = await put(a.token, 'openai', OPENAI_KEY);
     expect([sixth.status, sixth.body.error?.code]).toEqual([429, 'rate_limited']);
     expect(Number(sixth.headers['retry-after'])).toBeGreaterThanOrEqual(1);
@@ -362,7 +463,10 @@ describe('API-010 to API-013 through the api composition root', () => {
     expect((await put(a.token, 'wavespeed', WAVE_KEY)).status).toBe(429);
     expect((await put((await account()).token, 'openai', OPENAI_KEY)).status).toBe(422);
     // The window passes: the account's counters move ten minutes back.
-    await pool.query(`update rate_limit_buckets set window_start = window_start - interval '11 minutes' where scope = 'key-entry' and subject = $1`, [a.id]);
+    await pool.query(
+      `update rate_limit_buckets set window_start = window_start - interval '11 minutes' where scope = 'key-entry' and subject = $1`,
+      [a.id],
+    );
     providerAnswer = 200;
     expect((await put(a.token, 'openai', OPENAI_KEY)).status).toBe(200);
   });
@@ -380,7 +484,11 @@ describe('API-010 to API-013 through the api composition root', () => {
     const replaced = await put(a.token, 'openai', OPENAI_KEY_2);
     count.mockRestore();
     expect(replaced.status).toBe(200);
-    expect(replaced.body.data).toMatchObject({ version: 2, status: 'active', last4: OPENAI_KEY_2.slice(-4) });
+    expect(replaced.body.data).toMatchObject({
+      version: 2,
+      status: 'active',
+      last4: OPENAI_KEY_2.slice(-4),
+    });
     expect(replaced.body.data.fingerprint).not.toBe(warned.body.data[0].fingerprint);
     const now = await row(a.id, 'openai');
     expect(now?.id).toBe(old?.id);
@@ -389,7 +497,17 @@ describe('API-010 to API-013 through the api composition root', () => {
     expect(now?.wrapped_dek.equals(old?.wrapped_dek)).toBe(false);
     const aad: KeyAad = { userId: a.id, provider: 'openai', keyId: now?.id, version: 2 };
     expect(
-      unsealer.unseal({ ciphertext: now?.ciphertext, nonce: now?.nonce, wrappedDek: now?.wrapped_dek, kekVersion: now?.kek_version }, aad).toString('utf8'),
+      unsealer
+        .unseal(
+          {
+            ciphertext: now?.ciphertext,
+            nonce: now?.nonce,
+            wrappedDek: now?.wrapped_dek,
+            kekVersion: now?.kek_version,
+          },
+          aad,
+        )
+        .toString('utf8'),
     ).toBe(OPENAI_KEY_2);
     expect(await kinds(a.id)).toEqual(['test_passed', 'added', 'test_passed', 'replaced']);
     expect(await audits(a.id)).toEqual(['key.added', 'key.replaced']);
@@ -398,27 +516,43 @@ describe('API-010 to API-013 through the api composition root', () => {
   it('serialises two simultaneous first stores: both succeed, one row, version 2 (conditional write on version)', async () => {
     const a = await account();
     providerAnswer = 200;
-    const [x, y] = await Promise.all([put(a.token, 'openai', OPENAI_KEY), put(a.token, 'openai', OPENAI_KEY_2)]);
+    const [x, y] = await Promise.all([
+      put(a.token, 'openai', OPENAI_KEY),
+      put(a.token, 'openai', OPENAI_KEY_2),
+    ]);
     expect([x.status, y.status]).toEqual([200, 200]);
-    const rows = (await pool.query(`select version from provider_keys where owner_id = $1`, [a.id])).rows;
+    const rows = (await pool.query(`select version from provider_keys where owner_id = $1`, [a.id]))
+      .rows;
     expect(rows).toEqual([{ version: 2 }]);
-    expect((await kinds(a.id)).filter((k) => k === 'added' || k === 'replaced').sort()).toEqual(['added', 'replaced']);
+    expect((await kinds(a.id)).filter((k) => k === 'added' || k === 'replaced').sort()).toEqual([
+      'added',
+      'replaced',
+    ]);
   });
 
-  it('hard-deletes a key with 204, then 404; one account cannot see or delete another account\'s key (TC-KEY-19, TC-ZT)', async () => {
+  it("hard-deletes a key with 204, then 404; one account cannot see or delete another account's key (TC-KEY-19, TC-ZT)", async () => {
     const a = await account();
     const b = await account();
     providerAnswer = 200;
     expect((await put(a.token, 'wavespeed', WAVE_KEY)).status).toBe(200);
     const foreign = await call('DELETE', '/me/provider-keys/wavespeed', b.token);
     expect([foreign.status, foreign.body.error?.code]).toEqual([404, 'not_found']);
-    expect((await call('GET', '/me/provider-keys', b.token)).body.data.every((k: { configured: boolean }) => !k.configured)).toBe(true);
+    expect(
+      (await call('GET', '/me/provider-keys', b.token)).body.data.every(
+        (k: { configured: boolean }) => !k.configured,
+      ),
+    ).toBe(true);
     expect(await row(a.id, 'wavespeed')).toBeDefined();
     const gone = await call('DELETE', '/me/provider-keys/wavespeed', a.token);
     expect(gone.status).toBe(204);
     expect(gone.raw).toBe('');
     expect(await row(a.id, 'wavespeed')).toBeUndefined();
-    expect(Number((await pool.query(`select count(*) n from provider_keys where owner_id = $1`, [a.id])).rows[0].n)).toBe(0);
+    expect(
+      Number(
+        (await pool.query(`select count(*) n from provider_keys where owner_id = $1`, [a.id]))
+          .rows[0].n,
+      ),
+    ).toBe(0);
     const again = await call('DELETE', '/me/provider-keys/wavespeed', a.token);
     expect([again.status, again.body.error?.code]).toEqual([404, 'not_found']);
     expect(await kinds(a.id, 'wavespeed')).toEqual(['test_passed', 'added', 'deleted']);
@@ -434,14 +568,20 @@ describe('API-010 to API-013 through the api composition root', () => {
     await put(a.token, 'openai', OPENAI_KEY_2);
     await call('DELETE', '/me/provider-keys/wavespeed', a.token);
     const expected = (
-      await pool.query(`select id from key_events where owner_id = $1 order by at desc, id desc`, [a.id])
+      await pool.query(`select id from key_events where owner_id = $1 order by at desc, id desc`, [
+        a.id,
+      ])
     ).rows.map((r: { id: string }) => r.id);
     expect(expected).toHaveLength(7);
     const isPage = contractValidator('KeyEventPage');
     const seen: string[] = [];
     let cursor: string | null = null;
     do {
-      const r: Awaited<ReturnType<typeof call>> = await call('GET', `/me/key-events?limit=3${cursor === null ? '' : `&cursor=${cursor}`}`, a.token);
+      const r: Awaited<ReturnType<typeof call>> = await call(
+        'GET',
+        `/me/key-events?limit=3${cursor === null ? '' : `&cursor=${cursor}`}`,
+        a.token,
+      );
       expect(r.status).toBe(200);
       expect(isPage(r.body)).toBe(true);
       seen.push(...r.body.data.map((e: { id: string }) => e.id));
@@ -449,17 +589,29 @@ describe('API-010 to API-013 through the api composition root', () => {
     } while (cursor !== null);
     expect(seen).toEqual(expected);
     const filtered = await call('GET', '/me/key-events?provider=wavespeed', a.token);
-    expect(filtered.body.data.map((e: { kind: string }) => e.kind)).toEqual(['deleted', 'added', 'test_passed']);
+    expect(filtered.body.data.map((e: { kind: string }) => e.kind)).toEqual([
+      'deleted',
+      'added',
+      'test_passed',
+    ]);
     const page = await call('GET', '/me/key-events?limit=2', a.token);
     const next = page.body.metaData.pagination.nextCursor as string;
-    for (const url of [`/me/key-events?provider=openai&cursor=${next}`, `/me/key-events?cursor=${next}x`, '/me/key-events?cursor=garbage']) {
+    for (const url of [
+      `/me/key-events?provider=openai&cursor=${next}`,
+      `/me/key-events?cursor=${next}x`,
+      '/me/key-events?cursor=garbage',
+    ]) {
       const r = await call('GET', url, a.token);
       expect([r.status, r.body.error?.code]).toEqual([400, 'validation_failed']);
     }
     // Another account's cursor is refused too.
     const b = await account();
     expect((await call('GET', `/me/key-events?cursor=${next}`, b.token)).status).toBe(400);
-    for (const url of ['/me/key-events?limit=0', '/me/key-events?limit=51', '/me/key-events?provider=x']) {
+    for (const url of [
+      '/me/key-events?limit=0',
+      '/me/key-events?limit=51',
+      '/me/key-events?provider=x',
+    ]) {
       expect((await call('GET', url, a.token)).status).toBe(400);
     }
     expect((await call('GET', '/me/key-events', b.token)).body.data).toEqual([]);
@@ -477,11 +629,17 @@ describe('API-010 to API-013 through the api composition root', () => {
       (await call('GET', '/me/key-events', a.token)).raw,
       (await call('GET', '/me/key-events?limit=1', a.token)).raw,
     ];
-    const tables = (await pool.query(`select table_name from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'`)).rows.map(
-      (r: { table_name: string }) => r.table_name,
-    );
+    const tables = (
+      await pool.query(
+        `select table_name from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'`,
+      )
+    ).rows.map((r: { table_name: string }) => r.table_name);
     for (const table of tables) {
-      const dump = (await pool.query(`select coalesce(string_agg(t::text, E'\\n'), '') as text from "${table}" t`)).rows[0].text as string;
+      const dump = (
+        await pool.query(
+          `select coalesce(string_agg(t::text, E'\\n'), '') as text from "${table}" t`,
+        )
+      ).rows[0].text as string;
       bodies.push(dump);
     }
     const logs = logLines.join('');
@@ -497,8 +655,10 @@ describe('auto-disable, operator disable and account erasure on the service', ()
   const makeKey = async (provider: 'openai' | 'wavespeed' = 'openai', status = 200) => {
     const a = await account();
     providerAnswer = status;
-    expect((await put(a.token, provider, provider === 'openai' ? OPENAI_KEY : WAVE_KEY)).status).toBe(200);
-    const stored = (await row(a.id, provider)) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect(
+      (await put(a.token, provider, provider === 'openai' ? OPENAI_KEY : WAVE_KEY)).status,
+    ).toBe(200);
+    const stored = (await row(a.id, provider)) as Record<string, any>;
     return { ...a, keyId: stored['id'] as string };
   };
 
@@ -518,7 +678,14 @@ describe('auto-disable, operator disable and account erasure on the service', ()
     expect((await kinds(a.id)).filter((k) => k === 'auth_failed')).toHaveLength(9);
     expect((await kinds(a.id)).filter((k) => k === 'disabled')).toHaveLength(1);
     expect(await audits(a.id)).toEqual(['key.added']);
-    expect((await pool.query(`select count(*) n from audit_events where action = 'key.disabled' and object_id = $1`, [a.keyId])).rows[0].n).toBe('1');
+    expect(
+      (
+        await pool.query(
+          `select count(*) n from audit_events where action = 'key.disabled' and object_id = $1`,
+          [a.keyId],
+        )
+      ).rows[0].n,
+    ).toBe('1');
     // Later reports on a disabled key change nothing; a failure of an older version counts for nothing.
     await service().recordAuthResult(a.keyId, 1, false);
     await service().recordAuthResult(a.keyId, 1, true);
@@ -555,16 +722,29 @@ describe('auto-disable, operator disable and account erasure on the service', ()
     expect((await row(a.id, 'openai'))?.status).toBe('disabled');
     expect((await row(b.id, 'wavespeed'))?.status).toBe('disabled');
     expect(await kinds(a.id)).toContain('disabled_by_operator');
-    expect((await pool.query(`select count(*) n from audit_events where action = 'key.disabled_all' and actor_type = 'operator'`)).rows[0].n).toBe('1');
-    expect((await pool.query(`select count(*) n from admin_alerts where kind = 'keys_disabled_all'`)).rows[0].n).toBe('1');
+    expect(
+      (
+        await pool.query(
+          `select count(*) n from audit_events where action = 'key.disabled_all' and actor_type = 'operator'`,
+        )
+      ).rows[0].n,
+    ).toBe('1');
+    expect(
+      (await pool.query(`select count(*) n from admin_alerts where kind = 'keys_disabled_all'`))
+        .rows[0].n,
+    ).toBe('1');
     expect(await service().disableAll()).toBe(0);
   });
 
-  it('deletes every key of an owner inside the caller\'s transaction and leaves one event each (account erasure)', async () => {
+  it("deletes every key of an owner inside the caller's transaction and leaves one event each (account erasure)", async () => {
     const a = await makeKey('openai');
     providerAnswer = 200;
     await put(a.token, 'wavespeed', WAVE_KEY);
-    const db = (app.get(ProviderKeysService, { strict: false }) as unknown as { database: { uow: { run<T>(fn: (tx: Executor) => Promise<T>): Promise<T> } } }).database;
+    const db = (
+      app.get(ProviderKeysService, { strict: false }) as unknown as {
+        database: { uow: { run<T>(fn: (tx: Executor) => Promise<T>): Promise<T> } };
+      }
+    ).database;
     expect(await db.uow.run((tx) => service().deleteAllForOwner(tx, a.id))).toBe(2);
     expect(await row(a.id, 'openai')).toBeUndefined();
     expect((await kinds(a.id)).filter((k) => k === 'deleted')).toHaveLength(2);
@@ -584,7 +764,12 @@ describe('the repositories under the app_api column grants (ADR-009)', () => {
       const events = new DrizzleKeyEventRepository();
       const owner = await account();
       const id = '0197a1b2-0000-7000-8000-0000000000b1';
-      const sealed: Sealed = { ciphertext: Buffer.alloc(40, 1), nonce: Buffer.alloc(12, 2), wrappedDek: Buffer.alloc(384, 3), kekVersion: 1 };
+      const sealed: Sealed = {
+        ciphertext: Buffer.alloc(40, 1),
+        nonce: Buffer.alloc(12, 2),
+        wrappedDek: Buffer.alloc(384, 3),
+        kekVersion: 1,
+      };
       const write = {
         status: 'untested' as const,
         version: 1,
@@ -596,21 +781,32 @@ describe('the repositories under the app_api column grants (ADR-009)', () => {
       };
       expect(await keys.insert(db, id, owner.id, 'openai', write)).toBe(true);
       expect(await keys.insert(db, id, owner.id, 'openai', write)).toBe(false);
-      expect(await keys.find(db, owner.id, 'openai')).toMatchObject({ id, status: 'untested', version: 1, last4: 'abcd' });
+      expect(await keys.find(db, owner.id, 'openai')).toMatchObject({
+        id,
+        status: 'untested',
+        version: 1,
+        last4: 'abcd',
+      });
       expect((await keys.list(db, owner.id)).map((k) => k.provider)).toEqual(['openai']);
       expect(await keys.replace(db, id, 7, { ...write, version: 8 })).toBe(false);
-      expect(await keys.replace(db, id, 1, { ...write, version: 2, status: 'untested' })).toBe(true);
+      expect(await keys.replace(db, id, 1, { ...write, version: 2, status: 'untested' })).toBe(
+        true,
+      );
       expect((await keys.recordSuccess(db, id, 2))?.activated).toBe(true);
       expect((await keys.recordSuccess(db, id, 2))?.activated).toBe(false);
       expect(await keys.recordSuccess(db, id, 1)).toBeNull();
       expect((await keys.recordFailure(db, id, 2, 2))?.status).toBe('active');
       expect((await keys.recordFailure(db, id, 2, 2))?.status).toBe('disabled');
       expect(await keys.recordFailure(db, id, 2, 2)).toBeNull();
-      expect(await keys.disableAll(db)).toEqual(expect.not.arrayContaining([expect.objectContaining({ id })]));
+      expect(await keys.disableAll(db)).toEqual(
+        expect.not.arrayContaining([expect.objectContaining({ id })]),
+      );
       await events.insert(db, { ownerId: owner.id, keyId: id, provider: 'openai', kind: 'added' });
       expect((await events.list(db, owner.id, { limit: 5 })).map((e) => e.kind)).toEqual(['added']);
       // The grants really do refuse a read of a sealed column, so the repositories above could not have made one.
-      await expect(apiPool.query('select ciphertext from provider_keys')).rejects.toMatchObject({ code: '42501' });
+      await expect(apiPool.query('select ciphertext from provider_keys')).rejects.toMatchObject({
+        code: '42501',
+      });
       expect(await keys.delete(db, owner.id, 'openai')).toBe(id);
       expect(await keys.delete(db, owner.id, 'openai')).toBeNull();
       expect(await keys.deleteAll(db, owner.id)).toEqual([]);

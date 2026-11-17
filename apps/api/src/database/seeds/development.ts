@@ -44,7 +44,8 @@ export const developmentCampaignsStep: SeedStep = {
 
 function jsonMap(env: Env, name: string): Map<number, string> {
   const raw = env[name];
-  if (raw === undefined || raw === '') throw new SeedRefusedError(`${name} is required for the development keys`);
+  if (raw === undefined || raw === '')
+    throw new SeedRefusedError(`${name} is required for the development keys`);
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -75,12 +76,15 @@ export function developmentKeysStep(env: Env = process.env): SeedStep {
       const publicKeys = jsonMap(env, 'KEK_PUBLIC_KEYS');
       const kekVersion = Number(env['KEK_ACTIVE_VERSION']);
       const kekPem = publicKeys.get(kekVersion);
-      if (kekPem === undefined) throw new SeedRefusedError('KEK_ACTIVE_VERSION must name a version in KEK_PUBLIC_KEYS');
+      if (kekPem === undefined)
+        throw new SeedRefusedError('KEK_ACTIVE_VERSION must name a version in KEK_PUBLIC_KEYS');
       const peppers = jsonMap(env, 'KEY_FINGERPRINT_PEPPERS');
       const pepperVersion = Number(env['KEY_FINGERPRINT_PEPPER_ACTIVE']);
       const pepperB64 = peppers.get(pepperVersion);
       if (pepperB64 === undefined)
-        throw new SeedRefusedError('KEY_FINGERPRINT_PEPPER_ACTIVE must name a version in KEY_FINGERPRINT_PEPPERS');
+        throw new SeedRefusedError(
+          'KEY_FINGERPRINT_PEPPER_ACTIVE must name a version in KEY_FINGERPRINT_PEPPERS',
+        );
       const kek = createPublicKey(kekPem);
       const pepper = Buffer.from(pepperB64, 'base64');
       const ownerId = DEV_IDENTITY_USERS[1].id;
@@ -90,7 +94,11 @@ export function developmentKeysStep(env: Env = process.env): SeedStep {
         const nonce = randomBytes(12);
         const cipher = createCipheriv('aes-256-gcm', dek, nonce, { authTagLength: 16 });
         cipher.setAAD(Buffer.from(`${ownerId}|${stub.provider}|${stub.id}|1`, 'utf8'));
-        const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final(), cipher.getAuthTag()]);
+        const ciphertext = Buffer.concat([
+          cipher.update(plaintext),
+          cipher.final(),
+          cipher.getAuthTag(),
+        ]);
         const wrappedDek = publicEncrypt(
           { key: kek, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256' },
           dek,

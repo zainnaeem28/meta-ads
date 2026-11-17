@@ -80,10 +80,25 @@ const segmentsText = (count: FormValues['segmentCount']): string =>
     ? `Each segment is ${String(SEGMENT_SECONDS)} s.`
     : `${count} ${count === '1' ? 'segment' : 'segments'} × ${String(SEGMENT_SECONDS)} s = ${String(Number(count) * SEGMENT_SECONDS)} s total`;
 
-function Heading({ id, children, step, headingRef }: { id: string; children: string; step: number; headingRef: React.Ref<HTMLHeadingElement> }) {
+function Heading({
+  id,
+  children,
+  step,
+  headingRef,
+}: {
+  id: string;
+  children: string;
+  step: number;
+  headingRef: React.Ref<HTMLHeadingElement>;
+}) {
   return (
     <header className="flex flex-col gap-1">
-      <h2 id={id} ref={headingRef} tabIndex={-1} className="text-section font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+      <h2
+        id={id}
+        ref={headingRef}
+        tabIndex={-1}
+        className="text-section font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
         {children}
       </h2>
       <p className="text-ui text-muted-foreground">{COPY.stepOf(step)}</p>
@@ -139,7 +154,11 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [focusKey, setFocusKey] = useState(0);
   const [failures, setFailures] = useState(0);
-  const [startOver, setStartOver] = useState<{ open: boolean; pending: boolean; error: unknown }>({ open: false, pending: false, error: null });
+  const [startOver, setStartOver] = useState<{ open: boolean; pending: boolean; error: unknown }>({
+    open: false,
+    pending: false,
+    error: null,
+  });
   const [rev, setRev] = useState(0);
   const [imageBusy, setImageBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -212,7 +231,11 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
       setStatus({ kind: 'saving' });
       const run = (async () => {
         const res = idRef.current
-          ? await patchDraft(idRef.current, body as DraftPatch, etagRef.current ? { headers: { 'If-Match': etagRef.current } } : {})
+          ? await patchDraft(
+              idRef.current,
+              body as DraftPatch,
+              etagRef.current ? { headers: { 'If-Match': etagRef.current } } : {},
+            )
           : await createDraft(body);
         const draft = draftIn(res);
         if (!idRef.current) {
@@ -239,7 +262,11 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
     [fail],
   );
 
-  const blocked = status.kind === 'conflict' || status.kind === 'submitted' || status.kind === 'gone' || sessionEnded;
+  const blocked =
+    status.kind === 'conflict' ||
+    status.kind === 'submitted' ||
+    status.kind === 'gone' ||
+    sessionEnded;
   useEffect(() => {
     if (rev === 0 || rev === savedRev.current || blocked || advancing) return;
     if (validateStep(stepRef.current, valuesRef.current, imageBusyRef.current).length > 0) return;
@@ -261,7 +288,9 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
   const edit = (patch: Partial<FormValues>, controlId?: string) => {
     setValues((v) => ({ ...v, ...patch }));
     if (controlId && fieldErrors[controlId]) {
-      setFieldErrors((all) => Object.fromEntries(Object.entries(all).filter(([id]) => id !== controlId)));
+      setFieldErrors((all) =>
+        Object.fromEntries(Object.entries(all).filter(([id]) => id !== controlId)),
+      );
       setEntries((list) => list.filter((e) => e.target?.id !== controlId));
     }
     if (status.kind === 'failed' || status.kind === 'saved') setStatus({ kind: 'idle' });
@@ -284,7 +313,13 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
   const next = async () => {
     const problems = validateStep(step, values, imageBusy);
     if (problems.length > 0) {
-      setEntries(problems.map((p, i) => ({ key: `${String(i)}:${p.id}`, message: p.message, target: { id: p.id, label: p.label } })));
+      setEntries(
+        problems.map((p, i) => ({
+          key: `${String(i)}:${p.id}`,
+          message: p.message,
+          target: { id: p.id, label: p.label },
+        })),
+      );
       setFieldErrors(Object.fromEntries(problems.map((p) => [p.id, p.message])));
       setFocusKey((k) => k + 1);
       return;
@@ -300,7 +335,13 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
   const generate = async () => {
     const problems = validateStep(4, values);
     if (problems.length > 0) {
-      setEntries(problems.map((p, i) => ({ key: `${String(i)}:${p.id}`, message: p.message, target: { id: p.id, label: p.label } })));
+      setEntries(
+        problems.map((p, i) => ({
+          key: `${String(i)}:${p.id}`,
+          message: p.message,
+          target: { id: p.id, label: p.label },
+        })),
+      );
       setFieldErrors(Object.fromEntries(problems.map((p) => [p.id, p.message])));
       setFocusKey((k) => k + 1);
       return;
@@ -310,7 +351,10 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
     setGenerating(true);
     if (!(await save(4)) || !idRef.current) return setGenerating(false);
     try {
-      const res = await submitDraft(idRef.current, idempotencyHeaders(keys.current.keyFor({ draftId: idRef.current })));
+      const res = await submitDraft(
+        idRef.current,
+        idempotencyHeaders(keys.current.keyFor({ draftId: idRef.current })),
+      );
       keys.current.succeeded();
       const { campaignId } = (res.data as SubmitDraftResponse).data;
       // Stays in the pending state while the brief screen loads.
@@ -319,7 +363,13 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
       setGenerating(false);
       const code = resolveError(error, { surface: 'context' }).code;
       if (code === 'key_missing' || code === 'spend_cap_reached') return setBlock(code);
-      if (code === 'unauthenticated' || code === 'state_conflict' || code === 'not_found' || code === 'version_conflict') return fail(error);
+      if (
+        code === 'unauthenticated' ||
+        code === 'state_conflict' ||
+        code === 'not_found' ||
+        code === 'version_conflict'
+      )
+        return fail(error);
       setSubmitError(error);
     }
   };
@@ -405,7 +455,11 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
           {COPY.back}
         </Button>
       ) : (
-        <Button variant="ghost" onClick={() => setStartOver({ open: true, pending: false, error: null })} disabled={advancing || generating}>
+        <Button
+          variant="ghost"
+          onClick={() => setStartOver({ open: true, pending: false, error: null })}
+          disabled={advancing || generating}
+        >
           {COPY.startOver}
         </Button>
       )}
@@ -413,7 +467,12 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
     </div>
   );
   const nextButton = (
-    <Button onClick={() => void next()} pending={advancing} pendingLabel={COPY.savingButton} disabled={blocked}>
+    <Button
+      onClick={() => void next()}
+      pending={advancing}
+      pendingLabel={COPY.savingButton}
+      disabled={blocked}
+    >
       {COPY.next[step - 1]}
       <Icon name="arrow-right" size={16} />
     </Button>
@@ -428,28 +487,63 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
       body = null;
     } else if (code === 'not_found') {
       body = (
-        <Alert variant="warning" role="alert" title={COPY.notFoundTitle} action={<Button size="sm" asChild><a href={NEW_BRIEF_PATH}>{COPY.notFoundAction}</a></Button>}>
+        <Alert
+          variant="warning"
+          role="alert"
+          title={COPY.notFoundTitle}
+          action={
+            <Button size="sm" asChild>
+              <a href={NEW_BRIEF_PATH}>{COPY.notFoundAction}</a>
+            </Button>
+          }
+        >
           {COPY.notFoundBody}
         </Alert>
       );
     } else {
-      body = <ErrorNotice error={loaded.error} returnTo={returnTo} retrying={loaded.isRefetching} onAction={() => void loaded.refetch()} />;
+      body = (
+        <ErrorNotice
+          error={loaded.error}
+          returnTo={returnTo}
+          retrying={loaded.isRefetching}
+          onAction={() => void loaded.refetch()}
+        />
+      );
     }
   } else if (status.kind === 'submitted') {
     body = (
-      <Alert variant="info" role="status" title={COPY.submittedTitle} action={<Button size="sm" asChild><a href={ROUTES.campaigns}>{COPY.submittedAction}</a></Button>}>
+      <Alert
+        variant="info"
+        role="status"
+        title={COPY.submittedTitle}
+        action={
+          <Button size="sm" asChild>
+            <a href={ROUTES.campaigns}>{COPY.submittedAction}</a>
+          </Button>
+        }
+      >
         {COPY.submittedBody}
       </Alert>
     );
   } else if (status.kind === 'gone') {
     body = (
-      <Alert variant="warning" role="alert" title={COPY.notFoundTitle} action={<Button size="sm" asChild><a href={NEW_BRIEF_PATH}>{COPY.notFoundAction}</a></Button>}>
+      <Alert
+        variant="warning"
+        role="alert"
+        title={COPY.notFoundTitle}
+        action={
+          <Button size="sm" asChild>
+            <a href={NEW_BRIEF_PATH}>{COPY.notFoundAction}</a>
+          </Button>
+        }
+      >
         {COPY.notFoundBody}
       </Alert>
     );
   } else {
     const tones = COPY.step3.tones as readonly string[];
-    const toneOptions = values.tone && !tones.includes(values.tone) ? [...tones, values.tone] : tones;
+    const toneOptions =
+      values.tone && !tones.includes(values.tone) ? [...tones, values.tone] : tones;
     body = (
       <div className="flex flex-col gap-4">
         {status.kind === 'conflict' ? (
@@ -480,49 +574,130 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
             />
           </div>
         ) : null}
-        <Card variant="section" headingLevel={2} footer={step === 4 ? footer(
-          <Button onClick={() => void generate()} pending={generating} pendingLabel={COPY.step4.generating} disabled={blocked || block !== undefined}>
-            <Icon name="arrow-right" size={16} />
-            {COPY.step4.generate}
-          </Button>,
-          back,
-        ) : footer(nextButton, step === 1 ? undefined : back)}>
+        <Card
+          variant="section"
+          headingLevel={2}
+          footer={
+            step === 4
+              ? footer(
+                  <Button
+                    onClick={() => void generate()}
+                    pending={generating}
+                    pendingLabel={COPY.step4.generating}
+                    disabled={blocked || block !== undefined}
+                  >
+                    <Icon name="arrow-right" size={16} />
+                    {COPY.step4.generate}
+                  </Button>,
+                  back,
+                )
+              : footer(nextButton, step === 1 ? undefined : back)
+          }
+        >
           {entries.length > 0 ? (
-            <ErrorSummary entries={entries} focusKey={focusKey} heading={COPY.summaryHeading(entries.length)} />
+            <ErrorSummary
+              entries={entries}
+              focusKey={focusKey}
+              heading={COPY.summaryHeading(entries.length)}
+            />
           ) : null}
 
           {step === 1 ? (
             <div className="flex flex-col gap-6">
-              <Heading id="step-title" step={1} headingRef={headingRef}>{COPY.step1.title}</Heading>
+              <Heading id="step-title" step={1} headingRef={headingRef}>
+                {COPY.step1.title}
+              </Heading>
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-2 text-ui font-semibold">{COPY.step1.style}</legend>
-                <RadioCard name="ad-style" value="ugc" checked readOnly label={COPY.step1.ugc} description={COPY.step1.ugcHelp} />
-                <RadioCard name="ad-style" value="animated" unavailable label={COPY.step1.animated} description={COPY.step1.animatedHelp} />
+                <RadioCard
+                  name="ad-style"
+                  value="ugc"
+                  checked
+                  readOnly
+                  label={COPY.step1.ugc}
+                  description={COPY.step1.ugcHelp}
+                />
+                <RadioCard
+                  name="ad-style"
+                  value="animated"
+                  unavailable
+                  label={COPY.step1.animated}
+                  description={COPY.step1.animatedHelp}
+                />
               </fieldset>
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-2 text-ui font-semibold">{COPY.step1.intake}</legend>
-                <RadioCard name="intake-mode" value="description" checked={values.intakeMode === 'description'} onChange={() => edit({ intakeMode: 'description' })} label={COPY.step1.describe} description={COPY.step1.describeHelp} />
-                <RadioCard name="intake-mode" value="script" checked={values.intakeMode === 'script'} onChange={() => edit({ intakeMode: 'script' })} label={COPY.step1.script} description={COPY.step1.scriptHelp} />
+                <RadioCard
+                  name="intake-mode"
+                  value="description"
+                  checked={values.intakeMode === 'description'}
+                  onChange={() => edit({ intakeMode: 'description' })}
+                  label={COPY.step1.describe}
+                  description={COPY.step1.describeHelp}
+                />
+                <RadioCard
+                  name="intake-mode"
+                  value="script"
+                  checked={values.intakeMode === 'script'}
+                  onChange={() => edit({ intakeMode: 'script' })}
+                  label={COPY.step1.script}
+                  description={COPY.step1.scriptHelp}
+                />
               </fieldset>
             </div>
           ) : null}
 
           {step === 2 ? (
             <div className="flex flex-col gap-6">
-              <Heading id="step-title" step={2} headingRef={headingRef}>{COPY.step2.title}</Heading>
-              <FormField id={CONTROL_ID.name} label={COPY.step2.name} mark="required" help={COPY.step2.nameHelp} error={err(CONTROL_ID.name)}>
-                {(c) => <Input {...c} value={values.productName} onChange={(e) => edit({ productName: e.target.value }, CONTROL_ID.name)} autoComplete="off" />}
+              <Heading id="step-title" step={2} headingRef={headingRef}>
+                {COPY.step2.title}
+              </Heading>
+              <FormField
+                id={CONTROL_ID.name}
+                label={COPY.step2.name}
+                mark="required"
+                help={COPY.step2.nameHelp}
+                error={err(CONTROL_ID.name)}
+              >
+                {(c) => (
+                  <Input
+                    {...c}
+                    value={values.productName}
+                    onChange={(e) => edit({ productName: e.target.value }, CONTROL_ID.name)}
+                    autoComplete="off"
+                  />
+                )}
               </FormField>
-              <FormField id={CONTROL_ID.description} label={COPY.step2.description} mark="required" error={err(CONTROL_ID.description)}>
-                {(c) => <Textarea {...c} maxLength={2000} value={values.productDescription} onChange={(e) => edit({ productDescription: e.target.value }, CONTROL_ID.description)} />}
+              <FormField
+                id={CONTROL_ID.description}
+                label={COPY.step2.description}
+                mark="required"
+                error={err(CONTROL_ID.description)}
+              >
+                {(c) => (
+                  <Textarea
+                    {...c}
+                    maxLength={2000}
+                    value={values.productDescription}
+                    onChange={(e) =>
+                      edit({ productDescription: e.target.value }, CONTROL_ID.description)
+                    }
+                  />
+                )}
               </FormField>
-              <div id={CONTROL_ID.image} tabIndex={-1} className="flex flex-col gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              <div
+                id={CONTROL_ID.image}
+                tabIndex={-1}
+                className="flex flex-col gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
                 <h3 className="text-ui font-semibold">{COPY.step2.image}</h3>
                 <ProductImage
                   mediaId={values.productMediaId}
                   onMediaChange={(id) => edit({ productMediaId: id })}
                   onBusyChange={setImageBusy}
-                  onUseDescription={(text) => edit({ productDescription: text.slice(0, 2000) }, CONTROL_ID.description)}
+                  onUseDescription={(text) =>
+                    edit({ productDescription: text.slice(0, 2000) }, CONTROL_ID.description)
+                  }
                   onUnauthenticated={() => setSessionEnded(true)}
                   disabled={blocked}
                 />
@@ -532,48 +707,117 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
 
           {step === 3 ? (
             <div className="flex flex-col gap-6">
-              <Heading id="step-title" step={3} headingRef={headingRef}>{COPY.step3.title}</Heading>
+              <Heading id="step-title" step={3} headingRef={headingRef}>
+                {COPY.step3.title}
+              </Heading>
               <FormGrid>
-                <FormField id={CONTROL_ID.ageMin} label={COPY.step3.ageMin} error={err(CONTROL_ID.ageMin)}>
-                  {(c) => <Input {...c} type="number" inputMode="numeric" min={21} max={99} className="tabular-nums" value={values.ageMin} onChange={(e) => edit({ ageMin: e.target.value }, CONTROL_ID.ageMin)} />}
+                <FormField
+                  id={CONTROL_ID.ageMin}
+                  label={COPY.step3.ageMin}
+                  error={err(CONTROL_ID.ageMin)}
+                >
+                  {(c) => (
+                    <Input
+                      {...c}
+                      type="number"
+                      inputMode="numeric"
+                      min={21}
+                      max={99}
+                      className="tabular-nums"
+                      value={values.ageMin}
+                      onChange={(e) => edit({ ageMin: e.target.value }, CONTROL_ID.ageMin)}
+                    />
+                  )}
                 </FormField>
-                <FormField id={CONTROL_ID.ageMax} label={COPY.step3.ageMax} error={err(CONTROL_ID.ageMax)}>
-                  {(c) => <Input {...c} type="number" inputMode="numeric" min={21} max={99} className="tabular-nums" value={values.ageMax} onChange={(e) => edit({ ageMax: e.target.value }, CONTROL_ID.ageMax)} />}
+                <FormField
+                  id={CONTROL_ID.ageMax}
+                  label={COPY.step3.ageMax}
+                  error={err(CONTROL_ID.ageMax)}
+                >
+                  {(c) => (
+                    <Input
+                      {...c}
+                      type="number"
+                      inputMode="numeric"
+                      min={21}
+                      max={99}
+                      className="tabular-nums"
+                      value={values.ageMax}
+                      onChange={(e) => edit({ ageMax: e.target.value }, CONTROL_ID.ageMax)}
+                    />
+                  )}
                 </FormField>
                 <FormField label={COPY.step3.gender}>
                   {(c) => (
-                    <Select {...c} value={values.gender || 'all'} onChange={(e) => edit({ gender: e.target.value as FormValues['gender'] })}>
-                      {(Object.keys(COPY.step3.genders) as (keyof typeof COPY.step3.genders)[]).map((g) => (
-                        <option key={g} value={g}>{COPY.step3.genders[g]}</option>
-                      ))}
+                    <Select
+                      {...c}
+                      value={values.gender || 'all'}
+                      onChange={(e) => edit({ gender: e.target.value as FormValues['gender'] })}
+                    >
+                      {(Object.keys(COPY.step3.genders) as (keyof typeof COPY.step3.genders)[]).map(
+                        (g) => (
+                          <option key={g} value={g}>
+                            {COPY.step3.genders[g]}
+                          </option>
+                        ),
+                      )}
                     </Select>
                   )}
                 </FormField>
-                <FormField id={CONTROL_ID.interests} label={COPY.step3.interests} help={COPY.step3.interestsHelp} error={err(CONTROL_ID.interests)}>
-                  {(c) => <Input {...c} value={values.interests} onChange={(e) => edit({ interests: e.target.value }, CONTROL_ID.interests)} autoComplete="off" />}
+                <FormField
+                  id={CONTROL_ID.interests}
+                  label={COPY.step3.interests}
+                  help={COPY.step3.interestsHelp}
+                  error={err(CONTROL_ID.interests)}
+                >
+                  {(c) => (
+                    <Input
+                      {...c}
+                      value={values.interests}
+                      onChange={(e) => edit({ interests: e.target.value }, CONTROL_ID.interests)}
+                      autoComplete="off"
+                    />
+                  )}
                 </FormField>
               </FormGrid>
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-2 text-ui font-semibold">{COPY.step3.goal}</legend>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                  {(Object.keys(COPY.step3.goals) as (keyof typeof COPY.step3.goals)[]).map((goal) => (
-                    <RadioCard key={goal} name="goal" value={goal} checked={values.goal === goal} onChange={() => edit({ goal })} label={COPY.step3.goals[goal]} />
-                  ))}
+                  {(Object.keys(COPY.step3.goals) as (keyof typeof COPY.step3.goals)[]).map(
+                    (goal) => (
+                      <RadioCard
+                        key={goal}
+                        name="goal"
+                        value={goal}
+                        checked={values.goal === goal}
+                        onChange={() => edit({ goal })}
+                        label={COPY.step3.goals[goal]}
+                      />
+                    ),
+                  )}
                 </div>
               </fieldset>
               <FormGrid>
                 <FormField label={COPY.step3.tone} help={COPY.step3.toneHelp}>
                   {(c) => (
-                    <Select {...c} value={values.tone} onChange={(e) => edit({ tone: e.target.value })}>
+                    <Select
+                      {...c}
+                      value={values.tone}
+                      onChange={(e) => edit({ tone: e.target.value })}
+                    >
                       <option value="">Choose a tone</option>
                       {toneOptions.map((t) => (
-                        <option key={t} value={t}>{t}</option>
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
                       ))}
                     </Select>
                   )}
                 </FormField>
                 <div className="flex flex-col gap-1">
-                  <span id="segments-label" className="text-ui font-semibold">{COPY.step3.segments}</span>
+                  <span id="segments-label" className="text-ui font-semibold">
+                    {COPY.step3.segments}
+                  </span>
                   <SegmentedControl
                     aria-label={COPY.step3.segments}
                     name="segments"
@@ -581,7 +825,12 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
                     options={['1', '2', '3', '4'].map((n) => ({ value: n, label: n }))}
                     onValueChange={(n) => edit({ segmentCount: n as FormValues['segmentCount'] })}
                   />
-                  <p className="text-caption tabular-nums text-muted-foreground" data-testid="segments-total">{segmentsText(values.segmentCount)}</p>
+                  <p
+                    className="text-caption tabular-nums text-muted-foreground"
+                    data-testid="segments-total"
+                  >
+                    {segmentsText(values.segmentCount)}
+                  </p>
                 </div>
               </FormGrid>
             </div>
@@ -589,7 +838,9 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
 
           {step === 4 ? (
             <div className="flex flex-col gap-6">
-              <Heading id="step-title" step={4} headingRef={headingRef}>{COPY.step4.title}</Heading>
+              <Heading id="step-title" step={4} headingRef={headingRef}>
+                {COPY.step4.title}
+              </Heading>
               {block ? <SubmitBlockAlert block={block} /> : null}
               {submitError ? (
                 <ErrorNotice
@@ -603,19 +854,54 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
                 />
               ) : null}
               {values.intakeMode === 'script' ? (
-                <FormField id={CONTROL_ID.script} label={COPY.step4.script} mark="required" help={COPY.step4.scriptHelp} error={err(CONTROL_ID.script)}>
-                  {(c) => <Textarea {...c} maxLength={4000} rows={8} value={values.script} disabled={generating} onChange={(e) => edit({ script: e.target.value }, CONTROL_ID.script)} />}
+                <FormField
+                  id={CONTROL_ID.script}
+                  label={COPY.step4.script}
+                  mark="required"
+                  help={COPY.step4.scriptHelp}
+                  error={err(CONTROL_ID.script)}
+                >
+                  {(c) => (
+                    <Textarea
+                      {...c}
+                      maxLength={4000}
+                      rows={8}
+                      value={values.script}
+                      disabled={generating}
+                      onChange={(e) => edit({ script: e.target.value }, CONTROL_ID.script)}
+                    />
+                  )}
                 </FormField>
               ) : (
-                <FormField id={CONTROL_ID.concept} label={COPY.step4.concept} mark="required" help={COPY.step4.conceptHelp} error={err(CONTROL_ID.concept)}>
-                  {(c) => <Textarea {...c} maxLength={4000} rows={6} value={values.concept} disabled={generating} onChange={(e) => edit({ concept: e.target.value }, CONTROL_ID.concept)} />}
+                <FormField
+                  id={CONTROL_ID.concept}
+                  label={COPY.step4.concept}
+                  mark="required"
+                  help={COPY.step4.conceptHelp}
+                  error={err(CONTROL_ID.concept)}
+                >
+                  {(c) => (
+                    <Textarea
+                      {...c}
+                      maxLength={4000}
+                      rows={6}
+                      value={values.concept}
+                      disabled={generating}
+                      onChange={(e) => edit({ concept: e.target.value }, CONTROL_ID.concept)}
+                    />
+                  )}
                 </FormField>
               )}
-              <dl aria-label={COPY.step4.summary} className="grid grid-cols-1 gap-x-4 gap-y-1 text-ui md:grid-cols-4">
+              <dl
+                aria-label={COPY.step4.summary}
+                className="grid grid-cols-1 gap-x-4 gap-y-1 text-ui md:grid-cols-4"
+              >
                 <dt className="mt-2 text-muted-foreground md:mt-0">{COPY.step4.product}</dt>
                 <dd className="md:col-span-3">{values.productName || COPY.step4.notSet}</dd>
                 <dt className="mt-2 text-muted-foreground md:mt-0">{COPY.step4.image}</dt>
-                <dd className="md:col-span-3">{values.productMediaId ? COPY.step4.imageAdded : COPY.step4.imageNone}</dd>
+                <dd className="md:col-span-3">
+                  {values.productMediaId ? COPY.step4.imageAdded : COPY.step4.imageNone}
+                </dd>
                 <dt className="mt-2 text-muted-foreground md:mt-0">{COPY.step4.audience}</dt>
                 <dd className="md:col-span-3">{audienceSummary(values)}</dd>
                 <dt className="mt-2 text-muted-foreground md:mt-0">{COPY.step4.direction}</dt>
@@ -623,8 +909,16 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
               </dl>
               <p className="text-caption text-muted-foreground">{COPY.step4.reuseNote}</p>
               {generating ? (
-                <p role="status" className="flex items-center gap-2 text-ui" data-testid="generating-status">
-                  <Icon name="loader-circle" size={16} className="animate-spin motion-reduce:animate-none" />
+                <p
+                  role="status"
+                  className="flex items-center gap-2 text-ui"
+                  data-testid="generating-status"
+                >
+                  <Icon
+                    name="loader-circle"
+                    size={16}
+                    className="animate-spin motion-reduce:animate-none"
+                  />
                   {COPY.step4.inProgress}
                 </p>
               ) : null}
@@ -642,13 +936,19 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
       pageName={COPY.title}
       onSignOut={() => window.location.assign(ROUTES.signIn)}
     >
-      <div className="mx-auto flex max-w-content flex-col gap-6" data-screen="SCREEN-006" aria-busy={loading || undefined}>
+      <div
+        className="mx-auto flex max-w-content flex-col gap-6"
+        data-screen="SCREEN-006"
+        aria-busy={loading || undefined}
+      >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <header className="flex flex-col gap-1">
             <h1 className="text-page font-semibold">{COPY.title}</h1>
             <p className="text-ui text-muted-foreground">{COPY.description}</p>
           </header>
-          <div className="text-ui text-muted-foreground" data-testid="save-status">{savedLabel}</div>
+          <div className="text-ui text-muted-foreground" data-testid="save-status">
+            {savedLabel}
+          </div>
         </div>
         <Stepper steps={[...COPY.steps]} current={step - 1} />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -659,7 +959,12 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
               <ol className="flex flex-col gap-2 text-ui">
                 {COPY.next4.map((line, i) => (
                   <li key={line} className="flex items-center gap-2">
-                    <span aria-hidden="true" className="inline-grid size-6 place-items-center rounded-full bg-primary-subtle text-caption font-semibold text-primary-active">{i + 1}</span>
+                    <span
+                      aria-hidden="true"
+                      className="inline-grid size-6 place-items-center rounded-full bg-primary-subtle text-caption font-semibold text-primary-active"
+                    >
+                      {i + 1}
+                    </span>
                     {line}
                   </li>
                 ))}
@@ -672,17 +977,27 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
 
       <Dialog
         open={startOver.open}
-        onClose={() => !startOver.pending && setStartOver({ open: false, pending: false, error: null })}
+        onClose={() =>
+          !startOver.pending && setStartOver({ open: false, pending: false, error: null })
+        }
         title={COPY.startOverTitle}
         description={COPY.startOverBody}
         confirmLabel={COPY.startOverConfirm}
         destructive
         pending={startOver.pending}
-        error={startOver.error ? resolveError(startOver.error, { surface: 'context' }).message : undefined}
+        error={
+          startOver.error
+            ? resolveError(startOver.error, { surface: 'context' }).message
+            : undefined
+        }
         onConfirm={() => void confirmStartOver()}
       />
-      {sessionEnded || (loaded.isError && !applied && resolveError(loaded.error).code === 'unauthenticated') ? (
-        <SessionEndedDialog step={step} onSignIn={() => window.location.assign(signInUrl(returnTo))} />
+      {sessionEnded ||
+      (loaded.isError && !applied && resolveError(loaded.error).code === 'unauthenticated') ? (
+        <SessionEndedDialog
+          step={step}
+          onSignIn={() => window.location.assign(signInUrl(returnTo))}
+        />
       ) : null}
     </OperatorShell>
   );
@@ -701,7 +1016,9 @@ function directionSummary(v: FormValues): string {
   const parts = [
     v.goal ? COPY.step3.goals[v.goal] : null,
     v.tone ? v.tone.toLowerCase() : null,
-    v.segmentCount ? `${v.segmentCount} ${v.segmentCount === '1' ? 'segment' : 'segments'} (${String(Number(v.segmentCount) * SEGMENT_SECONDS)} s)` : null,
+    v.segmentCount
+      ? `${v.segmentCount} ${v.segmentCount === '1' ? 'segment' : 'segments'} (${String(Number(v.segmentCount) * SEGMENT_SECONDS)} s)`
+      : null,
   ];
   return parts.filter(Boolean).join(', ') || COPY.step4.notSet;
 }

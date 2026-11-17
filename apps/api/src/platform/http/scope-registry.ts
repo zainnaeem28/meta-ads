@@ -11,7 +11,8 @@ export const SCOPE_KEY = 'http:scope';
 const METRICS_GUARD_KEY = 'http:metrics-token-guard';
 
 /** Declares the scope of a route (or of every route of a controller). A route without one fails startup. */
-export const Scope = (scope: RouteScope): ClassDecorator & MethodDecorator => SetMetadata(SCOPE_KEY, scope);
+export const Scope = (scope: RouteScope): ClassDecorator & MethodDecorator =>
+  SetMetadata(SCOPE_KEY, scope);
 
 /** Marks the guard class that checks the metrics token (`platform/metrics`, TASK-061). Scope M needs it. */
 export const MetricsTokenGuardMarker = (): ClassDecorator => SetMetadata(METRICS_GUARD_KEY, true);
@@ -46,7 +47,11 @@ export function collectRouteScopes(app: INestApplicationContext): RouteScopeEntr
       const prototype = controller.prototype as Record<string, unknown>;
       for (const name of Object.getOwnPropertyNames(prototype)) {
         const handler = prototype[name];
-        if (typeof handler !== 'function' || Reflect.getMetadata(PATH_METADATA, handler) === undefined) continue;
+        if (
+          typeof handler !== 'function' ||
+          Reflect.getMetadata(PATH_METADATA, handler) === undefined
+        )
+          continue;
         if (Reflect.getMetadata(METHOD_METADATA, handler) === undefined) continue;
         const scope = (Reflect.getMetadata(SCOPE_KEY, handler) ??
           Reflect.getMetadata(SCOPE_KEY, controller)) as RouteScope | undefined;
@@ -65,7 +70,8 @@ export function scopeProblems(entries: readonly RouteScopeEntry[]): string[] {
   for (const { route, scope, hasMetricsGuard } of entries) {
     if (scope === undefined) problems.push(`${route}: no scope declared (default deny)`);
     else if (!SCOPES.includes(scope)) problems.push(`${route}: unknown scope ${String(scope)}`);
-    else if (scope === 'M' && !hasMetricsGuard) problems.push(`${route}: scope M without the metrics-token guard`);
+    else if (scope === 'M' && !hasMetricsGuard)
+      problems.push(`${route}: scope M without the metrics-token guard`);
   }
   return problems;
 }

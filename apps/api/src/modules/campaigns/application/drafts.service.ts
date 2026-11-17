@@ -17,7 +17,10 @@ const submitted = (): DomainError =>
 const mediaTaken = (): DomainError =>
   new DomainError('state_conflict', 'This image is already used by another draft or campaign.');
 const unavailable = (): DomainError =>
-  new DomainError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.');
+  new DomainError(
+    'service_unavailable',
+    'The service is temporarily unavailable. Try again shortly.',
+  );
 
 /**
  * Drafts of the intake wizard (API-020 to API-023, API-025; ARCHITECTURE §2.6, §5.3). Every read and write is scoped to
@@ -50,7 +53,8 @@ export class DraftsService {
     const id = newId();
     return this.guarded(() =>
       this.database.uow.run(async (tx) => {
-        if (fields.productMediaId != null) await this.claimMedia(tx, ownerId, fields.productMediaId, null);
+        if (fields.productMediaId != null)
+          await this.claimMedia(tx, ownerId, fields.productMediaId, null);
         return this.repository.insert(tx, id, ownerId, fields);
       }),
     );
@@ -60,7 +64,12 @@ export class DraftsService {
    * Saves a step under `If-Match`. A submitted draft is 409 `state_conflict` (SB-D13), a stale version 409
    * `version_conflict`; in both cases nothing is written, so a failed save keeps the stored values.
    */
-  async patch(ownerId: string, id: string, expectedVersion: number, fields: DraftFields): Promise<DraftRecord> {
+  async patch(
+    ownerId: string,
+    id: string,
+    expectedVersion: number,
+    fields: DraftFields,
+  ): Promise<DraftRecord> {
     assertAudience(fields.audience);
     return this.guarded(() =>
       this.database.uow.run(async (tx) => {
@@ -103,7 +112,10 @@ export class DraftsService {
       if (locked === null) throw notFound();
       if (locked.campaignId !== null) throw submitted();
       await this.repository.remove(tx, ownerId, id);
-      const media = locked.productMediaId === null ? null : await this.media.unregisterObject(tx, locked.productMediaId);
+      const media =
+        locked.productMediaId === null
+          ? null
+          : await this.media.unregisterObject(tx, locked.productMediaId);
       await this.audit.record(tx, {
         actorId: ownerId,
         actorType: 'user',
@@ -116,11 +128,15 @@ export class DraftsService {
       return media;
     });
     // The row names the key it really held; anything the derived keys missed goes now (the delete is idempotent).
-    if (row !== null && !derived.includes(row.storageKey)) await this.deleteObjects([row.storageKey]);
+    if (row !== null && !derived.includes(row.storageKey))
+      await this.deleteObjects([row.storageKey]);
   }
 
   private versionConflict(): DomainError {
-    return new DomainError('version_conflict', 'The draft was changed elsewhere. Reload it and try again.');
+    return new DomainError(
+      'version_conflict',
+      'The draft was changed elsewhere. Reload it and try again.',
+    );
   }
 
   /** Deletes objects (idempotent); a storage failure is 503 and nothing else has changed yet. */
@@ -133,7 +149,12 @@ export class DraftsService {
   }
 
   /** The caller's own, `ready` image that no other draft or campaign holds; attaching marks it as used. */
-  private async claimMedia(tx: DbTx, ownerId: string, mediaId: string, draftId: string | null): Promise<void> {
+  private async claimMedia(
+    tx: DbTx,
+    ownerId: string,
+    mediaId: string,
+    draftId: string | null,
+  ): Promise<void> {
     await this.media.attach(tx, ownerId, mediaId);
     if (await this.repository.mediaTaken(tx, mediaId, draftId)) throw mediaTaken();
   }
