@@ -400,6 +400,7 @@ test.describe('@TASK-096 SCREEN-009 final ad through the built web app', () => {
     await expect(list(page)).toBeVisible();
     await assemble(page).click();
     await expect(page.getByRole('heading', { name: 'Assembling your final ad' })).toBeVisible();
+    await expect.poll(() => seen.some((c) => c.startsWith('GET /assemblies/'))).toBe(true);
     const shapes = new Set(seen.map((c) => c.replace(/[0-9a-f-]{36}/g, ':id')));
     expect(shapes).toEqual(
       new Set([
