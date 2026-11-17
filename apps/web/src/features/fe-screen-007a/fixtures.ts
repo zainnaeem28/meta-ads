@@ -11,9 +11,10 @@ export const segment = (position: number, over: Partial<Segment> = {}): Segment 
   position,
   state: 'active',
   revision: 1,
-  dialogue: position === 3
-    ? "Everyone's mornings look different. If you are curious what fits yours, there is a short way to find out. Take the free 2-minute quiz today."
-    : `I am not a morning person, so I keep my routine simple with coffee, quiet light, and two capsules of Morning Focus Blend on the counter, nothing fancy just a steady habit before the run ${position}.`,
+  dialogue:
+    position === 3
+      ? "Everyone's mornings look different. If you are curious what fits yours, there is a short way to find out. Take the free 2-minute quiz today."
+      : `I am not a morning person, so I keep my routine simple with coffee, quiet light, and two capsules of Morning Focus Blend on the counter, nothing fancy just a steady habit before the run ${position}.`,
   prompt: `Handheld vertical shot ${position}, soft window light in a small kitchen. The runner holds the bottle toward the camera.`,
   wordCount: 32,
   ...over,
@@ -26,7 +27,8 @@ export const highRisk: ClaimIssue = {
   ruleId: 'BR-06-cure-claim',
   class: 'high_risk',
   resolution: 'open',
-  message: 'This wording implies a treatment claim. Edit the text until this check no longer finds it.',
+  message:
+    'This wording implies a treatment claim. Edit the text until this check no longer finds it.',
   span: { start: 40, end: 70 },
   clearReason: null,
 };
@@ -93,24 +95,23 @@ export const failedBrief = (): Brief =>
     },
   });
 
-export const campaignFixture = (over: Partial<Campaign> = {}): Campaign =>
-  ({
-    id: CAMPAIGN_ID,
-    productName: 'Morning Focus Blend',
-    productDescriptionExcerpt: 'A daily focus blend.',
-    progress: 'in_progress',
-    briefState: 'draft',
-    segmentCount: 3,
-    finalAvailable: false,
-    createdAt: T,
-    updatedAt: T,
-    productDescription: 'A daily focus blend for calm, steady mornings.',
-    productMediaId: null,
-    draftId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-    jobCounts: {},
-    latestAssemblyId: null,
-    thumbstopperJobId: null,
-    ...over,
-  });
+export const campaignFixture = (over: Partial<Campaign> = {}): Campaign => ({
+  id: CAMPAIGN_ID,
+  productName: 'Morning Focus Blend',
+  productDescriptionExcerpt: 'A daily focus blend.',
+  progress: 'in_progress',
+  briefState: 'draft',
+  segmentCount: 3,
+  finalAvailable: false,
+  createdAt: T,
+  updatedAt: T,
+  productDescription: 'A daily focus blend for calm, steady mornings.',
+  productMediaId: null,
+  draftId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  jobCounts: {},
+  latestAssemblyId: null,
+  thumbstopperJobId: null,
+  ...over,
+});
 
 export { words };

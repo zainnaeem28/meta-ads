@@ -6,7 +6,8 @@ export const SCREEN_007_COPY = {
   fallbackName: 'Campaign',
   loadingBrief: 'Loading the brief',
   generatingTitle: 'Generating your brief',
-  generatingBody: 'This usually takes under a minute. You can leave this page and come back; it keeps running.',
+  generatingBody:
+    'This usually takes under a minute. You can leave this page and come back; it keeps running.',
   failedTitle: 'The brief could not be generated',
   failedFallback: 'The brief could not be generated. Nothing was charged. Your answers are saved.',
   editAnswers: 'Edit answers',
@@ -16,25 +17,29 @@ export const SCREEN_007_COPY = {
   saving: 'Saving',
   continueToClips: 'Continue to clips',
   acceptedTitle: 'Brief accepted · all checks closed',
-  acceptedBody: 'Segment prompts are ready for clip generation. Editing any segment reopens the brief for acceptance.',
+  acceptedBody:
+    'Segment prompts are ready for clip generation. Editing any segment reopens the brief for acceptance.',
   acceptedToast: 'Brief accepted.',
   savedToast: 'Changes saved. Brand checks ran again.',
   blockedTitle: 'The brief cannot be accepted yet',
   reasonOpenIssues: (n: number, high: number) =>
     `${n} ${n === 1 ? 'issue is' : 'issues are'} still open${high > 0 ? `, including ${high} that must be fixed by editing the text` : ''}. Resolve them, then accept.`,
   reasonUnsaved: 'Save your changes before you accept the brief.',
-  reasonTooLong: (segment: number) => `Segment ${segment} is over the 45 word limit. Shorten it to continue.`,
+  reasonTooLong: (segment: number) =>
+    `Segment ${segment} is over the 45 word limit. Shorten it to continue.`,
   reasonFresh: 'Accept brief is available once the brief has no open issues.',
   issuesTitle: (n: number) => `${n} ${n === 1 ? 'issue' : 'issues'} to resolve`,
   issuesNote: 'Brand checks ran on the generated text. Open issues block acceptance.',
   highRisk: 'High risk',
   other: 'Other',
   editSegment: (n: number) => `Edit segment ${n}`,
-  highRiskNote: 'Treatment, cure and dosing wording cannot be cleared with a reason. Edit the text until this check no longer finds it.',
+  highRiskNote:
+    'Treatment, cure and dosing wording cannot be cleared with a reason. Edit the text until this check no longer finds it.',
   segmentHeading: (n: number) => `Segment ${n} · ${seconds((n - 1) * 15)} to ${seconds(n * 15)}`,
   segmentIssues: (n: number) => (n === 1 ? '1 issue' : `${n} issues`),
   visualPrompt: 'Visual prompt',
-  promptHelp: 'The product must be visible, described in one sentence. Prompts are checked with the same brand rules.',
+  promptHelp:
+    'The product must be visible, described in one sentence. Prompts are checked with the same brand rules.',
   aside: 'Campaign details',
   asideTitle: 'Campaign',
   asideProduct: 'Product',

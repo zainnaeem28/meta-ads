@@ -43,7 +43,12 @@ import { SCREEN_007_COPY as COPY, issueHeading } from './copy';
 type Edits = Record<number, { dialogue?: string; prompt?: string }>;
 type Toast = { id: string; variant: 'success'; message: string };
 
-const BADGE = { generating: 'info', draft: 'warning', accepted: 'success', failed: 'destructive' } as const;
+const BADGE = {
+  generating: 'info',
+  draft: 'warning',
+  accepted: 'success',
+  failed: 'destructive',
+} as const;
 const first = (v: string | null | undefined) => v ?? '';
 
 /**
@@ -70,23 +75,28 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
   });
   const campaign = useQuery({
     queryKey: getGetCampaignQueryKey(campaignId),
-    queryFn: async ({ signal }) => (await getCampaign(campaignId, { signal })).data as CampaignResponse,
+    queryFn: async ({ signal }) =>
+      (await getCampaign(campaignId, { signal })).data as CampaignResponse,
   });
   const keys = useQuery({
     queryKey: getListMyProviderKeysQueryKey(),
-    queryFn: async ({ signal }) => (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
+    queryFn: async ({ signal }) =>
+      (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
     retry: false,
   });
 
   const data: Brief | undefined = brief.data?.data;
   const camp: Campaign | undefined = campaign.data?.data;
   const name = camp?.productName ?? COPY.fallbackName;
-  const segments: Segment[] = (data?.segments ?? []).filter((s) => s.state === 'active').sort((a, b) => a.position - b.position);
+  const segments: Segment[] = (data?.segments ?? [])
+    .filter((s) => s.state === 'active')
+    .sort((a, b) => a.position - b.position);
   const openIssues: ClaimIssue[] = (data?.issues ?? []).filter((i) => i.resolution === 'open');
   const highRisk = openIssues.filter((i) => i.class === 'high_risk').length;
   const dirty = Object.keys(edits).length > 0;
 
-  const valueOf = (s: Segment, field: 'dialogue' | 'prompt') => edits[s.position]?.[field] ?? s[field];
+  const valueOf = (s: Segment, field: 'dialogue' | 'prompt') =>
+    edits[s.position]?.[field] ?? s[field];
   const setField = (s: Segment, field: 'dialogue' | 'prompt', value: string) =>
     setEdits((old) => {
       const next = { ...old, [s.position]: { ...old[s.position], [field]: value } };
@@ -97,7 +107,9 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
     });
 
   const tooLong = segments.find((s) => countWords(valueOf(s, 'dialogue')) > HARD_MAX);
-  const empty = segments.find((s) => valueOf(s, 'dialogue').trim() === '' || valueOf(s, 'prompt').trim() === '');
+  const empty = segments.find(
+    (s) => valueOf(s, 'dialogue').trim() === '' || valueOf(s, 'prompt').trim() === '',
+  );
 
   const store = (body: BriefResponse) => {
     client.setQueryData(briefKey, body);
@@ -111,7 +123,9 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
         ...(e.dialogue !== undefined ? { dialogue: e.dialogue } : {}),
         ...(e.prompt !== undefined ? { prompt: e.prompt } : {}),
       }));
-      return (await editBrief(campaignId, { segments: changed }, ifMatch(getGetBriefUrl(campaignId)))).data as BriefResponse;
+      return (
+        await editBrief(campaignId, { segments: changed }, ifMatch(getGetBriefUrl(campaignId)))
+      ).data as BriefResponse;
     },
     onSuccess: (body) => {
       store(body);
@@ -119,23 +133,29 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
       setSaveError(null);
       setShowLatest(false);
       setAttempted(false);
-      setToasts([{ id: `saved-${body.data.version}`, variant: 'success', message: COPY.savedToast }]);
+      setToasts([
+        { id: `saved-${body.data.version}`, variant: 'success', message: COPY.savedToast },
+      ]);
     },
     onError: (error) => setSaveError(error),
   });
 
   const accept = useMutation({
-    mutationFn: async () => (await acceptBrief(campaignId, ifMatch(getGetBriefUrl(campaignId)))).data as BriefResponse,
+    mutationFn: async () =>
+      (await acceptBrief(campaignId, ifMatch(getGetBriefUrl(campaignId)))).data as BriefResponse,
     onSuccess: (body) => {
       store(body);
       void client.invalidateQueries({ queryKey: briefKey });
       setAcceptError(null);
       setAttempted(false);
-      setToasts([{ id: `accepted-${body.data.version}`, variant: 'success', message: COPY.acceptedToast }]);
+      setToasts([
+        { id: `accepted-${body.data.version}`, variant: 'success', message: COPY.acceptedToast },
+      ]);
     },
     onError: (error) => {
       setAcceptError(error);
-      if (resolveError(error, { surface: 'context' }).code === 'open_claim_issues') void brief.refetch();
+      if (resolveError(error, { surface: 'context' }).code === 'open_claim_issues')
+        void brief.refetch();
     },
   });
 
@@ -169,38 +189,63 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
   };
 
   const openaiKey = keys.data?.data.find((k) => k.provider === 'openai');
-  const keyIssue = keys.isSuccess && data && data.state !== 'generating' ? (!openaiKey?.configured ? 'missing' : openaiKey.status === 'disabled' ? 'disabled' : null) : null;
+  const keyIssue =
+    keys.isSuccess && data && data.state !== 'generating'
+      ? !openaiKey?.configured
+        ? 'missing'
+        : openaiKey.status === 'disabled'
+          ? 'disabled'
+          : null
+      : null;
 
   const stateKey = data?.state;
-  const actions = data && (data.state === 'draft' || data.state === 'accepted') ? (
-    <>
-      {dirty ? (
-        <Button variant="outline" pending={save.isPending} pendingLabel={COPY.saving} disabled={Boolean(tooLong || empty)} onClick={() => save.mutate()}>
-          <Icon name="check" size={16} />
-          {COPY.save}
-        </Button>
-      ) : null}
-      {accepted && !dirty ? (
-        <Button asChild>
-          <a href={`/campaigns/${campaignId}/clips`}>
-            {COPY.continueToClips}
-            <Icon name="arrow-right" size={16} />
-          </a>
-        </Button>
-      ) : (
-        <Button asChild disabled={reason !== null || accept.isPending} pending={accept.isPending}>
-          <button type="button" aria-describedby={reason ? 'accept-reason' : undefined} onClick={onAccept}>
+  const actions =
+    data && (data.state === 'draft' || data.state === 'accepted') ? (
+      <>
+        {dirty ? (
+          <Button
+            variant="outline"
+            pending={save.isPending}
+            pendingLabel={COPY.saving}
+            disabled={Boolean(tooLong || empty)}
+            onClick={() => save.mutate()}
+          >
             <Icon name="check" size={16} />
-            {accept.isPending ? COPY.accepting : COPY.accept}
-          </button>
-        </Button>
-      )}
-    </>
-  ) : undefined;
+            {COPY.save}
+          </Button>
+        ) : null}
+        {accepted && !dirty ? (
+          <Button asChild>
+            <a href={`/campaigns/${campaignId}/clips`}>
+              {COPY.continueToClips}
+              <Icon name="arrow-right" size={16} />
+            </a>
+          </Button>
+        ) : (
+          <Button asChild disabled={reason !== null || accept.isPending} pending={accept.isPending}>
+            <button
+              type="button"
+              aria-describedby={reason ? 'accept-reason' : undefined}
+              onClick={onAccept}
+            >
+              <Icon name="check" size={16} />
+              {accept.isPending ? COPY.accepting : COPY.accept}
+            </button>
+          </Button>
+        )}
+      </>
+    ) : undefined;
 
   let body;
   if (brief.isError) {
-    body = <ErrorNotice error={brief.error} returnTo={path} retrying={brief.isRefetching} onAction={() => void brief.refetch()} />;
+    body = (
+      <ErrorNotice
+        error={brief.error}
+        returnTo={path}
+        retrying={brief.isRefetching}
+        onAction={() => void brief.refetch()}
+      />
+    );
   } else if (!data || data.state === 'generating') {
     body = (
       <div className="flex flex-col gap-4">
@@ -234,7 +279,12 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
         <GridCol span={8} className="flex flex-col gap-4">
           {accept.isPending ? null : acceptError ? (
             <div ref={blockedRef} tabIndex={-1}>
-              <ErrorNotice error={acceptError} surface="context" returnTo={path} onAction={(a) => (a === 'refresh' ? refresh(acceptError) : undefined)} />
+              <ErrorNotice
+                error={acceptError}
+                surface="context"
+                returnTo={path}
+                onAction={(a) => (a === 'refresh' ? refresh(acceptError) : undefined)}
+              />
             </div>
           ) : null}
           {attempted && reason ? (
@@ -251,7 +301,9 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
               title={keyIssue === 'missing' ? COPY.keyMissingTitle : COPY.keyDisabledTitle}
               action={
                 <Button size="sm" asChild>
-                  <a href={ROUTES.providerKeys}>{keyIssue === 'missing' ? COPY.keyMissingAction : COPY.keyDisabledAction}</a>
+                  <a href={ROUTES.providerKeys}>
+                    {keyIssue === 'missing' ? COPY.keyMissingAction : COPY.keyDisabledAction}
+                  </a>
                 </Button>
               }
             >
@@ -259,7 +311,13 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
             </Alert>
           ) : null}
           {saveError ? (
-            <ErrorNotice error={saveError} surface="context" returnTo={path} retrying={save.isPending} onAction={(a) => (a === 'refresh' ? refresh(saveError) : void save.mutate())} />
+            <ErrorNotice
+              error={saveError}
+              surface="context"
+              returnTo={path}
+              retrying={save.isPending}
+              onAction={(a) => (a === 'refresh' ? refresh(saveError) : void save.mutate())}
+            />
           ) : null}
 
           {accepted && !dirty ? (
@@ -276,61 +334,65 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
             </Card>
           ) : openIssues.length > 0 ? (
             <Card>
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h2 id="issues-title" className="text-body font-semibold">
-                    {COPY.issuesTitle(openIssues.length)}
-                  </h2>
-                  <p className="text-ui text-muted-foreground">{COPY.issuesNote}</p>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h2 id="issues-title" className="text-body font-semibold">
+                      {COPY.issuesTitle(openIssues.length)}
+                    </h2>
+                    <p className="text-ui text-muted-foreground">{COPY.issuesNote}</p>
+                  </div>
+                  {highRisk > 0 ? (
+                    <Badge variant="destructive" icon="circle-alert">
+                      {highRisk} high risk
+                    </Badge>
+                  ) : null}
                 </div>
-                {highRisk > 0 ? (
-                  <Badge variant="destructive" icon="circle-alert">
-                    {highRisk} high risk
-                  </Badge>
-                ) : null}
+                <ul aria-labelledby="issues-title" className="flex flex-col gap-3">
+                  {openIssues.map((issue) => {
+                    const high = issue.class === 'high_risk';
+                    return (
+                      <li
+                        key={issue.id}
+                        data-class={issue.class}
+                        className={`flex items-start gap-3 rounded-md border p-3 ${high ? 'border-destructive-border bg-destructive-subtle' : 'border-warning-border bg-warning-subtle'}`}
+                      >
+                        <span className={high ? 'text-destructive' : 'text-warning'}>
+                          <Icon name={high ? 'shield-alert' : 'triangle-alert'} size={20} />
+                        </span>
+                        <div className="flex min-w-0 flex-1 flex-col gap-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <strong className="text-ui font-semibold">{issueHeading(issue)}</strong>
+                            <Badge variant={high ? 'destructive' : 'warning'}>
+                              {high ? COPY.highRisk : COPY.other}
+                            </Badge>
+                          </div>
+                          <p className="break-words text-ui">{issue.message}</p>
+                          {high ? (
+                            <p className="text-caption text-muted-foreground">
+                              {COPY.highRiskNote}
+                            </p>
+                          ) : null}
+                          <div>
+                            <Button variant="outline" size="sm" asChild>
+                              <a
+                                href={`#segment-${issue.segmentPosition}`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  focusSegment(issue.segmentPosition);
+                                }}
+                              >
+                                <Icon name="pencil" size={16} />
+                                {COPY.editSegment(issue.segmentPosition)}
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-              <ul aria-labelledby="issues-title" className="flex flex-col gap-3">
-                {openIssues.map((issue) => {
-                  const high = issue.class === 'high_risk';
-                  return (
-                    <li
-                      key={issue.id}
-                      data-class={issue.class}
-                      className={`flex items-start gap-3 rounded-md border p-3 ${high ? 'border-destructive-border bg-destructive-subtle' : 'border-warning-border bg-warning-subtle'}`}
-                    >
-                      <span className={high ? 'text-destructive' : 'text-warning'}>
-                        <Icon name={high ? 'shield-alert' : 'triangle-alert'} size={20} />
-                      </span>
-                      <div className="flex min-w-0 flex-1 flex-col gap-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <strong className="text-ui font-semibold">{issueHeading(issue)}</strong>
-                          <Badge variant={high ? 'destructive' : 'warning'}>{high ? COPY.highRisk : COPY.other}</Badge>
-                        </div>
-                        <p className="break-words text-ui">{issue.message}</p>
-                        {high ? <p className="text-caption text-muted-foreground">{COPY.highRiskNote}</p> : null}
-                        <div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            asChild
-                          >
-                            <a
-                              href={`#segment-${issue.segmentPosition}`}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                focusSegment(issue.segmentPosition);
-                              }}
-                            >
-                              <Icon name="pencil" size={16} />
-                              {COPY.editSegment(issue.segmentPosition)}
-                            </a>
-                          </Button>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
             </Card>
           ) : null}
 
@@ -340,7 +402,12 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
             const promptId = `prompt-${s.position}`;
             const edited = edits[s.position];
             return (
-              <section key={s.position} id={`segment-${s.position}`} aria-labelledby={`segment-${s.position}-title`} className="flex scroll-mt-20 flex-col gap-3 rounded-md border border-border bg-card p-4">
+              <section
+                key={s.position}
+                id={`segment-${s.position}`}
+                aria-labelledby={`segment-${s.position}-title`}
+                className="flex scroll-mt-20 flex-col gap-3 rounded-md border border-border bg-card p-4"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 id={`segment-${s.position}-title`} className="text-body font-semibold">
                     {COPY.segmentHeading(s.position)}
@@ -376,13 +443,18 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
                   />
                 </div>
                 {showLatest && edited ? (
-                  <div className="flex flex-col gap-2 rounded-md border border-warning-border bg-warning-subtle p-3" data-testid={`latest-${s.position}`}>
+                  <div
+                    className="flex flex-col gap-2 rounded-md border border-warning-border bg-warning-subtle p-3"
+                    data-testid={`latest-${s.position}`}
+                  >
                     <h4 className="text-ui font-semibold">
                       {COPY.latestTitle} · Segment {s.position}
                     </h4>
                     <p className="text-caption text-muted-foreground">{COPY.latestNote}</p>
                     <p className="whitespace-pre-wrap break-words text-ui">{first(s.dialogue)}</p>
-                    <p className="whitespace-pre-wrap break-words text-ui text-muted-foreground">{first(s.prompt)}</p>
+                    <p className="whitespace-pre-wrap break-words text-ui text-muted-foreground">
+                      {first(s.prompt)}
+                    </p>
                     <div>
                       <Button
                         variant="outline"
@@ -414,7 +486,10 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
               <dd>{camp ? `${camp.segmentCount} segments · ${camp.segmentCount * 15} s` : '–'}</dd>
             </dl>
             {camp ? (
-              <a href={`${ROUTES.campaigns}/new?draft=${camp.draftId}`} className="text-ui underline underline-offset-4">
+              <a
+                href={`${ROUTES.campaigns}/new?draft=${camp.draftId}`}
+                className="text-ui underline underline-offset-4"
+              >
                 {COPY.intakeLink}
               </a>
             ) : null}
@@ -423,7 +498,10 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
             <p className="text-ui text-muted-foreground">{COPY.asideChecksNote}</p>
             <div className="mt-2 flex items-center justify-between text-ui">
               <span>{COPY.openIssues}</span>
-              <Badge variant={openIssues.length > 0 ? 'destructive' : 'success'} icon={openIssues.length > 0 ? undefined : 'circle-check'}>
+              <Badge
+                variant={openIssues.length > 0 ? 'destructive' : 'success'}
+                icon={openIssues.length > 0 ? undefined : 'circle-check'}
+              >
                 {String(openIssues.length)}
               </Badge>
             </div>
@@ -432,6 +510,22 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
       </PageGrid>
     );
   }
+
+  const panel = (
+    <div className="flex flex-col gap-4">
+      {data ? (
+        <div className="flex items-center gap-2">
+          <Badge variant={BADGE[data.state]}>{COPY.stateBadge[data.state]}</Badge>
+          {reason && !accepted && data.state === 'draft' ? (
+            <p id="accept-reason" className="text-ui text-muted-foreground">
+              {reason}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {body}
+    </div>
+  );
 
   return (
     <OperatorShell
@@ -443,36 +537,34 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
       onDismissToast={() => setToasts([])}
       onSignOut={() => window.location.assign(ROUTES.signIn)}
     >
-      <div className="mx-auto flex max-w-wide flex-col gap-4" data-screen="SCREEN-007" data-brief-state={stateKey ?? 'loading'} aria-busy={!data && !brief.isError ? true : undefined}>
+      <div
+        className="mx-auto flex max-w-wide flex-col gap-4"
+        data-screen="SCREEN-007"
+        data-brief-state={stateKey ?? 'loading'}
+        aria-busy={!data && !brief.isError ? true : undefined}
+      >
         <PageHeader
           title={name}
-          description={camp ? `UGC ad · ${camp.segmentCount} segments · ${camp.segmentCount * 15} s` : undefined}
+          description={
+            camp
+              ? `UGC ad · ${camp.segmentCount} segments · ${camp.segmentCount * 15} s`
+              : undefined
+          }
           breadcrumb={[{ label: 'Campaigns', href: ROUTES.campaigns }, { label: name }]}
           actions={actions}
-          tabs={
-            <Tabs
-              label={COPY.stageTabs}
-              value="brief"
-              onValueChange={goTo}
-              tabs={[
-                { id: 'brief', label: COPY.tabBrief },
-                { id: 'clips', label: COPY.tabClips, disabled: !accepted },
-                { id: 'final', label: COPY.tabFinal, disabled: true },
-              ]}
-            />
-          }
         />
-        {data ? (
-          <div className="flex items-center gap-2">
-            <Badge variant={BADGE[data.state]}>{COPY.stateBadge[data.state]}</Badge>
-            {reason && !accepted && data.state === 'draft' ? (
-              <p id="accept-reason" className="text-ui text-muted-foreground">
-                {reason}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-        {body}
+        <Tabs
+          label={COPY.stageTabs}
+          value="brief"
+          onValueChange={goTo}
+          tabs={[
+            { id: 'brief', label: COPY.tabBrief },
+            { id: 'clips', label: COPY.tabClips, disabled: !accepted },
+            { id: 'final', label: COPY.tabFinal, disabled: true },
+          ]}
+        >
+          {panel}
+        </Tabs>
       </div>
     </OperatorShell>
   );
