@@ -323,7 +323,9 @@ for (const { name, width, height } of WIDTHS) {
         mimeType: 'image/png',
         buffer: png(320).subarray(0, 300),
       });
-      await expect(page.locator('li[data-status="rejected"]')).toContainText('could not be read', { timeout: 60_000 });
+      await expect(page.locator('li[data-status="rejected"]')).toContainText('could not be read', {
+        timeout: 60_000,
+      });
       await capture(page, '15b-step-2-upload-undecodable', name);
       await expect(page.locator('li[data-status="ready"]')).toHaveCount(0);
       await page.getByRole('button', { name: /Next: Audience/ }).click();
