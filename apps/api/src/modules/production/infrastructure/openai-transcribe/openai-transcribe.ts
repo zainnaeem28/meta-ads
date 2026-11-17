@@ -48,7 +48,7 @@ export function multipart(boundary: string, fields: Readonly<Record<string, stri
 export class OpenAiTranscribe implements TranscribePort {
   constructor(
     @Inject(EGRESS) private readonly egress: Pick<Egress, 'fetch'>,
-    @Inject(QC_CONFIG) private readonly config: Pick<QcConfig, 'transcribeModel'>,
+    @Inject(QC_CONFIG) private readonly config: Pick<QcConfig, 'transcribeModel' | 'transcribeUrl'>,
   ) {}
 
   async transcribe(credential: ProviderCredential, audio: Buffer, language: 'en'): Promise<Transcript> {
@@ -59,7 +59,7 @@ export class OpenAiTranscribe implements TranscribePort {
     let response: Awaited<ReturnType<Egress['fetch']>>;
     try {
       response = await this.egress.fetch(PROVIDER, {
-        url: TRANSCRIPTIONS_URL,
+        url: this.config.transcribeUrl ?? TRANSCRIPTIONS_URL,
         method: 'POST',
         headers: {
           authorization: `Bearer ${credential.apiKey.toString('utf8')}`,

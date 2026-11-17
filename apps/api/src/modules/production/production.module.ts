@@ -147,7 +147,7 @@ export interface ProductionWorkerEdge {
   readonly storage: () => StoragePort;
   readonly media: () => Pick<MediaService, 'signedUrl' | 'registerObject'>;
   readonly registry: SweepRegistry;
-  /** Test seam: a local stand-in for `https://api.wavespeed.ai` (the host stays allow-listed). The product never sets it. */
+  /** Test seam: the origin of a local stand-in for the provider APIs (`https://api.wavespeed.ai`, and `https://api.openai.com` for the QC transcription); the hosts stay allow-listed. The product never sets it. */
   readonly baseUrl?: string;
 }
 
@@ -193,7 +193,7 @@ export function videoWorkerConfigFrom(env: Env): VideoWorkerConfig {
 }
 
 /** The QC settings, checked at start-up: `QC_MAX_WORD_ERROR_RATE` (0 to 1, 0.20 by default) and the clip's transcribe model. */
-export function qcConfigFrom(env: Env): QcConfig {
+export function qcConfigFrom(env: Env, baseUrl?: string): QcConfig {
   const text = optional(env, 'QC_MAX_WORD_ERROR_RATE');
   const maxWordErrorRate = text === undefined ? 0.2 : Number(text);
   if (!Number.isFinite(maxWordErrorRate) || maxWordErrorRate < 0 || maxWordErrorRate > 1) throw new Error('QC_MAX_WORD_ERROR_RATE must be a number from 0 to 1');
@@ -205,6 +205,7 @@ export function qcConfigFrom(env: Env): QcConfig {
     idempotencyTtlHours: video.idempotencyTtlHours,
     orphanAfterSec: videoWorkerConfigFrom(env).submitOrphanAfterSec,
     requeueAfterSec: 120,
+    ...(baseUrl === undefined ? {} : { transcribeUrl: `${baseUrl}/v1/audio/transcriptions` }),
   };
 }
 
@@ -243,7 +244,7 @@ export class ProductionWorkerModule {
           useFactory: (boss: Parameters<typeof startFirstQc>[0]) => productionMediaOf(edge.media, (tx, clip) => startFirstQc(boss, tx, clip).then(() => undefined)),
           inject: [BOSS],
         },
-        { provide: QC_CONFIG, useValue: qcConfigFrom(env) },
+        { provide: QC_CONFIG, useValue: qcConfigFrom(env, edge.baseUrl) },
         { provide: QC_REPOSITORY, useClass: SqlQcRepository },
         { provide: QC_KEY_AUTH_REPORTER, useClass: OpenAiKeyAuthReporter },
         { provide: TRANSCRIBE_PORT, useClass: OpenAiTranscribe },

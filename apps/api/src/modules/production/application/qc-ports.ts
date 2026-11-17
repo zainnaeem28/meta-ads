@@ -42,6 +42,8 @@ export interface QcConfig {
   readonly orphanAfterSec: number;
   /** A `pending` run whose queue message was lost is queued again after this long. */
   readonly requeueAfterSec: number;
+  /** Test seam: the transcription endpoint, a local stand-in for api.openai.com (the host stays allow-listed). The product never sets it. */
+  readonly transcribeUrl?: string;
 }
 export const QC_CONFIG = Symbol('QC_CONFIG');
 
