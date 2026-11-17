@@ -112,6 +112,24 @@ describe('SCREEN-006 step 2 product image', () => {
     saving();
   });
 
+  it('F4: an edit made inside the 0.8s debounce window is written when the wizard unmounts', async () => {
+    resume();
+    const seen: unknown[] = [];
+    server.use(
+      http.patch(`${BASE}/drafts/${ID}`, async ({ request }) => {
+        seen.push(await request.json());
+        return ok(draft({ version: 2 }));
+      }),
+    );
+    const view = show({ draftId: ID });
+    await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
+    fireEvent.change(screen.getByLabelText(/Product name/), { target: { value: 'Evening Calm' } });
+    expect(seen).toHaveLength(0);
+    view.unmount();
+    await waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toMatchObject({ productName: 'Evening Calm' });
+  });
+
   it('shows the likeness consent text and the file limits', async () => {
     resume();
     show({ draftId: ID });
@@ -315,7 +333,13 @@ describe('SCREEN-006 step 4 review and generate', () => {
     saving();
   });
   const atStep4 = (over: Record<string, unknown> = {}) =>
-    resume({ step: 4, productMediaId: MEDIA, concept: 'A calm morning routine.', ...over });
+    resume({
+      step: 4,
+      productMediaId: MEDIA,
+      concept: 'A calm morning routine.',
+      direction: { goal: 'awareness', segmentCount: 2 },
+      ...over,
+    });
   const generate = () => fireEvent.click(screen.getByRole('button', { name: COPY.step4.generate }));
 
   it('shows the summary and requires the concept before it submits', async () => {
@@ -435,12 +459,17 @@ describe('draft helpers', () => {
     });
   });
   it('validates step 4 by intake mode and length', () => {
-    expect(validateStep(4, EMPTY_VALUES)).toHaveLength(1);
-    expect(validateStep(4, { ...EMPTY_VALUES, intakeMode: 'script' })[0]?.id).toBe('draft-script');
-    expect(validateStep(4, { ...EMPTY_VALUES, concept: 'x'.repeat(4001) })[0]?.message).toBe(
+    const seg = { ...EMPTY_VALUES, segmentCount: '2' as const };
+    expect(validateStep(4, EMPTY_VALUES).map((p) => p.id)).toEqual([
+      'draft-segments',
+      'draft-concept',
+    ]);
+    expect(validateStep(4, seg)).toHaveLength(1);
+    expect(validateStep(4, { ...seg, intakeMode: 'script' })[0]?.id).toBe('draft-script');
+    expect(validateStep(4, { ...seg, concept: 'x'.repeat(4001) })[0]?.message).toBe(
       COPY.step4.long,
     );
-    expect(validateStep(4, { ...EMPTY_VALUES, concept: 'ok' })).toHaveLength(0);
+    expect(validateStep(4, { ...seg, concept: 'ok' })).toHaveLength(0);
     expect(
       validateStep(2, { ...EMPTY_VALUES, productName: 'a', productDescription: 'b' }, true)[0]?.id,
     ).toBe('draft-product-image');
@@ -450,5 +479,21 @@ describe('draft helpers', () => {
     expect(rejectText('pixel_cap_exceeded')).toBe(COPY.step2.rejected.pixel_cap_exceeded);
     expect(rejectText('decompression_bomb')).toBe(COPY.step2.rejected.decompression_bomb);
     expect(rejectText(null)).toBe(COPY.step2.rejectedFallback);
+  });
+});
+
+describe('SCREEN-006 step 4 names a missing segment count (F2)', () => {
+  it('Generate brief on a draft without segmentCount returns to step 3 and names it', async () => {
+    resume({ step: 4, concept: 'A calm morning routine.', direction: { goal: 'awareness' } });
+    const submitted = vi.fn();
+    server.use(http.post(`${BASE}/drafts/${ID}/submit`, () => (submitted(), failure(500, 'x'))));
+    show({ draftId: ID });
+    await screen.findByRole('heading', { level: 2, name: COPY.step4.title });
+    fireEvent.click(screen.getByRole('button', { name: COPY.step4.generate }));
+    expect(
+      await screen.findByRole('heading', { level: 2, name: COPY.step3.title }),
+    ).toBeInTheDocument();
+    expect((await screen.findAllByText(COPY.step3.segmentsRequired)).length).toBeGreaterThan(0);
+    expect(submitted).not.toHaveBeenCalled();
   });
 });

@@ -59,7 +59,8 @@ export const createApiFetch = (config: ApiClientConfig): typeof fetch => {
 
     let response: Response;
     try {
-      response = await doFetch(target, { ...init, headers });
+      // The api is bearer-only and its CORS is "no credentials mode" (cors.ts): the generated mutator's `include` would fail every cross-origin call.
+      response = await doFetch(target, { ...init, credentials: 'omit', headers });
     } catch (err) {
       throw asAbort(err) ? new ApiAbortError(err) : new ApiNetworkError(err);
     }

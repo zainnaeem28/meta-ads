@@ -64,6 +64,7 @@ const CONTROLS: ControlMap = {
   'audience.ageMax': { id: CONTROL_ID.ageMax, label: COPY.step3.ageMax },
   'audience.interests': { id: CONTROL_ID.interests, label: COPY.step3.interests },
   'audience.interests.*': { id: CONTROL_ID.interests, label: COPY.step3.interests },
+  'direction.segmentCount': { id: CONTROL_ID.segments, label: COPY.step3.segments },
 };
 
 const draftIn = (res: { data: unknown }): Draft => (res.data as DraftResponse).data;
@@ -258,6 +259,22 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
     const timer = setTimeout(() => void save(stepRef.current), AUTOSAVE_MS);
     return () => clearTimeout(timer);
   }, [rev, blocked, advancing, save]);
+
+  /** Edits still inside the debounce window are written when the user leaves (route change, tab hidden or closed). */
+  const flushRef = useRef<() => void>(() => undefined);
+  flushRef.current = () => {
+    if (revRef.current === savedRev.current || blocked || advancing) return;
+    if (validateStep(stepRef.current, valuesRef.current).length > 0) return;
+    void save(stepRef.current);
+  };
+  useEffect(() => {
+    const onHide = () => flushRef.current();
+    window.addEventListener('pagehide', onHide);
+    return () => {
+      window.removeEventListener('pagehide', onHide);
+      onHide();
+    };
+  }, []);
 
   useEffect(() => {
     if (focusHeading.current) {
@@ -734,7 +751,11 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
                     </Select>
                   )}
                 </FormField>
-                <div className="flex flex-col gap-1">
+                <div
+                  id={CONTROL_ID.segments}
+                  tabIndex={-1}
+                  className="flex flex-col gap-1 outline-none"
+                >
                   <span id="segments-label" className="text-ui font-semibold">
                     {COPY.step3.segments}
                   </span>
@@ -743,7 +764,9 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
                     name="segments"
                     value={values.segmentCount}
                     options={['1', '2', '3', '4'].map((n) => ({ value: n, label: n }))}
-                    onValueChange={(n) => edit({ segmentCount: n as FormValues['segmentCount'] })}
+                    onValueChange={(n) =>
+                      edit({ segmentCount: n as FormValues['segmentCount'] }, CONTROL_ID.segments)
+                    }
                   />
                   <p
                     className="text-caption tabular-nums text-muted-foreground"
@@ -751,6 +774,11 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
                   >
                     {segmentsText(values.segmentCount)}
                   </p>
+                  {err(CONTROL_ID.segments) ? (
+                    <p className="text-caption text-destructive" role="alert">
+                      {err(CONTROL_ID.segments)}
+                    </p>
+                  ) : null}
                 </div>
               </FormGrid>
             </div>
