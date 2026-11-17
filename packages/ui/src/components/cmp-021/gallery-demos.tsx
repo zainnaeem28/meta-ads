@@ -10,7 +10,13 @@ const SAMPLE: UploadItem[] = [
   { id: 'u', name: 'bottle.jpg', size: 2_400_000, status: 'uploading', progress: 60 },
   { id: 'p', name: 'tin.png', size: 1_100_000, status: 'processing' },
   { id: 'r', name: 'jar.webp', size: 640_000, status: 'ready' },
-  { id: 'x', name: 'huge.gif', size: 12_000_000, status: 'rejected', reason: 'Too large. Images can be up to 10 MB.' },
+  {
+    id: 'x',
+    name: 'huge.gif',
+    size: 12_000_000,
+    status: 'rejected',
+    reason: 'Too large. Images can be up to 10 MB.',
+  },
 ];
 
 const noop = () => undefined;
@@ -25,7 +31,10 @@ export function UploadStatesDemo() {
       <Cell id="upload-drag-over" label="CMP-021 drag-over">
         <FileUpload items={[]} onFiles={noop} onRemove={noop} dragOver />
       </Cell>
-      <Cell id="upload-rows" label="CMP-021 uploading, processing, ready, rejected with server reason">
+      <Cell
+        id="upload-rows"
+        label="CMP-021 uploading, processing, ready, rejected with server reason"
+      >
         <FileUpload items={SAMPLE} onFiles={noop} onRemove={noop} />
       </Cell>
     </div>
@@ -51,7 +60,10 @@ export function UploadLiveDemo() {
         onFiles={(files) =>
           files.forEach((file, n) => {
             const id = `${Date.now()}-${n}-${file.name}`;
-            setItems((list) => [...list, { id, name: file.name, size: file.size, status: 'uploading', progress: 0 }]);
+            setItems((list) => [
+              ...list,
+              { id, name: file.name, size: file.size, status: 'uploading', progress: 0 },
+            ]);
             later(() => patch(id, { progress: 50 }), 100);
             later(() => patch(id, { status: 'processing', progress: 100 }), 250);
             later(() => patch(id, { status: 'ready' }), 450);

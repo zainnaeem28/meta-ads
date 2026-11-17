@@ -33,7 +33,14 @@ export const VIDEO_TABLE = jobTable('video_jobs');
 export const HELD_RETRY_SEC = 10;
 const UNREADABLE_KEY = 'Your WaveSpeed key could not be read. Enter it again.';
 
-export type VideoSubmitOutcome = 'submitted' | 'rejected' | 'outcome_unknown' | 'late_task_id' | 'held' | 'skipped' | 'failed_before_call';
+export type VideoSubmitOutcome =
+  | 'submitted'
+  | 'rejected'
+  | 'outcome_unknown'
+  | 'late_task_id'
+  | 'held'
+  | 'skipped'
+  | 'failed_before_call';
 
 /** What the call closure learns, for the usage and key bookkeeping after `submitOnce` settles the row. */
 interface CallFacts {
@@ -72,7 +79,14 @@ export class VideoSubmitJob {
     const jobId = (job.data as { jobId?: unknown } | null)?.jobId;
     if (typeof jobId !== 'string') throw new TypeError('production.video-submit job has no jobId');
     const outcome = await this.run(jobId, log);
-    log.info({ module: 'production', outcome: outcome === 'rejected' || outcome === 'outcome_unknown' ? 'error' : 'ok', jobId }, `video submit: ${outcome}`);
+    log.info(
+      {
+        module: 'production',
+        outcome: outcome === 'rejected' || outcome === 'outcome_unknown' ? 'error' : 'ok',
+        jobId,
+      },
+      `video submit: ${outcome}`,
+    );
     return outcome;
   }
 
@@ -99,7 +113,9 @@ export class VideoSubmitJob {
 
     switch (outcome.kind) {
       case 'held':
-        await this.database.uow.run((tx) => enqueue(this.boss, tx, VIDEO_SUBMIT_QUEUE, { jobId }, { startAfter: HELD_RETRY_SEC }));
+        await this.database.uow.run((tx) =>
+          enqueue(this.boss, tx, VIDEO_SUBMIT_QUEUE, { jobId }, { startAfter: HELD_RETRY_SEC }),
+        );
         return 'held';
       case 'skipped':
         return 'skipped';
@@ -108,11 +124,18 @@ export class VideoSubmitJob {
         return 'submitted';
       case 'late_task_id':
         // The sweep or a cancel settled the row while the call was in flight: the usage event it wrote stands.
-        await this.database.uow.run((tx) => this.usage.record(tx, { ...base, outcome: 'succeeded', latencyMs: facts.latencyMs }));
+        await this.database.uow.run((tx) =>
+          this.usage.record(tx, { ...base, outcome: 'succeeded', latencyMs: facts.latencyMs }),
+        );
         return 'late_task_id';
       case 'rejected':
         await this.database.uow.run(async (tx) => {
-          if (facts.sent) await this.usage.record(tx, { ...base, outcome: 'rejected', latencyMs: facts.latencyMs });
+          if (facts.sent)
+            await this.usage.record(tx, {
+              ...base,
+              outcome: 'rejected',
+              latencyMs: facts.latencyMs,
+            });
           await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'video', jobId });
           await this.repository.setErrorCode(tx, jobId, outcome.cause);
         });
@@ -135,7 +158,12 @@ export class VideoSubmitJob {
     log: JobLog,
   ): Promise<
     | { kind: 'done'; outcome: VideoSubmitOutcome }
-    | { kind: 'go'; job: VideoJobRow; key: NonNullable<Awaited<ReturnType<KeySession['keyOf']>>>; input: Parameters<VideoGenPort['submit']>[1] }
+    | {
+        kind: 'go';
+        job: VideoJobRow;
+        key: NonNullable<Awaited<ReturnType<KeySession['keyOf']>>>;
+        input: Parameters<VideoGenPort['submit']>[1];
+      }
   > {
     const read = await this.database.uow.run(async (tx) => {
       const job = await this.repository.findJob(tx, jobId);
@@ -147,20 +175,44 @@ export class VideoSubmitJob {
     if (read.job === null) return { kind: 'done', outcome: 'skipped' };
     const { job, key, text } = read;
     const gate = gateKey(job, key);
-    if (!gate.ok) return { kind: 'done', outcome: await this.failBeforeCall(job, gate.cause, gate.message, log) };
-    if (text === null) return { kind: 'done', outcome: await this.failBeforeCall(job, 'temporary', 'The segment of this clip no longer exists.', log) };
+    if (!gate.ok)
+      return {
+        kind: 'done',
+        outcome: await this.failBeforeCall(job, gate.cause, gate.message, log),
+      };
+    if (text === null)
+      return {
+        kind: 'done',
+        outcome: await this.failBeforeCall(
+          job,
+          'temporary',
+          'The segment of this clip no longer exists.',
+          log,
+        ),
+      };
     let imageUrl: string | null = null;
     if (job.referenceMediaId !== null) {
       try {
         imageUrl = await this.media.referenceUrl(job.ownerId, job.referenceMediaId);
       } catch {
-        return { kind: 'done', outcome: await this.failBeforeCall(job, 'reference_unreachable', 'The reference image could not be shared with the provider. Try again.', log) };
+        return {
+          kind: 'done',
+          outcome: await this.failBeforeCall(
+            job,
+            'reference_unreachable',
+            'The reference image could not be shared with the provider. Try again.',
+            log,
+          ),
+        };
       }
     }
     const input = {
       model: job.providerModel,
       // The scene and what is said in it; the provider speaks the quoted words (VERIFY against the model's prompt guide).
-      prompt: text.dialogue === '' ? text.prompt : `${text.prompt}\n\nThe speaker says: "${text.dialogue}"`,
+      prompt:
+        text.dialogue === ''
+          ? text.prompt
+          : `${text.prompt}\n\nThe speaker says: "${text.dialogue}"`,
       imageUrl,
       durationSeconds: job.options.durationSeconds,
       resolution: job.options.resolution,
@@ -170,13 +222,22 @@ export class VideoSubmitJob {
   }
 
   /** `pending` to `failed` with no call: the reservation is released and no usage event is written. */
-  private async failBeforeCall(job: VideoJobRow, cause: VideoCause, message: string, log: JobLog): Promise<VideoSubmitOutcome> {
+  private async failBeforeCall(
+    job: VideoJobRow,
+    cause: VideoCause,
+    message: string,
+    log: JobLog,
+  ): Promise<VideoSubmitOutcome> {
     const failed = await this.database.uow.run(async (tx) => {
       const moved = await this.repository.failPending(tx, job.id, cause, message);
-      if (moved) await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'video', jobId: job.id });
+      if (moved)
+        await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'video', jobId: job.id });
       return moved;
     });
-    log.info({ module: 'production', outcome: 'error', jobId: job.id, cause }, 'video job failed before any call');
+    log.info(
+      { module: 'production', outcome: 'error', jobId: job.id, cause },
+      'video job failed before any call',
+    );
     return failed ? 'failed_before_call' : 'skipped';
   }
 
@@ -202,7 +263,8 @@ export class VideoSubmitJob {
         facts.latencyMs = Date.now() - began;
       }
     });
-    if (result === 'unreadable') return { kind: 'rejected', cause: 'configuration', message: UNREADABLE_KEY };
+    if (result === 'unreadable')
+      return { kind: 'rejected', cause: 'configuration', message: UNREADABLE_KEY };
     return result;
   }
 
@@ -213,9 +275,14 @@ export class VideoSubmitJob {
     }
     const c = error.classification;
     facts.authFailure = c.countsAsAuthFailure;
-    if (c.usageEvent === 'unconfirmed') return { kind: 'unknown', ...(c.message === undefined ? {} : { message: c.message }) };
+    if (c.usageEvent === 'unconfirmed')
+      return { kind: 'unknown', ...(c.message === undefined ? {} : { message: c.message }) };
     // Refused before acceptance: nothing is billed (a refusal that never left the process is not counted as a call).
     facts.sent = c.usageEvent === 'rejected_zero';
-    return { kind: 'rejected', cause: cleanCause(c.causeClass), ...(c.message === undefined ? {} : { message: c.message }) };
+    return {
+      kind: 'rejected',
+      cause: cleanCause(c.causeClass),
+      ...(c.message === undefined ? {} : { message: c.message }),
+    };
   }
 }

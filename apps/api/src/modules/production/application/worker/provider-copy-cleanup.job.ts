@@ -31,7 +31,9 @@ export class ProviderCopyCleanup {
   ) {}
 
   async run(log: JobLog): Promise<CleanupOutcome> {
-    const candidates = await this.database.uow.run((tx) => this.repository.cleanupCandidates(tx, BATCH));
+    const candidates = await this.database.uow.run((tx) =>
+      this.repository.cleanupCandidates(tx, BATCH),
+    );
     let deleted = 0;
     let waiting = 0;
     let failed = 0;
@@ -42,7 +44,10 @@ export class ProviderCopyCleanup {
         else waiting += 1;
       } catch {
         failed += 1;
-        log.warn({ module: 'production', outcome: 'error', jobId: candidate.id }, 'provider task cleanup failed; retried next hour');
+        log.warn(
+          { module: 'production', outcome: 'error', jobId: candidate.id },
+          'provider task cleanup failed; retried next hour',
+        );
       }
     }
     return { deleted, waiting, failed };
@@ -56,20 +61,25 @@ export class ProviderCopyCleanup {
     // No key to ask with: nothing can be done from here; the account removal run deletes provider tasks itself.
     if (key === null) return 'waiting';
     const taskId = candidate.providerTaskId;
-    const outcome = await this.keys.with(key, log, async (credential): Promise<'deleted' | 'waiting'> => {
-      try {
-        const status = await this.video.status(credential, taskId);
-        if (status.state === 'created' || status.state === 'processing') return 'waiting';
-        await this.video.deleteTask(credential, taskId);
-        return 'deleted';
-      } catch (error) {
-        // The provider no longer has the task: there is nothing left to delete.
-        if (error instanceof ProviderCallFailed && error.status === 404) return 'deleted';
-        throw error;
-      }
-    });
+    const outcome = await this.keys.with(
+      key,
+      log,
+      async (credential): Promise<'deleted' | 'waiting'> => {
+        try {
+          const status = await this.video.status(credential, taskId);
+          if (status.state === 'created' || status.state === 'processing') return 'waiting';
+          await this.video.deleteTask(credential, taskId);
+          return 'deleted';
+        } catch (error) {
+          // The provider no longer has the task: there is nothing left to delete.
+          if (error instanceof ProviderCallFailed && error.status === 404) return 'deleted';
+          throw error;
+        }
+      },
+    );
     if (outcome === 'unreadable') return 'waiting';
-    if (outcome === 'deleted') await this.database.uow.run((tx) => this.repository.markOutputDeleted(tx, candidate.id));
+    if (outcome === 'deleted')
+      await this.database.uow.run((tx) => this.repository.markOutputDeleted(tx, candidate.id));
     return outcome;
   }
 }

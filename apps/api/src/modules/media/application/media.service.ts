@@ -14,13 +14,7 @@ import {
 } from '../domain/storage.js';
 import type { ContentDisposition, StoragePort } from '../domain/storage.js';
 import { MEDIA_CONFIG, MEDIA_REPOSITORY } from './ports.js';
-import type {
-  MediaConfig,
-  MediaKind,
-  MediaRecord,
-  MediaRepository,
-  MediaState,
-} from './ports.js';
+import type { MediaConfig, MediaKind, MediaRecord, MediaRepository, MediaState } from './ports.js';
 
 /** What an upload may be before sanitizing; the sniffed type, never the client's claim. */
 export const UPLOAD_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
@@ -75,7 +69,10 @@ export interface SignedUrl {
 
 const notFound = (): DomainError => new DomainError('not_found', 'Not found.');
 const unavailable = (): DomainError =>
-  new DomainError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.');
+  new DomainError(
+    'service_unavailable',
+    'The service is temporarily unavailable. Try again shortly.',
+  );
 
 /**
  * The media module's public service (SB §4.2): quota, upload, registration of objects other modules produce,
@@ -152,7 +149,8 @@ export class MediaService {
       if (error instanceof StorageTooLarge) {
         throw new DomainError('payload_too_large', 'The file is larger than announced.');
       }
-      if (error instanceof StorageUnavailable || error instanceof StorageKeyExists) throw unavailable();
+      if (error instanceof StorageUnavailable || error instanceof StorageKeyExists)
+        throw unavailable();
       throw error;
     }
     if (stored.bytes !== declaredBytes) {
@@ -187,7 +185,8 @@ export class MediaService {
     if (!isOwnedKey(input.ownerId, input.storageKey)) {
       throw new TypeError('storageKey is outside the owner prefixes');
     }
-    if (!Number.isSafeInteger(input.bytes) || input.bytes < 0) throw new TypeError('bytes must be >= 0');
+    if (!Number.isSafeInteger(input.bytes) || input.bytes < 0)
+      throw new TypeError('bytes must be >= 0');
     const id = input.id ?? newId();
     await this.repository.lockUsage(tx, input.ownerId);
     await this.repository.insert(tx, {
@@ -236,15 +235,21 @@ export class MediaService {
    */
   async signedUrl(purpose: SignedUrlPurpose, input: SignedUrlInput): Promise<SignedUrl> {
     const media = await this.database.uow.run((tx) => this.repository.find(tx, input.mediaId));
-    if (media === null || media.ownerId !== input.ownerId || media.state === 'rejected') throw notFound();
-    if (media.state !== 'ready') throw new DomainError('media_not_ready', 'The file is still being checked.');
+    if (media === null || media.ownerId !== input.ownerId || media.state === 'rejected')
+      throw notFound();
+    if (media.state !== 'ready')
+      throw new DomainError('media_not_ready', 'The file is still being checked.');
     const expiresInSec =
       purpose === 'browser' ? this.config.browserUrlTtlSec : this.config.providerFetchUrlTtlSec;
     const disposition: ContentDisposition = input.disposition ?? { type: 'inline' };
     try {
-      return { url: await this.storage.presignGet(media.storageKey, expiresInSec, disposition), expiresInSec };
+      return {
+        url: await this.storage.presignGet(media.storageKey, expiresInSec, disposition),
+        expiresInSec,
+      };
     } catch (error) {
-      if (error instanceof StorageUnavailable || error instanceof StorageNotFound) throw unavailable();
+      if (error instanceof StorageUnavailable || error instanceof StorageNotFound)
+        throw unavailable();
       throw error;
     }
   }

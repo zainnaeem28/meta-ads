@@ -19,9 +19,18 @@ import { RevokeSessionsService } from './application/revoke-sessions.service.js'
 import { AdminUserListQueries } from './infrastructure/admin-users.queries.js';
 import { AccessRequestQueries } from './infrastructure/identity.queries.js';
 import { AdminUsersController } from './transport/admin-users.controller.js';
+import { DevTokenController } from './transport/dev-token.controller.js';
 import { MeController } from './transport/me.controller.js';
-import { InvitationJobs, EXPIRE_INVITATIONS_QUEUE, INVITATION_JOB_OPTIONS } from './application/invitations.jobs.js';
-import { INVITATION_OPTIONS, InvitationService, invitationOptionsFrom } from './application/invitations.service.js';
+import {
+  InvitationJobs,
+  EXPIRE_INVITATIONS_QUEUE,
+  INVITATION_JOB_OPTIONS,
+} from './application/invitations.jobs.js';
+import {
+  INVITATION_OPTIONS,
+  InvitationService,
+  invitationOptionsFrom,
+} from './application/invitations.service.js';
 import { INVITATION_ADMIN_STORE, InvitationAdminStore } from './application/invitations.store.js';
 import { InvitationsController } from './transport/invitations.controller.js';
 import {
@@ -29,10 +38,20 @@ import {
   AccessRequestService,
   accessRequestOptionsFrom,
 } from './application/access-requests.service.js';
-import { ACCESS_REQUEST_STORE, AccessRequestAdminStore } from './application/access-requests.store.js';
-import { SETTINGS_OPTIONS, SettingsService, settingsOptionsFrom } from './application/settings.service.js';
+import {
+  ACCESS_REQUEST_STORE,
+  AccessRequestAdminStore,
+} from './application/access-requests.store.js';
+import {
+  SETTINGS_OPTIONS,
+  SettingsService,
+  settingsOptionsFrom,
+} from './application/settings.service.js';
 import { SETTINGS_ADMIN_STORE, SettingsAdminStore } from './application/settings.store.js';
-import { AccessRequestsController, AdminAccessRequestsController } from './transport/access-requests.controller.js';
+import {
+  AccessRequestsController,
+  AdminAccessRequestsController,
+} from './transport/access-requests.controller.js';
 import { SettingsController } from './transport/settings.controller.js';
 import { DATABASE } from '../../platform/db/index.js';
 import type { Database } from '../../platform/db/index.js';
@@ -40,7 +59,7 @@ import { RateLimiter } from '../../platform/rate-limit/index.js';
 import { IDENTITY_PORT } from './domain/identity-port.js';
 import type { IdentityPort } from './domain/identity-port.js';
 import { ClerkIdentity } from './infrastructure/clerk-identity.js';
-import { identityConfigFrom } from './infrastructure/identity.config.js';
+import { assertDevTokenRoute, identityConfigFrom } from './infrastructure/identity.config.js';
 import type { IdentityConfig } from './infrastructure/identity.config.js';
 import {
   AccessRequestRepository,
@@ -66,13 +85,13 @@ export { LocalIdentity } from './infrastructure/local-identity.js';
 export { AdminUsersService } from './application/admin-users.service.js';
 export type { AdminChange, AdminUserView, RoleChange } from './application/admin-users.service.js';
 export { REVOKE_SESSIONS_QUEUE } from './application/admin.ports.js';
-export { RevokeSessionsService, revokeSessionsHandler } from './application/revoke-sessions.service.js';
+export {
+  RevokeSessionsService,
+  revokeSessionsHandler,
+} from './application/revoke-sessions.service.js';
 
 /** The adapter the configuration selects: Clerk, or the local provider that needs no account. */
-export function createIdentityPort(
-  config: IdentityConfig,
-  webOrigin?: string,
-): IdentityPort {
+export function createIdentityPort(config: IdentityConfig, webOrigin?: string): IdentityPort {
   if (config.mode === 'local') {
     return new LocalIdentity(webOrigin === undefined ? {} : { authorizedParties: [webOrigin] });
   }
@@ -89,7 +108,10 @@ export function createIdentityPort(
 }
 
 /** A worker job handler of this module (the worker composition root binds it to its queue). */
-export type IdentityJobHandler = (job: unknown, log: { info(fields: object, message: string): void }) => Promise<void>;
+export type IdentityJobHandler = (
+  job: unknown,
+  log: { info(fields: object, message: string): void },
+) => Promise<void>;
 
 /** The queue handlers of this module: `identity.expire-invitations` runs `InvitationJobs`, resolved when a job arrives. */
 export function identityJobHandlers(
@@ -119,7 +141,12 @@ export class IdentityModule {
    * `auth` switches on the session guard, API-001 and the linking service; it needs the database module, so the
    * composition root passes it only when a database is configured.
    */
-  static register(config: IdentityConfig, auth?: IdentityAuth): DynamicModule {
+  static register(
+    config: IdentityConfig,
+    auth?: IdentityAuth,
+    appEnv = 'production',
+  ): DynamicModule {
+    assertDevTokenRoute(config, appEnv);
     const repositories = [
       UserRepository,
       InvitationRepository,
@@ -144,10 +171,18 @@ export class IdentityModule {
               { provide: CURSOR_KEY, useValue: process.env['CURSOR_SIGNING_KEY'] },
               LinkingService,
               MeService,
-              { provide: RateLimiter, useFactory: (database: Database) => new RateLimiter(database.db), inject: [DATABASE] },
+              {
+                provide: RateLimiter,
+                useFactory: (database: Database) => new RateLimiter(database.db),
+                inject: [DATABASE],
+              },
               {
                 provide: INVITATION_OPTIONS,
-                useValue: invitationOptionsFrom(process.env, auth.options.inviteEmailDomains, auth.options.webOrigin),
+                useValue: invitationOptionsFrom(
+                  process.env,
+                  auth.options.inviteEmailDomains,
+                  auth.options.webOrigin,
+                ),
               },
               { provide: INVITATION_ADMIN_STORE, useClass: InvitationAdminStore },
               InvitationService,
@@ -165,15 +200,22 @@ export class IdentityModule {
             ]),
       ],
       imports: auth === undefined ? [] : [auth.audit],
-      controllers: auth === undefined ? [] : [
+      controllers:
+        auth === undefined
+          ? []
+          : [
               MeController,
               AdminUsersController,
               InvitationsController,
               AccessRequestsController,
               AdminAccessRequestsController,
               SettingsController,
+              ...(config.devTokens === true ? [DevTokenController] : []),
             ],
-      exports: [IDENTITY_PORT, ...(auth === undefined ? [] : [AdminUsersService, RevokeSessionsService])],
+      exports: [
+        IDENTITY_PORT,
+        ...(auth === undefined ? [] : [AdminUsersService, RevokeSessionsService]),
+      ],
     };
   }
 
@@ -189,7 +231,10 @@ export class IdentityModule {
       providers: [
         {
           provide: IDENTITY_PORT,
-          useValue: createIdentityPort(identityConfigFrom(env, env['APP_ENV'] ?? 'development', webOrigin), webOrigin),
+          useValue: createIdentityPort(
+            identityConfigFrom(env, env['APP_ENV'] ?? 'development', webOrigin),
+            webOrigin,
+          ),
         },
         { provide: INVITATION_JOB_OPTIONS, useValue: { sendStaleMin: stale } },
         { provide: INVITATION_ADMIN_STORE, useClass: InvitationAdminStore },

@@ -78,7 +78,15 @@ describe('CMP-013 Dialog', () => {
   it('typed confirm keeps confirm disabled until the exact text is typed', async () => {
     const onConfirm = vi.fn();
     const user = userEvent.setup();
-    render(<Harness variant="typed-confirm" confirmText="Spring" confirmLabel="Delete" destructive onConfirm={onConfirm} />);
+    render(
+      <Harness
+        variant="typed-confirm"
+        confirmText="Spring"
+        confirmLabel="Delete"
+        destructive
+        onConfirm={onConfirm}
+      />,
+    );
     await user.click(screen.getByRole('button', { name: 'Open' }));
     const input = screen.getByLabelText(/Type/);
     expect(input).toHaveFocus();
@@ -115,7 +123,10 @@ describe('CMP-013 Dialog', () => {
     const opener = screen.getByRole('button', { name: 'Open' });
     await user.click(opener);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('dialog', { name: 'Discard changes?' })).toHaveAttribute('data-state', 'dirty-discard');
+    expect(screen.getByRole('dialog', { name: 'Discard changes?' })).toHaveAttribute(
+      'data-state',
+      'dirty-discard',
+    );
     expect(screen.getByRole('button', { name: 'Keep editing' })).toHaveFocus();
     await user.keyboard('{Escape}');
     expect(screen.getByRole('dialog', { name: 'Pause campaign?' })).toBeInTheDocument();
@@ -129,7 +140,9 @@ describe('CMP-013 Dialog', () => {
 
   it('DialogPanel renders every state with no axe violations', async () => {
     const { container } = render(<DialogStates />);
-    const states = Array.from(container.querySelectorAll('[role=group][data-variant]')).map((d) => d.getAttribute('data-state'));
+    const states = Array.from(container.querySelectorAll('[role=group][data-variant]')).map((d) =>
+      d.getAttribute('data-state'),
+    );
     expect(states).toEqual(['open', 'open', 'open', 'pending', 'error', 'dirty-discard']);
     expect(container.querySelector('[role=group][data-variant=typed-confirm]')).not.toBeNull();
     const results = await axe.run(container, { rules: { region: { enabled: false } } });
@@ -138,7 +151,16 @@ describe('CMP-013 Dialog', () => {
 
   it('DialogPanel ignores submit while pending', async () => {
     const onConfirm = vi.fn();
-    render(<DialogPanel inline title="T" confirmLabel="Go" pending onConfirm={onConfirm} onCancel={() => {}} />);
+    render(
+      <DialogPanel
+        inline
+        title="T"
+        confirmLabel="Go"
+        pending
+        onConfirm={onConfirm}
+        onCancel={() => {}}
+      />,
+    );
     await userEvent.type(screen.getByRole('button', { name: /Working/ }), '{Enter}');
     expect(onConfirm).not.toHaveBeenCalled();
   });

@@ -2,7 +2,12 @@ import { EventEmitter } from 'node:events';
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
 import { AppMetrics } from './app-metrics.js';
-import { installRequestMetrics, instrumentBossSend, instrumentPool, isProbePath } from './instrument.js';
+import {
+  installRequestMetrics,
+  instrumentBossSend,
+  instrumentPool,
+  isProbePath,
+} from './instrument.js';
 
 describe('request metrics', () => {
   it('records by route template, skips probes and counts unmatched routes under one label', async () => {
@@ -26,7 +31,11 @@ describe('request metrics', () => {
   });
 
   it('recognises the probe and metrics paths only', () => {
-    expect(['/health/live', '/health/ready?x=1', '/internal/metrics', '/internal/metrics/window'].every(isProbePath)).toBe(true);
+    expect(
+      ['/health/live', '/health/ready?x=1', '/internal/metrics', '/internal/metrics/window'].every(
+        isProbePath,
+      ),
+    ).toBe(true);
     expect(['/api/v1/health/live', '/healthy', '/internal/metricsx'].some(isProbePath)).toBe(false);
   });
 });
@@ -44,7 +53,9 @@ class FakePool extends EventEmitter {
       setTimeout(settle, this.delay);
       return undefined;
     }
-    return new Promise((resolve, reject) => setTimeout(() => (this.fail ? reject(new Error('down')) : resolve({})), this.delay));
+    return new Promise((resolve, reject) =>
+      setTimeout(() => (this.fail ? reject(new Error('down')) : resolve({})), this.delay),
+    );
   }
 }
 
@@ -59,7 +70,9 @@ describe('pool wait instrumentation (ALR-7 input)', () => {
     pool.totalCount = 2;
     pool.delay = 15;
     await (pool as never as { connect(): Promise<unknown> }).connect();
-    await new Promise<void>((resolve) => (pool as never as { connect(cb: () => void): void }).connect(() => resolve()));
+    await new Promise<void>((resolve) =>
+      (pool as never as { connect(cb: () => void): void }).connect(() => resolve()),
+    );
     const sample = metrics.window.snapshot().poolWait;
     expect(sample.acquisitions).toBe(3);
     expect(sample.waited).toBe(2);
@@ -72,7 +85,9 @@ describe('pool wait instrumentation (ALR-7 input)', () => {
     const pool = new FakePool();
     pool.fail = true;
     instrumentPool(pool as never, metrics);
-    await expect((pool as never as { connect(): Promise<unknown> }).connect()).rejects.toThrow('down');
+    await expect((pool as never as { connect(): Promise<unknown> }).connect()).rejects.toThrow(
+      'down',
+    );
     expect(metrics.window.snapshot().poolWait.acquisitions).toBe(1);
   });
 });
@@ -81,7 +96,12 @@ describe('pg-boss send instrumentation', () => {
   it('counts a failed send and rethrows, passing a successful one through', async () => {
     const metrics = new AppMetrics();
     let fail = true;
-    const boss = { send: async (queue: string): Promise<string> => { if (fail) throw new Error(queue); return 'id'; } };
+    const boss = {
+      send: async (queue: string): Promise<string> => {
+        if (fail) throw new Error(queue);
+        return 'id';
+      },
+    };
     instrumentBossSend(boss as never, metrics);
     await expect(boss.send('provider')).rejects.toThrow('provider');
     fail = false;

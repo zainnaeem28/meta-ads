@@ -32,3 +32,16 @@ f4ea4f1e66a893d8e3ef5fe5f318daa27650c5de:docs/evidence/TASK-092/submit-check.md:
 8771c30112efdfe8b2b4c381feb45b6db6c49367:docs/evidence/TASK-099/submit-check.md:openai-key-shaped:3
 # False positive: the ticket branch name in a report line (removed again in the next commit), not a credential
 8382f3ad3b850622709479a7da66fd6c001320ea:docs/evidence/TASK-095/submit-check.md:openai-key-shaped:3
+59d9723aa25103d2fb40f6ac1bdd7ea333caa908:docs/evidence/TASK-111/submit-check.md:openai-key-shaped:3
+59d9723aa25103d2fb40f6ac1bdd7ea333caa908:docs/evidence/TASK-111/submit-check.md:openai-key-shaped:11
+59d9723aa25103d2fb40f6ac1bdd7ea333caa908:docs/evidence/TASK-111/submit-check.md:openai-key-shaped:28
+59d9723aa25103d2fb40f6ac1bdd7ea333caa908:docs/evidence/TASK-111/submit-check.md:openai-key-shaped:30
+59d9723aa25103d2fb40f6ac1bdd7ea333caa908:docs/evidence/TASK-111/submit-check.md:openai-key-shaped:62
+234390b23e821d0b72650df00cff83292cfa5893:docs/evidence/TASK-111/submit-check.md:openai-key-shaped:3
+ad93582d90cb7187ca2e88b60783af5f1b487a07:docs/evidence/TASK-111/submit-check.md:openai-key-shaped:3
+ad93582d90cb7187ca2e88b60783af5f1b487a07:docs/evidence/TASK-111/submit-check.md:openai-key-shaped:41
+33198cf3b8963e5732bb80bfd07b5c2c994c649e:docs/evidence/TASK-105/submit-check.md:openai-key-shaped:3
+33198cf3b8963e5732bb80bfd07b5c2c994c649e:docs/evidence/TASK-105/submit-check.md:openai-key-shaped:41
+b1dbf4e38593834b6ce0a06c1f5653a2396f55f0:docs/evidence/AIU-251/dev-token-integration.txt:openai-key-shaped:2
+ba405a0c437230c6ba121e451e9dfda596a907d5:docs/evidence/TASK-112/submit-check.md:openai-key-shaped:3
+ba405a0c437230c6ba121e451e9dfda596a907d5:docs/evidence/TASK-112/submit-check.md:openai-key-shaped:41

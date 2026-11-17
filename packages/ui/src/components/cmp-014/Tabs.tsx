@@ -100,7 +100,13 @@ export function Tabs({ tabs, value, onValueChange, label, children, className }:
         })}
       </div>
       {children !== undefined && selected ? (
-        <div role="tabpanel" id={`${base}-panel`} aria-labelledby={`${base}-tab-${selected}`} tabIndex={0} className="pt-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        <div
+          role="tabpanel"
+          id={`${base}-panel`}
+          aria-labelledby={`${base}-tab-${selected}`}
+          tabIndex={0}
+          className="pt-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
           {children}
         </div>
       ) : null}

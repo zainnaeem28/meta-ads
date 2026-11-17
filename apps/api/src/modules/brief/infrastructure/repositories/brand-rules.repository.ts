@@ -24,7 +24,9 @@ export class DrizzleBrandRulesRepository {
         .onConflictDoUpdate({ target: brandRules.id, set: values });
     }
     const keep = new Set(rules.map((rule) => rule.id));
-    const stored = await tx.select({ id: brandRules.id, active: brandRules.active }).from(brandRules);
+    const stored = await tx
+      .select({ id: brandRules.id, active: brandRules.active })
+      .from(brandRules);
     for (const row of stored) {
       if (row.active && !keep.has(row.id)) {
         await tx.update(brandRules).set({ active: false }).where(eq(brandRules.id, row.id));

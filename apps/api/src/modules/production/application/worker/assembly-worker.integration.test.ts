@@ -47,7 +47,8 @@ async function startTestBucket(bucket = 'app'): Promise<TestBucket> {
     res.setHeader('content-type', 'application/xml');
     res.end(`<?xml version="1.0" encoding="UTF-8"?>${body}`);
   };
-  const error = (res: ServerResponse, status: number, code: string): void => xml(res, status, `<Error><Code>${code}</Code><Message>${code}</Message></Error>`);
+  const error = (res: ServerResponse, status: number, code: string): void =>
+    xml(res, status, `<Error><Code>${code}</Code><Message>${code}</Message></Error>`);
   const server = createHttpServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://local');
     const key = decodeURIComponent(url.pathname.split('/').slice(2).join('/'));
@@ -57,16 +58,29 @@ async function startTestBucket(bucket = 'app'): Promise<TestBucket> {
       const body = Buffer.concat(parts);
       if (key === '' && req.method === 'GET') {
         const prefix = url.searchParams.get('prefix') ?? '';
-        const listed = [...objects.entries()].filter(([name]) => name.startsWith(prefix)).sort(([a], [b]) => a.localeCompare(b));
-        const contents = listed.map(([name, o]) => `<Contents><Key>${name}</Key><Size>${String(o.body.length)}</Size><LastModified>${o.at.toISOString()}</LastModified></Contents>`).join('');
-        return xml(res, 200, `<ListBucketResult><Name>${bucket}</Name><Prefix>${prefix}</Prefix><KeyCount>${String(listed.length)}</KeyCount><IsTruncated>false</IsTruncated>${contents}</ListBucketResult>`);
+        const listed = [...objects.entries()]
+          .filter(([name]) => name.startsWith(prefix))
+          .sort(([a], [b]) => a.localeCompare(b));
+        const contents = listed
+          .map(
+            ([name, o]) =>
+              `<Contents><Key>${name}</Key><Size>${String(o.body.length)}</Size><LastModified>${o.at.toISOString()}</LastModified></Contents>`,
+          )
+          .join('');
+        return xml(
+          res,
+          200,
+          `<ListBucketResult><Name>${bucket}</Name><Prefix>${prefix}</Prefix><KeyCount>${String(listed.length)}</KeyCount><IsTruncated>false</IsTruncated>${contents}</ListBucketResult>`,
+        );
       }
       if (key === '' && req.method === 'POST' && url.searchParams.has('delete')) {
-        for (const match of body.toString().matchAll(/<Key>([^<]+)<\/Key>/g)) objects.delete(match[1] as string);
+        for (const match of body.toString().matchAll(/<Key>([^<]+)<\/Key>/g))
+          objects.delete(match[1] as string);
         return xml(res, 200, '<DeleteResult></DeleteResult>');
       }
       if (req.method === 'PUT') {
-        if (req.headers['if-none-match'] === '*' && objects.has(key)) return error(res, 412, 'PreconditionFailed');
+        if (req.headers['if-none-match'] === '*' && objects.has(key))
+          return error(res, 412, 'PreconditionFailed');
         objects.set(key, { body, type: String(req.headers['content-type'] ?? ''), at: new Date() });
         res.setHeader('etag', '"stub"');
         res.statusCode = 200;
@@ -95,22 +109,37 @@ async function startTestBucket(bucket = 'app'): Promise<TestBucket> {
     accessKey: 'stub-access',
     secretKey: 'stub-secret',
     bucket,
-    stop: () => new Promise<void>((resolve) => { server.closeAllConnections(); server.close(() => resolve()); }),
+    stop: () =>
+      new Promise<void>((resolve) => {
+        server.closeAllConnections();
+        server.close(() => resolve());
+      }),
   };
 }
 
 function kekMaps() {
-  const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 3072, publicExponent: 0x10001 });
+  const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+    modulusLength: 3072,
+    publicExponent: 0x10001,
+  });
   return {
-    KEK_PUBLIC_KEYS: JSON.stringify({ 1: publicKey.export({ type: 'spki', format: 'pem' }).toString() }),
-    KEK_PRIVATE_KEYS: JSON.stringify({ 1: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString() }),
+    KEK_PUBLIC_KEYS: JSON.stringify({
+      1: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    }),
+    KEK_PRIVATE_KEYS: JSON.stringify({
+      1: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+    }),
     KEK_ACTIVE_VERSION: '1',
   };
 }
 
-
 const lines: string[] = [];
-const sink = new Writable({ write(chunk: Buffer, _e, done) { lines.push(chunk.toString()); done(); } });
+const sink = new Writable({
+  write(chunk: Buffer, _e, done) {
+    lines.push(chunk.toString());
+    done();
+  },
+});
 
 let testDb: TestDatabase;
 let pool: pg.Pool;
@@ -125,11 +154,17 @@ let savedPath: string | undefined;
 let real = false;
 
 const usable = (dir: string): boolean =>
-  ['ffmpeg', 'ffprobe'].every((name) => existsSync(join(dir, name)) && spawnSync(join(dir, name), ['-version'], { stdio: 'ignore' }).status === 0);
+  ['ffmpeg', 'ffprobe'].every(
+    (name) =>
+      existsSync(join(dir, name)) &&
+      spawnSync(join(dir, name), ['-version'], { stdio: 'ignore' }).status === 0,
+  );
 
 /** The real binaries: `FFMPEG_DIR`, else a PATH entry that has both. */
 function findTools(): string | undefined {
-  const dirs = [process.env['FFMPEG_DIR'], ...(process.env['PATH'] ?? '').split(delimiter)].filter((dir): dir is string => dir !== undefined && dir !== '');
+  const dirs = [process.env['FFMPEG_DIR'], ...(process.env['PATH'] ?? '').split(delimiter)].filter(
+    (dir): dir is string => dir !== undefined && dir !== '',
+  );
   return dirs.find(usable);
 }
 
@@ -140,8 +175,14 @@ function installFakeTools(): string {
     writeFileSync(join(dir, name), `#!/bin/sh\n${body}\n`);
     chmodSync(join(dir, name), 0o755);
   };
-  write('ffprobe', 'for a; do f="$a"; done\nif grep -q BROKEN "$f"; then exit 1; fi\nprintf \'{"streams":[{"codec_type":"video","width":320,"height":568},{"codec_type":"audio"}],"format":{"duration":"15.0"}}\'');
-  write('ffmpeg', 'for a; do out="$a"; done\nprintf "out_time_us=30000000\\n"\nprintf "fakefinalvideo" > "$out"');
+  write(
+    'ffprobe',
+    'for a; do f="$a"; done\nif grep -q BROKEN "$f"; then exit 1; fi\nprintf \'{"streams":[{"codec_type":"video","width":320,"height":568},{"codec_type":"audio"}],"format":{"duration":"15.0"}}\'',
+  );
+  write(
+    'ffmpeg',
+    'for a; do out="$a"; done\nprintf "out_time_us=30000000\\n"\nprintf "fakefinalvideo" > "$out"',
+  );
   return dir;
 }
 
@@ -154,7 +195,15 @@ function tool(name: string, args: string[]): string {
 /** A 15 second 320x568 clip; `silent` has no audio track. */
 function makeClip(file: string, silent: boolean): void {
   const args = ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x568:rate=30:duration=15'];
-  if (!silent) args.push('-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000:duration=15', '-c:a', 'aac');
+  if (!silent)
+    args.push(
+      '-f',
+      'lavfi',
+      '-i',
+      'sine=frequency=440:sample_rate=48000:duration=15',
+      '-c:a',
+      'aac',
+    );
   args.push('-c:v', 'mpeg4', '-pix_fmt', 'yuv420p', '-y', file);
   tool('ffmpeg', args);
 }
@@ -183,7 +232,11 @@ beforeAll(async () => {
   ]) {
     const tables = readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants')[0] ?? '';
     for (const statement of tables.split('--> statement-breakpoint')) {
-      const sql = statement.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim();
+      const sql = statement
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n')
+        .trim();
       if (sql !== '') await pool.query(sql);
     }
   }
@@ -238,7 +291,13 @@ beforeEach(() => {
   lines.length = 0;
 });
 
-interface Fixture { owner: string; campaign: string; job: string; clips: string[]; reuseHash: string }
+interface Fixture {
+  owner: string;
+  campaign: string;
+  job: string;
+  clips: string[];
+  reuseHash: string;
+}
 interface Options {
   /** Row values of the assembly job. */
   state?: string;
@@ -259,14 +318,26 @@ async function assembly(opts: Options = {}): Promise<Fixture> {
   const owner = randomUUID();
   const campaign = randomUUID();
   const brief = randomUUID();
-  await pool.query(`insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`, [owner, `sub_${owner.slice(0, 20)}`, `${owner.slice(0, 12)}@example.test`]);
-  await pool.query(`insert into campaigns (id, owner_id, product_name, product_description, segment_count) values ($1, $2, 'Calm Cap', 'A slow morning drink', 4)`, [campaign, owner]);
-  await pool.query(`insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, 'accepted', now())`, [brief, campaign, owner]);
+  await pool.query(
+    `insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`,
+    [owner, `sub_${owner.slice(0, 20)}`, `${owner.slice(0, 12)}@example.test`],
+  );
+  await pool.query(
+    `insert into campaigns (id, owner_id, product_name, product_description, segment_count) values ($1, $2, 'Calm Cap', 'A slow morning drink', 4)`,
+    [campaign, owner],
+  );
+  await pool.query(
+    `insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, 'accepted', now())`,
+    [brief, campaign, owner],
+  );
   const clips: string[] = [];
   for (let position = 1; position <= 4; position += 1) {
     const segment = randomUUID();
     const job = randomUUID();
-    await pool.query(`insert into brief_segments (id, brief_id, position, dialogue, prompt, word_count) values ($1, $2, $3, 'A calm start.', 'A bright kitchen at dawn', 3)`, [segment, brief, position]);
+    await pool.query(
+      `insert into brief_segments (id, brief_id, position, dialogue, prompt, word_count) values ($1, $2, $3, 'A calm start.', 'A bright kitchen at dawn', 3)`,
+      [segment, brief, position],
+    );
     const key = `u/${owner}/c/${campaign}/clip/${job}.mp4`;
     if (!(opts.missing ?? []).includes(position)) {
       let body: Buffer;
@@ -278,7 +349,10 @@ async function assembly(opts: Options = {}): Promise<Fixture> {
       } else body = Buffer.from('fakeclip');
       await storage.put(key, body, 'video/mp4', 50_000_000);
     }
-    await pool.query(`insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'clip', 'ready', $3, 100, 'video/mp4', $4)`, [job, owner, key, campaign]);
+    await pool.query(
+      `insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'clip', 'ready', $3, 100, 'video/mp4', $4)`,
+      [job, owner, key, campaign],
+    );
     await pool.query(
       `insert into video_jobs (id, owner_id, campaign_id, segment_id, segment_revision, provider_model, options, state, reuse_hash, deadline_at, provider_task_id, provider_completed_at, output_media_id)
        values ($1, $2, $3, $4, 1, 'm', '{"durationSeconds":15,"resolution":"1080p","aspectRatio":"9:16"}', 'completed', $5, now(), 'task-1', now(), $1)`,
@@ -294,23 +368,36 @@ async function assembly(opts: Options = {}): Promise<Fixture> {
     [id, owner, campaign, opts.state ?? 'pending', reuseHash, opts.attempts ?? 0],
   );
   for (const [index, videoJobId] of clips.entries()) {
-    await pool.query(`insert into assembly_clips (assembly_job_id, position, video_job_id) values ($1, $2, $3)`, [id, index + 1, videoJobId]);
+    await pool.query(
+      `insert into assembly_clips (assembly_job_id, position, video_job_id) values ($1, $2, $3)`,
+      [id, index + 1, videoJobId],
+    );
   }
   return { owner, campaign, job: id, clips, reuseHash };
 }
 
 type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-const row = async (id: string): Promise<Row> => (await pool.query('select * from assembly_jobs where id = $1', [id])).rows[0] as Row;
-async function until(id: string, done: (r: Row) => boolean, what: string, ms = 90_000): Promise<Row> {
+const row = async (id: string): Promise<Row> =>
+  (await pool.query('select * from assembly_jobs where id = $1', [id])).rows[0] as Row;
+async function until(
+  id: string,
+  done: (r: Row) => boolean,
+  what: string,
+  ms = 90_000,
+): Promise<Row> {
   const deadline = Date.now() + ms;
   for (;;) {
     const r = await row(id);
     if (done(r)) return r;
-    if (Date.now() > deadline) throw new Error(`assembly ${id}: ${what}; stayed ${String(r['state'])} (${String(r['cause_class'])})`);
+    if (Date.now() > deadline)
+      throw new Error(
+        `assembly ${id}: ${what}; stayed ${String(r['state'])} (${String(r['cause_class'])})`,
+      );
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
-const finished = (id: string) => until(id, (r) => r['state'] === 'done' || r['state'] === 'failed', 'did not finish');
+const finished = (id: string) =>
+  until(id, (r) => r['state'] === 'done' || r['state'] === 'failed', 'did not finish');
 const send = (id: string) => apiBoss.send('production.assembly-render', { jobId: id });
 async function sweepNow(): Promise<void> {
   for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -321,19 +408,41 @@ async function sweepNow(): Promise<void> {
   }
   throw new Error('the recovery sweep never ran');
 }
-const finals = async (campaign: string) => (await pool.query(`select * from media_objects where campaign_id = $1 and kind = 'final'`, [campaign])).rows as Row[];
-const objects = async (owner: string, campaign: string) => (await storage.list(`u/${owner}/c/${campaign}/final/`)).objects;
+const finals = async (campaign: string) =>
+  (
+    await pool.query(`select * from media_objects where campaign_id = $1 and kind = 'final'`, [
+      campaign,
+    ])
+  ).rows as Row[];
+const objects = async (owner: string, campaign: string) =>
+  (await storage.list(`u/${owner}/c/${campaign}/final/`)).objects;
 const leftovers = (id: string): boolean => existsSync(join(tmpdir(), `assembly-${id}`));
 
 /** What ffprobe says about the stored final video (real tools only). */
-async function probeStored(key: string): Promise<{ seconds: number; video: number; audio: number }> {
+async function probeStored(
+  key: string,
+): Promise<{ seconds: number; video: number; audio: number }> {
   const file = join(scratch, `probe-${randomUUID()}.mp4`);
   const body = await storage.get(key);
   const chunks: Buffer[] = [];
   for await (const chunk of body) chunks.push(chunk as Buffer);
   writeFileSync(file, Buffer.concat(chunks));
-  const out = JSON.parse(tool('ffprobe', ['-v', 'error', '-print_format', 'json', '-show_entries', 'stream=codec_type:format=duration', file])) as { streams: { codec_type: string }[]; format: { duration: string } };
-  return { seconds: Number(out.format.duration), video: out.streams.filter((s) => s.codec_type === 'video').length, audio: out.streams.filter((s) => s.codec_type === 'audio').length };
+  const out = JSON.parse(
+    tool('ffprobe', [
+      '-v',
+      'error',
+      '-print_format',
+      'json',
+      '-show_entries',
+      'stream=codec_type:format=duration',
+      file,
+    ]),
+  ) as { streams: { codec_type: string }[]; format: { duration: string } };
+  return {
+    seconds: Number(out.format.duration),
+    video: out.streams.filter((s) => s.codec_type === 'video').length,
+    audio: out.streams.filter((s) => s.codec_type === 'audio').length,
+  };
 }
 
 describe('production.assembly-render, through the worker process', () => {
@@ -341,10 +450,23 @@ describe('production.assembly-render, through the worker process', () => {
     const f = await assembly({ silent: [3] });
     await send(f.job);
     const done = await finished(f.job);
-    expect(done).toMatchObject({ state: 'done', cause_class: null, cause_message: null, output_media_id: f.job, lease_until: null, attempts: 1 });
+    expect(done).toMatchObject({
+      state: 'done',
+      cause_class: null,
+      cause_message: null,
+      output_media_id: f.job,
+      lease_until: null,
+      attempts: 1,
+    });
     const media = await finals(f.campaign);
     expect(media).toHaveLength(1);
-    expect(media[0]).toMatchObject({ id: f.job, owner_id: f.owner, state: 'ready', content_type: 'video/mp4', storage_key: `u/${f.owner}/c/${f.campaign}/final/${f.job}.mp4` });
+    expect(media[0]).toMatchObject({
+      id: f.job,
+      owner_id: f.owner,
+      state: 'ready',
+      content_type: 'video/mp4',
+      storage_key: `u/${f.owner}/c/${f.campaign}/final/${f.job}.mp4`,
+    });
     const stored = await objects(f.owner, f.campaign);
     expect(stored).toHaveLength(1);
     expect(Number(media[0]?.['bytes'])).toBe(stored[0]?.bytes);
@@ -359,7 +481,12 @@ describe('production.assembly-render, through the worker process', () => {
   });
 
   it('resumes a render whose worker was killed mid-way: the expired lease is taken over from fetching, with one output (kill-worker-mid-render)', async () => {
-    const f = await assembly({ state: 'rendering', attempts: 1, leaseUntil: '-2 minutes', updatedAgo: '5 minutes' });
+    const f = await assembly({
+      state: 'rendering',
+      attempts: 1,
+      leaseUntil: '-2 minutes',
+      updatedAgo: '5 minutes',
+    });
     // What the dead run left behind: its working directory.
     const { mkdirSync } = await import('node:fs');
     mkdirSync(join(tmpdir(), `assembly-${f.job}`), { recursive: true });
@@ -374,7 +501,9 @@ describe('production.assembly-render, through the worker process', () => {
 
   it('does not take over a job whose lease is still running', async () => {
     const f = await assembly({ state: 'rendering', attempts: 1, leaseUntil: '5 minutes' });
-    const outcome = await worker.context.get(AssemblyRenderJob, { strict: false }).run(f.job, { info: () => undefined, warn: () => undefined });
+    const outcome = await worker.context
+      .get(AssemblyRenderJob, { strict: false })
+      .run(f.job, { info: () => undefined, warn: () => undefined });
     expect(outcome).toBe('ignored');
     expect(await row(f.job)).toMatchObject({ state: 'rendering', attempts: 1 });
     await sweepNow();
@@ -382,8 +511,18 @@ describe('production.assembly-render, through the worker process', () => {
   });
 
   it('after a crash between the put and the registration, the resume registers the object that is there: one output', async () => {
-    const f = await assembly({ state: 'saving', attempts: 1, leaseUntil: '-1 minutes', updatedAgo: '5 minutes' });
-    await storage.put(`u/${f.owner}/c/${f.campaign}/final/${f.job}.mp4`, Buffer.from('an earlier output'), 'video/mp4', 1_000_000);
+    const f = await assembly({
+      state: 'saving',
+      attempts: 1,
+      leaseUntil: '-1 minutes',
+      updatedAgo: '5 minutes',
+    });
+    await storage.put(
+      `u/${f.owner}/c/${f.campaign}/final/${f.job}.mp4`,
+      Buffer.from('an earlier output'),
+      'video/mp4',
+      1_000_000,
+    );
     await sweepNow();
     const done = await finished(f.job);
     expect(done).toMatchObject({ state: 'done', attempts: 2 });
@@ -399,7 +538,12 @@ describe('production.assembly-render, through the worker process', () => {
   });
 
   it('ends a job that used all its attempts as render_failed with its cause, and a new assembly of the same clips is then possible (TC-ASM)', async () => {
-    const f = await assembly({ state: 'rendering', attempts: 3, leaseUntil: '-1 minutes', updatedAgo: '5 minutes' });
+    const f = await assembly({
+      state: 'rendering',
+      attempts: 3,
+      leaseUntil: '-1 minutes',
+      updatedAgo: '5 minutes',
+    });
     await sweepNow();
     expect(await until(f.job, (r) => r['state'] === 'failed', 'was not failed')).toMatchObject({
       cause_class: 'render_failed',
@@ -416,10 +560,17 @@ describe('production.assembly-render, through the worker process', () => {
   it('fails with input_unavailable when a clip is gone from storage or cannot be read, naming no file', async () => {
     const gone = await assembly({ missing: [2] });
     await send(gone.job);
-    expect(await finished(gone.job)).toMatchObject({ state: 'failed', cause_class: 'input_unavailable', cause_message: 'One of the clips could not be read. Check the clips, then assemble again.' });
+    expect(await finished(gone.job)).toMatchObject({
+      state: 'failed',
+      cause_class: 'input_unavailable',
+      cause_message: 'One of the clips could not be read. Check the clips, then assemble again.',
+    });
     const broken = await assembly({ garbage: [4] });
     await send(broken.job);
-    expect(await finished(broken.job)).toMatchObject({ state: 'failed', cause_class: 'input_unavailable' });
+    expect(await finished(broken.job)).toMatchObject({
+      state: 'failed',
+      cause_class: 'input_unavailable',
+    });
     expect(await finals(broken.campaign)).toHaveLength(0);
     expect(await objects(broken.owner, broken.campaign)).toHaveLength(0);
     expect(leftovers(broken.job)).toBe(false);
@@ -429,7 +580,10 @@ describe('production.assembly-render, through the worker process', () => {
     const f = await assembly();
     await pool.query(`update campaigns set state = 'deleting' where id = $1`, [f.campaign]);
     await send(f.job);
-    expect(await finished(f.job)).toMatchObject({ state: 'failed', cause_class: 'cancelled_campaign_deleted' });
+    expect(await finished(f.job)).toMatchObject({
+      state: 'failed',
+      cause_class: 'cancelled_campaign_deleted',
+    });
     expect(await objects(f.owner, f.campaign)).toHaveLength(0);
   });
 

@@ -14,7 +14,8 @@ type Env = Readonly<Record<string, string | undefined>>;
 const days = (env: Env, name: string, fallback: number): number => {
   const text = env[name];
   if (text === undefined || text === '') return fallback;
-  if (!/^\d+$/.test(text) || Number(text) < 1 || Number(text) > 366) throw new Error(`${name} must be a whole number of days from 1 to 366`);
+  if (!/^\d+$/.test(text) || Number(text) < 1 || Number(text) > 366)
+    throw new Error(`${name} must be a whole number of days from 1 to 366`);
   return Number(text);
 };
 
@@ -22,7 +23,8 @@ const days = (env: Env, name: string, fallback: number): number => {
 export function reportingConfigFrom(env: Env): ReportingConfig {
   const defaultWindowDays = days(env, 'REPORT_DEFAULT_WINDOW_DAYS', 30);
   const maxWindowDays = days(env, 'REPORT_MAX_WINDOW_DAYS', 366);
-  if (defaultWindowDays > maxWindowDays) throw new Error('REPORT_DEFAULT_WINDOW_DAYS must not exceed REPORT_MAX_WINDOW_DAYS');
+  if (defaultWindowDays > maxWindowDays)
+    throw new Error('REPORT_DEFAULT_WINDOW_DAYS must not exceed REPORT_MAX_WINDOW_DAYS');
   return { defaultWindowDays, maxWindowDays, statementTimeoutMs: 15_000 };
 }
 
@@ -40,7 +42,11 @@ export interface ReportingModuleOptions {
 /** Reporting (TASK-060): the usage report and its CSV, read-only over usage, production and brief (REQ-021). */
 @Module({})
 export class ReportingModule {
-  static register(env: Env, edge: ReportingEdge, options: ReportingModuleOptions = {}): DynamicModule {
+  static register(
+    env: Env,
+    edge: ReportingEdge,
+    options: ReportingModuleOptions = {},
+  ): DynamicModule {
     return {
       module: ReportingModule,
       imports: [edge.audit, edge.brief, edge.production],
@@ -49,7 +55,11 @@ export class ReportingModule {
         { provide: REPORTING_CONFIG, useValue: reportingConfigFrom(env) },
         { provide: REPORTING_CLOCK, useValue: options.clock ?? (() => new Date()) },
         { provide: REPORTING_USAGE, useClass: DrizzleUsageReportReader },
-        { provide: RateLimiter, useFactory: (database: Database) => new RateLimiter(database.db), inject: [DATABASE] },
+        {
+          provide: RateLimiter,
+          useFactory: (database: Database) => new RateLimiter(database.db),
+          inject: [DATABASE],
+        },
       ],
       controllers: [ReportingController],
     };

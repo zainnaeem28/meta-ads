@@ -63,11 +63,20 @@ export class MultipartSupport implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    const fastify = this.host.httpAdapter.getInstance() as { register: (plugin: unknown, options: unknown) => Promise<unknown> };
+    const fastify = this.host.httpAdapter.getInstance() as {
+      register: (plugin: unknown, options: unknown) => Promise<unknown>;
+    };
     await fastify.register(multipart, {
       throwFileSizeLimit: true,
       // One byte over the cap so the route's own counter (the 413) decides first.
-      limits: { fileSize: this.config.maxUploadBytes + 1, files: 1, fields: 4, parts: 8, fieldSize: 1024, headerPairs: 32 },
+      limits: {
+        fileSize: this.config.maxUploadBytes + 1,
+        files: 1,
+        fields: 4,
+        parts: 8,
+        fieldSize: 1024,
+        headerPairs: 32,
+      },
     });
   }
 }
@@ -79,7 +88,11 @@ function planned(error: unknown): unknown {
   if (error instanceof UploadTooLarge || code === 'FST_REQ_FILE_TOO_LARGE') {
     return new DomainError('payload_too_large', 'The file is too large.');
   }
-  if (typeof code === 'string' && code.startsWith('FST_') && code !== 'FST_ERR_CTP_BODY_TOO_LARGE') {
+  if (
+    typeof code === 'string' &&
+    code.startsWith('FST_') &&
+    code !== 'FST_ERR_CTP_BODY_TOO_LARGE'
+  ) {
     return new DomainError('validation_failed', 'The request is not valid.');
   }
   return error;
@@ -105,7 +118,12 @@ export class MediaController {
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<MediaView> {
     const ownerId = owner(actor);
-    const consumed = await this.limiter.consume(UPLOAD_SCOPE, ownerId, UPLOAD_LIMIT.limit, UPLOAD_LIMIT.windowSeconds);
+    const consumed = await this.limiter.consume(
+      UPLOAD_SCOPE,
+      ownerId,
+      UPLOAD_LIMIT.limit,
+      UPLOAD_LIMIT.windowSeconds,
+    );
     if (!consumed.allowed) {
       void reply.header('Retry-After', String(consumed.retryAfterSeconds));
       throw new DomainError('rate_limited', 'Too many requests. Try again shortly.');
@@ -116,7 +134,10 @@ export class MediaController {
     const announced = Number(request.headers['content-length']);
     const announcedBytes = Number.isSafeInteger(announced) && announced > 0 ? announced : undefined;
     // Size is checked before the body is read.
-    if (announcedBytes !== undefined && announcedBytes > this.config.maxUploadBytes + FRAMING_ALLOWANCE_BYTES) {
+    if (
+      announcedBytes !== undefined &&
+      announcedBytes > this.config.maxUploadBytes + FRAMING_ALLOWANCE_BYTES
+    ) {
       throw new DomainError('payload_too_large', 'The file is too large.');
     }
     let created;
@@ -132,7 +153,8 @@ export class MediaController {
     } catch (error) {
       const failure = planned(error);
       // An oversized body is refused without reading the rest: the connection closes after the answer.
-      if (failure instanceof DomainError && failure.code === 'payload_too_large') void reply.header('Connection', 'close');
+      if (failure instanceof DomainError && failure.code === 'payload_too_large')
+        void reply.header('Connection', 'close');
       throw failure;
     }
     const record = await this.find(ownerId, created.id);
@@ -142,7 +164,10 @@ export class MediaController {
 
   @Get(':mediaId')
   @Scope('U')
-  async get(@CurrentActor() actor: ActorContext | undefined, @Param() rawParams: unknown): Promise<MediaView> {
+  async get(
+    @CurrentActor() actor: ActorContext | undefined,
+    @Param() rawParams: unknown,
+  ): Promise<MediaView> {
     const { mediaId } = parseWith(MediaParams, rawParams);
     return mediaView(await this.find(owner(actor), mediaId));
   }
@@ -156,7 +181,10 @@ export class MediaController {
   ): Promise<{ url: string; expiresAt: string }> {
     const { mediaId } = parseWith(MediaParams, rawParams);
     const signed = await this.media.signedUrl('browser', { ownerId: owner(actor), mediaId });
-    return { url: signed.url, expiresAt: new Date(Date.now() + signed.expiresInSec * 1000).toISOString() };
+    return {
+      url: signed.url,
+      expiresAt: new Date(Date.now() + signed.expiresInSec * 1000).toISOString(),
+    };
   }
 
   /** A foreign id and one that never existed give the same 404. */

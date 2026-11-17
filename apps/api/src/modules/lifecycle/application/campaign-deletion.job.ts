@@ -66,9 +66,13 @@ export class CampaignDeletionJob {
 
   async handle(job: { id: string; data: unknown }, log: JobLog): Promise<CampaignDeletionOutcome> {
     const runId = (job.data as { runId?: unknown } | null)?.runId;
-    if (typeof runId !== 'string') throw new TypeError('lifecycle.campaign-deletion job has no runId');
+    if (typeof runId !== 'string')
+      throw new TypeError('lifecycle.campaign-deletion job has no runId');
     const outcome = await this.run(runId, log);
-    log.info({ module: 'lifecycle', outcome: outcome === 'failed' ? 'error' : 'ok', runId }, `campaign deletion: ${outcome}`);
+    log.info(
+      { module: 'lifecycle', outcome: outcome === 'failed' ? 'error' : 'ok', runId },
+      `campaign deletion: ${outcome}`,
+    );
     return outcome;
   }
 
@@ -78,7 +82,9 @@ export class CampaignDeletionJob {
       if (run === null || run.kind !== 'campaign' || run.state !== 'running') return 'skipped';
       const waitMs = Date.parse(run.notBefore) - Date.now();
       if (waitMs > 0) {
-        await this.database.uow.run((tx) => this.queue.send(tx, runId, { startAfterSec: Math.ceil(waitMs / 1000) }));
+        await this.database.uow.run((tx) =>
+          this.queue.send(tx, runId, { startAfterSec: Math.ceil(waitMs / 1000) }),
+        );
         return 'waiting';
       }
       try {
@@ -98,9 +104,14 @@ export class CampaignDeletionJob {
         // Step 0, then the best-effort provider deletion: a provider that cannot be reached never holds the run.
         await this.ledger.record(ledgerKeyOf(run.createdAt, run.id), ledgerBodyOf(run));
         await this.providers.deleteFinishedTasks(log).catch(() => {
-          log.warn({ module: 'lifecycle', outcome: 'error', runId: run.id }, 'provider task deletion failed; the hourly cleanup retries');
+          log.warn(
+            { module: 'lifecycle', outcome: 'error', runId: run.id },
+            'provider task deletion failed; the hourly cleanup retries',
+          );
         });
-        await this.database.uow.run((tx) => this.repository.advance(tx, run.id, { step: STEP_MEDIA }));
+        await this.database.uow.run((tx) =>
+          this.repository.advance(tx, run.id, { step: STEP_MEDIA }),
+        );
         return 'continue';
       }
       case STEP_MEDIA: {
@@ -108,7 +119,9 @@ export class CampaignDeletionJob {
         await this.media.sweepPrefix(prefixOf(run));
         // Jobs cancelled at the request may still be inside a provider call or a copy: wait out the longest deadline.
         const delayMs = verifyDelayMs(this.config.jobDeadlineMinutes, this.config.graceSeconds);
-        await this.database.uow.run((tx) => this.repository.advance(tx, run.id, { step: STEP_VERIFY, notBeforeInMs: delayMs }));
+        await this.database.uow.run((tx) =>
+          this.repository.advance(tx, run.id, { step: STEP_VERIFY, notBeforeInMs: delayMs }),
+        );
         return 'continue';
       }
       case STEP_VERIFY: {
@@ -119,7 +132,9 @@ export class CampaignDeletionJob {
         const left = await this.countRemaining(run);
         await this.database.uow.run((tx) => this.repository.setRemaining(tx, run.id, left));
         if (left > 0) throw new DeletionVerificationFailed(left);
-        await this.database.uow.run((tx) => this.repository.advance(tx, run.id, { step: STEP_HARD_DELETE, remainingObjects: 0 }));
+        await this.database.uow.run((tx) =>
+          this.repository.advance(tx, run.id, { step: STEP_HARD_DELETE, remainingObjects: 0 }),
+        );
         return 'continue';
       }
       case STEP_HARD_DELETE: {
@@ -138,17 +153,26 @@ export class CampaignDeletionJob {
         return 'completed';
       }
       default:
-        throw new RangeError(`unknown campaign deletion step ${String(run.step)} (last is ${String(LAST_STEP)})`);
+        throw new RangeError(
+          `unknown campaign deletion step ${String(run.step)} (last is ${String(LAST_STEP)})`,
+        );
     }
   }
 
   /** Objects under the campaign prefix plus media rows still registered for the campaign. */
   private async countRemaining(run: DeletionRun): Promise<number> {
-    const [first, again] = [await this.media.deleteForCampaign(run.subjectId), await this.media.sweepPrefix(prefixOf(run))];
+    const [first, again] = [
+      await this.media.deleteForCampaign(run.subjectId),
+      await this.media.sweepPrefix(prefixOf(run)),
+    ];
     return first.rows + first.objects + again;
   }
 
-  private async fail(run: DeletionRun, error: unknown, log: JobLog): Promise<CampaignDeletionOutcome> {
+  private async fail(
+    run: DeletionRun,
+    error: unknown,
+    log: JobLog,
+  ): Promise<CampaignDeletionOutcome> {
     const errorClass = errorClassOf(error);
     let alert: PendingAlert | undefined;
     const stuck = await this.database.uow.run(async (tx) => {
@@ -163,11 +187,17 @@ export class CampaignDeletionJob {
         objectId: run.subjectId,
         outcome: 'failed',
       });
-      alert = await this.alerts.raiseAlert(tx, 'campaign_deletion_stuck', run.ownerId, { attempts, step: run.step });
+      alert = await this.alerts.raiseAlert(tx, 'campaign_deletion_stuck', run.ownerId, {
+        attempts,
+        step: run.step,
+      });
       return true;
     });
     alert?.announce();
-    log.warn({ module: 'lifecycle', outcome: 'error', runId: run.id, step: run.step, errorClass }, stuck ? 'campaign deletion stuck' : 'campaign deletion step failed; retrying');
+    log.warn(
+      { module: 'lifecycle', outcome: 'error', runId: run.id, step: run.step, errorClass },
+      stuck ? 'campaign deletion stuck' : 'campaign deletion step failed; retrying',
+    );
     if (stuck) return 'stuck';
     // The queue retries the job with its backoff; this counts as one attempt of the run.
     throw error;

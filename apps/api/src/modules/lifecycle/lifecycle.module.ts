@@ -29,7 +29,10 @@ import type {
 } from './application/campaign-deletion-ports.js';
 import { CampaignDeletionService } from './application/campaign-deletion.service.js';
 import { CAMPAIGN_DELETION_QUEUE } from './domain/campaign-deletion.js';
-import { IdentityAccountAdmin, IdentityProviderAccounts } from './infrastructure/account-identity.adapters.js';
+import {
+  IdentityAccountAdmin,
+  IdentityProviderAccounts,
+} from './infrastructure/account-identity.adapters.js';
 import { PgBossAccountErasureQueueing } from './infrastructure/account-erasure.queueing.js';
 import { DrizzleAccountLifecycleRepository } from './infrastructure/account-lifecycle.repository.js';
 import { DrizzleCampaignDeletionRepository } from './infrastructure/campaign-deletion.repository.js';
@@ -50,7 +53,8 @@ function optional(env: Env, name: string): string | undefined {
 function integer(env: Env, name: string, fallback: number, min: number, max: number): number {
   const text = optional(env, name);
   const value = text === undefined ? fallback : Number(text);
-  if (!Number.isInteger(value) || value < min || value > max) throw new Error(`${name} must be an integer from ${String(min)} to ${String(max)}`);
+  if (!Number.isInteger(value) || value < min || value > max)
+    throw new Error(`${name} must be an integer from ${String(min)} to ${String(max)}`);
   return value;
 }
 
@@ -91,12 +95,18 @@ export class LifecycleModule {
       providers: [
         { provide: CAMPAIGN_DELETION_REPOSITORY, useClass: DrizzleCampaignDeletionRepository },
         { provide: CAMPAIGN_DELETION_QUEUEING, useClass: PgBossCampaignDeletionQueueing },
-        { provide: CAMPAIGN_BRIEF_TEXT_MODEL, useValue: optional(env, 'OPENAI_TEXT_MODEL') ?? 'brief-text' },
+        {
+          provide: CAMPAIGN_BRIEF_TEXT_MODEL,
+          useValue: optional(env, 'OPENAI_TEXT_MODEL') ?? 'brief-text',
+        },
         CampaignDeletionService,
         { provide: ACCOUNT_LIFECYCLE_REPOSITORY, useClass: DrizzleAccountLifecycleRepository },
         { provide: ACCOUNT_ADMIN, useClass: IdentityAccountAdmin },
         { provide: ACCOUNT_ERASURE_QUEUEING, useClass: PgBossAccountErasureQueueing },
-        { provide: ACCOUNT_HOLD_HOURS, useValue: integer(env, 'ERASURE_HOLD_PERIOD_HOURS', 0, 0, 8760) },
+        {
+          provide: ACCOUNT_HOLD_HOURS,
+          useValue: integer(env, 'ERASURE_HOLD_PERIOD_HOURS', 0, 0, 8760),
+        },
         { provide: ACCOUNT_CURSOR_KEY, useValue: optional(env, 'CURSOR_SIGNING_KEY') },
         AccountLifecycleService,
       ],

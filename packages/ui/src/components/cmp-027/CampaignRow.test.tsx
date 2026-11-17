@@ -34,7 +34,10 @@ function renderRow(props: Partial<React.ComponentProps<typeof CampaignRow>> = {}
 
 describe('CMP-027 Campaign row', () => {
   it.each(ROW_VARIANTS)('%s variant passes axe', async (variant) => {
-    const { container } = renderRow({ variant, posterSrc: variant === 'history' ? '/p.png' : undefined });
+    const { container } = renderRow({
+      variant,
+      posterSrc: variant === 'history' ? '/p.png' : undefined,
+    });
     expect(screen.getByRole('listitem')).toHaveAttribute('data-variant', variant);
     expect(await axeViolations(container)).toEqual([]);
   });
@@ -43,7 +46,10 @@ describe('CMP-027 Campaign row', () => {
     const user = userEvent.setup();
     const { onDelete } = renderRow();
     expect(screen.getAllByRole('link')).toHaveLength(1);
-    expect(screen.getByRole('link', { name: 'Summer sale' })).toHaveAttribute('href', '/campaigns/1');
+    expect(screen.getByRole('link', { name: 'Summer sale' })).toHaveAttribute(
+      'href',
+      '/campaigns/1',
+    );
     await user.click(screen.getByRole('button', { name: 'Delete Summer sale' }));
     expect(onDelete).toHaveBeenCalled();
   });
@@ -63,10 +69,20 @@ describe('CMP-027 Campaign row', () => {
       duration: undefined,
       format: 'UGC ad',
       status: { label: 'Draft' },
-      actions: [{ id: 'delete', label: 'Delete draft A very long product name indeed', icon: 'trash-2', destructive: true, onClick: onDelete }],
+      actions: [
+        {
+          id: 'delete',
+          label: 'Delete draft A very long product name indeed',
+          icon: 'trash-2',
+          destructive: true,
+          onClick: onDelete,
+        },
+      ],
     });
     expect(screen.getByText('UGC ad · 12 Nov 2026')).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: 'Delete draft A very long product name indeed' });
+    const button = screen.getByRole('button', {
+      name: 'Delete draft A very long product name indeed',
+    });
     expect(button).toHaveTextContent('');
     await user.click(button);
     expect(onDelete).toHaveBeenCalled();

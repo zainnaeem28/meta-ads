@@ -118,7 +118,13 @@ export interface BriefJobRepository {
   /** `pending` to `failed` (no call was made). False when the job is no longer `pending`. */
   failPending(tx: DbTx, jobId: string, cause: JobCause, message: string): Promise<boolean>;
   /** `submitting` to `failed`. False when the job already left `submitting` (the sweep settled it). */
-  failSubmitting(tx: DbTx, jobId: string, cause: JobCause, message: string, errorCode?: string): Promise<boolean>;
+  failSubmitting(
+    tx: DbTx,
+    jobId: string,
+    cause: JobCause,
+    message: string,
+    errorCode?: string,
+  ): Promise<boolean>;
   /** Marks provider call `seq` as started on a `submitting` job (`call_count` goes from seq-1 to seq). */
   startCall(tx: DbTx, jobId: string, seq: number): Promise<boolean>;
   /**
@@ -130,7 +136,11 @@ export interface BriefJobRepository {
     tx: DbTx,
     job: BriefJobRow,
     context: BriefContext,
-    write: { segments: readonly WrittenSegment[]; close: readonly string[]; raise: readonly NewIssue[] },
+    write: {
+      segments: readonly WrittenSegment[];
+      close: readonly string[];
+      raise: readonly NewIssue[];
+    },
   ): Promise<GenerationWrite>;
   /** `submitting` to `completed` with the description. */
   completeAnalysis(tx: DbTx, jobId: string, description: string): Promise<boolean>;
@@ -144,7 +154,12 @@ export const BRIEF_JOB_REPOSITORY = Symbol('BRIEF_JOB_REPOSITORY');
 export interface KeyOpener {
   unseal(
     sealed: SealedKeyRow['sealed'],
-    aad: { readonly userId: string; readonly provider: 'openai' | 'wavespeed'; readonly keyId: string; readonly version: number },
+    aad: {
+      readonly userId: string;
+      readonly provider: 'openai' | 'wavespeed';
+      readonly keyId: string;
+      readonly version: number;
+    },
   ): Buffer;
 }
 export const KEY_OPENER = Symbol('KEY_OPENER');

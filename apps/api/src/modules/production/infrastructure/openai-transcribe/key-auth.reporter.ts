@@ -25,12 +25,18 @@ export class OpenAiKeyAuthReporter implements KeyAuthReporter {
   ) {}
 
   async report(keyId: string, version: number, ok: boolean): Promise<void> {
-    await this.database.uow.run((tx) => (ok ? this.succeeded(tx, keyId, version) : this.failed(tx, keyId, version)));
+    await this.database.uow.run((tx) =>
+      ok ? this.succeeded(tx, keyId, version) : this.failed(tx, keyId, version),
+    );
   }
 
   private async succeeded(tx: DbTx, keyId: string, version: number): Promise<void> {
     const live = and(eq(providerKeys.id, keyId), eq(providerKeys.version, version));
-    const reset = { consecutiveAuthFailures: 0, lastValidatedAt: sql`now()`, updatedAt: sql`now()` };
+    const reset = {
+      consecutiveAuthFailures: 0,
+      lastValidatedAt: sql`now()`,
+      updatedAt: sql`now()`,
+    };
     const activated = await tx
       .update(providerKeys)
       .set({ ...reset, status: 'active' })
@@ -40,7 +46,10 @@ export class OpenAiKeyAuthReporter implements KeyAuthReporter {
       await this.event(tx, activated[0].ownerId, keyId, 'validated_by_job');
       return;
     }
-    await tx.update(providerKeys).set(reset).where(and(live, eq(providerKeys.status, 'active')));
+    await tx
+      .update(providerKeys)
+      .set(reset)
+      .where(and(live, eq(providerKeys.status, 'active')));
   }
 
   private async failed(tx: DbTx, keyId: string, version: number): Promise<void> {
@@ -54,7 +63,13 @@ export class OpenAiKeyAuthReporter implements KeyAuthReporter {
         disabledAt: sql`case when ${reached} then now() else ${providerKeys.disabledAt} end`,
         updatedAt: sql`now()`,
       })
-      .where(and(eq(providerKeys.id, keyId), eq(providerKeys.version, version), ne(providerKeys.status, 'disabled')))
+      .where(
+        and(
+          eq(providerKeys.id, keyId),
+          eq(providerKeys.version, version),
+          ne(providerKeys.status, 'disabled'),
+        ),
+      )
       .returning({ ownerId: providerKeys.ownerId, status: providerKeys.status });
     const row = rows[0];
     if (row === undefined) return;

@@ -15,7 +15,13 @@ import {
   type ProviderKeyPutResponse,
   type ProviderKeyStatus,
 } from '@shroomap/contracts';
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from '@tanstack/react-query';
 import { Button } from '@shroomap/ui/cmp-003';
 import { KeyInput } from '@shroomap/ui/cmp-004';
 import { Alert } from '@shroomap/ui/cmp-011';
@@ -54,9 +60,7 @@ const FIELD_CODES = new Set(['key_invalid', 'validation_failed']);
 
 type Pages = InfiniteData<KeyEventPage, string | undefined>;
 type Flow =
-  | { kind: 'put'; provider: ProviderName }
-  | { kind: 'delete'; provider: ProviderName }
-  | null;
+  { kind: 'put'; provider: ProviderName } | { kind: 'delete'; provider: ProviderName } | null;
 type Saved = { provider: ProviderName; last4: string | null; probe: 'valid' | 'unknown' };
 
 async function loadEvents(cursor: string | undefined, signal?: AbortSignal): Promise<KeyEventPage> {
@@ -85,7 +89,11 @@ function KeyDialog({ provider, current, pending, error, onSubmit, onClose }: Key
   const helpId = `${fieldId}-help`;
 
   const view = error ? resolveError(error, { surface: 'context' }) : null;
-  const fieldError = empty ? COPY.fieldEmpty : view && FIELD_CODES.has(view.code) ? view.message : null;
+  const fieldError = empty
+    ? COPY.fieldEmpty
+    : view && FIELD_CODES.has(view.code)
+      ? view.message
+      : null;
 
   return (
     <Dialog
@@ -136,7 +144,10 @@ function KeyDialog({ provider, current, pending, error, onSubmit, onClose }: Key
           </p>
         ) : null}
         <p id={helpId} className="text-caption text-muted-foreground">
-          {replacing ? `${COPY.replaceHelp} Afterwards, revoke the old key at ${name}.` : COPY.fieldHelp} {advice} {COPY.reminder}
+          {replacing
+            ? `${COPY.replaceHelp} Afterwards, revoke the old key at ${name}.`
+            : COPY.fieldHelp}{' '}
+          {advice} {COPY.reminder}
         </p>
         {pending ? (
           <p role="status" className="text-ui text-muted-foreground">
@@ -166,9 +177,16 @@ export function ProviderKeysScreen() {
   });
   const keys = useQuery({
     queryKey: KEYS,
-    queryFn: async ({ signal }) => (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
+    queryFn: async ({ signal }) =>
+      (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
   });
-  const events = useInfiniteQuery<KeyEventPage, Error, Pages, readonly unknown[], string | undefined>({
+  const events = useInfiniteQuery<
+    KeyEventPage,
+    Error,
+    Pages,
+    readonly unknown[],
+    string | undefined
+  >({
     queryKey: EVENTS,
     initialPageParam: undefined,
     queryFn: ({ pageParam, signal }) => loadEvents(pageParam, signal),
@@ -180,18 +198,31 @@ export function ProviderKeysScreen() {
     void client.invalidateQueries({ queryKey: EVENTS_ROOT });
   };
   const reauthenticate = () => window.location.assign(signInUrl(PATH));
-  const needsStepUp = (error: unknown) => resolveError(error, { surface: 'context' }).code === 'recent_auth_required';
+  const needsStepUp = (error: unknown) =>
+    resolveError(error, { surface: 'context' }).code === 'recent_auth_required';
 
   const put = useMutation({
     mutationFn: async (vars: { provider: ProviderName; apiKey: string }) =>
-      (await putMyProviderKey(vars.provider, { apiKey: vars.apiKey })).data as ProviderKeyPutResponse,
+      (await putMyProviderKey(vars.provider, { apiKey: vars.apiKey }))
+        .data as ProviderKeyPutResponse,
     onSuccess: (body) => {
       const { probe, ...status } = body.data;
-      client.setQueryData<ProviderKeyListResponse>(KEYS, (old) =>
-        old && { ...old, data: old.data.map((k) => (k.provider === status.provider ? status : k)) },
+      client.setQueryData<ProviderKeyListResponse>(
+        KEYS,
+        (old) =>
+          old && {
+            ...old,
+            data: old.data.map((k) => (k.provider === status.provider ? status : k)),
+          },
       );
       setSaved({ provider: status.provider, last4: status.last4, probe });
-      setToasts([{ id: `saved-${status.provider}`, variant: 'success', message: `${PROVIDER_COPY[status.provider].name} key saved.` }]);
+      setToasts([
+        {
+          id: `saved-${status.provider}`,
+          variant: 'success',
+          message: `${PROVIDER_COPY[status.provider].name} key saved.`,
+        },
+      ]);
       setFlow(null);
       refreshed();
     },
@@ -210,7 +241,13 @@ export function ProviderKeysScreen() {
     },
     onSuccess: (provider) => {
       setSaved(null);
-      setToasts([{ id: `deleted-${provider}`, variant: 'success', message: COPY.deletedToast(PROVIDER_COPY[provider].name) }]);
+      setToasts([
+        {
+          id: `deleted-${provider}`,
+          variant: 'success',
+          message: COPY.deletedToast(PROVIDER_COPY[provider].name),
+        },
+      ]);
       setFlow(null);
       refreshed();
     },
@@ -227,7 +264,9 @@ export function ProviderKeysScreen() {
   const entries = events.data?.pages.flatMap((p) => p.data) ?? [];
   const role = me.data && me.data.data.linkState === 'linked' ? me.data.data.role : 'user';
   const missing = keys.isSuccess && PROVIDERS.every((p) => !byProvider(p)?.configured);
-  const disabled = PROVIDERS.filter((p) => byProvider(p)?.configured && byProvider(p)?.status === 'disabled');
+  const disabled = PROVIDERS.filter(
+    (p) => byProvider(p)?.configured && byProvider(p)?.status === 'disabled',
+  );
 
   const open = (kind: 'put' | 'delete', provider: ProviderName) => {
     put.reset();
@@ -276,7 +315,10 @@ export function ProviderKeysScreen() {
                 onDelete={() => open('delete', provider)}
               />
               {key?.configured && key.status === 'untested' ? (
-                <p className="px-1 text-ui text-muted-foreground" data-testid={`untested-${provider}`}>
+                <p
+                  className="px-1 text-ui text-muted-foreground"
+                  data-testid={`untested-${provider}`}
+                >
                   {COPY.untestedNote}
                 </p>
               ) : null}
@@ -300,19 +342,34 @@ export function ProviderKeysScreen() {
       onDismissToast={() => setToasts([])}
       onSignOut={() => window.location.assign(ROUTES.signIn)}
     >
-      <div className="mx-auto flex max-w-narrow flex-col gap-4" data-screen="SCREEN-010" aria-busy={keys.isPending || undefined}>
+      <div
+        className="mx-auto flex max-w-narrow flex-col gap-4"
+        data-screen="SCREEN-010"
+        aria-busy={keys.isPending || undefined}
+      >
         <header className="flex flex-col gap-1">
           <h1 className="text-section font-semibold">{COPY.title}</h1>
           <p className="text-ui text-muted-foreground">{COPY.description}</p>
         </header>
 
         {saved ? (
-          <Alert variant="success" role="status" title={savedMessage(PROVIDER_COPY[saved.provider].name, saved.last4, saved.probe).title}>
+          <Alert
+            variant="success"
+            role="status"
+            title={savedMessage(PROVIDER_COPY[saved.provider].name, saved.last4, saved.probe).title}
+          >
             {savedMessage(PROVIDER_COPY[saved.provider].name, saved.last4, saved.probe).body}
           </Alert>
         ) : null}
         {disabled.map((provider) => (
-          <Alert key={provider} variant="destructive" role="alert" title={disabledMessage(PROVIDER_COPY[provider].name, PROVIDER_COPY[provider].uses).title}>
+          <Alert
+            key={provider}
+            variant="destructive"
+            role="alert"
+            title={
+              disabledMessage(PROVIDER_COPY[provider].name, PROVIDER_COPY[provider].uses).title
+            }
+          >
             {disabledMessage(PROVIDER_COPY[provider].name, PROVIDER_COPY[provider].uses).body}
           </Alert>
         ))}
@@ -325,16 +382,33 @@ export function ProviderKeysScreen() {
         {body}
 
         {keys.isSuccess ? (
-          <section id="key-activity" aria-labelledby="key-activity-title" className="flex scroll-mt-20 flex-col gap-2">
+          <section
+            id="key-activity"
+            aria-labelledby="key-activity-title"
+            className="flex scroll-mt-20 flex-col gap-2"
+          >
             <Card
               variant="plain"
-              state={events.isPending ? 'loading' : events.isError ? 'content' : entries.length === 0 ? 'empty' : 'content'}
+              state={
+                events.isPending
+                  ? 'loading'
+                  : events.isError
+                    ? 'content'
+                    : entries.length === 0
+                      ? 'empty'
+                      : 'content'
+              }
               emptyTitle={COPY.eventsEmpty}
               title={events.isPending ? COPY.eventsLoading : undefined}
               headingLevel={2}
               footer={
                 events.hasNextPage ? (
-                  <Button variant="outline" size="sm" pending={events.isFetchingNextPage} onClick={() => void events.fetchNextPage()}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    pending={events.isFetchingNextPage}
+                    onClick={() => void events.fetchNextPage()}
+                  >
                     {COPY.showMore}
                   </Button>
                 ) : undefined
@@ -347,7 +421,13 @@ export function ProviderKeysScreen() {
                 <span className="text-ui text-muted-foreground">{COPY.eventsNote}</span>
               </div>
               {events.isError ? (
-                <ErrorNotice error={events.error} surface="context" returnTo={PATH} retrying={events.isRefetching} onAction={(a) => (a === 'confirm' ? reauthenticate() : void events.refetch())} />
+                <ErrorNotice
+                  error={events.error}
+                  surface="context"
+                  returnTo={PATH}
+                  retrying={events.isRefetching}
+                  onAction={(a) => (a === 'confirm' ? reauthenticate() : void events.refetch())}
+                />
               ) : (
                 <ul aria-label={COPY.eventsTitle} className="divide-y divide-border">
                   {entries.map((event) => {
@@ -358,7 +438,10 @@ export function ProviderKeysScreen() {
                           <Icon name={view.icon} size={16} />
                         </span>
                         <span className="min-w-0 grow">{view.label}</span>
-                        <time dateTime={event.at} className="shrink-0 text-caption text-muted-foreground">
+                        <time
+                          dateTime={event.at}
+                          className="shrink-0 text-caption text-muted-foreground"
+                        >
                           {formatEvent(event.at)}
                         </time>
                       </li>
@@ -394,10 +477,16 @@ export function ProviderKeysScreen() {
           confirmLabel={COPY.deleteConfirm}
           destructive
           pending={remove.isPending}
-          error={remove.error ? resolveError(remove.error, { surface: 'context' }).message : undefined}
+          error={
+            remove.error ? resolveError(remove.error, { surface: 'context' }).message : undefined
+          }
           onConfirm={() => remove.mutate(dialogProvider)}
         >
-          {deleteBody(PROVIDER_COPY[dialogProvider].name, current?.inFlightJobCount ?? 0, PROVIDER_COPY[dialogProvider].uses).map((line) => (
+          {deleteBody(
+            PROVIDER_COPY[dialogProvider].name,
+            current?.inFlightJobCount ?? 0,
+            PROVIDER_COPY[dialogProvider].uses,
+          ).map((line) => (
             <p key={line} className="text-ui">
               {line}
             </p>

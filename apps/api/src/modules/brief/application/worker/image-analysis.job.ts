@@ -28,7 +28,10 @@ interface Refusal {
   readonly message: string;
 }
 
-const IMAGE_UNAVAILABLE: Refusal = { cause: 'temporary', message: 'The product image is not available. Continue without a description.' };
+const IMAGE_UNAVAILABLE: Refusal = {
+  cause: 'temporary',
+  message: 'The product image is not available. Continue without a description.',
+};
 
 /**
  * `brief.analyze-image` (ARCHITECTURE §5.4, REQ-006, REQ-020): the sanitized product image is read from storage and its
@@ -45,14 +48,18 @@ export class ImageAnalysisJob {
     @Inject(ProviderCallRunner) private readonly calls: ProviderCallRunner,
     @Inject(TEXT_AI_PORT) private readonly ai: TextAIPort,
     @Inject(IMAGE_SOURCE) private readonly images: ImageSource,
-    @Inject(BRIEF_WORKER_CONFIG) private readonly config: Pick<BriefWorkerConfig, 'visionModel' | 'sensitiveTerms'>,
+    @Inject(BRIEF_WORKER_CONFIG)
+    private readonly config: Pick<BriefWorkerConfig, 'visionModel' | 'sensitiveTerms'>,
   ) {}
 
   async handle(job: { id: string; data: unknown }, log: JobLog): Promise<ImageAnalysisOutcome> {
     const jobId = (job.data as { jobId?: unknown } | null)?.jobId;
     if (typeof jobId !== 'string') throw new TypeError('brief.analyze-image job has no jobId');
     const outcome = await this.run(jobId, log);
-    log.info({ module: 'brief', outcome: outcome === 'failed' ? 'error' : 'ok', jobId }, `image analysis: ${outcome}`);
+    log.info(
+      { module: 'brief', outcome: outcome === 'failed' ? 'error' : 'ok', jobId },
+      `image analysis: ${outcome}`,
+    );
     return outcome;
   }
 
@@ -60,18 +67,36 @@ export class ImageAnalysisJob {
     const visionCall: BillableCall = { provider: 'openai', operation: this.config.visionModel };
     const gate = await this.database.uow.run(async (tx) => {
       const job = await this.repository.findJob(tx, jobId);
-      if (job === null || job.state !== 'pending' || job.kind !== 'image_analysis' || job.mediaId === null) {
+      if (
+        job === null ||
+        job.state !== 'pending' ||
+        job.kind !== 'image_analysis' ||
+        job.mediaId === null
+      ) {
         return { kind: 'skipped' as const };
       }
       const media = await this.repository.findMedia(tx, job.mediaId);
-      if (media === null || media.ownerId !== job.ownerId || media.state !== 'ready' || media.contentType === null) {
+      if (
+        media === null ||
+        media.ownerId !== job.ownerId ||
+        media.state !== 'ready' ||
+        media.contentType === null
+      ) {
         return this.refuse(tx, job, IMAGE_UNAVAILABLE);
       }
-      const keyGate = gateKey(job, job.keyId === null ? null : await this.repository.findKey(tx, job.keyId));
+      const keyGate = gateKey(
+        job,
+        job.keyId === null ? null : await this.repository.findKey(tx, job.keyId),
+      );
       if (!keyGate.ok) return this.refuse(tx, job, keyGate);
       // The cap check precedes any call: the reservation exists when the api created the job, else it is made here.
       try {
-        await this.usage.reserve(tx, { ownerId: job.ownerId, jobType: 'image_analysis', jobId, calls: [visionCall] });
+        await this.usage.reserve(tx, {
+          ownerId: job.ownerId,
+          jobType: 'image_analysis',
+          jobId,
+          calls: [visionCall],
+        });
       } catch (error) {
         if (!(error instanceof DomainError)) throw error;
         return this.refuse(tx, job, { cause: 'temporary', message: error.message });
@@ -106,7 +131,11 @@ export class ImageAnalysisJob {
     if (description === '') {
       return this.failAfterClaim(
         job,
-        { cause: 'temporary', message: 'No usable description came back. Continue without one.', code: 'empty_description' },
+        {
+          cause: 'temporary',
+          message: 'No usable description came back. Continue without one.',
+          code: 'empty_description',
+        },
         log,
       );
     }
@@ -119,7 +148,11 @@ export class ImageAnalysisJob {
 
   private async refuse(tx: DbTx, job: BriefJobRow, refusal: Refusal): Promise<{ kind: 'refused' }> {
     await this.repository.failPending(tx, job.id, refusal.cause, refusal.message);
-    await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'image_analysis', jobId: job.id });
+    await this.usage.release(tx, {
+      ownerId: job.ownerId,
+      jobType: 'image_analysis',
+      jobId: job.id,
+    });
     return { kind: 'refused' };
   }
 
@@ -133,11 +166,23 @@ export class ImageAnalysisJob {
     log: JobLog,
   ): Promise<ImageAnalysisOutcome> {
     await this.database.uow.run(async (tx) => {
-      await this.repository.failSubmitting(tx, job.id, failure.cause, failure.message, failure.code);
-      await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'image_analysis', jobId: job.id });
+      await this.repository.failSubmitting(
+        tx,
+        job.id,
+        failure.cause,
+        failure.message,
+        failure.code,
+      );
+      await this.usage.release(tx, {
+        ownerId: job.ownerId,
+        jobType: 'image_analysis',
+        jobId: job.id,
+      });
     });
-    log.warn({ module: 'brief', outcome: 'error', jobId: job.id, cause: failure.cause }, 'image analysis failed');
+    log.warn(
+      { module: 'brief', outcome: 'error', jobId: job.id, cause: failure.cause },
+      'image analysis failed',
+    );
     return 'failed';
   }
 }
-

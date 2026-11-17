@@ -4,7 +4,11 @@ import type { Logger } from 'pino';
 import { AlertService, AuditService } from './application/audit.service.js';
 import { ALERT_PORT, ALERT_SINK, AUDIT_REPOSITORY } from './application/ports.js';
 import { DrizzleAuditRepository } from './infrastructure/audit.repository.js';
-import { ALERT_CURSOR_KEY, AlertsController, cursorKeyFrom } from './transport/alerts.controller.js';
+import {
+  ALERT_CURSOR_KEY,
+  AlertsController,
+  cursorKeyFrom,
+} from './transport/alerts.controller.js';
 import { LogAlertSink } from './infrastructure/log-alert-sink.js';
 
 @Module({})

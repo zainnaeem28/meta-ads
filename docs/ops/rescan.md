@@ -24,13 +24,13 @@ Schema and policy check (target `dev`, weekly, grouped): `docs/evidence/TASK-015
 At each milestone the Orchestrator creates a DevOps task: `CI=1 scripts/ci/rescan.sh` from the latest `dev`.
 It runs the same wrappers as the pipeline, each to completion even if an earlier one fails:
 
-| Scan | Wrapper | Report |
-| --- | --- | --- |
-| Dependencies | `deps.sh` (osv-scanner + pnpm audit) | `reports/deps.sarif`, `reports/audit.json` |
-| SAST | `sast.sh` (Semgrep, pinned rules) | `reports/sast.sarif` |
-| Secrets, **whole git history** | `secrets.sh` with `CI_SECRETS_FULL=1` | `reports/secrets.sarif` |
-| Container | `container.sh` (needs `CI_IMAGE_REF`; not applicable until a Dockerfile exists) | `reports/container.sarif` |
-| IaC | `iac.sh` | `reports/iac.sarif` |
+| Scan                           | Wrapper                                                                         | Report                                     |
+| ------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------ |
+| Dependencies                   | `deps.sh` (osv-scanner + pnpm audit)                                            | `reports/deps.sarif`, `reports/audit.json` |
+| SAST                           | `sast.sh` (Semgrep, pinned rules)                                               | `reports/sast.sarif`                       |
+| Secrets, **whole git history** | `secrets.sh` with `CI_SECRETS_FULL=1`                                           | `reports/secrets.sarif`                    |
+| Container                      | `container.sh` (needs `CI_IMAGE_REF`; not applicable until a Dockerfile exists) | `reports/container.sarif`                  |
+| IaC                            | `iac.sh`                                                                        | `reports/iac.sarif`                        |
 
 Outputs: `reports/ci/rescan-junit.xml` (one case per scan), `reports/deps.json` (merged dependency findings),
 `reports/rescan/summary.json`. Exit 1 on any Critical/High finding (policy `config/quality-policy.json`, reviewed

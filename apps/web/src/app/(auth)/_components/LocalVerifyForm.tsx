@@ -17,17 +17,26 @@ export function LocalVerifyForm({ returnTo }: { returnTo: string }) {
       <input type="hidden" name="return" value={returnTo} />
       <FormField
         label="6-digit code"
-        error={state.error ? 'That code is not right or has expired. Enter the current code.' : undefined}
+        error={
+          state.error ? 'That code is not right or has expired. Enter the current code.' : undefined
+        }
       >
         {(control) => (
-          <Input {...control} name="code" inputMode="numeric" autoComplete="one-time-code" required />
+          <Input
+            {...control}
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+          />
         )}
       </FormField>
       <Button type="submit" pending={pending} pendingLabel="Verifying…">
         Verify
       </Button>
       <p className="text-caption text-muted-foreground">
-        Recovery needs another second factor or an administrator to verify you. An email alone is not enough.
+        Recovery needs another second factor or an administrator to verify you. An email alone is
+        not enough.
       </p>
       <p className="text-caption text-muted-foreground">
         Local second step (AUTH_MODE=local): the code is <code>{LOCAL_DEV_CODE}</code>.

@@ -19,7 +19,9 @@ import type { CancelledBriefJob } from '../application/campaign-deletion-ports.j
 
 const BRIEF_NON_TERMINAL = ['pending', 'submitting', 'submitted', 'processing'];
 
-function runOf(row: typeof deletionRuns.$inferSelect): AccountRun & { createdAt: string; notBefore: string; ownerId: string } {
+function runOf(
+  row: typeof deletionRuns.$inferSelect,
+): AccountRun & { createdAt: string; notBefore: string; ownerId: string } {
   return {
     id: row.id,
     subjectId: row.subjectId,
@@ -79,10 +81,18 @@ export class DrizzleAccountLifecycleRepository implements AccountLifecycleReposi
       .set({
         state: 'cancelled',
         causeClass: cause,
-        causeMessage: cause === 'cancelled_account_removed' ? 'The account was removed.' : 'The account was suspended.',
+        causeMessage:
+          cause === 'cancelled_account_removed'
+            ? 'The account was removed.'
+            : 'The account was suspended.',
         updatedAt: sql`now()`,
       })
-      .where(inArray(briefJobs.id, live.map((job) => job.id)));
+      .where(
+        inArray(
+          briefJobs.id,
+          live.map((job) => job.id),
+        ),
+      );
     return live;
   }
 
@@ -92,7 +102,9 @@ export class DrizzleAccountLifecycleRepository implements AccountLifecycleReposi
       .where(eq(providerKeys.ownerId, ownerId))
       .returning({ id: providerKeys.id, provider: providerKeys.provider });
     for (const { id, provider } of removed) {
-      await tx.insert(keyEvents).values({ id: newId(), ownerId, keyId: id, provider, kind: 'deleted' });
+      await tx
+        .insert(keyEvents)
+        .values({ id: newId(), ownerId, keyId: id, provider, kind: 'deleted' });
     }
     return removed.length;
   }
@@ -154,14 +166,20 @@ export class DrizzleAccountLifecycleRepository implements AccountLifecycleReposi
     return row === undefined ? undefined : runOf(row);
   }
 
-  async advance(tx: DbTx, runId: string, patch: { step: number; remainingObjects?: number | null }): Promise<void> {
+  async advance(
+    tx: DbTx,
+    runId: string,
+    patch: { step: number; remainingObjects?: number | null },
+  ): Promise<void> {
     await tx
       .update(deletionRuns)
       .set({
         step: patch.step,
         attempts: 0,
         lastErrorClass: null,
-        ...(patch.remainingObjects === undefined ? {} : { remainingObjects: patch.remainingObjects }),
+        ...(patch.remainingObjects === undefined
+          ? {}
+          : { remainingObjects: patch.remainingObjects }),
         updatedAt: sql`now()`,
       })
       .where(and(eq(deletionRuns.id, runId), eq(deletionRuns.state, 'running')));
@@ -177,7 +195,11 @@ export class DrizzleAccountLifecycleRepository implements AccountLifecycleReposi
   async recordFailure(tx: DbTx, runId: string, errorClass: string): Promise<number> {
     const [row] = await tx
       .update(deletionRuns)
-      .set({ attempts: sql`${deletionRuns.attempts} + 1`, lastErrorClass: errorClass, updatedAt: sql`now()` })
+      .set({
+        attempts: sql`${deletionRuns.attempts} + 1`,
+        lastErrorClass: errorClass,
+        updatedAt: sql`now()`,
+      })
       .where(and(eq(deletionRuns.id, runId), eq(deletionRuns.state, 'running')))
       .returning({ attempts: deletionRuns.attempts });
     return row?.attempts ?? 0;
@@ -201,13 +223,25 @@ export class DrizzleAccountLifecycleRepository implements AccountLifecycleReposi
     const rows = await tx
       .update(deletionRuns)
       .set({ state: 'running', attempts: 0, notBefore: sql`now()`, updatedAt: sql`now()` })
-      .where(and(eq(deletionRuns.id, runId), eq(deletionRuns.kind, 'account'), eq(deletionRuns.state, 'stuck')))
+      .where(
+        and(
+          eq(deletionRuns.id, runId),
+          eq(deletionRuns.kind, 'account'),
+          eq(deletionRuns.state, 'stuck'),
+        ),
+      )
       .returning({ id: deletionRuns.id });
     return rows.length === 1;
   }
 
-  async findSubject(tx: DbTx, userId: string): Promise<{ email: string; idpSubject: string } | undefined> {
-    const [row] = await tx.select({ email: users.email, idpSubject: users.idpSubject }).from(users).where(eq(users.id, userId));
+  async findSubject(
+    tx: DbTx,
+    userId: string,
+  ): Promise<{ email: string; idpSubject: string } | undefined> {
+    const [row] = await tx
+      .select({ email: users.email, idpSubject: users.idpSubject })
+      .from(users)
+      .where(eq(users.id, userId));
     return row;
   }
 
@@ -215,15 +249,29 @@ export class DrizzleAccountLifecycleRepository implements AccountLifecycleReposi
     const rows = await tx
       .select({ id: invitations.idpInvitationId })
       .from(invitations)
-      .where(and(sql`lower(${invitations.email}) = lower(${email})`, eq(invitations.state, 'invited'), sql`${invitations.idpInvitationId} is not null`));
+      .where(
+        and(
+          sql`lower(${invitations.email}) = lower(${email})`,
+          eq(invitations.state, 'invited'),
+          sql`${invitations.idpInvitationId} is not null`,
+        ),
+      );
     return rows.flatMap((row) => (row.id === null ? [] : [row.id]));
   }
 
-  async eraseSubjectRecords(tx: DbTx, subject: { email: string; idpSubject: string }): Promise<void> {
+  async eraseSubjectRecords(
+    tx: DbTx,
+    subject: { email: string; idpSubject: string },
+  ): Promise<void> {
     await tx.delete(invitations).where(sql`lower(${invitations.email}) = lower(${subject.email})`);
     await tx
       .delete(accessRequests)
-      .where(or(eq(accessRequests.idpSubject, subject.idpSubject), sql`lower(${accessRequests.email}) = lower(${subject.email})`));
+      .where(
+        or(
+          eq(accessRequests.idpSubject, subject.idpSubject),
+          sql`lower(${accessRequests.email}) = lower(${subject.email})`,
+        ),
+      );
   }
 
   async deleteUser(tx: DbTx, userId: string): Promise<void> {

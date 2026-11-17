@@ -1,5 +1,15 @@
 import { randomBytes } from 'node:crypto';
-import { Controller, Get, HttpCode, Inject, Optional, Param, Post, Query, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Optional,
+  Param,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { DATABASE } from '../../../platform/db/index.js';
@@ -56,7 +66,8 @@ const view = (a: AlertRecord): AlertView => ({
   counts: { ...a.counts },
 });
 
-const positionKey = (a: AlertRecord): string => JSON.stringify([a.acknowledgedAt, a.raisedAt, a.id]);
+const positionKey = (a: AlertRecord): string =>
+  JSON.stringify([a.acknowledgedAt, a.raisedAt, a.id]);
 
 function parsePosition(key: string): AlertPosition {
   const bad = (): DomainError =>
@@ -92,7 +103,10 @@ export class AlertsController {
   ) {}
 
   /** Without a database there is no session guard either: such a request is refused, never served. */
-  private db(actor: ActorContext | undefined): { actor: ActorContext; db: Pick<Database, 'db'>['db'] } {
+  private db(actor: ActorContext | undefined): {
+    actor: ActorContext;
+    db: Pick<Database, 'db'>['db'];
+  } {
     if (actor === undefined || this.database === undefined) {
       throw new DomainError('unauthenticated', 'Sign in to continue.');
     }
@@ -100,7 +114,11 @@ export class AlertsController {
   }
 
   /** The guard has checked token, status, MFA and role; this adds recent authentication and audits its denial. */
-  private async recentAuth(actor: ActorContext, db: Pick<Database, 'db'>['db'], requestId: string): Promise<void> {
+  private async recentAuth(
+    actor: ActorContext,
+    db: Pick<Database, 'db'>['db'],
+    requestId: string,
+  ): Promise<void> {
     try {
       requireRecentAuth(actor);
     } catch (error) {
@@ -130,7 +148,8 @@ export class AlertsController {
     const { actor, db } = this.db(current);
     await this.recentAuth(actor, db, request.id);
     const query = parseWith(ListQuery, rawQuery);
-    const acknowledged = query.acknowledged === undefined ? undefined : query.acknowledged === 'true';
+    const acknowledged =
+      query.acknowledged === undefined ? undefined : query.acknowledged === 'true';
     const scope = { owner: actor.userId, filters: { acknowledged: acknowledged ?? null } };
     const after =
       query.cursor === undefined

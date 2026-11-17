@@ -29,13 +29,19 @@ const NON_TERMINAL = ['pending', 'submitting', 'submitted', 'processing'];
 export class VideoProgressReader {
   constructor(private readonly database: Pick<Database, 'uow'>) {}
 
-  progressFor(ownerId: string, campaignIds: readonly string[]): Promise<ReadonlyMap<string, ProgressSnapshotShape>> {
+  progressFor(
+    ownerId: string,
+    campaignIds: readonly string[],
+  ): Promise<ReadonlyMap<string, ProgressSnapshotShape>> {
     if (campaignIds.length === 0) return Promise.resolve(new Map());
     return this.database.uow.run((tx) => this.snapshots(tx, ownerId, campaignIds));
   }
 
   /** The owner's active campaigns in a derived progress; the owner's campaigns are read in chunks and derived. */
-  async idsWithProgress(ownerId: string, progress: Exclude<CampaignProgress, 'in_progress'>): Promise<ReadonlySet<string>> {
+  async idsWithProgress(
+    ownerId: string,
+    progress: Exclude<CampaignProgress, 'in_progress'>,
+  ): Promise<ReadonlySet<string>> {
     return this.database.uow.run(async (tx) => {
       const rows = await tx
         .select({ id: campaigns.id })
@@ -45,13 +51,18 @@ export class VideoProgressReader {
       const matching = new Set<string>();
       for (let at = 0; at < ids.length; at += CHUNK) {
         const snapshots = await this.snapshots(tx, ownerId, ids.slice(at, at + CHUNK));
-        for (const [id, snapshot] of snapshots) if (snapshot.progress === progress) matching.add(id);
+        for (const [id, snapshot] of snapshots)
+          if (snapshot.progress === progress) matching.add(id);
       }
       return matching;
     });
   }
 
-  private async snapshots(tx: DbTx, ownerId: string, ids: readonly string[]): Promise<Map<string, ProgressSnapshotShape>> {
+  private async snapshots(
+    tx: DbTx,
+    ownerId: string,
+    ids: readonly string[],
+  ): Promise<Map<string, ProgressSnapshotShape>> {
     const list = [...ids];
     const briefRows = await tx
       .select({ campaignId: briefs.campaignId, state: briefs.state })
@@ -65,30 +76,60 @@ export class VideoProgressReader {
       await tx
         .selectDistinct({ campaignId: briefJobs.campaignId })
         .from(briefJobs)
-        .where(and(eq(briefJobs.ownerId, ownerId), eq(briefJobs.kind, 'brief_generation'), inArray(briefJobs.campaignId, list), inArray(briefJobs.state, NON_TERMINAL))),
+        .where(
+          and(
+            eq(briefJobs.ownerId, ownerId),
+            eq(briefJobs.kind, 'brief_generation'),
+            inArray(briefJobs.campaignId, list),
+            inArray(briefJobs.state, NON_TERMINAL),
+          ),
+        ),
     );
     mark(
       await tx
         .selectDistinct({ campaignId: videoJobs.campaignId })
         .from(videoJobs)
-        .where(and(eq(videoJobs.ownerId, ownerId), inArray(videoJobs.campaignId, list), inArray(videoJobs.state, NON_TERMINAL))),
+        .where(
+          and(
+            eq(videoJobs.ownerId, ownerId),
+            inArray(videoJobs.campaignId, list),
+            inArray(videoJobs.state, NON_TERMINAL),
+          ),
+        ),
     );
     mark(
       await tx
         .selectDistinct({ campaignId: videoJobs.campaignId })
         .from(qcRuns)
         .innerJoin(videoJobs, eq(videoJobs.id, qcRuns.videoJobId))
-        .where(and(eq(qcRuns.ownerId, ownerId), inArray(videoJobs.campaignId, list), inArray(qcRuns.state, NON_TERMINAL))),
+        .where(
+          and(
+            eq(qcRuns.ownerId, ownerId),
+            inArray(videoJobs.campaignId, list),
+            inArray(qcRuns.state, NON_TERMINAL),
+          ),
+        ),
     );
     const latest = await tx
-      .selectDistinctOn([videoJobs.segmentId], { campaignId: videoJobs.campaignId, state: videoJobs.state })
+      .selectDistinctOn([videoJobs.segmentId], {
+        campaignId: videoJobs.campaignId,
+        state: videoJobs.state,
+      })
       .from(videoJobs)
       .innerJoin(briefSegments, eq(briefSegments.id, videoJobs.segmentId))
-      .where(and(eq(videoJobs.ownerId, ownerId), inArray(videoJobs.campaignId, list), eq(briefSegments.state, 'active')))
+      .where(
+        and(
+          eq(videoJobs.ownerId, ownerId),
+          inArray(videoJobs.campaignId, list),
+          eq(briefSegments.state, 'active'),
+        ),
+      )
       .orderBy(videoJobs.segmentId, sql`${videoJobs.createdAt} desc`, sql`${videoJobs.id} desc`);
     const result = new Map<string, ProgressSnapshotShape>();
     for (const brief of briefRows) {
-      const states = latest.filter((job) => job.campaignId === brief.campaignId).map((job) => job.state);
+      const states = latest
+        .filter((job) => job.campaignId === brief.campaignId)
+        .map((job) => job.state);
       const jobCounts: Record<string, number> = {};
       for (const state of states) jobCounts[labelOf(state)] = (jobCounts[labelOf(state)] ?? 0) + 1;
       result.set(brief.campaignId, {

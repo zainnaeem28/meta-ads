@@ -11,7 +11,11 @@ const signedIn = async (context: BrowserContext, baseURL: string) =>
   context.addCookies([
     {
       name: LOCAL_SESSION_COOKIE,
-      value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + 600 }),
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      }),
       url: baseURL,
     },
   ]);
@@ -21,9 +25,12 @@ const watchViolations = (page: Page) =>
   page.addInitScript(() => {
     const w = window as unknown as { __csp: string[] };
     w.__csp = [];
-    document.addEventListener('securitypolicyviolation', (e) => w.__csp.push(`${e.violatedDirective} ${e.blockedURI} ${e.sourceFile}:${e.lineNumber}`));
+    document.addEventListener('securitypolicyviolation', (e) =>
+      w.__csp.push(`${e.violatedDirective} ${e.blockedURI} ${e.sourceFile}:${e.lineNumber}`),
+    );
   });
-const violations = (page: Page) => page.evaluate(() => (window as unknown as { __csp: string[] }).__csp);
+const violations = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __csp: string[] }).__csp);
 
 /** Not `networkidle`: the 404 screen's prefetch loop on unbuilt routes never goes idle. Load plus a fixed window for late violations. */
 const settle = async (page: Page) => {
@@ -47,7 +54,11 @@ const SCREENS = [
 
 test.describe('@TASK-085 web security headers and CSP through the built web app', () => {
   for (const { path, session } of SCREENS) {
-    test(`${path}: full header set, enforced policy, no violation`, async ({ page, context, baseURL }) => {
+    test(`${path}: full header set, enforced policy, no violation`, async ({
+      page,
+      context,
+      baseURL,
+    }) => {
       if (session) await signedIn(context, baseURL!);
       await watchViolations(page);
       const res = await page.goto(path);
@@ -74,7 +85,9 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
     expect(res.headers()['x-powered-by']).toBeUndefined();
   });
 
-  test('the framework scripts carry the nonce and a new nonce is issued per request', async ({ request }) => {
+  test('the framework scripts carry the nonce and a new nonce is issued per request', async ({
+    request,
+  }) => {
     const nonces = new Set<string>();
     for (let i = 0; i < 2; i++) {
       const res = await request.get('/sign-in');
@@ -83,12 +96,17 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
       const html = await res.text();
       const scripts = [...html.matchAll(/<script\b[^>]*>/g)].map((m) => m[0]);
       expect(scripts.length).toBeGreaterThan(0);
-      for (const tag of scripts) expect(tag, 'every script tag is marked').toContain(`nonce="${nonce}"`);
+      for (const tag of scripts)
+        expect(tag, 'every script tag is marked').toContain(`nonce="${nonce}"`);
     }
     expect(nonces.size).toBe(2);
   });
 
-  test('a third-party script and an inline script injected on the key page are blocked and reported', async ({ page, context, baseURL }) => {
+  test('a third-party script and an inline script injected on the key page are blocked and reported', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
     await signedIn(context, baseURL!);
     await watchViolations(page);
     const consoleErrors: string[] = [];
@@ -105,14 +123,25 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
           const inline = document.createElement('script');
           inline.textContent = 'window.__inline = true';
           document.head.append(inline);
-          setTimeout(() => resolve({ external: Boolean(w.__ext), inline: Boolean(w.__inline) }), 500);
+          setTimeout(
+            () => resolve({ external: Boolean(w.__ext), inline: Boolean(w.__inline) }),
+            500,
+          );
         }),
     );
     expect(executed).toEqual({ external: false, inline: false });
     const reported = await violations(page);
-    expect(reported.some((v) => v.startsWith('script-src-elem') && v.includes('third-party.example'))).toBe(true);
-    expect(reported.some((v) => v.startsWith('script-src-elem') && v.includes('inline'))).toBe(true);
-    expect(consoleErrors.some((m) => m.includes('Content Security Policy') && m.includes('third-party.example'))).toBe(true);
+    expect(
+      reported.some((v) => v.startsWith('script-src-elem') && v.includes('third-party.example')),
+    ).toBe(true);
+    expect(reported.some((v) => v.startsWith('script-src-elem') && v.includes('inline'))).toBe(
+      true,
+    );
+    expect(
+      consoleErrors.some(
+        (m) => m.includes('Content Security Policy') && m.includes('third-party.example'),
+      ),
+    ).toBe(true);
   });
 
   test('framing is refused: the page cannot be embedded', async ({ page, baseURL }) => {
@@ -122,7 +151,8 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
         new Promise<{ loaded: boolean; body: string | null }>((resolve) => {
           const frame = document.createElement('iframe');
           frame.src = src;
-          frame.onload = () => resolve({ loaded: true, body: frame.contentDocument?.body?.innerHTML ?? null });
+          frame.onload = () =>
+            resolve({ loaded: true, body: frame.contentDocument?.body?.innerHTML ?? null });
           document.body.append(frame);
           setTimeout(() => resolve({ loaded: false, body: null }), 5000);
         }),
@@ -132,15 +162,24 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
     expect(framed.loaded, 'the frame reported a load').toBe(true);
     expect(framed.body === null || framed.body === '').toBe(true);
     // The browser replaces a refused frame with its error document.
-    expect(page.frames().some((f) => f !== page.mainFrame() && f.url().startsWith('chrome-error:'))).toBe(true);
+    expect(
+      page.frames().some((f) => f !== page.mainFrame() && f.url().startsWith('chrome-error:')),
+    ).toBe(true);
   });
 
   for (const { name, width, height } of SHOTS) {
-    test(`evidence: key page and campaigns at ${name} px under the enforced policy`, async ({ page, context, baseURL }) => {
+    test(`evidence: key page and campaigns at ${name} px under the enforced policy`, async ({
+      page,
+      context,
+      baseURL,
+    }) => {
       await signedIn(context, baseURL!);
       await page.setViewportSize({ width, height });
       await watchViolations(page);
-      for (const [slug, path] of [['provider-keys', '/settings/provider-keys'], ['signed-in-campaigns', '/campaigns']] as const) {
+      for (const [slug, path] of [
+        ['provider-keys', '/settings/provider-keys'],
+        ['signed-in-campaigns', '/campaigns'],
+      ] as const) {
         await page.goto(path);
         await settle(page);
         await page.evaluate(() => document.fonts.ready);
@@ -156,7 +195,9 @@ test.describe('@TASK-085 web security headers and CSP through the built web app'
       await page.setViewportSize({ width, height });
       await watchViolations(page);
       await page.goto('/sign-in');
-      await expect(page.getByRole('heading', { level: 1, name: 'AI UGC Ad Director' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'AI UGC Ad Director' }),
+      ).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
       expect(await violations(page)).toEqual([]);
       mkdirSync(`${evidence}/screenshots`, { recursive: true });

@@ -73,13 +73,24 @@ export interface ProviderKeyRepository {
   find(db: Executor, ownerId: string, provider: Provider): Promise<KeyRecord | null>;
   list(db: Executor, ownerId: string): Promise<KeyRecord[]>;
   /** False when the owner already has a key for the provider (a concurrent first store). */
-  insert(db: Executor, id: string, ownerId: string, provider: Provider, write: KeyWrite): Promise<boolean>;
+  insert(
+    db: Executor,
+    id: string,
+    ownerId: string,
+    provider: Provider,
+    write: KeyWrite,
+  ): Promise<boolean>;
   /** Conditional on `expectedVersion`; false when another request replaced or deleted the row first. */
   replace(db: Executor, id: string, expectedVersion: number, write: KeyWrite): Promise<boolean>;
   delete(db: Executor, ownerId: string, provider: Provider): Promise<string | null>;
   deleteAll(db: Executor, ownerId: string): Promise<{ id: string; provider: Provider }[]>;
   /** Counts one authentication failure of this version of the key; disables it at `threshold`. Null when no such live key. */
-  recordFailure(db: Executor, id: string, version: number, threshold: number): Promise<AuthResultRow | null>;
+  recordFailure(
+    db: Executor,
+    id: string,
+    version: number,
+    threshold: number,
+  ): Promise<AuthResultRow | null>;
   /** Resets the count (and sets `untested` to `active`); `activated` is true when the status changed. Null when no such live key. */
   recordSuccess(
     db: Executor,

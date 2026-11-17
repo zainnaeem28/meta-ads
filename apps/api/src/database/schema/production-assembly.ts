@@ -1,5 +1,19 @@
 import { sql } from 'drizzle-orm';
-import { boolean, char, check, date, index, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  char,
+  check,
+  date,
+  index,
+  pgTable,
+  primaryKey,
+  smallint,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 import { campaigns } from './campaigns.js';
 import { mediaObjects } from './media.js';
 import { thumbstopperJobs } from './production-thumb.js';
@@ -35,13 +49,21 @@ export const assemblyJobs = pgTable(
     causeClass: text('cause_class'),
     causeMessage: varchar('cause_message', { length: 300 }),
     reuseHash: char('reuse_hash', { length: 64 }).notNull(),
-    thumbstopperJobId: uuid('thumbstopper_job_id').references(() => thumbstopperJobs.id, { onDelete: 'set null' }),
-    outputMediaId: uuid('output_media_id').references(() => mediaObjects.id, { onDelete: 'set null' }),
+    thumbstopperJobId: uuid('thumbstopper_job_id').references(() => thumbstopperJobs.id, {
+      onDelete: 'set null',
+    }),
+    outputMediaId: uuid('output_media_id').references(() => mediaObjects.id, {
+      onDelete: 'set null',
+    }),
     renderDay: date('render_day', { mode: 'string' }).notNull(),
     leaseUntil: timestamp('lease_until', { withTimezone: true, mode: 'string' }),
     attempts: smallint('attempts').notNull().default(0),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     uniqueIndex('assembly_jobs_reuse_uq')
@@ -50,7 +72,10 @@ export const assemblyJobs = pgTable(
     index('assembly_jobs_owner_day_idx').on(table.ownerId, table.renderDay),
     index('assembly_jobs_campaign_idx').on(table.campaignId, sql`${table.createdAt} desc`),
     check('assembly_jobs_state_ck', sql`${table.state} in (${list(STATES)})`),
-    check('assembly_jobs_cause_ck', sql`${table.causeClass} is null or ${table.causeClass} in (${list(CAUSE_CLASSES)})`),
+    check(
+      'assembly_jobs_cause_ck',
+      sql`${table.causeClass} is null or ${table.causeClass} in (${list(CAUSE_CLASSES)})`,
+    ),
     check('assembly_jobs_attempts_ck', sql`${table.attempts} >= 0`),
   ],
 );

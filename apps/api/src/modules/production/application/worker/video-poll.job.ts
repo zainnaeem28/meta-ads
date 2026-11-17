@@ -11,7 +11,12 @@ import { UsageService } from '../../../usage/index.js';
 import { KeySession, followUpKey } from './key-session.js';
 import { enqueueCopy } from './copy-queue.js';
 import { VIDEO_TABLE } from './video-submit.job.js';
-import { ProviderCallFailed, VIDEO_GEN_PORT, VIDEO_WORKER_CONFIG, VIDEO_WORKER_REPOSITORY } from './ports.js';
+import {
+  ProviderCallFailed,
+  VIDEO_GEN_PORT,
+  VIDEO_WORKER_CONFIG,
+  VIDEO_WORKER_REPOSITORY,
+} from './ports.js';
 import type { JobLog, VideoGenPort, VideoWorkerConfig, VideoWorkerRepository } from './ports.js';
 
 export { POLL_QUEUE };
@@ -43,13 +48,25 @@ export class VideoPollJob {
     const jobId = (job.data as { jobId?: unknown } | null)?.jobId;
     if (typeof jobId !== 'string') throw new TypeError('production.poll job has no jobId');
     const outcome = await this.run(jobId, log);
-    log.info({ module: 'production', outcome: outcome === 'failed' || outcome === 'timed_out' ? 'error' : 'ok', jobId }, `video poll: ${outcome}`);
+    log.info(
+      {
+        module: 'production',
+        outcome: outcome === 'failed' || outcome === 'timed_out' ? 'error' : 'ok',
+        jobId,
+      },
+      `video poll: ${outcome}`,
+    );
     return outcome;
   }
 
   async run(jobId: string, log: JobLog): Promise<VideoPollOutcome> {
     const row = await this.database.uow.run((tx) => this.repository.findJob(tx, jobId));
-    if (row === null || (row.state !== 'submitted' && row.state !== 'processing') || row.providerTaskId === null) return 'skipped';
+    if (
+      row === null ||
+      (row.state !== 'submitted' && row.state !== 'processing') ||
+      row.providerTaskId === null
+    )
+      return 'skipped';
     const taskId = row.providerTaskId;
     let finished = false;
     // The copy job joins the transaction that records completion, so the finished clip and its copy job commit together.
@@ -86,9 +103,22 @@ export class VideoPollJob {
   }
 
   /** One status read. A key or provider fault that ends the job is returned; a transient one is thrown to retry. */
-  private async read(keyId: string | null, ownerId: string, taskId: string, log: JobLog): Promise<PollResult> {
-    const key = followUpKey({ keyId, ownerId }, keyId === null ? null : await this.keys.keyOf(keyId));
-    if (key === null) return { kind: 'failed', cause: 'key_deleted', message: 'The WaveSpeed key this clip used was removed.' };
+  private async read(
+    keyId: string | null,
+    ownerId: string,
+    taskId: string,
+    log: JobLog,
+  ): Promise<PollResult> {
+    const key = followUpKey(
+      { keyId, ownerId },
+      keyId === null ? null : await this.keys.keyOf(keyId),
+    );
+    if (key === null)
+      return {
+        kind: 'failed',
+        cause: 'key_deleted',
+        message: 'The WaveSpeed key this clip used was removed.',
+      };
     let ended: PollResult | undefined;
     const status = await this.keys.with(key, log, async (credential) => {
       try {
@@ -98,26 +128,49 @@ export class VideoPollJob {
         const c = error.classification;
         if (c.countsAsAuthFailure) await this.keys.report(key, false, log);
         // The provider refused the read for good: the key is not accepted, or the task is gone.
-        if (error.status === 401 || error.status === 403) ended = { kind: 'failed', cause: 'configuration', ...(c.message === undefined ? {} : { message: c.message }) };
-        else if (error.status === 404) ended = { kind: 'failed', cause: 'temporary', message: GONE };
+        if (error.status === 401 || error.status === 403)
+          ended = {
+            kind: 'failed',
+            cause: 'configuration',
+            ...(c.message === undefined ? {} : { message: c.message }),
+          };
+        else if (error.status === 404)
+          ended = { kind: 'failed', cause: 'temporary', message: GONE };
         else throw error;
         return undefined;
       }
     });
-    if (status === 'unreadable') return { kind: 'failed', cause: 'configuration', message: 'Your WaveSpeed key could not be read. Enter it again.' };
+    if (status === 'unreadable')
+      return {
+        kind: 'failed',
+        cause: 'configuration',
+        message: 'Your WaveSpeed key could not be read. Enter it again.',
+      };
     if (ended !== undefined) return ended;
     if (status === undefined) throw new Error('video status read returned nothing');
     await this.keys.report(key, true, log);
     if (status.state === 'completed') return { kind: 'completed' };
     if (status.state === 'failed') {
-      const c = classifyProviderFailure(PROVIDER, { kind: 'poll_failed', authError: status.errorClass === 'auth' });
-      return { kind: 'failed', cause: c.causeClass, message: c.causeClass === 'configuration' ? `your ${PROVIDER} key was not accepted` : 'The provider could not make this clip. Try again.' };
+      const c = classifyProviderFailure(PROVIDER, {
+        kind: 'poll_failed',
+        authError: status.errorClass === 'auth',
+      });
+      return {
+        kind: 'failed',
+        cause: c.causeClass,
+        message:
+          c.causeClass === 'configuration'
+            ? `your ${PROVIDER} key was not accepted`
+            : 'The provider could not make this clip. Try again.',
+      };
     }
     return { kind: 'pending' };
   }
 
   /** The submit event stands (the provider billed); the unused part of the reservation (the first QC) goes. */
   private async releaseReservation(ownerId: string, jobId: string): Promise<void> {
-    await this.database.uow.run((tx: DbTx) => this.usage.release(tx, { ownerId, jobType: 'video', jobId }));
+    await this.database.uow.run((tx: DbTx) =>
+      this.usage.release(tx, { ownerId, jobType: 'video', jobId }),
+    );
   }
 }

@@ -29,10 +29,16 @@ export const campaigns = pgTable(
     state: text('state').notNull().default('active'),
     productName: varchar('product_name', { length: 120 }).notNull(),
     productDescription: varchar('product_description', { length: 2000 }).notNull(),
-    productMediaId: uuid('product_media_id').references(() => mediaObjects.id, { onDelete: 'set null' }),
+    productMediaId: uuid('product_media_id').references(() => mediaObjects.id, {
+      onDelete: 'set null',
+    }),
     segmentCount: smallint('segment_count').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     index('campaigns_owner_active_idx')
@@ -75,10 +81,16 @@ export const drafts = pgTable(
     segmentCount: smallint('segment_count'),
     concept: varchar('concept', { length: 4000 }),
     script: varchar('script', { length: 4000 }),
-    productMediaId: uuid('product_media_id').references(() => mediaObjects.id, { onDelete: 'set null' }),
+    productMediaId: uuid('product_media_id').references(() => mediaObjects.id, {
+      onDelete: 'set null',
+    }),
     campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'cascade' }),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     index('drafts_owner_open_idx')

@@ -37,9 +37,19 @@ describe('WindowStore', () => {
     store.recordPoolAcquire(0.1, false);
     store.recordPoolAcquire(250, true);
     store.recordPoolAcquire(50, true);
-    expect(store.snapshot().poolWait).toEqual({ minutes: 10, acquisitions: 3, waited: 2, p95WaitMs: 250 });
+    expect(store.snapshot().poolWait).toEqual({
+      minutes: 10,
+      acquisitions: 3,
+      waited: 2,
+      p95WaitMs: 250,
+    });
     now += 11 * MIN;
-    expect(store.snapshot().poolWait).toEqual({ minutes: 10, acquisitions: 0, waited: 0, p95WaitMs: null });
+    expect(store.snapshot().poolWait).toEqual({
+      minutes: 10,
+      acquisitions: 0,
+      waited: 0,
+      p95WaitMs: null,
+    });
   });
 
   it('counts a drop inside 10 minutes, then 0 with a non-zero total, and restarts at 0 with a new process', () => {
@@ -53,7 +63,10 @@ describe('WindowStore', () => {
     now += 2 * MIN;
     expect(store.snapshot()).toMatchObject({ telemetryDropped10m: 0, telemetryDroppedTotal: 1 });
     const restarted = new WindowStore(() => now);
-    expect(restarted.snapshot()).toMatchObject({ telemetryDropped10m: 0, telemetryDroppedTotal: 0 });
+    expect(restarted.snapshot()).toMatchObject({
+      telemetryDropped10m: 0,
+      telemetryDroppedTotal: 0,
+    });
     expect(restarted.snapshot().processStartedAt).toBe(new Date(now).toISOString());
   });
 });
@@ -70,7 +83,9 @@ describe('AppMetrics exposition', () => {
     metrics.providerCall('openai', 'text', 'ok', 30);
     metrics.setQueueDepth('provider', 7);
     const text = await metrics.exposition();
-    expect(text).toContain('http_request_duration_seconds_count{method="GET",route="/api/v1/drafts/:draftId",status_class="5xx"} 1');
+    expect(text).toContain(
+      'http_request_duration_seconds_count{method="GET",route="/api/v1/drafts/:draftId",status_class="5xx"} 1',
+    );
     expect(text).toContain('telemetry_dropped_total 2');
     expect(text).toContain('pgboss_send_failures_total 1');
     expect(text).toContain('db_pool_size 3');

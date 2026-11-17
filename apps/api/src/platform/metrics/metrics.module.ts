@@ -19,7 +19,8 @@ export interface MetricsConfig extends SentryConfig {
   METRICS_TOKEN?: string | undefined;
 }
 
-const loadSentry = async (): Promise<SentrySdk> => (await import('@sentry/node')) as unknown as SentrySdk;
+const loadSentry = async (): Promise<SentrySdk> =>
+  (await import('@sentry/node')) as unknown as SentrySdk;
 
 /** Instruments the request path, the pool and pg-boss sends, and starts the error reporter when it is configured. */
 @Injectable()
@@ -40,7 +41,12 @@ export class MetricsLifecycle implements OnModuleInit, OnApplicationShutdown {
     if (this.database !== undefined) {
       const { pool } = this.database;
       instrumentPool(pool, this.metrics);
-      const gauge = (): void => this.metrics.setPoolState(pool.totalCount, pool.totalCount - pool.idleCount, pool.waitingCount);
+      const gauge = (): void =>
+        this.metrics.setPoolState(
+          pool.totalCount,
+          pool.totalCount - pool.idleCount,
+          pool.waitingCount,
+        );
       gauge();
       const timer = setInterval(gauge, 5000);
       timer.unref();
@@ -61,7 +67,10 @@ export class MetricsLifecycle implements OnModuleInit, OnApplicationShutdown {
 
 @Module({})
 export class MetricsModule {
-  static register(config: MetricsConfig, loader: () => Promise<SentrySdk> = loadSentry): DynamicModule {
+  static register(
+    config: MetricsConfig,
+    loader: () => Promise<SentrySdk> = loadSentry,
+  ): DynamicModule {
     return {
       module: MetricsModule,
       global: true,

@@ -18,7 +18,16 @@ async function openGallery(page: Page, width: number, height: number) {
 const look = (l: Locator) =>
   l.evaluate((e) => {
     const c = getComputedStyle(e);
-    return [c.backgroundColor, c.color, c.borderTopColor, c.boxShadow, c.outlineStyle, c.outlineColor, c.textDecorationLine, c.transform].join('|');
+    return [
+      c.backgroundColor,
+      c.color,
+      c.borderTopColor,
+      c.boxShadow,
+      c.outlineStyle,
+      c.outlineColor,
+      c.textDecorationLine,
+      c.transform,
+    ].join('|');
   });
 
 async function perform(page: Page, action: Action) {
@@ -36,7 +45,9 @@ async function perform(page: Page, action: Action) {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
   }
-  await expect.poll(() => look(target), { message: `${action.kind} changes how ${action.on} looks` }).not.toBe(before);
+  await expect
+    .poll(() => look(target), { message: `${action.kind} changes how ${action.on} looks` })
+    .not.toBe(before);
   if (action.kind === 'press') await page.mouse.up();
 }
 
@@ -48,18 +59,25 @@ async function expectState(page: Page, st: StateEntry) {
 }
 
 test.describe('@TASK-081 gallery completion through the built web app', () => {
-  test('registry: every live CMP ID of UI-UX §6 has a gallery section or cell and nothing else is registered', async ({ page }) => {
+  test('registry: every live CMP ID of UI-UX §6 has a gallery section or cell and nothing else is registered', async ({
+    page,
+  }) => {
     await openGallery(page, 1440, 900);
     expect(LIVE_IDS).toHaveLength(32);
     // Every CMP ID the page names is a live one (CMP-009 is reserved, CMP-029 never existed).
     const named = await page.evaluate(() => {
       const ids = new Set<string>();
-      for (const e of document.querySelectorAll('[data-testid=gallery] h2, [data-testid=gallery] [data-cell] > span:first-child')) {
+      for (const e of document.querySelectorAll(
+        '[data-testid=gallery] h2, [data-testid=gallery] [data-cell] > span:first-child',
+      )) {
         for (const m of (e.textContent ?? '').matchAll(/CMP-\d{3}/g)) ids.add(m[0]);
       }
       return [...ids];
     });
-    expect(named.filter((id) => !LIVE_IDS.includes(id)), 'gallery names an ID outside the inventory').toEqual([]);
+    expect(
+      named.filter((id) => !LIVE_IDS.includes(id)),
+      'gallery names an ID outside the inventory',
+    ).toEqual([]);
     // The page nav lists every gallery section; each live ID is either a section or inside one.
     const sections = await page.locator('[data-testid=gallery] section[id^=CMP-]').count();
     expect(sections).toBeGreaterThanOrEqual(14);
@@ -68,7 +86,9 @@ test.describe('@TASK-081 gallery completion through the built web app', () => {
   for (const vp of WIDTHS) {
     test.describe(`states at ${vp.name} px`, () => {
       for (const entry of INVENTORY) {
-        test(`${entry.id} ${entry.name}: every listed state is on the page (${entry.sheet})`, async ({ page }) => {
+        test(`${entry.id} ${entry.name}: every listed state is on the page (${entry.sheet})`, async ({
+          page,
+        }) => {
           await openGallery(page, vp.width, vp.height);
           const failures: string[] = [];
           for (const st of entry.states) {
@@ -103,7 +123,10 @@ test.describe('@TASK-081 gallery completion through the built web app', () => {
         await page.getByRole('button', { name: open }).click();
         const overlay = page.getByTestId('dialog-overlay');
         await expect(overlay.getByRole('dialog', { name: title })).toBeVisible();
-        await expectNoAxeViolations(page, `${evidence}/axe/dialog-${title.replace(/\W+/g, '-')}-${vp.name}.json`);
+        await expectNoAxeViolations(
+          page,
+          `${evidence}/axe/dialog-${title.replace(/\W+/g, '-')}-${vp.name}.json`,
+        );
         await page.keyboard.press('Escape');
         await expect(overlay).toHaveCount(0);
       }
@@ -128,7 +151,9 @@ test.describe('@TASK-081 gallery completion through the built web app', () => {
       for (const entry of INVENTORY) {
         const anchor = page.locator(entry.anchor).first();
         await anchor.scrollIntoViewIfNeeded();
-        await anchor.screenshot({ path: `${evidence}/screenshots/${entry.sheet}-${entry.id}-${vp.name}.png` });
+        await anchor.screenshot({
+          path: `${evidence}/screenshots/${entry.sheet}-${entry.id}-${vp.name}.png`,
+        });
       }
     }
   });

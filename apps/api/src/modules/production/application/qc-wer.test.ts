@@ -3,11 +3,31 @@ import { judge, mismatchSummary, normalizeWords, numberWords, wordErrorRate } fr
 
 describe('normalizeWords', () => {
   it('lower-cases, strips punctuation and writes numbers as words', () => {
-    expect(normalizeWords('Hello, World! It\'s 42 days; 1,250 people.')).toEqual(['hello', 'world', 'its', 'forty', 'two', 'days', 'one', 'thousand', 'two', 'hundred', 'fifty', 'people']);
+    expect(normalizeWords("Hello, World! It's 42 days; 1,250 people.")).toEqual([
+      'hello',
+      'world',
+      'its',
+      'forty',
+      'two',
+      'days',
+      'one',
+      'thousand',
+      'two',
+      'hundred',
+      'fifty',
+      'people',
+    ]);
   });
 
   it('says a decimal and a percentage', () => {
-    expect(normalizeWords('3.5 and 20%')).toEqual(['three', 'point', 'five', 'and', 'twenty', 'percent']);
+    expect(normalizeWords('3.5 and 20%')).toEqual([
+      'three',
+      'point',
+      'five',
+      'and',
+      'twenty',
+      'percent',
+    ]);
   });
 
   it('splits digits out of a mixed token and drops empty text', () => {
@@ -30,7 +50,9 @@ describe('numberWords', () => {
   });
 
   it('keeps a number too large to say digit by digit', () => {
-    expect(numberWords('12345678901').join(' ')).toBe('one two three four five six seven eight nine zero one');
+    expect(numberWords('12345678901').join(' ')).toBe(
+      'one two three four five six seven eight nine zero one',
+    );
   });
 });
 
@@ -68,7 +90,9 @@ describe('judge', () => {
     const verdict = judge('one two three four five', 'one two canary-secret-words five', 0.2);
     expect(verdict.passed).toBe(false);
     expect(verdict.rate).toBe(0.6);
-    expect(verdict.reason).toBe('60% of the words differ from the script. Missing: three, four. Extra: canary, secret, words.');
+    expect(verdict.reason).toBe(
+      '60% of the words differ from the script. Missing: three, four. Extra: canary, secret, words.',
+    );
   });
 });
 

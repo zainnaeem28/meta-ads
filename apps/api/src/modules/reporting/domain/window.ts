@@ -25,8 +25,10 @@ export function resolveWindow(
 ): ReportWindow | WindowFault {
   const to = input.to ?? now;
   const from = input.from ?? new Date(to.getTime() - settings.defaultDays * DAY_MS);
-  if (!(to.getTime() > from.getTime())) return { kind: 'invalid', field: 'to', message: 'to must be after from' };
-  if (to.getTime() - from.getTime() > settings.maxDays * DAY_MS) return { kind: 'too_large', maxDays: settings.maxDays };
+  if (!(to.getTime() > from.getTime()))
+    return { kind: 'invalid', field: 'to', message: 'to must be after from' };
+  if (to.getTime() - from.getTime() > settings.maxDays * DAY_MS)
+    return { kind: 'too_large', maxDays: settings.maxDays };
   return { from, to };
 }
 

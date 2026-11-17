@@ -7,11 +7,17 @@ export class HmacFingerprinter implements Fingerprinter {
     private readonly peppers: ReadonlyMap<number, Buffer>,
     private readonly active: number,
   ) {
-    if (!peppers.has(active)) throw new Error('KEY_FINGERPRINT_PEPPER_ACTIVE must name a version in KEY_FINGERPRINT_PEPPERS');
+    if (!peppers.has(active))
+      throw new Error(
+        'KEY_FINGERPRINT_PEPPER_ACTIVE must name a version in KEY_FINGERPRINT_PEPPERS',
+      );
   }
 
   fingerprint(key: Buffer): { readonly hex: string; readonly pepperVersion: number } {
     const pepper = this.peppers.get(this.active) as Buffer;
-    return { hex: createHmac('sha256', pepper).update(key).digest('hex'), pepperVersion: this.active };
+    return {
+      hex: createHmac('sha256', pepper).update(key).digest('hex'),
+      pepperVersion: this.active,
+    };
   }
 }

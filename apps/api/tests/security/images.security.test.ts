@@ -11,7 +11,12 @@ import type { Account, Stack } from './support/stack.js';
 // person's likeness image goes up through the real API, is sanitized by the real worker, is sent to the provider as bytes
 // only, yields no inferred attribute in any store, and is erased with the account.
 
-const rules = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', '..', '..', 'config', 'brand-rules.json'), 'utf8')) as { sensitiveAttributeFilter: { terms: string[] } };
+const rules = JSON.parse(
+  readFileSync(
+    join(import.meta.dirname, '..', '..', '..', '..', 'config', 'brand-rules.json'),
+    'utf8',
+  ),
+) as { sensitiveAttributeFilter: { terms: string[] } };
 const TERMS = rules.sensitiveAttributeFilter.terms;
 const CLEAN_1 = 'A small amber glass bottle with a silver cap.';
 const CLEAN_2 = 'The box is matte green.';
@@ -53,17 +58,59 @@ describe('analysis output with no sensitive inference (SECT-PD-15, REQ-006, NFR-
   });
 
   it('refuses an answer with fields beyond the description (age, ethnicity, health, a URL): the job fails and none of it is stored', async () => {
-    const media = await s.one<{ id: string }>(`select id from media_objects where owner_id = $1 and kind = 'upload' limit 1`, [u.id]);
-    const key = await s.one<{ id: string; version: number }>(`select id, version from provider_keys where owner_id = $1`, [u.id]);
-    s.openai.reply = () => ({ body: { choices: [{ message: { role: 'assistant', refusal: null, content: JSON.stringify({ productDescription: `${CLEAN_1} ${CLEAN_2}`, age: 'about 30', ethnicity: 'inferred-ethnicity-canary', health: 'inferred-health-canary', url: 'https://evil.example.com/x' }) } }] } });
+    const media = await s.one<{ id: string }>(
+      `select id from media_objects where owner_id = $1 and kind = 'upload' limit 1`,
+      [u.id],
+    );
+    const key = await s.one<{ id: string; version: number }>(
+      `select id, version from provider_keys where owner_id = $1`,
+      [u.id],
+    );
+    s.openai.reply = () => ({
+      body: {
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              refusal: null,
+              content: JSON.stringify({
+                productDescription: `${CLEAN_1} ${CLEAN_2}`,
+                age: 'about 30',
+                ethnicity: 'inferred-ethnicity-canary',
+                health: 'inferred-health-canary',
+                url: 'https://evil.example.com/x',
+              }),
+            },
+          },
+        ],
+      },
+    });
     const jobId = (await s.one<{ id: string }>(`select gen_random_uuid() as id`)).id;
-    await s.pool.query(`insert into brief_jobs (id, owner_id, kind, media_id, state, reuse_hash, key_id, key_version, deadline_at) values ($1, $2, 'image_analysis', $3, 'pending', repeat('e', 64), $4, $5, now() + interval '10 minutes')`, [jobId, u.id, media.id, key.id, key.version]);
+    await s.pool.query(
+      `insert into brief_jobs (id, owner_id, kind, media_id, state, reuse_hash, key_id, key_version, deadline_at) values ($1, $2, 'image_analysis', $3, 'pending', repeat('e', 64), $4, $5, now() + interval '10 minutes')`,
+      [jobId, u.id, media.id, key.id, key.version],
+    );
     await s.boss.send('brief.analyze-image', { jobId });
-    await s.until(async () => ['completed', 'failed'].includes((await s.one<{ state: string }>(`select state from brief_jobs where id = $1`, [jobId])).state), 'the job', 60_000);
-    const row = await s.one<Record<string, unknown>>(`select * from brief_jobs where id = $1`, [jobId]);
+    await s.until(
+      async () =>
+        ['completed', 'failed'].includes(
+          (await s.one<{ state: string }>(`select state from brief_jobs where id = $1`, [jobId]))
+            .state,
+        ),
+      'the job',
+      60_000,
+    );
+    const row = await s.one<Record<string, unknown>>(`select * from brief_jobs where id = $1`, [
+      jobId,
+    ]);
     expect(row['state']).toBe('failed');
     expect(row['result_text']).toBeNull();
-    for (const canary of ['inferred-ethnicity-canary', 'inferred-health-canary', 'evil.example.com', 'about 30']) {
+    for (const canary of [
+      'inferred-ethnicity-canary',
+      'inferred-health-canary',
+      'evil.example.com',
+      'about 30',
+    ]) {
       expect(await rowsHolding(s.pool, canary, ['public', 'pgboss']), canary).toEqual({});
       expect(s.logs.join('').includes(canary), canary).toBe(false);
     }
@@ -71,30 +118,58 @@ describe('analysis output with no sensitive inference (SECT-PD-15, REQ-006, NFR-
 
   it('drops the wordings an evasion would use: case, punctuation, line breaks and list items', () => {
     const probes = [
-      'AN ELDERLY MAN holds the jar.', 'The jar sits next to a Black woman!', 'Held by an asian teenager?', 'A pregnant model smiles.\nThe lid is silver.',
-      'A diabetic patient in a wheelchair.', 'Looks healthy and young, in her twenties', '- hispanic couple\n- amber bottle',
+      'AN ELDERLY MAN holds the jar.',
+      'The jar sits next to a Black woman!',
+      'Held by an asian teenager?',
+      'A pregnant model smiles.\nThe lid is silver.',
+      'A diabetic patient in a wheelchair.',
+      'Looks healthy and young, in her twenties',
+      '- hispanic couple\n- amber bottle',
     ];
     const bad = probes.filter((text) => {
       const kept = dropSensitiveSentences(text, TERMS);
-      return /elderly|black|asian|teen|pregnant|diabetic|wheelchair|healthy|young|twenties|hispanic/iu.test(kept);
+      return /elderly|black|asian|teen|pregnant|diabetic|wheelchair|healthy|young|twenties|hispanic/iu.test(
+        kept,
+      );
     });
     expect(bad, 'sentences that kept a sensitive wording').toEqual([]);
   });
 });
 
-describe('a person\'s likeness image end to end (TC-ZT-10, NFR-09, SECT-UP-05, SECT-PD-02)', () => {
+describe("a person's likeness image end to end (TC-ZT-10, NFR-09, SECT-UP-05, SECT-PD-02)", () => {
   it('is stored privately without EXIF or GPS, goes to the provider as bytes only, and is erased with the account', async () => {
-    const jpeg = await sharp({ create: { width: 64, height: 64, channels: 3, background: { r: 200, g: 120, b: 90 } } })
+    const jpeg = await sharp({
+      create: { width: 64, height: 64, channels: 3, background: { r: 200, g: 120, b: 90 } },
+    })
       .jpeg()
-      .withExif({ IFD0: { Copyright: 'exif-owner-canary-116' }, IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '51/1 30/1 0/1', GPSLongitudeRef: 'W', GPSLongitude: '0/1 7/1 0/1' } })
+      .withExif({
+        IFD0: { Copyright: 'exif-owner-canary-116' },
+        IFD3: {
+          GPSLatitudeRef: 'N',
+          GPSLatitude: '51/1 30/1 0/1',
+          GPSLongitudeRef: 'W',
+          GPSLongitude: '0/1 7/1 0/1',
+        },
+      })
       .toBuffer();
     expect((await sharp(jpeg).metadata()).exif).toBeDefined();
-    const seededQuarantine = new Set([...s.stand.objects.keys()].filter((name) => name.startsWith(`${APP_BUCKET}/q/${u.id}/`)));
+    const seededQuarantine = new Set(
+      [...s.stand.objects.keys()].filter((name) => name.startsWith(`${APP_BUCKET}/q/${u.id}/`)),
+    );
     const up = await uploadImage(s, u, jpeg);
     expect(up.status, JSON.stringify(up.body)).toBeLessThan(300);
     const mediaId = up.body.data?.id as string;
-    await s.until(async () => (await s.one<{ state: string }>(`select state from media_objects where id = $1`, [mediaId])).state === 'ready', 'the image to be ready', 60_000);
-    const row = await s.one<{ storage_key: string; owner_id: string }>(`select storage_key, owner_id from media_objects where id = $1`, [mediaId]);
+    await s.until(
+      async () =>
+        (await s.one<{ state: string }>(`select state from media_objects where id = $1`, [mediaId]))
+          .state === 'ready',
+      'the image to be ready',
+      60_000,
+    );
+    const row = await s.one<{ storage_key: string; owner_id: string }>(
+      `select storage_key, owner_id from media_objects where id = $1`,
+      [mediaId],
+    );
     // Private by construction: the object lives under the owner's own prefix, the file name the client sent is not in the key,
     // and an unsigned request is the bucket's to refuse (SECT-R2-03 is a deploy check).
     expect(row.storage_key.startsWith(`u/${u.id}/`)).toBe(true);
@@ -104,15 +179,43 @@ describe('a person\'s likeness image end to end (TC-ZT-10, NFR-09, SECT-UP-05, S
     expect(stored.includes(Buffer.from('exif-owner-canary-116'))).toBe(false);
     expect((await sharp(stored).metadata()).exif).toBeUndefined();
     // No upload of the person's image leaves a copy outside the owner's prefixes (the quarantine object is gone).
-    expect([...s.stand.objects.keys()].filter((name) => name.startsWith(`${APP_BUCKET}/q/${u.id}/`) && !seededQuarantine.has(name))).toEqual([]);
+    expect(
+      [...s.stand.objects.keys()].filter(
+        (name) => name.startsWith(`${APP_BUCKET}/q/${u.id}/`) && !seededQuarantine.has(name),
+      ),
+    ).toEqual([]);
     // The provider gets the sanitized bytes inline: no URL of the image, no EXIF.
-    const key = await s.one<{ id: string; version: number }>(`select id, version from provider_keys where owner_id = $1`, [u.id]);
-    s.openai.reply = () => ({ body: { choices: [{ message: { role: 'assistant', refusal: null, content: JSON.stringify({ productDescription: CLEAN_1 }) } }] } });
+    const key = await s.one<{ id: string; version: number }>(
+      `select id, version from provider_keys where owner_id = $1`,
+      [u.id],
+    );
+    s.openai.reply = () => ({
+      body: {
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              refusal: null,
+              content: JSON.stringify({ productDescription: CLEAN_1 }),
+            },
+          },
+        ],
+      },
+    });
     const jobId = (await s.one<{ id: string }>(`select gen_random_uuid() as id`)).id;
-    await s.pool.query(`insert into brief_jobs (id, owner_id, kind, media_id, state, reuse_hash, key_id, key_version, deadline_at) values ($1, $2, 'image_analysis', $3, 'pending', repeat('f', 64), $4, $5, now() + interval '10 minutes')`, [jobId, u.id, mediaId, key.id, key.version]);
+    await s.pool.query(
+      `insert into brief_jobs (id, owner_id, kind, media_id, state, reuse_hash, key_id, key_version, deadline_at) values ($1, $2, 'image_analysis', $3, 'pending', repeat('f', 64), $4, $5, now() + interval '10 minutes')`,
+      [jobId, u.id, mediaId, key.id, key.version],
+    );
     s.openai.seen.length = 0;
     await s.boss.send('brief.analyze-image', { jobId });
-    await s.until(async () => (await s.one<{ state: string }>(`select state from brief_jobs where id = $1`, [jobId])).state === 'completed', 'the analysis', 60_000);
+    await s.until(
+      async () =>
+        (await s.one<{ state: string }>(`select state from brief_jobs where id = $1`, [jobId]))
+          .state === 'completed',
+      'the analysis',
+      60_000,
+    );
     const sent = JSON.stringify(s.openai.seen[0]?.body);
     expect(sent).not.toMatch(/https?:\/\//u);
     const dataUrl = /data:image\/[a-z]+;base64,([A-Za-z0-9+/=]+)/u.exec(sent);
@@ -121,14 +224,25 @@ describe('a person\'s likeness image end to end (TC-ZT-10, NFR-09, SECT-UP-05, S
     expect(provided.includes(Buffer.from('exif-owner-canary-116'))).toBe(false);
     expect((await sharp(provided).metadata()).exif).toBeUndefined();
     // Erased on removal (TC-DEL-05): the object, the row and the description go.
-    const removed = await s.call('POST', `/admin/users/${u.id}/remove`, boss.token, { confirmation: u.email });
+    const removed = await s.call('POST', `/admin/users/${u.id}/remove`, boss.token, {
+      confirmation: u.email,
+    });
     expect(removed.status).toBe(202);
     const runId = removed.body.data.deletionRunId as string;
-    await s.until(async () => (await s.one<{ step: number }>('select step from deletion_runs where id = $1', [runId])).step === 4, 'step 4');
+    await s.until(
+      async () =>
+        (await s.one<{ step: number }>('select step from deletion_runs where id = $1', [runId]))
+          .step === 4,
+      'step 4',
+    );
     await s.pool.query(`update deletion_runs set not_before = now() where id = $1`, [runId]);
     expect(await s.erasure.run(runId, silentJobLog)).toBe('completed');
     expect(s.stand.objects.has(`${APP_BUCKET}/${row.storage_key}`)).toBe(false);
-    expect([...s.stand.objects.keys()].filter((name) => name.includes(u.id) && name.startsWith(`${APP_BUCKET}/`))).toEqual([]);
+    expect(
+      [...s.stand.objects.keys()].filter(
+        (name) => name.includes(u.id) && name.startsWith(`${APP_BUCKET}/`),
+      ),
+    ).toEqual([]);
     expect(await s.count('media_objects', 'owner_id = $1', [u.id])).toBe(0);
     expect(await s.count('brief_jobs', 'owner_id = $1', [u.id])).toBe(0);
     expect(await rowsHolding(s.pool, CLEAN_1, ['public', 'pgboss'])).toEqual({});

@@ -10,7 +10,7 @@ const { createTestDatabase } = await import(pathToFileURL(`${dist}/db/test-datab
 const { installJobs } = await import(pathToFileURL(`${dist}/jobs/test-support.js`));
 
 const database = await createTestDatabase({ label: 'task095_e2e', migrations: false });
-let status = 1;
+let status;
 try {
   await installJobs(database.url);
   const reports = 'reports/fe-screen-008';

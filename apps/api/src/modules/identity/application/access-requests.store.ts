@@ -63,7 +63,11 @@ export class AccessRequestAdminStore {
     return rows.length === 1;
   }
 
-  async findById(db: AccessRequestDb, id: string, lock = false): Promise<AccessRequestRow | undefined> {
+  async findById(
+    db: AccessRequestDb,
+    id: string,
+    lock = false,
+  ): Promise<AccessRequestRow | undefined> {
     const query = db.select(COLUMNS).from(accessRequests).where(eq(accessRequests.id, id)).limit(1);
     const rows = await (lock ? query.for('update') : query);
     return rows[0] as AccessRequestRow | undefined;
@@ -78,12 +82,17 @@ export class AccessRequestAdminStore {
     const rows = await db
       .select({ id: users.id, idpSubject: users.idpSubject })
       .from(users)
-      .where(sql`(${users.idpSubject} = ${idpSubject} or lower(${users.email}) = ${normalizeEmail(email)})`)
+      .where(
+        sql`(${users.idpSubject} = ${idpSubject} or lower(${users.email}) = ${normalizeEmail(email)})`,
+      )
       .limit(1);
     return rows[0];
   }
 
-  async insertUser(db: AccessRequestDb, row: { id: string; idpSubject: string; email: string }): Promise<void> {
+  async insertUser(
+    db: AccessRequestDb,
+    row: { id: string; idpSubject: string; email: string },
+  ): Promise<void> {
     await db.insert(users).values({
       id: row.id,
       idpSubject: row.idpSubject,
@@ -129,4 +138,6 @@ export class AccessRequestAdminStore {
   }
 }
 
-export type AccessRequestStorePort = { [K in keyof AccessRequestAdminStore]: AccessRequestAdminStore[K] };
+export type AccessRequestStorePort = {
+  [K in keyof AccessRequestAdminStore]: AccessRequestAdminStore[K];
+};
