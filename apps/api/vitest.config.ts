@@ -26,6 +26,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/campaigns/junit.xml' }],
       ['junit', { outputFile: 'reports/campaigns-list/junit.xml' }],
       ['junit', { outputFile: 'reports/brief-data/junit.xml' }],
+      ['junit', { outputFile: 'reports/brief-ai/junit.xml' }],
       ['junit', { outputFile: 'reports/brief-api/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
@@ -126,6 +127,10 @@ export default defineConfig({
         // (transport); the port file holds types only.
         'src/modules/brief/application/brief-ports.ts',
         'src/modules/brief/infrastructure/repositories/brief.repository.ts',
+        // The Drizzle repository of the brief jobs and the key-auth reporter are proven on real PostgreSQL through the worker
+        // composition root by brief-ai.integration.test.ts; the handlers and the adapter are unit tested here.
+        'src/modules/brief/infrastructure/brief-jobs.repository.ts',
+        'src/modules/brief/infrastructure/key-auth.reporter.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',
