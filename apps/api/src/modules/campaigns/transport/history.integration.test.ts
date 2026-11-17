@@ -109,11 +109,11 @@ beforeAll(async () => {
     if (/^CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(statement)) await pool.query(statement);
   }
   await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm'); // M0001 creates it; this suite applies only the tables it needs
-  for (const file of ['0010_task-032-audit.sql', '0020_task-033-identity.sql', '0040_task-041-media.sql', '0070_task-046-campaigns.sql']) {
+  for (const file of ['0010_task-032-audit.sql', '0020_task-033-identity.sql', '0040_task-041-media.sql', '0070_task-046-campaigns.sql', '0080_task-048-brief.sql', '0090_task-052-production-video.sql']) {
     for (const statement of statementsOf(file, 'tables')) await pool.query(statement);
   }
   await pool.query(`GRANT USAGE ON SCHEMA public TO "${roleName}"`);
-  for (const file of ['0040_task-041-media.sql', '0070_task-046-campaigns.sql']) {
+  for (const file of ['0040_task-041-media.sql', '0070_task-046-campaigns.sql', '0080_task-048-brief.sql', '0090_task-052-production-video.sql']) {
     for (const statement of statementsOf(file, 'grants')) await pool.query(statement);
   }
   await installJobs(testDb.url);

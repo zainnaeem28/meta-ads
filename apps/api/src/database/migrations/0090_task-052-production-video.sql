@@ -76,3 +76,10 @@ CREATE INDEX "video_jobs_segment_idx" ON "video_jobs" USING btree ("segment_id")
 CREATE INDEX "video_jobs_poll_idx" ON "video_jobs" USING btree ("next_poll_at") WHERE "video_jobs"."state" in ('submitted', 'processing');--> statement-breakpoint
 CREATE INDEX "video_jobs_submitting_idx" ON "video_jobs" USING btree ("submitting_at") WHERE "video_jobs"."state" = 'submitting';--> statement-breakpoint
 CREATE INDEX "video_jobs_copy_idx" ON "video_jobs" USING btree ("provider_completed_at") WHERE "video_jobs"."state" = 'processing' and "video_jobs"."provider_completed_at" is not null;
+--> statement-breakpoint
+-- Grants (ARCHITECTURE §2.2). The api creates video jobs and cancels unfinished ones (campaign deletion, suspension); the
+-- worker submits, polls, copies and settles them and writes the QC runs. Neither role deletes a job or a QC run: they leave
+-- only through the campaign cascade, which the owner role's lifecycle runs. app_backup reads every table by default
+-- privilege (M0001).
+GRANT SELECT, INSERT, UPDATE ON "video_jobs" TO app_api, app_worker;--> statement-breakpoint
+GRANT SELECT, INSERT, UPDATE ON "qc_runs" TO app_api, app_worker;
