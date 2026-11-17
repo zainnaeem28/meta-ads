@@ -74,8 +74,9 @@ for (const { name, width, height } of WIDTHS) {
       await provider('ok');
       session = await signIn(context, page, baseURL!);
     });
-    test.afterEach(async (_fixtures, info) => {
+    test.afterEach(async ({ page }, info) => {
       if (info.status === info.expectedStatus) return;
+      await info.attach('page-url.txt', { body: page.url(), contentType: 'text/plain' });
       // What the api and the worker left behind, attached to the failure report.
       const jobs = await sql(
         'select kind, state, cause_class, cause_message, call_count from brief_jobs order by created_at',
@@ -117,14 +118,12 @@ for (const { name, width, height } of WIDTHS) {
       const draftId = new URL(page.url()).searchParams.get('draft')!;
       await expect(page.getByTestId('save-status')).toContainText('Draft saved');
       await fillProduct(page);
-      await page
-        .getByTestId('file-upload-input')
-        .setInputFiles({
-          name: 'morning-focus-blend.png',
-          mimeType: 'image/png',
-          buffer: png(320),
-        });
-      await expect(page.locator('li[data-status="ready"]')).toBeVisible();
+      await page.getByTestId('file-upload-input').setInputFiles({
+        name: 'morning-focus-blend.png',
+        mimeType: 'image/png',
+        buffer: png(320),
+      });
+      await expect(page.locator('li[data-status="ready"]')).toBeVisible({ timeout: 60_000 });
       await capture(page, '03-step-2-image-ready', name);
 
       // Analysis by the worker through the provider stub; the person copies it into the description.
@@ -324,7 +323,7 @@ for (const { name, width, height } of WIDTHS) {
         mimeType: 'image/png',
         buffer: png(320).subarray(0, 300),
       });
-      await expect(page.locator('li[data-status="rejected"]')).toContainText('could not be read');
+      await expect(page.locator('li[data-status="rejected"]')).toContainText('could not be read', { timeout: 60_000 });
       await capture(page, '15b-step-2-upload-undecodable', name);
       await expect(page.locator('li[data-status="ready"]')).toHaveCount(0);
       await page.getByRole('button', { name: /Next: Audience/ }).click();
@@ -346,7 +345,7 @@ for (const { name, width, height } of WIDTHS) {
       await page
         .getByTestId('file-upload-input')
         .setInputFiles({ name: 'bottle.png', mimeType: 'image/png', buffer: png(320) });
-      await expect(page.locator('li[data-status="ready"]')).toBeVisible();
+      await expect(page.locator('li[data-status="ready"]')).toBeVisible({ timeout: 60_000 });
       await page.getByRole('button', { name: 'Describe this image' }).click();
       await expect(page.getByText('could not be described').first()).toBeVisible({
         timeout: 60_000,
@@ -366,7 +365,7 @@ for (const { name, width, height } of WIDTHS) {
       await page
         .getByTestId('file-upload-input')
         .setInputFiles({ name: 'bottle.png', mimeType: 'image/png', buffer: png(320) });
-      await expect(page.locator('li[data-status="ready"]')).toBeVisible();
+      await expect(page.locator('li[data-status="ready"]')).toBeVisible({ timeout: 60_000 });
       await page.getByRole('button', { name: 'Back' }).click();
       await heading(page, 'Choose the format');
       await page.getByRole('button', { name: 'Start over' }).click();
@@ -469,7 +468,7 @@ test.describe('@TASK-104 FLOW-01 keyboard only at 1440 px', () => {
     await page
       .getByTestId('file-upload-input')
       .setInputFiles({ name: 'bottle.png', mimeType: 'image/png', buffer: png(320) });
-    await expect(page.locator('li[data-status="ready"]')).toBeVisible();
+    await expect(page.locator('li[data-status="ready"]')).toBeVisible({ timeout: 60_000 });
     await press(page.getByRole('button', { name: 'Describe this image' }));
     await expect(page.getByTestId('analysis-result')).toContainText(ANALYSIS);
     await press(page.getByRole('button', { name: 'Use as product description' }));

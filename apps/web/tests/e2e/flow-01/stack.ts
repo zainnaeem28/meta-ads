@@ -18,7 +18,7 @@ const load = new Function('url', 'return import(url)') as (url: string) => Promi
 const dist = (file: string) => pathToFileURL(join(API, 'dist', file)).href;
 const requireApi = createRequire(pathToFileURL(join(API, 'package.json')));
 
-const OPENAI_KEY = 'sk-flow01-integration-openai-key-0123456789abcdef';
+const OPENAI_KEY = 'flow01-integration-openai-secret-0123456789abcdef';
 
 /** What the provider stub answers; tests change `mode` to drive the failure paths. */
 export interface StubState {
@@ -244,7 +244,7 @@ export async function startStack(ports: {
       WORKER_WATCHDOG_SECONDS: 180,
       WORKER_DRAIN_SECONDS: 5,
       WORKER_CONCURRENCY_PROVIDER: 2,
-      WORKER_CONCURRENCY_SANITIZE: 1,
+      WORKER_CONCURRENCY_SANITIZE: 2,
       WORKER_CONCURRENCY_DELETION: 1,
     },
     {
