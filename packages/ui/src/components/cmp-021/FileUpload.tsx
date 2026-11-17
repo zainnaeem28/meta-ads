@@ -150,7 +150,6 @@ export function FileUpload({
             >
               <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-muted text-muted-foreground">
                 {item.previewUrl && item.status !== 'rejected' ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.previewUrl} alt="" width={56} height={56} className="size-full object-cover" />
                 ) : (
                   <Icon name={item.status === 'rejected' ? 'file-warning' : 'image'} size={24} />

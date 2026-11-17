@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openApiOperations, seedSubject } from './support/data.js';
 import { ORIGIN, bootStack, openDefect } from './support/stack.js';
-import type { Account, Stack } from './support/stack.js';
+import type { Stack } from './support/stack.js';
 
 // TASK-116: SECT-ZT-01, 02, 03, 05, 06; SECT-AZ-10, 11, 13; SECT-AUTH-05, 06; TC-ZT-01, 02, 03, 06, TC-AUT-12, 13: the
 // zero-trust revocation matrix. Every operation of the OpenAPI file (generated: ID, method, path, scope) is called as an

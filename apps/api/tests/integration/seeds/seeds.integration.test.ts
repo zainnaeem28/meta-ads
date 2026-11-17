@@ -6,6 +6,7 @@ import { DEV_IDENTITY_USERS, DEV_STUB_KEYS } from '../../../src/database/seeds/i
 import { isUuidV7 } from '../../../src/platform/shared-kernel/index.js';
 import { cleanup, drizzleMigrate, provision, renderMigrations, teardown } from '../migrations/support/harness.js';
 import type { Env } from '../migrations/support/harness.js';
+import type { DbTx } from '../../../src/platform/db/index.js';
 import { Factories, FixedClock, fixedUuidV7 } from '../../support/factories/index.js';
 
 // TC-OPS-03 (seed rerun): the real seed entry (`main` and `runSeed` with the registered steps) on real PostgreSQL.
@@ -198,7 +199,7 @@ describe('factories', () => {
   });
 });
 
-async function runDb<T>(fn: (tx: import('../../../src/platform/db/index.js').DbTx) => Promise<T>): Promise<T> {
+async function runDb<T>(fn: (tx: DbTx) => Promise<T>): Promise<T> {
   const { createDatabase } = await import('../../../src/platform/db/index.js');
   const db = createDatabase(
     { DATABASE_URL: database.url, DATABASE_POOL_MAX: 2, DATABASE_ACQUIRE_TIMEOUT_MS: 5000 },

@@ -81,7 +81,6 @@ export function CampaignRow({
         className="flex aspect-9/16 w-11 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-media-placeholder text-foreground md:w-14"
       >
         {posterSrc ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={posterSrc} alt="" className="size-full object-cover" />
         ) : (
           <Icon name={variant === 'draft' ? 'file-text' : 'film'} size={20} />

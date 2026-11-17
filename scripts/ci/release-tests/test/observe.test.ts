@@ -127,7 +127,8 @@ describe('observe.sh', () => {
 
   it('aborts when a required metric field is missing or not a number', async () => {
     for (const name of Object.keys(healthy)) {
-      const { [name]: _gone, ...rest } = healthy as Record<string, number>;
+      const rest = { ...(healthy as Record<string, number>) };
+      delete rest[name];
       const missing = await observe({ metrics: rest }, { OBSERVE_BASELINE_P95_MS: '100' });
       expect(missing.result.code, name).toBe(1);
       expect(missing.result.stderr).toContain(`no numeric '${name}' field`);
