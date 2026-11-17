@@ -326,20 +326,24 @@ interface JobOptions {
   withReference?: boolean;
   keyStatus?: string;
   withKey?: boolean;
+  /** Another clip of an owner who already has a key. */
+  sameOwner?: { owner: string; keyId: string };
 }
 
 /** What the api leaves behind for a clip: owner, key, campaign, brief segment, reference image and a reservation. */
 async function clip(opts: JobOptions = {}): Promise<Fixture> {
-  const owner = randomUUID();
-  await pool.query(`insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`, [owner, `sub_${owner.slice(0, 20)}`, `${owner.slice(0, 12)}@example.test`]);
-  const keyId = randomUUID();
-  if (opts.withKey !== false) {
-    const sealed = wrap.seal(Buffer.from(KEY), { userId: owner, provider: 'wavespeed', keyId, version: 1 });
-    await pool.query(
-      `insert into provider_keys (id, owner_id, provider, status, version, ciphertext, nonce, wrapped_dek, kek_version, last4, fingerprint, fingerprint_pepper_version)
-       values ($1, $2, 'wavespeed', $3, 1, $4, $5, $6, $7, 'cdef', $8, 1)`,
-      [keyId, owner, opts.keyStatus ?? 'active', sealed.ciphertext, sealed.nonce, sealed.wrappedDek, sealed.kekVersion, 'b'.repeat(64)],
-    );
+  const owner = opts.sameOwner?.owner ?? randomUUID();
+  const keyId = opts.sameOwner?.keyId ?? randomUUID();
+  if (opts.sameOwner === undefined) {
+    await pool.query(`insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`, [owner, `sub_${owner.slice(0, 20)}`, `${owner.slice(0, 12)}@example.test`]);
+    if (opts.withKey !== false) {
+      const sealed = wrap.seal(Buffer.from(KEY), { userId: owner, provider: 'wavespeed', keyId, version: 1 });
+      await pool.query(
+        `insert into provider_keys (id, owner_id, provider, status, version, ciphertext, nonce, wrapped_dek, kek_version, last4, fingerprint, fingerprint_pepper_version)
+         values ($1, $2, 'wavespeed', $3, 1, $4, $5, $6, $7, 'cdef', $8, 1)`,
+        [keyId, owner, opts.keyStatus ?? 'active', sealed.ciphertext, sealed.nonce, sealed.wrappedDek, sealed.kekVersion, 'b'.repeat(64)],
+      );
+    }
   }
   const campaign = randomUUID();
   const brief = randomUUID();
@@ -503,6 +507,20 @@ describe('production.video-submit and the clip, through the worker process', () 
       expect(await reservations(c.job)).toBe(0);
     }
     expect(calls).toHaveLength(0);
+  });
+
+  it('holds a sixth clip of one owner as pending until one of the five running finishes (REQ-009, ARCHITECTURE §5.5)', async () => {
+    const first = await clip({ state: 'processing', nextPollAt: '1 hour' });
+    const running = [first, ...(await Promise.all([1, 2, 3, 4].map(() => clip({ state: 'processing', nextPollAt: '1 hour', sameOwner: first })))) ];
+    const waiting = await clip({ sameOwner: first });
+    await send('production.video-submit', waiting.job);
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    expect(await rowOf(waiting.job)).toMatchObject({ state: 'pending', call_count: 0 });
+    expect(submits()).toHaveLength(0);
+    await pool.query(`update video_jobs set state = 'completed' where id = $1`, [(running[0] as Fixture).job]);
+    const job = await until(waiting.job, (row) => ['submitted', 'processing', 'completed'].includes(row['state'] as string), 'was never submitted after a slot freed', 30_000);
+    expect(job['call_count']).toBe(1);
+    expect(submits()).toHaveLength(1);
   });
 
   it('classifies a refused submit: 401, 402 and 429 are unbilled rejections with the cause for the owner (ARCHITECTURE §5.10)', async () => {
