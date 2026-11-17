@@ -100,3 +100,23 @@ export interface BriefRules {
 }
 
 export const BRIEF_RULES = Symbol('BRIEF_RULES');
+
+/** The window of a claim-check count: events with `from <= at < to`. `ownerId` narrows it to one account; absent, all accounts. */
+export interface ClaimWindow {
+  readonly from: Date;
+  readonly to: Date;
+  readonly ownerId?: string;
+}
+
+/** Claim events in a window by class and outcome (IDs and counts only, never copy text). */
+export interface ClaimCountRow {
+  readonly class: RuleClass;
+  readonly outcome: ClaimOutcome;
+  readonly count: number;
+}
+
+export interface ClaimCountsRepository {
+  countEvents(tx: DbTx, window: ClaimWindow): Promise<readonly ClaimCountRow[]>;
+}
+
+export const CLAIM_COUNTS_REPOSITORY = Symbol('CLAIM_COUNTS_REPOSITORY');
