@@ -236,18 +236,54 @@ test.describe('@TASK-109 @TC-FLW-06 @FLOW-06 history, drafts and search end to e
     await capture(p, '6-brief-from-history', info.project.name);
   });
 
-  test('keyboard only: the search box, the status chips and a campaign link are reachable and open the campaign', async ({ page: p }) => {
+  test('keyboard only: Tab reaches the search box, the status chips and a campaign link; Space toggles a chip, Enter opens the campaign', async ({ page: p }) => {
     await api(p, world());
-    await p.goto('/campaigns');
-    await expect(listed(p)).toHaveCount(10);
-    await p.getByRole('searchbox', { name: 'Search by product name or description' }).focus();
-    await p.keyboard.type('calm');
-    await expect(listed(p)).toHaveCount(2);
+    await p.goto('/campaigns?q=calm');
+    const box = p.getByRole('searchbox', { name: 'Search by product name or description' });
+    const chips = p.getByRole('group', { name: 'Filter by status' }).getByRole('button');
     const link = p.getByRole('link', { name: /Evening Calm Gummies/ });
-    await link.focus();
+    await expect(listed(p)).toHaveCount(2);
+    const total = await chips.count();
+    expect(total).toBe(4);
+    await box.focus();
+    await expect(box).toBeFocused();
+    // Tab order: the box, then each chip in turn.
+    await p.keyboard.press('Tab');
+    for (let i = 0; i < total; i++) {
+      if (i > 0) await p.keyboard.press('Tab');
+      await expect(chips.nth(i)).toBeFocused();
+    }
+    // Space toggles the Completed chip into the URL and back out.
+    await chips.nth(2).focus();
+    await p.keyboard.press('Space');
+    await expect(chips.nth(2)).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => query(p)).toContain('status=completed');
+    await p.keyboard.press('Enter');
+    await expect(chips.nth(2)).toHaveAttribute('aria-pressed', 'false');
+    await expect.poll(() => query(p)).not.toContain('status=completed');
+    // Tab on from the last chip reaches the first campaign link; Enter opens it.
+    await chips.last().focus();
+    for (let i = 0; i < 8; i++) {
+      await p.keyboard.press('Tab');
+      if (await link.evaluate((el) => el === document.activeElement)) break;
+    }
     await expect(link).toBeFocused();
     await p.keyboard.press('Enter');
     await p.waitForURL(`**/campaigns/${CAMPAIGN_ID}/clips`);
+  });
+
+  // FE109-01: at 390 px the badge and delete button leave a product name only a few letters. Owned by SCREEN-005 (TASK-090);
+  // `test.fail` flips to a failure when that ticket lands, so the annotation is then removed.
+  test('390 px: every product name in the history list is fully visible', async ({ page: p }) => {
+    test.fail(true, 'SCREEN-005 truncates product names to a few characters at 390 px (correction ticket to TASK-090)');
+    await api(p, world());
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.goto('/campaigns');
+    await expect(listed(p)).toHaveCount(10);
+    const cut = await listed(p).evaluateAll((rows) =>
+      rows.flatMap((row) => [...row.querySelectorAll('*')].filter((el) => el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).textOverflow === 'ellipsis').map((el) => el.textContent)),
+    );
+    expect(cut).toEqual([]);
   });
 
   test('drafts: resume a draft at its saved step; the draft tab and its search are in the URL; Back returns', async ({ page: p }, info) => {
@@ -287,7 +323,6 @@ test.describe('@TASK-109 @TC-FLW-06 @FLOW-06 history, drafts and search end to e
     await p.getByRole('tab', { name: /Drafts/ }).click();
     await expect(p.getByRole('heading', { name: 'No drafts' })).toBeVisible();
     await capture(p, '10-empty-drafts', info.project.name);
-
   });
 
   test('no-results: a search that finds nothing is "no match" with a way back, not the empty state', async ({ page: p }, info) => {
@@ -369,6 +404,7 @@ test.describe('@TASK-109 @TC-FLW-06 @FLOW-06 history, drafts and search end to e
     await p.goto('/campaigns?q=calm');
     expect(new URL(p.url()).pathname).toBe('/sign-in');
     expect(new URL(p.url()).searchParams.get('reason')).toBe('session-expired');
+    expect(new URL(p.url()).searchParams.get('return')).toBe('/campaigns?q=calm');
     await expect(p.getByText('Your session ended. Sign in to continue.')).toBeVisible();
     await expect(p.getByRole('heading', { name: 'Campaigns' })).toHaveCount(0);
     await capture(p, '15-session-expired', info.project.name);

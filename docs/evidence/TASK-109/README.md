@@ -11,3 +11,14 @@
 
 1. **Unavailable campaign does not go to SCREEN-004.** UI-UX §7 FLOW-06 and §9.1 ("Removed/not found: Unavailable page ... SCREEN-004") require a missing, deleted or not-yours campaign opened from the list to reach SCREEN-004 `unavailable`. SCREEN-007, 008 and 009 instead keep their shell and show an in-page "This page or item is not available." under a generic "Campaign" title (screenshot `14-unavailable-campaign`), and the 007/008/009 tabs and header action stay visible. Owners: the fe-screen-007a, 008 and 009a tickets (a `not_found` on the campaign read should send the browser to `/not-found?state=unavailable`). The strict check is in the spec as `test.fail` (passes while the mismatch exists, fails when it is fixed so the annotation gets removed); a second test pins the current in-page state (one message, no hint, Go Home to the list).
 2. **The ticket's literal check cannot start from the repository root:** `pnpm exec playwright` resolves only inside `apps/web` and the base config's `testDir` is `e2e`, so the check runs from `apps/web` with the folder config (see `submit-check.md`). The deps report is `reports/deps.sarif` (what `scripts/ci/deps.sh` writes), not `deps.json`.
+
+## Round 1 review responses (FE109-01 to 06)
+
+| Finding | Response |
+| --- | --- |
+| FE109-01 | Correction ticket AIU-263 (to the TASK-090 owner). New test "390 px: every product name in the history list is fully visible" is `test.fail` until it lands. |
+| FE109-02 | Correction tickets AIU-264 (SCREEN-007), AIU-265 (SCREEN-008), AIU-266 (SCREEN-009). Acceptance "unavailable link goes to SCREEN-004" is not met until they land; the strict `test.fail` flips when fixed. |
+| FE109-03 | Keyboard test now drives Tab through the box and all four chips, toggles a chip with Space and Enter, then Tabs to the first campaign link and opens it with Enter. |
+| FE109-04 | Go-live limitation for QA: signed-in api answers are a contract mock (no out-of-process operator token); QA closes it with the real signed-in journey. |
+| FE109-05 | Session-expiry test asserts `return=/campaigns?q=calm`; stray blank line removed. |
+| FE109-06 | QA and the Integrator run the check from `apps/web`: `cd apps/web && pnpm exec playwright test --config tests/e2e/flow-06/playwright.config.ts --project=chromium`. |
