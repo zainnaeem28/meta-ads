@@ -21,14 +21,41 @@ type Provider = 'openai' | 'wavespeed';
 type Outcome = 'valid' | 'unknown' | 'key_invalid' | 'rate_limited' | 'step_up' | 'unauthenticated';
 type Answer = { status: number; body?: unknown; headers?: Record<string, string> };
 interface KeyRow {
-  provider: Provider; configured: boolean; status: string | null; last4: string | null; fingerprint: string | null;
-  version: number | null; createdAt: string | null; updatedAt: string | null; lastValidatedAt: string | null; inFlightJobCount: number;
+  provider: Provider;
+  configured: boolean;
+  status: string | null;
+  last4: string | null;
+  fingerprint: string | null;
+  version: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  lastValidatedAt: string | null;
+  inFlightJobCount: number;
 }
-interface Event { id: string; provider: Provider; kind: string; at: string }
-interface Job { id: string; provider: Provider; state: 'running' | 'failed'; cause: string | null }
+interface Event {
+  id: string;
+  provider: Provider;
+  kind: string;
+  at: string;
+}
+interface Job {
+  id: string;
+  provider: Provider;
+  state: 'running' | 'failed';
+  cause: string | null;
+}
 
 const none = (provider: Provider): KeyRow => ({
-  provider, configured: false, status: null, last4: null, fingerprint: null, version: null, createdAt: null, updatedAt: null, lastValidatedAt: null, inFlightJobCount: 0,
+  provider,
+  configured: false,
+  status: null,
+  last4: null,
+  fingerprint: null,
+  version: null,
+  createdAt: null,
+  updatedAt: null,
+  lastValidatedAt: null,
+  inFlightJobCount: 0,
 });
 
 /** The api as the journey sees it: keys, key events and stub jobs in one state, so each answer follows from the calls before it. */
@@ -45,26 +72,56 @@ class World {
   private clock = 0;
 
   constructor(seed: Partial<Record<Provider, { last4: string; jobs?: number }>> = {}) {
-    for (const [provider, s] of Object.entries(seed) as [Provider, { last4: string; jobs?: number }][]) {
+    for (const [provider, s] of Object.entries(seed) as [
+      Provider,
+      { last4: string; jobs?: number },
+    ][]) {
       this.keys[provider] = this.row(provider, s.last4, 1);
-      for (let i = 0; i < (s.jobs ?? 0); i += 1) this.jobs.push({ id: `job-${provider}-${i}`, provider, state: 'running', cause: null });
+      for (let i = 0; i < (s.jobs ?? 0); i += 1)
+        this.jobs.push({ id: `job-${provider}-${i}`, provider, state: 'running', cause: null });
       this.sync();
     }
   }
 
-  private stamp = () => new Date(Date.parse('2026-11-16T09:00:00.000Z') + (this.clock += 60_000)).toISOString();
+  private stamp = () =>
+    new Date(Date.parse('2026-11-16T09:00:00.000Z') + (this.clock += 60_000)).toISOString();
   private row(provider: Provider, last4: string, version: number): KeyRow {
     const at = '2026-11-03T09:14:00.000Z';
-    return { provider, configured: true, status: 'active', last4, fingerprint: `${provider === 'openai' ? '4f9a1c07' : 'b21e88d0'}${last4.toLowerCase().padEnd(4, '0')}`, version, createdAt: at, updatedAt: this.stamp(), lastValidatedAt: this.stamp(), inFlightJobCount: 0 };
+    return {
+      provider,
+      configured: true,
+      status: 'active',
+      last4,
+      fingerprint: `${provider === 'openai' ? '4f9a1c07' : 'b21e88d0'}${last4.toLowerCase().padEnd(4, '0')}`,
+      version,
+      createdAt: at,
+      updatedAt: this.stamp(),
+      lastValidatedAt: this.stamp(),
+      inFlightJobCount: 0,
+    };
   }
-  private event = (provider: Provider, kind: string) => this.events.unshift({ id: `00000000-0000-4000-8000-${String(this.events.length + 1).padStart(12, '0')}`, provider, kind, at: this.stamp() });
+  private event = (provider: Provider, kind: string) =>
+    this.events.unshift({
+      id: `00000000-0000-4000-8000-${String(this.events.length + 1).padStart(12, '0')}`,
+      provider,
+      kind,
+      at: this.stamp(),
+    });
   /** A stub job starts on the provider's key (the worker is not reachable, see the header). */
   startJob(provider: Provider) {
-    this.jobs.push({ id: `job-stub-${this.jobs.length + 1}`, provider, state: 'running', cause: null });
+    this.jobs.push({
+      id: `job-stub-${this.jobs.length + 1}`,
+      provider,
+      state: 'running',
+      cause: null,
+    });
     this.sync();
   }
   private sync() {
-    for (const p of ['openai', 'wavespeed'] as const) this.keys[p].inFlightJobCount = this.jobs.filter((j) => j.provider === p && j.state === 'running').length;
+    for (const p of ['openai', 'wavespeed'] as const)
+      this.keys[p].inFlightJobCount = this.jobs.filter(
+        (j) => j.provider === p && j.state === 'running',
+      ).length;
   }
 
   /** The worker saw the provider refuse the stored key five times in a row: the key is disabled (REQ-018). */
@@ -89,9 +146,14 @@ class World {
     }
     const had = this.keys[provider].configured;
     const next = this.row(provider, apiKey.slice(-4), (this.keys[provider].version ?? 0) + 1);
-    this.keys[provider] = { ...next, createdAt: had ? this.keys[provider].createdAt : next.createdAt };
+    this.keys[provider] = {
+      ...next,
+      createdAt: had ? this.keys[provider].createdAt : next.createdAt,
+    };
     // Replacing a key under a running job fails that job cleanly (REQ-017): no partial result, a named cause.
-    for (const job of this.jobs) if (job.provider === provider && job.state === 'running') Object.assign(job, { state: 'failed', cause: 'key replaced during the job' });
+    for (const job of this.jobs)
+      if (job.provider === provider && job.state === 'running')
+        Object.assign(job, { state: 'failed', cause: 'key replaced during the job' });
     this.sync();
     this.event(provider, had ? 'replaced' : 'added');
     this.event(provider, outcome === 'valid' ? 'test_passed' : 'stored_untested');
@@ -99,7 +161,9 @@ class World {
   }
 
   del(provider: Provider): Answer {
-    for (const job of this.jobs) if (job.provider === provider && job.state === 'running') Object.assign(job, { state: 'failed', cause: 'key deleted during the job' });
+    for (const job of this.jobs)
+      if (job.provider === provider && job.state === 'running')
+        Object.assign(job, { state: 'failed', cause: 'key deleted during the job' });
     this.keys[provider] = none(provider);
     this.sync();
     this.event(provider, 'deleted');
@@ -107,30 +171,72 @@ class World {
   }
 }
 
-const ok = (data: unknown, status = 200): Answer => ({ status, body: { success: true, data, metaData: meta } });
-const failure = (status: number, code: string, headers: Record<string, string> = {}): Answer => ({
-  status, headers, body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta },
+const ok = (data: unknown, status = 200): Answer => ({
+  status,
+  body: { success: true, data, metaData: meta },
 });
-const me = ok({ linkState: 'linked', id: '8f3a0000-0000-4000-8000-00000000c21d', role: 'user', status: 'active', mfa: { required: true, satisfied: true }, recentAuth: { satisfied: true, maxAgeSeconds: 600 }, keyNotices: [] });
+const failure = (status: number, code: string, headers: Record<string, string> = {}): Answer => ({
+  status,
+  headers,
+  body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta },
+});
+const me = ok({
+  linkState: 'linked',
+  id: '8f3a0000-0000-4000-8000-00000000c21d',
+  role: 'user',
+  status: 'active',
+  mfa: { required: true, satisfied: true },
+  recentAuth: { satisfied: true, maxAgeSeconds: 600 },
+  keyNotices: [],
+});
 
-function answer(w: World, method: string, path: string, body: unknown, listError: Answer | null): Answer {
+function answer(
+  w: World,
+  method: string,
+  path: string,
+  body: unknown,
+  listError: Answer | null,
+): Answer {
   if (path === '/me') return me;
   if (path === '/me/provider-keys') return listError ?? ok([w.keys.openai, w.keys.wavespeed]);
   if (path === '/me/key-events') {
-    return { status: 200, body: { success: true, data: w.events, metaData: { ...meta, pagination: { type: 'cursor', limit: 20, returnedCount: w.events.length, hasNextPage: false, nextCursor: null } } } };
+    return {
+      status: 200,
+      body: {
+        success: true,
+        data: w.events,
+        metaData: {
+          ...meta,
+          pagination: {
+            type: 'cursor',
+            limit: 20,
+            returnedCount: w.events.length,
+            hasNextPage: false,
+            nextCursor: null,
+          },
+        },
+      },
+    };
   }
-  const target = /^\/me\/provider-keys\/(openai|wavespeed)$/.exec(path)?.[1] as Provider | undefined;
+  const target = /^\/me\/provider-keys\/(openai|wavespeed)$/.exec(path)?.[1] as
+    Provider | undefined;
   if (target && method === 'PUT') return w.put(target, (body as { apiKey: string }).apiKey);
   if (target && method === 'DELETE') return w.del(target);
   return failure(404, 'not_found');
 }
 
 const signedIn = async (context: BrowserContext, baseURL: string) =>
-  context.addCookies([{
-    name: LOCAL_SESSION_COOKIE,
-    value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + 600 }),
-    url: baseURL,
-  }]);
+  context.addCookies([
+    {
+      name: LOCAL_SESSION_COOKIE,
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      }),
+      url: baseURL,
+    },
+  ]);
 
 /** Relays the browser's api calls with CORS headers and answers each from `w`, or from the running api when `real`. */
 async function api(page: Page, w: World, opts: { real?: boolean; listError?: Answer } = {}) {
@@ -143,7 +249,15 @@ async function api(page: Page, w: World, opts: { real?: boolean; listError?: Ans
       'access-control-expose-headers': 'x-request-id,etag,retry-after',
     };
     if (request.method() === 'OPTIONS') {
-      return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*', 'access-control-allow-methods': '*' } });
+      return route.fulfill({
+        status: 204,
+        headers: {
+          ...cors,
+          'access-control-allow-headers':
+            (await request.headerValue('access-control-request-headers')) ?? '*',
+          'access-control-allow-methods': '*',
+        },
+      });
     }
     const path = new URL(request.url()).pathname.replace('/api/v1', '');
     w.calls.push(`${request.method()} ${path}`);
@@ -151,16 +265,27 @@ async function api(page: Page, w: World, opts: { real?: boolean; listError?: Ans
       const response = await route.fetch();
       return route.fulfill({ response, headers: { ...response.headers(), ...cors } });
     }
-    const a = answer(w, request.method(), path, request.method() === 'GET' || request.method() === 'DELETE' ? null : request.postDataJSON(), opts.listError ?? null);
+    const a = answer(
+      w,
+      request.method(),
+      path,
+      request.method() === 'GET' || request.method() === 'DELETE' ? null : request.postDataJSON(),
+      opts.listError ?? null,
+    );
     return route.fulfill({
       status: a.status,
       headers: { ...cors, ...(a.headers ?? {}) },
-      ...(a.status === 204 ? {} : { contentType: 'application/json', body: JSON.stringify(a.body) }),
+      ...(a.status === 204
+        ? {}
+        : { contentType: 'application/json', body: JSON.stringify(a.body) }),
     });
   });
 }
 
-const VIEWPORTS = [{ name: '390', width: 390, height: 844 }, { name: '1440', width: 1440, height: 900 }] as const;
+const VIEWPORTS = [
+  { name: '390', width: 390, height: 844 },
+  { name: '1440', width: 1440, height: 900 },
+] as const;
 const puts = (w: World) => w.calls.filter((c) => c.startsWith('PUT '));
 const region = (page: Page, name: string) => page.getByRole('region', { name });
 const open = (page: Page, name: string) => page.getByRole('button', { name }).click();
@@ -181,12 +306,17 @@ for (const { name, width, height } of VIEWPORTS) {
       const full = await page.evaluate(() => document.documentElement.scrollHeight);
       await page.setViewportSize({ width, height: Math.max(height, full) });
       await page.evaluate(() => document.fonts.ready);
-      await page.screenshot({ path: `${evidence}/screenshots/${label}-${name}.png`, fullPage: true });
+      await page.screenshot({
+        path: `${evidence}/screenshots/${label}-${name}.png`,
+        fullPage: true,
+      });
       await page.setViewportSize({ width, height });
     };
     const field = (page: Page, label: string, value: string) => page.getByLabel(label).fill(value);
 
-    test('the whole journey: add both keys, a failed test keeps the old key, replace under a running job, delete, rate limit, step-up', async ({ page }) => {
+    test('the whole journey: add both keys, a failed test keeps the old key, replace under a running job, delete, rate limit, step-up', async ({
+      page,
+    }) => {
       const w = new World();
       await api(page, w);
 
@@ -240,7 +370,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await field(page, 'WaveSpeed API key', KEY);
       await page.getByRole('button', { name: 'Test and save' }).click();
       await expect(page.getByText('WaveSpeed key saved', { exact: true })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Add both keys to create ads' })).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: 'Add both keys to create ads' })).toHaveCount(
+        0,
+      );
       await shot(page, '5-both-keys');
 
       // 6. Replace under a running job: the warning comes first, a failed test keeps the old key, a good one replaces it, the job fails cleanly.
@@ -302,10 +434,20 @@ for (const { name, width, height } of VIEWPORTS) {
       await expect(page.locator('body')).not.toContainText(/sk-proj/);
       expect(w.sent).toEqual([BAD, KEY, KEY, KEY, BAD, NEW, KEY]);
       const shape = new Set(w.calls);
-      for (const call of ['GET /me', 'GET /me/provider-keys', 'GET /me/key-events', 'PUT /me/provider-keys/openai', 'PUT /me/provider-keys/wavespeed', 'DELETE /me/provider-keys/wavespeed']) expect(shape).toContain(call);
+      for (const call of [
+        'GET /me',
+        'GET /me/provider-keys',
+        'GET /me/key-events',
+        'PUT /me/provider-keys/openai',
+        'PUT /me/provider-keys/wavespeed',
+        'DELETE /me/provider-keys/wavespeed',
+      ])
+        expect(shape).toContain(call);
     });
 
-    test('repeated refusals disable the key: the notice stays until it is replaced, and the replacement clears it', async ({ page }) => {
+    test('repeated refusals disable the key: the notice stays until it is replaced, and the replacement clears it', async ({
+      page,
+    }) => {
       const w = new World({ openai: { last4: '7Q2d' }, wavespeed: { last4: '9fK2' } });
       await api(page, w);
       await page.goto(PATH);
@@ -341,7 +483,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await shot(page, '15-stored-untested');
     });
 
-    test('session expiry: a 401 on saving stores nothing and says the session ended', async ({ page }) => {
+    test('session expiry: a 401 on saving stores nothing and says the session ended', async ({
+      page,
+    }) => {
       const w = new World({ openai: { last4: '7Q2d' } });
       w.plan.wavespeed = ['unauthenticated'];
       await api(page, w);
@@ -351,13 +495,19 @@ for (const { name, width, height } of VIEWPORTS) {
       await page.getByRole('button', { name: 'Test and save' }).click();
       // MISMATCH (returned to TASK-098): the error registry marks `unauthenticated` as a redirect to sign-in with the
       // return path, but SCREEN-010's save only shows the message in the dialog, with no Sign-in action. No false success.
-      await expect(page.getByRole('dialog', { name: 'Add WaveSpeed key' }).getByText('Your session ended. Sign in to continue.')).toBeVisible();
+      await expect(
+        page
+          .getByRole('dialog', { name: 'Add WaveSpeed key' })
+          .getByText('Your session ended. Sign in to continue.'),
+      ).toBeVisible();
       await expect(page.getByText('WaveSpeed key saved', { exact: true })).toHaveCount(0);
       expect(w.keys.wavespeed.configured).toBe(false);
       await shot(page, '16-session-expired');
     });
 
-    test('step-up: Confirm sends the user to sign in again and brings them back to this screen', async ({ page }) => {
+    test('step-up: Confirm sends the user to sign in again and brings them back to this screen', async ({
+      page,
+    }) => {
       const w = new World({ openai: { last4: '7Q2d' } });
       w.plan.wavespeed = ['step_up'];
       await api(page, w);
@@ -365,21 +515,30 @@ for (const { name, width, height } of VIEWPORTS) {
       await open(page, 'Add WaveSpeed key');
       await field(page, 'WaveSpeed API key', KEY);
       await page.getByRole('button', { name: 'Test and save' }).click();
-      await page.getByRole('dialog', { name: 'Confirm it is you' }).getByRole('button', { name: /^(Confirm|Continue|Sign in)/ }).click();
+      await page
+        .getByRole('dialog', { name: 'Confirm it is you' })
+        .getByRole('button', { name: /^(Confirm|Continue|Sign in)/ })
+        .click();
       await page.waitForURL('**/sign-in**');
       expect(new URL(page.url()).searchParams.get('return')).toBe(PATH);
     });
 
-    test('permission path: a key list the api refuses shows no key cards and no key action', async ({ page }) => {
+    test('permission path: a key list the api refuses shows no key cards and no key action', async ({
+      page,
+    }) => {
       const w = new World();
       await api(page, w, { listError: failure(403, 'forbidden') });
       await page.goto(PATH);
       await expect(page.getByRole('alert').first()).toBeVisible();
-      await expect(page.getByRole('button', { name: /^(Add|Replace|Delete) .*key/ })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /^(Add|Replace|Delete) .*key/ })).toHaveCount(
+        0,
+      );
       await shot(page, '17-keys-forbidden');
     });
 
-    test('back path: Back from the key screen returns to the screen the user came from', async ({ page }) => {
+    test('back path: Back from the key screen returns to the screen the user came from', async ({
+      page,
+    }) => {
       const w = new World({ openai: { last4: '7Q2d' }, wavespeed: { last4: '9fK2' } });
       await api(page, w);
       await page.goto('/campaigns');
@@ -389,7 +548,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await expect(page).toHaveURL(/\/campaigns$/);
     });
 
-    test('session expiry at the door: the running api answers 401 without a bearer; sign-in carries the return path and no key is shown', async ({ page }) => {
+    test('session expiry at the door: the running api answers 401 without a bearer; sign-in carries the return path and no key is shown', async ({
+      page,
+    }) => {
       const w = new World();
       await api(page, w, { real: true });
       await page.goto(PATH);
@@ -408,7 +569,9 @@ test.describe('@TASK-112 @TC-FLW-11 FLOW-11 keyboard only', () => {
     await page.clock.setFixedTime(NOW);
   });
 
-  test('add, replace and delete a key, and leave a dialog, every step by keys', async ({ page }) => {
+  test('add, replace and delete a key, and leave a dialog, every step by keys', async ({
+    page,
+  }) => {
     const w = new World({ openai: { last4: '7Q2d' } });
     await api(page, w);
     await page.goto(PATH);
