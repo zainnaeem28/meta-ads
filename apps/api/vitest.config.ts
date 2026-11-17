@@ -32,6 +32,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/prod-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-worker/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-qc/junit.xml' }],
+      ['junit', { outputFile: 'reports/lifecycle-del/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -53,6 +54,7 @@ export default defineConfig({
         'src/modules/campaigns/**/*.ts',
         'src/modules/brief/**/*.ts',
         'src/modules/production/**/*.ts',
+        'src/modules/lifecycle/**/*.ts',
         'src/platform/jobs/**/*.ts',
         'src/platform/rate-limit/**/*.ts',
         'src/platform/idempotency/**/*.ts',
@@ -132,6 +134,15 @@ export default defineConfig({
         // (transport); the port file holds types only.
         'src/modules/brief/application/brief-ports.ts',
         'src/modules/brief/infrastructure/repositories/brief.repository.ts',
+        // The SQL repository, the queue adapter, the S3 ledger adapter, the controller and the module wiring are proven on real
+        // PostgreSQL through the api and worker composition roots by campaign-deletion.integration.test.ts; the port file
+        // holds types only.
+        'src/modules/lifecycle/lifecycle.module.ts',
+        'src/modules/lifecycle/application/campaign-deletion-ports.ts',
+        'src/modules/lifecycle/infrastructure/campaign-deletion.repository.ts',
+        'src/modules/lifecycle/infrastructure/campaign-deletion.queueing.ts',
+        'src/modules/lifecycle/infrastructure/campaign-erasure-ledger.ts',
+        'src/modules/lifecycle/transport/campaign-deletion.controller.ts',
         // The Drizzle repository of the brief jobs and the key-auth reporter are proven on real PostgreSQL through the worker
         // composition root by brief-ai.integration.test.ts; the handlers and the adapter are unit tested here.
         'src/modules/brief/infrastructure/brief-jobs.repository.ts',

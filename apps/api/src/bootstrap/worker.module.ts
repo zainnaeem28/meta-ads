@@ -24,6 +24,8 @@ import { MEDIA_REPOSITORY } from '../modules/media/application/ports.js';
 import type { MediaRepository } from '../modules/media/application/ports.js';
 import { mediaConfigFrom } from '../modules/media/media.module.js';
 import { ProductionWorkerModule, ProviderCopyCleanup, QcRunJob, VideoCopyJob, VideoPollJob, VideoSubmitJob, productionJobHandlers } from '../modules/production/production.module.js';
+import { LifecycleModule, lifecycleJobHandlers, CampaignDeletionJob } from '../modules/lifecycle/lifecycle.module.js';
+import { MediaDeletion } from '../modules/media/worker/media-deletion.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
 import { IdentityModule, InvitationJobs, identityJobHandlers } from '../modules/identity/index.js';
 import { MediaModule, SanitizeJob, UnattachedSweep, mediaJobHandlers } from '../modules/media/media.module.js';
@@ -266,6 +268,17 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
     );
     return media$;
   };
+  // Lifecycle (TASK-058): the campaign deletion run. Needs the object storage and the erasure-ledger token (token C).
+  const lifecycleEnabled = media.length > 0 && env['R2_LEDGER_BUCKET'] !== undefined;
+  const lifecycle = lifecycleEnabled
+    ? [
+        LifecycleModule.registerWorker(env, {
+          audit,
+          media: () => context.get(MediaDeletion, { strict: false }),
+          providerTasks: productionEnabled ? () => context.get(ProviderCopyCleanup, { strict: false }) : undefined,
+        }),
+      ]
+    : [];
   // Queue handlers of the modules (the owning module's jobs); a handler a caller passes for the same queue wins.
   const moduleHandlers = identityJobHandlers(() => context.get(InvitationJobs, { strict: false }));
   const merged: WorkerOptions = {
@@ -293,6 +306,9 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
             cleanup: () => context.get(ProviderCopyCleanup, { strict: false }),
             qc: () => context.get(QcRunJob, { strict: false }),
           })),
+      ...(lifecycle.length === 0
+        ? {}
+        : lifecycleJobHandlers({ campaignDeletion: () => context.get(CampaignDeletionJob, { strict: false }) })),
       ...options.handlers,
     },
   };
@@ -306,6 +322,7 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
       ...media,
       ...brief,
       ...production,
+      ...lifecycle,
     ],
     providers: [
       ...unsealer,
