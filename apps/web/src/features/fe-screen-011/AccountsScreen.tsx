@@ -232,7 +232,8 @@ export function AccountsScreen() {
     setActionError(null);
     try {
       if (kind === 'suspend') await suspend.mutateAsync({ userId: user.id });
-      else await remove.mutateAsync({ userId: user.id, data: { confirmation: typed ?? user.email } });
+      else
+        await remove.mutateAsync({ userId: user.id, data: { confirmation: typed ?? user.email } });
       toast(kind === 'suspend' ? COPY.toast.suspended : COPY.toast.removed);
       setConfirm(null);
       refresh();
@@ -401,7 +402,11 @@ export function AccountsScreen() {
   );
   const listFailed = users.isError && !stepUpList;
   const onlyYou =
-    users.isSuccess && !filters.status && !filters.q && userRows.length === 1 && userRows[0]?.id === meId;
+    users.isSuccess &&
+    !filters.status &&
+    !filters.q &&
+    userRows.length === 1 &&
+    userRows[0]?.id === meId;
   const filtered = filters.q !== '' || filters.status !== '';
 
   const accountsPanel = (
@@ -505,7 +510,11 @@ export function AccountsScreen() {
 
   const tabs = [
     { id: 'accounts', label: 'Accounts', count: users.isSuccess ? userRows.length : undefined },
-    { id: 'erasures', label: 'Account erasures', count: erasures.isSuccess ? erasureRows.length : undefined },
+    {
+      id: 'erasures',
+      label: 'Account erasures',
+      count: erasures.isSuccess ? erasureRows.length : undefined,
+    },
   ];
 
   const target = confirm?.user;

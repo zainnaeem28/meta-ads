@@ -11,7 +11,10 @@ export const COPY = {
     body: 'No account has this status.',
   },
   onlyYou: 'You are the only person here. Invite your team to get started.',
-  error: { title: 'Accounts could not be loaded', body: 'Nothing has changed. Try again in a moment.' },
+  error: {
+    title: 'Accounts could not be loaded',
+    body: 'Nothing has changed. Try again in a moment.',
+  },
   you: 'You',
   paging: {
     label: 'Pagination',

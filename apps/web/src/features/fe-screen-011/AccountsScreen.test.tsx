@@ -109,7 +109,11 @@ describe('SCREEN-011 accounts', () => {
     server.use(http.get(`${API}/admin/users`, () => failure(500, 'internal_error')));
     mount();
     expect(
-      await screen.findByRole('heading', { name: 'Accounts could not be loaded' }, { timeout: 8000 }),
+      await screen.findByRole(
+        'heading',
+        { name: 'Accounts could not be loaded' },
+        { timeout: 8000 },
+      ),
     ).toBeInTheDocument();
     server.use(
       http.get(`${API}/admin/users`, () =>
@@ -148,12 +152,18 @@ describe('SCREEN-011 accounts', () => {
     expect(await within(dialog).findByText('Enter an email address.')).toBeInTheDocument();
     server.use(
       http.post(`${API}/admin/invitations`, () =>
-        failure(422, 'invite_domain_not_allowed', 'Invitations are limited to approved email domains.'),
+        failure(
+          422,
+          'invite_domain_not_allowed',
+          'Invitations are limited to approved email domains.',
+        ),
       ),
     );
     await type(within(dialog).getByLabelText('Email address'), 'a@elsewhere.example');
     await click(within(dialog).getByRole('button', { name: 'Send invitation' }));
-    expect(await within(dialog).findByText(/limited to approved email domains/)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText(/limited to approved email domains/),
+    ).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Invite a person' })).toBeInTheDocument();
     server.use(
       http.post(`${API}/admin/invitations`, () =>
@@ -161,18 +171,12 @@ describe('SCREEN-011 accounts', () => {
           {
             success: true,
             data: {
-              id: '11111111-1111-4111-8111-111111111111',
               email: 'sam@shroomap.example',
-              state: 'invited',
-              sendState: 'sent',
-              expiresAt: new Date().toISOString(),
-              invitedBy: null,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
+              message: 'If this address can be invited, an invitation is on its way.',
             },
             metaData: meta,
           },
-          { status: 201 },
+          { status: 202 },
         ),
       ),
     );
@@ -192,8 +196,14 @@ describe('SCREEN-011 accounts', () => {
     expect(within(menu).getByRole('menuitem', { name: 'Remove' })).toBeEnabled();
     fireEvent.keyDown(menu, { key: 'Escape' });
     const own = await openMenu('dana.whitfield@shroomap.example');
-    expect(within(own).getByRole('menuitem', { name: 'Revoke admin' })).toHaveAttribute('aria-disabled', 'true');
-    expect(within(own).getByRole('menuitem', { name: 'Remove' })).toHaveAttribute('aria-disabled', 'true');
+    expect(within(own).getByRole('menuitem', { name: 'Revoke admin' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(within(own).getByRole('menuitem', { name: 'Remove' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 
   it('suspend-confirm: names the account, calls API-101 and toasts', async () => {
@@ -213,7 +223,9 @@ describe('SCREEN-011 accounts', () => {
       within(table).getByRole('button', { name: 'Suspend marcus.oyelaran@shroomap.example' }),
     );
     const dialog = await screen.findByRole('alertdialog').catch(() => screen.findByRole('dialog'));
-    expect(within(dialog).getByText(/Suspend marcus.oyelaran@shroomap.example\?/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Suspend marcus.oyelaran@shroomap.example\?/),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText(/signed out at once/)).toBeInTheDocument();
     await click(within(dialog).getByRole('button', { name: 'Suspend account' }));
     expect(await screen.findByText('Account suspended.')).toBeInTheDocument();
@@ -224,7 +236,11 @@ describe('SCREEN-011 accounts', () => {
     serve();
     mount();
     const table = await ready();
-    server.use(http.post(`${API}/admin/users/${accountFixtures()[0]!.id}/suspend`, () => failure(422, 'last_admin')));
+    server.use(
+      http.post(`${API}/admin/users/${accountFixtures()[0]!.id}/suspend`, () =>
+        failure(422, 'last_admin'),
+      ),
+    );
     await click(
       within(table).getByRole('button', { name: 'Suspend dana.whitfield@shroomap.example' }),
     );
@@ -242,14 +258,16 @@ describe('SCREEN-011 accounts', () => {
     serve();
     mount();
     const table = await ready();
-    server.use(http.post(`${API}/admin/users/${accountFixtures()[0]!.id}/suspend`, () => failure(422, 'self_action')));
+    server.use(
+      http.post(`${API}/admin/users/${accountFixtures()[0]!.id}/suspend`, () =>
+        failure(422, 'self_action'),
+      ),
+    );
     await click(
       within(table).getByRole('button', { name: 'Suspend dana.whitfield@shroomap.example' }),
     );
     await click(screen.getByRole('button', { name: 'Suspend account' }));
-    expect(
-      await screen.findByText('You cannot do this to your own account.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('You cannot do this to your own account.')).toBeInTheDocument();
   });
 
   it('remove-confirm: the button waits for the exact email; a server mismatch stays in the dialog; success starts erasure', async () => {
@@ -268,20 +286,24 @@ describe('SCREEN-011 accounts', () => {
     expect(button).toBeEnabled();
 
     server.use(
-      http.post(`${API}/admin/users/${TOM}/remove`, () =>
-        failure(422, 'confirmation_mismatch'),
-      ),
+      http.post(`${API}/admin/users/${TOM}/remove`, () => failure(422, 'confirmation_mismatch')),
     );
     await click(button);
     expect(await within(dialog).findByText(/does not match/)).toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Remove this account permanently?' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('dialog', { name: 'Remove this account permanently?' }),
+    ).toBeInTheDocument();
 
     let body: unknown;
     server.use(
       http.post(`${API}/admin/users/${TOM}/remove`, async ({ request }) => {
         body = await request.json();
         return HttpResponse.json(
-          { success: true, data: { deletionRunId: '99999999-9999-4999-8999-999999999999', state: 'running' }, metaData: meta },
+          {
+            success: true,
+            data: { deletionRunId: '99999999-9999-4999-8999-999999999999', state: 'running' },
+            metaData: meta,
+          },
           { status: 202 },
         );
       }),
@@ -297,7 +319,11 @@ describe('SCREEN-011 accounts', () => {
     const table = await ready();
     server.use(
       http.post(`${API}/admin/users/${TOM}/reinstate`, () =>
-        HttpResponse.json({ success: true, data: { ...accountFixtures()[3], status: 'active' }, metaData: meta }),
+        HttpResponse.json({
+          success: true,
+          data: { ...accountFixtures()[3], status: 'active' },
+          metaData: meta,
+        }),
       ),
     );
     await click(
@@ -311,7 +337,11 @@ describe('SCREEN-011 accounts', () => {
       http.put(`${API}/admin/users/${MARCUS}/role`, async ({ request }) => {
         ifMatch = request.headers.get('if-match');
         body = await request.json();
-        return HttpResponse.json({ success: true, data: { ...accountFixtures()[1], role: 'admin', version: 4 }, metaData: meta });
+        return HttpResponse.json({
+          success: true,
+          data: { ...accountFixtures()[1], role: 'admin', version: 4 },
+          metaData: meta,
+        });
       }),
     );
     const menu = await openMenu('marcus.oyelaran@shroomap.example');
@@ -325,7 +355,9 @@ describe('SCREEN-011 accounts', () => {
     serve();
     mount();
     await ready();
-    server.use(http.put(`${API}/admin/users/${MARCUS}/role`, () => failure(409, 'version_conflict')));
+    server.use(
+      http.put(`${API}/admin/users/${MARCUS}/role`, () => failure(409, 'version_conflict')),
+    );
     const menu = await openMenu('marcus.oyelaran@shroomap.example');
     await click(within(menu).getByRole('menuitem', { name: 'Grant admin' }));
     expect(await screen.findByText(/changed somewhere else/)).toBeInTheDocument();
