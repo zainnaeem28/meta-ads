@@ -11,14 +11,22 @@ const reports = process.env.REPORT_DIR ?? 'reports/flow-04';
 process.env.E2E_API_URL = `http://127.0.0.1:${apiPort}`;
 process.env.E2E_STORAGE_URL = `http://127.0.0.1:${Number(process.env.E2E_STORAGE_PORT ?? 9304)}`;
 // One database per run, created by the first config load (workers inherit the variable) and dropped by global teardown.
-process.env.FLOW04_DATABASE_URL ??= execFileSync('node', [resolve(__dirname, 'database.mjs'), 'create'], { encoding: 'utf8' });
+process.env.FLOW04_DATABASE_URL ??= execFileSync(
+  'node',
+  [resolve(__dirname, 'database.mjs'), 'create'],
+  { encoding: 'utf8' },
+);
 
 export default defineConfig({
   testDir: '.',
   outputDir: `${web}/${reports}/pw-output`,
   globalTeardown: resolve(__dirname, 'teardown.ts'),
   reporter: [['junit', { outputFile: `${web}/${reports}/e2e-junit.xml` }]],
-  use: { baseURL: `http://127.0.0.1:${port}`, contextOptions: { reducedMotion: 'reduce' }, trace: 'retain-on-failure' },
+  use: {
+    baseURL: `http://127.0.0.1:${port}`,
+    contextOptions: { reducedMotion: 'reduce' },
+    trace: 'retain-on-failure',
+  },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
