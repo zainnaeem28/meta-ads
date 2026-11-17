@@ -94,3 +94,6 @@ f8b1cd4e6be19ca88d0511de91872b5719bb20fe:docs/evidence/TASK-104/submit-check.md:
 328924b36b9c9c99120efb7c5395c284be444330:docs/evidence/TASK-104/submit-check.md:openai-key-shaped:3
 a4e072d50609f8566cb78f2b07f8de29f5a6bf48:docs/evidence/TASK-104/submit-check.md:openai-key-shaped:3
 a4e072d50609f8566cb78f2b07f8de29f5a6bf48:docs/evidence/TASK-104/submit-check.md:openai-key-shaped:48
+# False positive: the branch name (sk-106-flow-...) in the TASK-106 submit-check report matches the key shape (no credential)
+60057b2055215bd5733736fac69e0db6bc912732:docs/evidence/TASK-106/submit-check.md:openai-key-shaped:3
+60057b2055215bd5733736fac69e0db6bc912732:docs/evidence/TASK-106/submit-check.md:openai-key-shaped:44
