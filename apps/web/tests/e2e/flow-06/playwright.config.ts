@@ -26,5 +26,8 @@ export default defineConfig({
     // The api (first server) runs on this run's own database.
     ...(i === 0 ? { env: { ...server!.env, DATABASE_URL: process.env.FLOW06_DATABASE_URL! } } : {}),
   })),
+  // The journeys capture each step twice with axe; a loaded shared host needs room.
+  timeout: 120_000,
+  expect: { ...base.expect, timeout: 15_000 },
   use: { ...base.use, trace: 'retain-on-failure' },
 });
