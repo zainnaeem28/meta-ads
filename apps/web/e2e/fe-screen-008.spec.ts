@@ -161,6 +161,7 @@ const world = (w: World = {}): Handler => {
 
 const settle = async (page: Page) => {
   await page.evaluate(async () => {
+    window.scrollTo(0, 0);
     await Promise.all(
       ['400', '500', '600', '700'].map((w) => document.fonts.load(`${w} 16px Inter`)),
     );
@@ -221,7 +222,9 @@ const STATES: { state: string; world: () => World; arrange: Arrange }[] = [
     arrange: async (page) => {
       await page.goto(URL_PATH);
       await expect(card(page, 1)).toHaveAttribute('data-cause', 'unknown');
-      await expect(page.getByText(/Check your provider account before retrying/)).toBeVisible();
+      await expect(
+        page.getByText(/Check your provider account before retrying/).first(),
+      ).toBeVisible();
       await expect(page.getByRole('button', { name: /Retry segment 1/ })).toHaveCount(0);
     },
   },
