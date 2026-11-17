@@ -16,13 +16,14 @@ import type { WorkerApp } from '../../../bootstrap/worker.module.js';
 import { runSeed } from '../../../database/seed.js';
 import { REAL_MIGRATIONS, createTestDatabase } from '../../../platform/db/test-database.js';
 import type { TestDatabase } from '../../../platform/db/test-database.js';
-import { installJobs } from '../../../platform/jobs/test-support.js';
+import { installJobs, stopPeriodicSweep } from '../../../platform/jobs/test-support.js';
 import { buildLogger, createHttpLogging } from '../../../platform/logging/index.js';
 import { STORAGE_PORT } from '../../media/index.js';
 import type { StoragePort } from '../../media/index.js';
 import { priceTableSeedStep } from '../../usage/index.js';
 import { IDENTITY_PORT } from '../../identity/index.js';
 import type { LocalIdentity } from '../../identity/index.js';
+import { ACCOUNT_ERASURE_QUEUE } from '../application/account-erasure-steps.js';
 import { AccountErasureJob } from '../lifecycle.module.js';
 import { AccountLifecycleService } from '../application/account-lifecycle.service.js';
 
@@ -234,6 +235,10 @@ beforeAll(async () => {
     },
     { logger: buildLogger({ level: 'silent', destination: sink }).logger, env: workerEnv, exit: () => undefined },
   );
+  // No cron or start-up sweep resumes a run behind the test's back: erasure advances only through the job queue and the
+  // sweeps the tests run themselves.
+  await stopPeriodicSweep(testDb.url);
+  await worker.runtime.sweep();
   storage = worker.context.get<StoragePort>(STORAGE_PORT, { strict: false });
   job = worker.context.get(AccountErasureJob, { strict: false });
   service = app.get(AccountLifecycleService, { strict: false });
@@ -328,6 +333,16 @@ const one = async <T = any>(text: string, params: unknown[] = []): Promise<T> =>
 const count = async (table: string, where: string, params: unknown[]) => (await one<{ n: number }>(`select count(*)::int as n from ${table} where ${where}`, params)).n;
 const appObjects = (prefix: string) => [...stand.objects.keys()].filter((name) => name.startsWith(`${APP_BUCKET}/${prefix}`));
 const ledgerObjects = () => [...stand.objects.keys()].filter((name) => name.startsWith(`${LEDGER_BUCKET}/erasure/`));
+/**
+ * Take the run away from the queue's worker so a test that drives `job.run` by hand (and counts its attempts) is the only
+ * one running it: wait for a job in hand to finish and drop the ones still waiting, including the delayed one a step sends.
+ */
+async function quiesce(runId: string): Promise<void> {
+  await until(async () => {
+    await pool.query(`delete from pgboss.job where name = $1 and data->>'runId' = $2 and state in ('created', 'retry')`, [ACCOUNT_ERASURE_QUEUE, runId]);
+    return (await count('pgboss.job', `name = $1 and data->>'runId' = $2 and state in ('created', 'retry', 'active')`, [ACCOUNT_ERASURE_QUEUE, runId])) === 0;
+  }, `the queue to let go of run ${runId}`);
+}
 const fastForward = (runId: string) => pool.query(`update deletion_runs set not_before = now() where id = $1`, [runId]);
 async function until(check: () => Promise<boolean>, what: string, timeoutMs = 20_000): Promise<void> {
   const end = Date.now() + timeoutMs;
@@ -546,11 +561,15 @@ describe('API-103: remove and the erasure run through the real entry points', ()
     const boss = await admin();
     const a = await account();
     const data = await populated(a);
-    const res = await call('POST', `/admin/users/${a.id}/remove`, boss.token, { confirmation: a.email });
-    const runId = res.body.data.deletionRunId as string;
     stand.failLedger = true;
+    let runId = '';
     try {
-      // The queue's own attempt may already have failed; run the step by hand: it throws and counts one attempt.
+      const res = await call('POST', `/admin/users/${a.id}/remove`, boss.token, { confirmation: a.email });
+      runId = res.body.data.deletionRunId as string;
+      await quiesce(runId);
+      // The queue's own attempt may already have failed and counted; start the count over, then run the step by hand:
+      // it throws and counts one attempt.
+      await pool.query(`update deletion_runs set attempts = 0 where id = $1`, [runId]);
       await expect(job.run(runId, log)).rejects.toThrow();
       expect(ledgerObjects().filter((name) => name.includes(runId))).toHaveLength(0);
       expect(await runOf(a.id)).toMatchObject({ step: 1, state: 'running' });
@@ -575,6 +594,7 @@ describe('API-103: remove and the erasure run through the real entry points', ()
     await populated(a);
     const runId = (await call('POST', `/admin/users/${a.id}/remove`, boss.token, { confirmation: a.email })).body.data.deletionRunId as string;
     await until(async () => (await one<{ step: number }>('select step from deletion_runs where id = $1', [runId])).step >= 3, 'step 3');
+    await quiesce(runId);
     await pool.query(`update deletion_runs set step = 2, attempts = 0, not_before = now(), state = 'running' where id = $1`, [runId]);
     idp.users.set(a.sub, { sub: a.sub, email: a.email, emailVerified: true });
     idp.available = false;
@@ -621,6 +641,7 @@ describe('API-103: remove and the erasure run through the real entry points', ()
     const data = await populated(a);
     const runId = (await call('POST', `/admin/users/${a.id}/remove`, boss.token, { confirmation: a.email })).body.data.deletionRunId as string;
     await until(async () => (await one<{ step: number }>('select step from deletion_runs where id = $1', [runId])).step >= 4, 'step 4');
+    await quiesce(runId);
     // Put the run back before the object step with objects present and the storage failing.
     for (const key of data.objects) await storage.put(key, Buffer.alloc(8, 7), 'application/octet-stream', 100);
     await pool.query(`update deletion_runs set step = 3, attempts = 0, not_before = now() where id = $1`, [runId]);
