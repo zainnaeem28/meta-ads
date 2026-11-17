@@ -96,7 +96,8 @@ describe('the edge is bounded (TC-ZT-08)', () => {
       const timer = setTimeout(() => { socket.destroy(); reject(new Error('no answer within 110 s')); }, 110_000);
       socket.on('data', (chunk) => { text += chunk.toString(); });
       socket.on('close', () => { clearTimeout(timer); resolve(text); });
-      socket.on('error', reject);
+      // The server closes with our dripped bytes unread, which can surface as a reset after the 408 was read.
+      socket.on('error', (err) => { clearTimeout(timer); if (text) resolve(text); else reject(err); });
       socket.write(`POST /api/v1/drafts HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer ${user.token}\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{"productName":`);
       // A silent socket is closed at 30 s with no answer (CONNECTION_TIMEOUT); a slow body that keeps arriving reaches the 60 s request timeout.
       const drip = setInterval(() => { if (!socket.destroyed) socket.write(' '); else clearInterval(drip); }, 10_000);
