@@ -216,6 +216,18 @@ describe('SCREEN-006 step 2 product image', () => {
     expect(await screen.findByText('The provider could not read the image.')).toBeInTheDocument();
   });
 
+  it('a resumed draft with its image does not write the draft again', async () => {
+    resume({ productMediaId: MEDIA });
+    server.use(
+      http.get(`${BASE}/media/${MEDIA}`, () => ok(media())),
+      http.get(`${BASE}/media/${MEDIA}/analysis`, () => ok({ job: null, productDescription: null })),
+    );
+    show({ draftId: ID });
+    await waitFor(() => expect(document.querySelector('li[data-status="ready"]')).not.toBeNull());
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(patches).toHaveLength(0);
+  });
+
   it('removing the image clears it from the draft', async () => {
     resume({ productMediaId: MEDIA });
     server.use(

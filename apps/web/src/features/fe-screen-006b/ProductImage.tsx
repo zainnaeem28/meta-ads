@@ -109,7 +109,8 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
 
   const becameReady = useCallback(
     (id: string, signal: AbortSignal) => {
-      onMediaChange(id);
+      // A resumed draft already carries this image: no write.
+      if (attached.current !== id) onMediaChange(id);
       void watchAnalysis(id, signal);
     },
     [onMediaChange, watchAnalysis],
