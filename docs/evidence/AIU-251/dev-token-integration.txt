@@ -1,0 +1,17 @@
+
+ RUN  v5.1.0 <repo>/apps/api
+
+ ✓ src/modules/identity/transport/dev-token.integration.test.ts (5 tests) 113862ms
+   ✓ local mode (development, IDENTITY_MODE=local) (2)
+     ✓ mints a token the same process verifies: owner links as admin with a second factor, others as users 6778ms
+     ✓ does not weaken verification: a tampered token is 401, a no-second-factor token says so, bad input is 4xx 7102ms
+   ✓ outside local mode (3)
+     ✓ does not mount the route with Clerk identity 3899ms
+     ✓ refuses to start with IDENTITY_MODE=local when APP_ENV=staging 4637ms
+     ✓ refuses to start with IDENTITY_MODE=local when APP_ENV=production 6157ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  17:55:20
+   Duration  117.82s (tests 97%, import 3%)
+
