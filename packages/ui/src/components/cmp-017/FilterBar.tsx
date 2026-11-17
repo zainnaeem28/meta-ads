@@ -75,13 +75,17 @@ export function FilterBar({
               onClick={() => onStatusChange(pressed ? '' : chip.id)}
               className={`${CHIP_CLASS} ${
                 pressed
-                  ? 'border-primary bg-primary-subtle text-primary-active'
+                  ? 'border-foreground bg-foreground text-background'
                   : 'border-input bg-card text-foreground hover:bg-accent'
               }`}
             >
               {chip.label}{' '}
               {chip.count !== undefined ? (
-                <span className="text-caption text-muted-foreground">{chip.count}</span>
+                <span
+                  className={`text-caption ${pressed ? 'text-background' : 'text-muted-foreground'}`}
+                >
+                  {chip.count}
+                </span>
               ) : null}
             </button>
           );

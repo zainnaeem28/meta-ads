@@ -67,7 +67,7 @@ export function CampaignRow({
       data-state={deleting ? 'deleting' : 'default'}
       aria-busy={deleting ? true : undefined}
       className={[
-        'relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-card p-3',
+        'relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-card p-3 md:px-3 md:py-2',
         'transition-colors duration-(--duration-fast) ease-standard hover:bg-accent focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring',
         deleting ? 'bg-muted' : '',
         className,
@@ -78,15 +78,15 @@ export function CampaignRow({
     >
       <div
         aria-hidden="true"
-        className="flex aspect-9/16 w-11 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-media-placeholder text-foreground md:w-14"
+        className="flex aspect-9/16 w-11 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-media-placeholder text-foreground md:aspect-auto md:size-7"
       >
         {posterSrc ? (
           <img src={posterSrc} alt="" className="size-full object-cover" />
         ) : (
-          <Icon name={variant === 'draft' ? 'file-text' : 'film'} size={20} />
+          <Icon name={variant === 'draft' ? 'file-text' : 'film'} size={16} />
         )}
       </div>
-      <div className="flex min-w-0 basis-[calc(100%-4rem)] flex-col gap-1 md:flex-1 md:basis-0">
+      <div className="flex min-w-0 basis-[calc(100%-4rem)] flex-col gap-0.5 md:flex-1 md:basis-0">
         <a
           href={href}
           className="truncate text-body font-semibold text-foreground no-underline after:absolute after:inset-0 hover:underline focus-visible:outline-none"
