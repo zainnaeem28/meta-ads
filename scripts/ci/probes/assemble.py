@@ -52,7 +52,7 @@ def main():
         os.makedirs(os.path.join(args.dest, rid))
         with open(os.path.join(args.dest, rid, "summary.json"), "w", encoding="utf-8") as handle:
             handle.write('{"id": "%s", "exitCode": 0, "sourceSha": "%s"}\n' % (rid, args.sha))
-        status = "stub" if rid == "contract" else "pass"
+        status = "pass"
         ci_reports.write_meta(args.dest, rid, "summary", statuses.get(rid, status), args.sha, "probe", 0,
                               "%s/summary.json" % rid)
     for rid, (kind, rel, fixture) in DEFAULT.items():

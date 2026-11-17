@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Executor, KeyWrite } from '../application/ports.js';
-import { DrizzleKeyEventRepository, DrizzleProviderKeyRepository } from './provider-keys.repositories.js';
+import {
+  DrizzleKeyEventRepository,
+  DrizzleProviderKeyRepository,
+} from './provider-keys.repositories.js';
 
 // A chainable stand-in for the Drizzle builder: every call returns the chain, awaiting it yields the next queued result.
 // The SQL itself is proven against real PostgreSQL in provider-keys.integration.test.ts; this covers the row mapping.
@@ -8,9 +11,7 @@ const fakeDb = (...results: unknown[][]): Executor => {
   const queue = [...results];
   const chain: unknown = new Proxy(() => undefined, {
     get: (_t, prop) =>
-      prop === 'then'
-        ? (resolve: (v: unknown) => void) => resolve(queue.shift() ?? [])
-        : chain,
+      prop === 'then' ? (resolve: (v: unknown) => void) => resolve(queue.shift() ?? []) : chain,
     apply: () => chain,
   });
   return chain as Executor;
@@ -30,11 +31,22 @@ const row = {
   updatedAt: now,
   lastValidatedAt: null,
 };
-const auth = { id: 'k1', ownerId: 'o1', provider: 'openai', status: 'active', consecutiveAuthFailures: 1 };
+const auth = {
+  id: 'k1',
+  ownerId: 'o1',
+  provider: 'openai',
+  status: 'active',
+  consecutiveAuthFailures: 1,
+};
 const write = {
   status: 'active',
   version: 2,
-  sealed: { ciphertext: Buffer.from('c'), nonce: Buffer.from('n'), wrappedDek: Buffer.from('w'), kekVersion: 1 },
+  sealed: {
+    ciphertext: Buffer.from('c'),
+    nonce: Buffer.from('n'),
+    wrappedDek: Buffer.from('w'),
+    kekVersion: 1,
+  },
   last4: 'abcd',
   fingerprint: 'fp',
   fingerprintPepperVersion: 1,
@@ -45,7 +57,10 @@ describe('DrizzleProviderKeyRepository row mapping', () => {
   const repo = new DrizzleProviderKeyRepository();
 
   it('find returns a record or null', async () => {
-    expect(await repo.find(fakeDb([row]), 'o1', 'openai')).toMatchObject({ id: 'k1', provider: 'openai' });
+    expect(await repo.find(fakeDb([row]), 'o1', 'openai')).toMatchObject({
+      id: 'k1',
+      provider: 'openai',
+    });
     expect(await repo.find(fakeDb([]), 'o1', 'openai')).toBeNull();
   });
 
@@ -63,22 +78,30 @@ describe('DrizzleProviderKeyRepository row mapping', () => {
   it('delete and deleteAll return the removed ids', async () => {
     expect(await repo.delete(fakeDb([{ id: 'k1' }]), 'o1', 'openai')).toBe('k1');
     expect(await repo.delete(fakeDb([]), 'o1', 'openai')).toBeNull();
-    expect(await repo.deleteAll(fakeDb([{ id: 'k1', provider: 'openai' }]), 'o1')).toEqual([{ id: 'k1', provider: 'openai' }]);
+    expect(await repo.deleteAll(fakeDb([{ id: 'k1', provider: 'openai' }]), 'o1')).toEqual([
+      { id: 'k1', provider: 'openai' },
+    ]);
   });
 
   it('recordFailure maps the updated row or null', async () => {
-    expect(await repo.recordFailure(fakeDb([auth]), 'k1', 1, 5)).toMatchObject({ consecutiveAuthFailures: 1 });
+    expect(await repo.recordFailure(fakeDb([auth]), 'k1', 1, 5)).toMatchObject({
+      consecutiveAuthFailures: 1,
+    });
     expect(await repo.recordFailure(fakeDb([]), 'k1', 1, 5)).toBeNull();
   });
 
   it('recordSuccess reports activation, a kept key, or a stale version', async () => {
     expect(await repo.recordSuccess(fakeDb([auth]), 'k1', 1)).toMatchObject({ activated: true });
-    expect(await repo.recordSuccess(fakeDb([], [auth]), 'k1', 1)).toMatchObject({ activated: false });
+    expect(await repo.recordSuccess(fakeDb([], [auth]), 'k1', 1)).toMatchObject({
+      activated: false,
+    });
     expect(await repo.recordSuccess(fakeDb([], []), 'k1', 1)).toBeNull();
   });
 
   it('disableAll returns the disabled keys', async () => {
-    expect(await repo.disableAll(fakeDb([{ id: 'k1', ownerId: 'o1', provider: 'openai' }]))).toHaveLength(1);
+    expect(
+      await repo.disableAll(fakeDb([{ id: 'k1', ownerId: 'o1', provider: 'openai' }])),
+    ).toHaveLength(1);
   });
 });
 
@@ -86,12 +109,18 @@ describe('DrizzleKeyEventRepository', () => {
   const repo = new DrizzleKeyEventRepository();
 
   it('inserts an event', async () => {
-    await expect(repo.insert(fakeDb([]), { ownerId: 'o1', provider: 'openai', kind: 'stored' } as never)).resolves.toBeUndefined();
+    await expect(
+      repo.insert(fakeDb([]), { ownerId: 'o1', provider: 'openai', kind: 'stored' } as never),
+    ).resolves.toBeUndefined();
   });
 
   it('lists with provider and cursor filters', async () => {
     const events = [{ id: 'e1', provider: 'openai', kind: 'stored', at: '2026-01-01 00:00:00+00' }];
-    const query = { limit: 10, provider: 'openai', after: { at: '2026-01-02T00:00:00Z', id: '00000000-0000-0000-0000-000000000000' } };
+    const query = {
+      limit: 10,
+      provider: 'openai',
+      after: { at: '2026-01-02T00:00:00Z', id: '00000000-0000-0000-0000-000000000000' },
+    };
     expect(await repo.list(fakeDb(events), 'o1', query as never)).toEqual(events);
     expect(await repo.list(fakeDb([]), 'o1', { limit: 10 } as never)).toEqual([]);
   });

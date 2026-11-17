@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Headers, HttpCode, Inject, Param, Patch, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Res,
+} from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { CurrentActor } from '../../../platform/http/auth.guard.js';
@@ -85,7 +96,10 @@ export const issueView = (issue: IssueRecord) => ({
   class: issue.class,
   resolution: issue.resolution,
   message: issue.message,
-  span: issue.spanStart === null || issue.spanEnd === null ? null : { start: issue.spanStart, end: issue.spanEnd },
+  span:
+    issue.spanStart === null || issue.spanEnd === null
+      ? null
+      : { start: issue.spanStart, end: issue.spanEnd },
   clearReason: issue.clearReason,
 });
 

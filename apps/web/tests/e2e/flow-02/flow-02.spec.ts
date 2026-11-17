@@ -28,16 +28,34 @@ const BRIEF_URL = `/campaigns/${CAMPAIGN_ID}/brief`;
 const CLIPS_URL = `/campaigns/${CAMPAIGN_ID}/clips`;
 const WIZARD_URL = `/campaigns/new?draft=${DRAFT_ID}`;
 const T = '2026-11-16T09:00:00Z';
-const FIXED = 'A calm and steady routine helps me start each day on my own terms, with coffee and quiet light, before the run begins.';
+const FIXED =
+  'A calm and steady routine helps me start each day on my own terms, with coffee and quiet light, before the run begins.';
 
 const draft = (over: Record<string, unknown> = {}) => ({
-  id: DRAFT_ID, version: 2, step: 4, adStyle: 'ugc', intakeMode: 'description',
+  id: DRAFT_ID,
+  version: 2,
+  step: 4,
+  adStyle: 'ugc',
+  intakeMode: 'description',
   productName: 'Morning Focus Blend',
-  productDescription: "Lion's Mane and Cordyceps capsules for a steady start to the day. 60 capsules, vegan, third-party tested.",
-  audience: { ageMin: 35, ageMax: 52, gender: 'all', interests: ['morning routines', 'nootropics', 'trail running'] },
+  productDescription:
+    "Lion's Mane and Cordyceps capsules for a steady start to the day. 60 capsules, vegan, third-party tested.",
+  audience: {
+    ageMin: 35,
+    ageMax: 52,
+    gender: 'all',
+    interests: ['morning routines', 'nootropics', 'trail running'],
+  },
   direction: { goal: 'conversion', tone: 'Calm and grounded', segmentCount: 3 },
-  concept: 'A calm morning routine: she takes the capsules with breakfast, then heads out for a trail run.',
-  script: null, productMediaId: MEDIA_ID, campaignId: null, durationSeconds: 45, createdAt: T, updatedAt: T, ...over,
+  concept:
+    'A calm morning routine: she takes the capsules with breakfast, then heads out for a trail run.',
+  script: null,
+  productMediaId: MEDIA_ID,
+  campaignId: null,
+  durationSeconds: 45,
+  createdAt: T,
+  updatedAt: T,
+  ...over,
 });
 
 type Answer = { status: number; body?: unknown; headers?: Record<string, string> };
@@ -47,12 +65,21 @@ const ok = (data: unknown, status = 200, version?: number): Answer => ({
   body: { success: true, data, metaData: meta },
 });
 const failure = (status: number, code: string): Answer => ({
-  status, body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta },
+  status,
+  body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta },
 });
 const keyRows = (openai: boolean) =>
   ['openai', 'wavespeed'].map((provider) => ({
-    provider, configured: provider === 'wavespeed' || openai, status: provider === 'openai' && !openai ? null : 'active',
-    last4: null, fingerprint: null, version: 1, createdAt: null, updatedAt: null, lastValidatedAt: null, inFlightJobCount: 0,
+    provider,
+    configured: provider === 'wavespeed' || openai,
+    status: provider === 'openai' && !openai ? null : 'active',
+    last4: null,
+    fingerprint: null,
+    version: 1,
+    createdAt: null,
+    updatedAt: null,
+    lastValidatedAt: null,
+    inFlightJobCount: 0,
   }));
 
 /** The api as the journey sees it: one stateful brief, so each answer follows from the calls before it. */
@@ -69,24 +96,75 @@ interface World {
   calls: string[];
 }
 const world = (over: Partial<World> = {}): World => ({
-  brief: briefFixture(), openaiKey: true, generatingReads: 2, submit: 'ok', accept: 'ok', regenerateTo: briefFixture(), unavailable: false, calls: [], ...over,
+  brief: briefFixture(),
+  openaiKey: true,
+  generatingReads: 2,
+  submit: 'ok',
+  accept: 'ok',
+  regenerateTo: briefFixture(),
+  unavailable: false,
+  calls: [],
+  ...over,
 });
 
-const bump = (w: World, over: Partial<Brief>) => (w.brief = { ...w.brief, ...over, version: w.brief.version + 1, updatedAt: T });
+const bump = (w: World, over: Partial<Brief>) =>
+  (w.brief = { ...w.brief, ...over, version: w.brief.version + 1, updatedAt: T });
 
 function answer(w: World, method: string, path: string, body: unknown): Answer | 'real' {
   const brief = `/campaigns/${CAMPAIGN_ID}/brief`;
   if (w.unavailable && path.startsWith('/campaigns/')) return failure(404, 'not_found');
   if (method === 'GET' && path === '/me/provider-keys') return ok(keyRows(w.openaiKey));
-  if (method === 'GET' && path === '/me') return ok({ linkState: 'linked', id: '8f3a0000-0000-4000-8000-00000000c21d', role: 'user', status: 'active', mfa: { required: true, satisfied: true }, recentAuth: { satisfied: true, maxAgeSeconds: 600 }, keyNotices: [] });
-  if (method === 'GET' && path === '/me/key-events') return { status: 200, body: { success: true, data: [], metaData: { ...meta, pagination: { type: 'cursor', limit: 20, returnedCount: 0, hasNextPage: false, nextCursor: null } } } };
+  if (method === 'GET' && path === '/me')
+    return ok({
+      linkState: 'linked',
+      id: '8f3a0000-0000-4000-8000-00000000c21d',
+      role: 'user',
+      status: 'active',
+      mfa: { required: true, satisfied: true },
+      recentAuth: { satisfied: true, maxAgeSeconds: 600 },
+      keyNotices: [],
+    });
+  if (method === 'GET' && path === '/me/key-events')
+    return {
+      status: 200,
+      body: {
+        success: true,
+        data: [],
+        metaData: {
+          ...meta,
+          pagination: {
+            type: 'cursor',
+            limit: 20,
+            returnedCount: 0,
+            hasNextPage: false,
+            nextCursor: null,
+          },
+        },
+      },
+    };
   if (method === 'GET' && path === `/drafts/${DRAFT_ID}`) return ok(draft());
   if (method === 'PATCH' && path === `/drafts/${DRAFT_ID}`) return ok(draft({ version: 3 }));
   if (method === 'POST' && path === `/drafts/${DRAFT_ID}/submit`) {
     if (w.submit === 'key_missing') return failure(422, 'key_missing');
-    return ok({ campaignId: CAMPAIGN_ID, briefJob: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', state: 'pending', label: 'brief_generation', causeClass: null, causeMessage: null, createdAt: T, updatedAt: T, reused: false } }, 202);
+    return ok(
+      {
+        campaignId: CAMPAIGN_ID,
+        briefJob: {
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          state: 'pending',
+          label: 'brief_generation',
+          causeClass: null,
+          causeMessage: null,
+          createdAt: T,
+          updatedAt: T,
+          reused: false,
+        },
+      },
+      202,
+    );
   }
-  if (method === 'GET' && path === `/campaigns/${CAMPAIGN_ID}`) return ok(campaignFixture({ briefState: w.brief.state }));
+  if (method === 'GET' && path === `/campaigns/${CAMPAIGN_ID}`)
+    return ok(campaignFixture({ briefState: w.brief.state }));
   if (method === 'GET' && path === brief) {
     if (w.generatingReads > 0) {
       w.generatingReads -= 1;
@@ -101,12 +179,18 @@ function answer(w: World, method: string, path: string, body: unknown): Answer |
       return edit ? { ...s, dialogue: edit.dialogue, revision: s.revision + 1 } : s;
     });
     // The brand checks run again on the saved text: an edit that removes the wording closes the high-risk flag.
-    const issues = w.brief.issues.filter((i) => !(i.id === highRisk.id && segments[1]!.dialogue === FIXED));
+    const issues = w.brief.issues.filter(
+      (i) => !(i.id === highRisk.id && segments[1]!.dialogue === FIXED),
+    );
     return ok(bump(w, { segments, issues }));
   }
   if (method === 'POST' && path === `/claim-issues/${otherIssue.id}/clear`) {
     bump(w, { issues: w.brief.issues.filter((i) => i.id !== otherIssue.id) });
-    return ok({ ...otherIssue, resolution: 'cleared', clearReason: (body as { reason: string }).reason });
+    return ok({
+      ...otherIssue,
+      resolution: 'cleared',
+      clearReason: (body as { reason: string }).reason,
+    });
   }
   if (method === 'POST' && path === `${brief}/accept`) {
     if (w.accept === 'unauthenticated') return failure(401, 'unauthenticated');
@@ -123,11 +207,17 @@ function answer(w: World, method: string, path: string, body: unknown): Answer |
 }
 
 const signedIn = async (context: BrowserContext, baseURL: string) =>
-  context.addCookies([{
-    name: LOCAL_SESSION_COOKIE,
-    value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + 600 }),
-    url: baseURL,
-  }]);
+  context.addCookies([
+    {
+      name: LOCAL_SESSION_COOKIE,
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      }),
+      url: baseURL,
+    },
+  ]);
 
 /** Relays the browser's api calls with CORS headers and answers each from `w`, or from the running api when `real`. */
 async function api(page: Page, w: World, real = false) {
@@ -140,21 +230,46 @@ async function api(page: Page, w: World, real = false) {
       'access-control-expose-headers': 'x-request-id,etag,retry-after',
     };
     if (request.method() === 'OPTIONS') {
-      return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*', 'access-control-allow-methods': '*' } });
+      return route.fulfill({
+        status: 204,
+        headers: {
+          ...cors,
+          'access-control-allow-headers':
+            (await request.headerValue('access-control-request-headers')) ?? '*',
+          'access-control-allow-methods': '*',
+        },
+      });
     }
     const path = new URL(request.url()).pathname.replace('/api/v1', '');
     w.calls.push(`${request.method()} ${path}`);
-    const a = real ? 'real' : answer(w, request.method(), path, request.method() === 'GET' ? null : request.postDataJSON());
+    const a = real
+      ? 'real'
+      : answer(
+          w,
+          request.method(),
+          path,
+          request.method() === 'GET' ? null : request.postDataJSON(),
+        );
     if (a === 'real') {
       const response = await route.fetch();
       return route.fulfill({ response, headers: { ...response.headers(), ...cors } });
     }
-    return route.fulfill({ status: a.status, headers: { ...cors, ...(a.headers ?? {}) }, contentType: 'application/json', body: JSON.stringify(a.body) });
+    return route.fulfill({
+      status: a.status,
+      headers: { ...cors, ...(a.headers ?? {}) },
+      contentType: 'application/json',
+      body: JSON.stringify(a.body),
+    });
   });
 }
 
-const VIEWPORTS = [{ name: '390', width: 390, height: 844 }, { name: '1440', width: 1440, height: 900 }] as const;
-const shape = (calls: string[]) => [...new Set(calls.map((c) => c.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, ':id')))];
+const VIEWPORTS = [
+  { name: '390', width: 390, height: 844 },
+  { name: '1440', width: 1440, height: 900 },
+] as const;
+const shape = (calls: string[]) => [
+  ...new Set(calls.map((c) => c.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, ':id'))),
+];
 
 for (const { name, width, height } of VIEWPORTS) {
   test.describe(`@TASK-105 @TC-FLW-02 FLOW-02 brief generation, edit, accept at ${name} px`, () => {
@@ -164,27 +279,44 @@ for (const { name, width, height } of VIEWPORTS) {
     const shot = async (page: Page, label: string) => {
       await page.evaluate(async () => {
         window.scrollTo(0, 0);
-        await Promise.all(['400', '500', '600', '700'].map((x) => document.fonts.load(`${x} 16px Inter`)));
+        await Promise.all(
+          ['400', '500', '600', '700'].map((x) => document.fonts.load(`${x} 16px Inter`)),
+        );
         await document.fonts.ready;
       });
       await expectNoAxeViolations(page, `${evidence}/axe/${label}-${name}.json`);
       mkdirSync(`${evidence}/screenshots`, { recursive: true });
       // The fixed bottom navigation of the phone layout would hide content in a full-page capture; it is hidden for the picture only.
       const hide = await page.addStyleTag({ content: '.fixed { visibility: hidden !important; }' });
-      await page.screenshot({ path: `${evidence}/screenshots/${label}-${name}.png`, fullPage: true });
+      await page.screenshot({
+        path: `${evidence}/screenshots/${label}-${name}.png`,
+        fullPage: true,
+      });
       await hide.evaluate((el) => el.remove());
     };
-    const reviewed = (page: Page) => expect(page.getByRole('heading', { name: '2 issues to resolve' })).toBeVisible({ timeout: 20_000 });
-    const accepted = (page: Page) => expect(page.getByRole('heading', { name: 'Brief accepted · all checks closed' })).toBeVisible();
+    const reviewed = (page: Page) =>
+      expect(page.getByRole('heading', { name: '2 issues to resolve' })).toBeVisible({
+        timeout: 20_000,
+      });
+    const accepted = (page: Page) =>
+      expect(
+        page.getByRole('heading', { name: 'Brief accepted · all checks closed' }),
+      ).toBeVisible();
 
-    test('the whole journey: generate from step 4, fix the high-risk flag, clear the other flag with a reason, accept, copy prompts, continue to clips', async ({ page, context, baseURL }) => {
+    test('the whole journey: generate from step 4, fix the high-risk flag, clear the other flag with a reason, accept, copy prompts, continue to clips', async ({
+      page,
+      context,
+      baseURL,
+    }) => {
       await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: baseURL! });
       const w = world();
       await api(page, w);
 
       // 1. SCREEN-006 step 4: the concept is shown and Generate brief submits the draft.
       await page.goto(WIZARD_URL);
-      await expect(page.getByRole('heading', { level: 2, name: 'Concept and script' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 2, name: 'Concept and script' }),
+      ).toBeVisible();
       await shot(page, '1-wizard-step-4');
       await page.getByRole('button', { name: 'Generate brief' }).click();
 
@@ -196,10 +328,14 @@ for (const { name, width, height } of VIEWPORTS) {
       await shot(page, '3-brief-with-issues');
 
       // 3. An open high-risk issue blocks acceptance and cannot be cleared with a reason.
-      await expect(page.getByRole('button', { name: 'Clear with reason, segment 2' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Clear with reason, segment 2' })).toHaveCount(
+        0,
+      );
       await page.getByRole('button', { name: 'Accept brief' }).click({ force: true });
       await expect(page.getByText('The brief cannot be accepted yet')).toBeVisible();
-      await expect(page.getByText(/including 1 that must be fixed by editing the text/).first()).toBeVisible();
+      await expect(
+        page.getByText(/including 1 that must be fixed by editing the text/).first(),
+      ).toBeVisible();
       await shot(page, '4-accept-blocked');
       expect(w.calls.filter((c) => c.endsWith('/brief/accept'))).toEqual([]);
 
@@ -218,7 +354,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await page.getByRole('button', { name: 'Cancel' }).click();
       expect(w.calls.filter((c) => c.includes('/claim-issues/'))).toEqual([]);
       await page.getByRole('button', { name: 'Clear with reason, segment 1' }).click();
-      await page.getByRole('textbox', { name: /Reason for clearing/ }).fill('The brand approver agreed in review.');
+      await page
+        .getByRole('textbox', { name: /Reason for clearing/ })
+        .fill('The brand approver agreed in review.');
       await shot(page, '6-clear-reason');
       await page.getByRole('button', { name: 'Clear issue', exact: true }).click();
       await expect(page.getByText('Issue cleared. Your reason is recorded.')).toBeVisible();
@@ -243,22 +381,48 @@ for (const { name, width, height } of VIEWPORTS) {
       await accepted(page);
 
       const sent = shape(w.calls);
-      for (const call of ['PATCH /drafts/:id', 'POST /drafts/:id/submit', 'GET /campaigns/:id/brief', 'PATCH /campaigns/:id/brief', 'POST /claim-issues/:id/clear', 'POST /campaigns/:id/brief/accept', 'GET /campaigns/:id/video-jobs']) {
+      for (const call of [
+        'PATCH /drafts/:id',
+        'POST /drafts/:id/submit',
+        'GET /campaigns/:id/brief',
+        'PATCH /campaigns/:id/brief',
+        'POST /claim-issues/:id/clear',
+        'POST /campaigns/:id/brief/accept',
+        'GET /campaigns/:id/video-jobs',
+      ]) {
         expect(sent).toContain(call);
       }
-      expect(w.calls.indexOf(`POST /campaigns/${CAMPAIGN_ID}/brief/accept`)).toBeGreaterThan(w.calls.indexOf(`PATCH /campaigns/${CAMPAIGN_ID}/brief`));
+      expect(w.calls.indexOf(`POST /campaigns/${CAMPAIGN_ID}/brief/accept`)).toBeGreaterThan(
+        w.calls.indexOf(`PATCH /campaigns/${CAMPAIGN_ID}/brief`),
+      );
     });
 
-    test('failed generation shows the cause and Try again; the retry generates the brief', async ({ page }) => {
+    test('failed generation shows the cause and Try again; the retry generates the brief', async ({
+      page,
+    }) => {
       const failed = briefFixture({
-        state: 'failed', segments: [], issues: [],
-        generationJob: { ...generatingBrief().generationJob!, state: 'failed', label: 'failed', causeClass: 'credit', causeMessage: 'Your OpenAI account reported that it is out of credit. Nothing was charged. Add credit at OpenAI, then try again. Your answers are saved.' },
+        state: 'failed',
+        segments: [],
+        issues: [],
+        generationJob: {
+          ...generatingBrief().generationJob!,
+          state: 'failed',
+          label: 'failed',
+          causeClass: 'credit',
+          causeMessage:
+            'Your OpenAI account reported that it is out of credit. Nothing was charged. Add credit at OpenAI, then try again. Your answers are saved.',
+        },
       });
       const w = world({ brief: failed, generatingReads: 0 });
       await api(page, w);
       await page.goto(BRIEF_URL);
-      await expect(page.getByRole('heading', { name: 'The brief could not be generated' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Edit answers' })).toHaveAttribute('href', WIZARD_URL);
+      await expect(
+        page.getByRole('heading', { name: 'The brief could not be generated' }),
+      ).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Edit answers' })).toHaveAttribute(
+        'href',
+        WIZARD_URL,
+      );
       await expect(page.getByRole('button', { name: 'Accept brief' })).toHaveCount(0);
       await shot(page, '9-failed-generation');
       w.regenerateTo = briefFixture();
@@ -268,7 +432,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await shot(page, '10-retry-generated');
     });
 
-    test('a missing OpenAI key goes to the key screen: from step 4 on Generate, and from the brief on Regenerate', async ({ page }) => {
+    test('a missing OpenAI key goes to the key screen: from step 4 on Generate, and from the brief on Regenerate', async ({
+      page,
+    }) => {
       const w = world({ submit: 'key_missing', openaiKey: false });
       await api(page, w);
       await page.goto(WIZARD_URL);
@@ -292,7 +458,9 @@ for (const { name, width, height } of VIEWPORTS) {
       expect(w.calls.filter((c) => c.endsWith('/submit'))).toHaveLength(1);
     });
 
-    test('cancel paths: Keep this brief on the regenerate confirm sends nothing and the edits stay', async ({ page }) => {
+    test('cancel paths: Keep this brief on the regenerate confirm sends nothing and the edits stay', async ({
+      page,
+    }) => {
       const w = world({ generatingReads: 0 });
       await api(page, w);
       await page.goto(BRIEF_URL);
@@ -302,15 +470,23 @@ for (const { name, width, height } of VIEWPORTS) {
       await expect(page.getByRole('dialog', { name: 'Regenerate this brief?' })).toBeVisible();
       await page.getByRole('button', { name: 'Keep this brief' }).click();
       await expect(page.getByRole('dialog')).toBeHidden();
-      await expect(page.getByRole('textbox', { name: 'Segment 3 dialogue' })).toHaveValue('Short unsaved text.');
+      await expect(page.getByRole('textbox', { name: 'Segment 3 dialogue' })).toHaveValue(
+        'Short unsaved text.',
+      );
       expect(w.calls.filter((c) => c.endsWith('/regenerate'))).toEqual([]);
       // Unsaved text is not accepted: accepting is blocked with the reason.
       await page.getByRole('button', { name: 'Accept brief' }).click({ force: true });
       await expect(page.getByText('The brief cannot be accepted yet')).toBeVisible();
     });
 
-    test('session expiry in the journey: the api answers 401 on Accept, the visitor goes to sign-in with this brief as the return path and nothing is accepted', async ({ page }) => {
-      const w = world({ generatingReads: 0, brief: briefFixture({ issues: [] }), accept: 'unauthenticated' });
+    test('session expiry in the journey: the api answers 401 on Accept, the visitor goes to sign-in with this brief as the return path and nothing is accepted', async ({
+      page,
+    }) => {
+      const w = world({
+        generatingReads: 0,
+        brief: briefFixture({ issues: [] }),
+        accept: 'unauthenticated',
+      });
       await api(page, w);
       await page.goto(BRIEF_URL);
       await page.getByRole('button', { name: 'Accept brief' }).click();
@@ -322,7 +498,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await shot(page, '14-session-expired-on-accept');
     });
 
-    test('permission path: a campaign that is not the operator\'s is answered 404 and no brief is shown', async ({ page }) => {
+    test("permission path: a campaign that is not the operator's is answered 404 and no brief is shown", async ({
+      page,
+    }) => {
       const w = world({ generatingReads: 0, unavailable: true });
       await api(page, w);
       await page.goto(BRIEF_URL);
@@ -332,7 +510,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await shot(page, '15-campaign-unavailable');
     });
 
-    test('session expiry at the door: the running api answers 401 without a bearer; sign-in carries the return path, no brief is shown', async ({ page }) => {
+    test('session expiry at the door: the running api answers 401 without a bearer; sign-in carries the return path, no brief is shown', async ({
+      page,
+    }) => {
       const w = world();
       await api(page, w, true);
       await page.goto(BRIEF_URL);
@@ -349,7 +529,9 @@ test.describe('@TASK-105 @TC-FLW-02 FLOW-02 keyboard only', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
   test.beforeEach(async ({ context, baseURL }) => signedIn(context, baseURL!));
 
-  test('Generate, edit, Save, clear with a reason, Accept and Continue to clips, every step by keys', async ({ page }) => {
+  test('Generate, edit, Save, clear with a reason, Accept and Continue to clips, every step by keys', async ({
+    page,
+  }) => {
     const w = world();
     await api(page, w);
     await page.goto(WIZARD_URL);
@@ -357,7 +539,9 @@ test.describe('@TASK-105 @TC-FLW-02 FLOW-02 keyboard only', () => {
     await page.getByRole('button', { name: 'Generate brief' }).focus();
     await page.keyboard.press('Enter');
     await page.waitForURL(`**${BRIEF_URL}`);
-    await expect(page.getByRole('heading', { name: '2 issues to resolve' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: '2 issues to resolve' })).toBeVisible({
+      timeout: 20_000,
+    });
 
     await page.getByRole('link', { name: 'Edit segment 2' }).focus();
     await page.keyboard.press('Enter');
@@ -379,7 +563,9 @@ test.describe('@TASK-105 @TC-FLW-02 FLOW-02 keyboard only', () => {
 
     await page.getByRole('button', { name: 'Accept brief' }).focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('heading', { name: 'Brief accepted · all checks closed' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Brief accepted · all checks closed' }),
+    ).toBeVisible();
     const next = page.getByRole('link', { name: /Continue to clips/ });
     await next.focus();
     await page.keyboard.press('Enter');

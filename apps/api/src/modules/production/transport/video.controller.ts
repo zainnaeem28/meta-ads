@@ -10,7 +10,10 @@ import { JOB_CREATE_ROUTE, RateLimit } from '../../../platform/rate-limit/index.
 import { VideoJobsService } from '../application/video-jobs.service.js';
 import { videoJobView } from './video-view.js';
 
-const SegmentParams = z.object({ campaignId: z.uuid(), position: z.coerce.number().int().min(1).max(4) });
+const SegmentParams = z.object({
+  campaignId: z.uuid(),
+  position: z.coerce.number().int().min(1).max(4),
+});
 const CampaignParams = z.object({ campaignId: z.uuid() });
 const JobParams = z.object({ videoJobId: z.uuid() });
 const GenerateSegment = z.object({ useProductImage: z.boolean().default(true) }).strict();
@@ -81,7 +84,12 @@ export class VideoController {
     const ownerId = owner(actor);
     const { videoJobId } = parseWith(JobParams, rawParams);
     const key = parseIdempotencyKey(header);
-    const result = await this.jobs.retry(ownerId, videoJobId, key, requestHash('POST', request.url, null));
+    const result = await this.jobs.retry(
+      ownerId,
+      videoJobId,
+      key,
+      requestHash('POST', request.url, null),
+    );
     return videoJobView(result.job, result.reused);
   }
 }

@@ -5,27 +5,65 @@ import { ProviderCallFailed, ProviderInvalidResponse } from '../../application/w
 import { IMAGE_TIMEOUT_MS, OpenAiImageGen, sniffImage } from './thumb-openai-image.js';
 
 const credential = { apiKey: Buffer.from('sk-openai-secret') };
-const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(16, 1)]);
+const PNG = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.alloc(16, 1),
+]);
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(16, 2)]);
-const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBP'), Buffer.alloc(8)]);
+const WEBP = Buffer.concat([
+  Buffer.from('RIFF'),
+  Buffer.alloc(4),
+  Buffer.from('WEBP'),
+  Buffer.alloc(8),
+]);
 
 type Fetch = Pick<Egress, 'fetch'>['fetch'];
-interface Sent { provider: string; url: string; method?: string; headers?: Record<string, string>; body?: string | Buffer; timeoutMs?: number }
+interface Sent {
+  provider: string;
+  url: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string | Buffer;
+  timeoutMs?: number;
+}
 
-function adapter(answer: { status?: number; body?: unknown; raw?: string; fail?: unknown }, config: { imageModel?: string; maxBytes?: number } = {}) {
+function adapter(
+  answer: { status?: number; body?: unknown; raw?: string; fail?: unknown },
+  config: { imageModel?: string; maxBytes?: number } = {},
+) {
   const sent: Sent[] = [];
   const fetch: Fetch = async (provider, req) => {
-    sent.push({ provider, url: req.url, ...(req.method === undefined ? {} : { method: req.method }), ...(req.headers === undefined ? {} : { headers: req.headers }), ...(req.body === undefined ? {} : { body: req.body }), ...(req.timeoutMs === undefined ? {} : { timeoutMs: req.timeoutMs }) });
+    sent.push({
+      provider,
+      url: req.url,
+      ...(req.method === undefined ? {} : { method: req.method }),
+      ...(req.headers === undefined ? {} : { headers: req.headers }),
+      ...(req.body === undefined ? {} : { body: req.body }),
+      ...(req.timeoutMs === undefined ? {} : { timeoutMs: req.timeoutMs }),
+    });
     if (answer.fail !== undefined) throw answer.fail;
-    return { status: answer.status ?? 200, headers: {}, body: Buffer.from(answer.raw ?? JSON.stringify(answer.body ?? {})) };
+    return {
+      status: answer.status ?? 200,
+      headers: {},
+      body: Buffer.from(answer.raw ?? JSON.stringify(answer.body ?? {})),
+    };
   };
   const model = 'imageModel' in config ? config.imageModel : 'local-stub-image';
-  return { port: new OpenAiImageGen({ fetch }, { imageModel: model, outputMaxBytes: config.maxBytes ?? 1_000_000 }), sent };
+  return {
+    port: new OpenAiImageGen(
+      { fetch },
+      { imageModel: model, outputMaxBytes: config.maxBytes ?? 1_000_000 },
+    ),
+    sent,
+  };
 }
 const image = (bytes: Buffer) => ({ data: [{ b64_json: bytes.toString('base64') }] });
 
 async function failure(promise: Promise<unknown>): Promise<ProviderCallFailed> {
-  const error = await promise.then(() => undefined, (e: unknown) => e);
+  const error = await promise.then(
+    () => undefined,
+    (e: unknown) => e,
+  );
   expect(error).toBeInstanceOf(ProviderCallFailed);
   return error as ProviderCallFailed;
 }
@@ -42,7 +80,10 @@ describe('sniffImage', () => {
     ['html', Buffer.from('<html></html>')],
     ['svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>')],
     ['gif', Buffer.from('GIF89a......')],
-    ['riff that is not webp', Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE'), Buffer.alloc(8)])],
+    [
+      'riff that is not webp',
+      Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE'), Buffer.alloc(8)]),
+    ],
     ['a short png signature', PNG.subarray(0, 5)],
   ])('refuses %s', (_name, bytes) => {
     expect(sniffImage(bytes)).toBeNull();
@@ -56,22 +97,39 @@ describe('OpenAiImageGen', () => {
     expect(result).toMatchObject({ contentType: 'image/png', extension: 'png' });
     expect(result.bytes.equals(PNG)).toBe(true);
     expect(sent).toHaveLength(1);
-    expect(sent[0]).toMatchObject({ provider: 'openai', url: 'https://api.openai.com/v1/images/generations', method: 'POST', timeoutMs: IMAGE_TIMEOUT_MS });
+    expect(sent[0]).toMatchObject({
+      provider: 'openai',
+      url: 'https://api.openai.com/v1/images/generations',
+      method: 'POST',
+      timeoutMs: IMAGE_TIMEOUT_MS,
+    });
     expect(IMAGE_TIMEOUT_MS).toBe(120_000);
     expect(sent[0]?.headers?.['authorization']).toBe('Bearer sk-openai-secret');
-    expect(JSON.parse((sent[0]?.body as Buffer).toString('utf8'))).toEqual({ model: 'local-stub-image', prompt: 'draw "hi"', n: 1, size: '1024x1536' });
+    expect(JSON.parse((sent[0]?.body as Buffer).toString('utf8'))).toEqual({
+      model: 'local-stub-image',
+      prompt: 'draw "hi"',
+      n: 1,
+      size: '1024x1536',
+    });
   });
 
   it('returns a JPEG and a WebP as what they are, whatever the provider says', async () => {
-    expect((await adapter({ body: image(JPEG) }).port.generate(credential, { prompt: 'x' })).contentType).toBe('image/jpeg');
-    expect((await adapter({ body: image(WEBP) }).port.generate(credential, { prompt: 'x' })).contentType).toBe('image/webp');
+    expect(
+      (await adapter({ body: image(JPEG) }).port.generate(credential, { prompt: 'x' })).contentType,
+    ).toBe('image/jpeg');
+    expect(
+      (await adapter({ body: image(WEBP) }).port.generate(credential, { prompt: 'x' })).contentType,
+    ).toBe('image/webp');
   });
 
-  it.each(['gpt image"\r\n', undefined])('refuses a model name that is not a plain identifier (%j), before any call', async (imageModel) => {
-    const { port, sent } = adapter({}, { imageModel });
-    await expect(port.generate(credential, { prompt: 'x' })).rejects.toThrow(RangeError);
-    expect(sent).toHaveLength(0);
-  });
+  it.each(['gpt image"\r\n', undefined])(
+    'refuses a model name that is not a plain identifier (%j), before any call',
+    async (imageModel) => {
+      const { port, sent } = adapter({}, { imageModel });
+      await expect(port.generate(credential, { prompt: 'x' })).rejects.toThrow(RangeError);
+      expect(sent).toHaveLength(0);
+    },
+  );
 
   it.each([
     [401, {}, 'configuration', true],
@@ -88,11 +146,23 @@ describe('OpenAiImageGen', () => {
   });
 
   it('classifies an egress refusal before the request left as unsent, and one after as unknown', async () => {
-    const before = await failure(adapter({ fail: new EgressError('blocked_address', 'before_send', 'refused') }).port.generate(credential, { prompt: 'x' }));
+    const before = await failure(
+      adapter({ fail: new EgressError('blocked_address', 'before_send', 'refused') }).port.generate(
+        credential,
+        { prompt: 'x' },
+      ),
+    );
     expect(before.classification.usageEvent).toBe('none');
-    const after = await failure(adapter({ fail: new EgressError('timeout', 'after_send', 'timed out') }).port.generate(credential, { prompt: 'x' }));
+    const after = await failure(
+      adapter({ fail: new EgressError('timeout', 'after_send', 'timed out') }).port.generate(
+        credential,
+        { prompt: 'x' },
+      ),
+    );
     expect(after.classification.causeClass).toBe('outcome_unknown');
-    const plain = await failure(adapter({ fail: new Error('boom') }).port.generate(credential, { prompt: 'x' }));
+    const plain = await failure(
+      adapter({ fail: new Error('boom') }).port.generate(credential, { prompt: 'x' }),
+    );
     expect(plain.classification.causeClass).toBe('outcome_unknown');
   });
 
@@ -105,13 +175,21 @@ describe('OpenAiImageGen', () => {
     ['an empty image', { body: { data: [{ b64_json: '' }] } }],
     ['a non-image payload', { body: image(Buffer.from('<script>alert(1)</script>')) }],
     ['an svg', { body: image(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>')) }],
-  ])('answers an invalid response for %s (the call was made and is billed)', async (_name, answer) => {
-    const { port } = adapter(answer);
-    await expect(port.generate(credential, { prompt: 'x' })).rejects.toBeInstanceOf(ProviderInvalidResponse);
-  });
+  ])(
+    'answers an invalid response for %s (the call was made and is billed)',
+    async (_name, answer) => {
+      const { port } = adapter(answer);
+      await expect(port.generate(credential, { prompt: 'x' })).rejects.toBeInstanceOf(
+        ProviderInvalidResponse,
+      );
+    },
+  );
 
   it('refuses an image over the size cap', async () => {
-    const { port } = adapter({ body: image(Buffer.concat([PNG, Buffer.alloc(100)])) }, { maxBytes: 50 });
+    const { port } = adapter(
+      { body: image(Buffer.concat([PNG, Buffer.alloc(100)])) },
+      { maxBytes: 50 },
+    );
     await expect(port.generate(credential, { prompt: 'x' })).rejects.toThrow('too large');
   });
 });

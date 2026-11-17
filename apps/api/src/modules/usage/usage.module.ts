@@ -29,14 +29,16 @@ function capOf(env: Env, name: string, fallback: string): number {
 export function usageConfigFrom(env: Env): UsageConfig {
   const dailyCapUnits = capOf(env, 'SPEND_CAP_DAILY_USD', DEFAULT_DAILY);
   const monthlyCapUnits = capOf(env, 'SPEND_CAP_MONTHLY_USD', DEFAULT_MONTHLY);
-  if (monthlyCapUnits < dailyCapUnits) throw new Error('SPEND_CAP_MONTHLY_USD must not be below SPEND_CAP_DAILY_USD');
+  if (monthlyCapUnits < dailyCapUnits)
+    throw new Error('SPEND_CAP_MONTHLY_USD must not be below SPEND_CAP_DAILY_USD');
   return { dailyCapUnits, monthlyCapUnits };
 }
 
 const positiveInt = (env: Env, name: string, fallback: number): number => {
   const text = env[name];
   if (text === undefined || text === '') return fallback;
-  if (!/^\d+$/.test(text) || Number(text) < 1) throw new Error(`${name} must be a positive whole number`);
+  if (!/^\d+$/.test(text) || Number(text) < 1)
+    throw new Error(`${name} must be a positive whole number`);
   return Number(text);
 };
 

@@ -8,7 +8,13 @@ import { IdentityNotFound, IdentityUnavailable, IDENTITY_PORT } from '../domain/
 import type { Claims, IdentityPort } from '../domain/identity-port.js';
 import { normalizeEmail } from '../domain/records.js';
 import { AUTH_OPTIONS, INVITATION_STORE, SETTINGS_STORE, USER_STORE } from './ports.js';
-import type { AuthOptions, InvitationStore, SettingsStore, UserRecord, UserStore } from './ports.js';
+import type {
+  AuthOptions,
+  InvitationStore,
+  SettingsStore,
+  UserRecord,
+  UserStore,
+} from './ports.js';
 
 class NoBasis extends Error {}
 
@@ -38,7 +44,10 @@ export class LinkingService {
     } catch (error) {
       if (error instanceof IdentityNotFound) return undefined;
       if (error instanceof IdentityUnavailable) {
-        throw new DomainError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.');
+        throw new DomainError(
+          'service_unavailable',
+          'The service is temporarily unavailable. Try again shortly.',
+        );
       }
       throw error;
     }
@@ -88,7 +97,8 @@ export class LinkingService {
         linkedVia: 'invitation',
       });
       if (row === undefined) return this.existing(tx, claims);
-      if (!(await this.invitations.transition(tx, invitation.id, 'accepted', row.id))) throw new NoBasis();
+      if (!(await this.invitations.transition(tx, invitation.id, 'accepted', row.id)))
+        throw new NoBasis();
       await this.record(tx, row, 'auth.linked');
       return row;
     }
@@ -119,7 +129,11 @@ export class LinkingService {
     return domains.length === 0 || domains.includes(email.slice(email.lastIndexOf('@') + 1));
   }
 
-  private async record(tx: DbTx, row: UserRecord, action: 'auth.first_admin_seeded' | 'auth.linked'): Promise<void> {
+  private async record(
+    tx: DbTx,
+    row: UserRecord,
+    action: 'auth.first_admin_seeded' | 'auth.linked',
+  ): Promise<void> {
     await this.audit.record(tx, {
       actorId: row.id,
       actorType: row.role === 'admin' ? 'admin' : 'user',

@@ -11,7 +11,9 @@ const camel = (segment: string): string =>
 
 /** Public DTO path: dot-joined, string segments in camelCase, array indexes as numbers. */
 export function fieldPath(path: readonly PropertyKey[]): string {
-  return path.map((segment) => (typeof segment === 'string' ? camel(segment) : String(segment))).join('.');
+  return path
+    .map((segment) => (typeof segment === 'string' ? camel(segment) : String(segment)))
+    .join('.');
 }
 
 /** Zod leaves `issue.input` out by default, so a missing value is found by walking the original input. */
@@ -33,11 +35,17 @@ function describe(issue: Issue, input: unknown): { code: string; message: string
         : { code: 'invalid_type', message: `Expected ${String(issue.expected)}.` };
     case 'too_big':
       return issue.origin === 'string' || issue.origin === 'array'
-        ? { code: 'too_long', message: `Must be at most ${String(issue.maximum)} ${issue.origin === 'string' ? 'characters' : 'items'}.` }
+        ? {
+            code: 'too_long',
+            message: `Must be at most ${String(issue.maximum)} ${issue.origin === 'string' ? 'characters' : 'items'}.`,
+          }
         : { code: 'out_of_range', message: `Must be at most ${String(issue.maximum)}.` };
     case 'too_small':
       return issue.origin === 'string' || issue.origin === 'array'
-        ? { code: 'too_short', message: `Must be at least ${String(issue.minimum)} ${issue.origin === 'string' ? 'characters' : 'items'}.` }
+        ? {
+            code: 'too_short',
+            message: `Must be at least ${String(issue.minimum)} ${issue.origin === 'string' ? 'characters' : 'items'}.`,
+          }
         : { code: 'out_of_range', message: `Must be at least ${String(issue.minimum)}.` };
     case 'invalid_format':
       return { code: 'invalid_format', message: 'The value has the wrong format.' };
@@ -71,7 +79,11 @@ export function issueDetails(issues: readonly Issue[], input?: unknown): ErrorDe
 export function parseWith<S extends z.ZodType>(schema: S, value: unknown): z.output<S> {
   const result = schema.safeParse(value);
   if (result.success) return result.data;
-  throw new DomainError('validation_failed', 'The request is not valid.', issueDetails(result.error.issues, value));
+  throw new DomainError(
+    'validation_failed',
+    'The request is not valid.',
+    issueDetails(result.error.issues, value),
+  );
 }
 
 /** `@Body(new ZodValidationPipe(schemas.createCampaignBody))` and the same for query and params. */

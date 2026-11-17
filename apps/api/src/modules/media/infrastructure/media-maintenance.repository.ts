@@ -15,7 +15,13 @@ export class DrizzleMediaMaintenance implements MediaMaintenanceRepository {
   async markReady(
     tx: DbTx,
     id: string,
-    ready: { storageKey: string; bytes: number; contentType: string; width: number; height: number },
+    ready: {
+      storageKey: string;
+      bytes: number;
+      contentType: string;
+      width: number;
+      height: number;
+    },
   ): Promise<void> {
     await tx
       .update(mediaObjects)
@@ -30,18 +36,30 @@ export class DrizzleMediaMaintenance implements MediaMaintenanceRepository {
       .where(and(eq(mediaObjects.id, id), eq(mediaObjects.state, 'processing')));
   }
 
-  async listUnattachedBefore(tx: DbTx, cutoff: Date, limit: number): Promise<{ id: string; ownerId: string }[]> {
+  async listUnattachedBefore(
+    tx: DbTx,
+    cutoff: Date,
+    limit: number,
+  ): Promise<{ id: string; ownerId: string }[]> {
     return tx
       .select({ id: mediaObjects.id, ownerId: mediaObjects.ownerId })
       .from(mediaObjects)
       .where(
-        and(eq(mediaObjects.kind, 'upload'), isNull(mediaObjects.attachedAt), lt(mediaObjects.createdAt, cutoff)),
+        and(
+          eq(mediaObjects.kind, 'upload'),
+          isNull(mediaObjects.attachedAt),
+          lt(mediaObjects.createdAt, cutoff),
+        ),
       )
       .orderBy(asc(mediaObjects.createdAt))
       .limit(limit);
   }
 
-  async listByCampaign(tx: DbTx, campaignId: string, limit: number): Promise<{ id: string; ownerId: string }[]> {
+  async listByCampaign(
+    tx: DbTx,
+    campaignId: string,
+    limit: number,
+  ): Promise<{ id: string; ownerId: string }[]> {
     return tx
       .select({ id: mediaObjects.id, ownerId: mediaObjects.ownerId })
       .from(mediaObjects)

@@ -6,7 +6,12 @@ export type DataMode = 'synthetic' | 'real';
 export class VendorGateError extends Error {
   constructor(
     readonly vendor: string,
-    readonly reason: 'no-contract-record' | 'adapter-absent' | 'invalid-mode' | 'unknown-vendor' | 'register-incomplete',
+    readonly reason:
+      | 'no-contract-record'
+      | 'adapter-absent'
+      | 'invalid-mode'
+      | 'unknown-vendor'
+      | 'register-incomplete',
   ) {
     super(`vendor gate: ${vendor} refused (${reason})`);
     this.name = 'VendorGateError';
@@ -45,7 +50,8 @@ export class VendorGate {
     const entry = this.entry(vendor);
     const mode = this.modeOf(vendor);
     if (mode === 'synthetic') return mode;
-    if (this.register.absentAdapters.includes(vendor)) throw new VendorGateError(vendor, 'adapter-absent');
+    if (this.register.absentAdapters.includes(vendor))
+      throw new VendorGateError(vendor, 'adapter-absent');
     if (!hasRecordedContract(entry)) throw new VendorGateError(vendor, 'no-contract-record');
     return mode;
   }
@@ -58,12 +64,16 @@ export class VendorGate {
     const known = new Set(this.register.vendors.map((v) => v.dataModeKey));
     for (const key of Object.keys(this.env)) {
       const match = /^PROVIDER_DATA_MODE_(.+)$/.exec(key);
-      if (match !== null && !known.has(key)) throw new VendorGateError((match[1] ?? key).toLowerCase(), 'unknown-vendor');
+      if (match !== null && !known.has(key))
+        throw new VendorGateError((match[1] ?? key).toLowerCase(), 'unknown-vendor');
     }
     for (const v of this.register.vendors) {
       if (v.dataModeKey !== null) this.assertAllowed(v.id);
     }
-    if (this.register.absentAdapters.includes('shotstack') && this.env['ASSEMBLY_ADAPTER'] === 'shotstack') {
+    if (
+      this.register.absentAdapters.includes('shotstack') &&
+      this.env['ASSEMBLY_ADAPTER'] === 'shotstack'
+    ) {
       throw new VendorGateError('shotstack', 'adapter-absent');
     }
   }
@@ -106,7 +116,11 @@ export function gateInstance(gate: VendorGate, vendor: string, instance: object)
   const marked = instance as { __vendorGated?: boolean };
   if (marked.__vendorGated === true) return;
   const names = new Set<string>();
-  for (let proto: object | null = instance; proto !== null && proto !== Object.prototype; proto = Object.getPrototypeOf(proto) as object | null) {
+  for (
+    let proto: object | null = instance;
+    proto !== null && proto !== Object.prototype;
+    proto = Object.getPrototypeOf(proto) as object | null
+  ) {
     for (const name of Object.getOwnPropertyNames(proto)) names.add(name);
   }
   for (const name of names) {

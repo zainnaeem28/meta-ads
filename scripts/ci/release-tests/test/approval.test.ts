@@ -112,7 +112,11 @@ describe('verify-release-approval.sh', () => {
     ],
     [
       'a G3 with no ref',
-      () => fixture({ g3: { ref: '' }, releases: [{ environment: 'staging', runId: '50', g3Ref: '' }] }),
+      () =>
+        fixture({
+          g3: { ref: '' },
+          releases: [{ environment: 'staging', runId: '50', g3Ref: '' }],
+        }),
       'g3-ref',
     ],
     [

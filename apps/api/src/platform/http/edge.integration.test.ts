@@ -99,7 +99,9 @@ describe('main.api.js HTTP edge (real entry point)', () => {
     expect(res.headers.get('cache-control')).toBe('no-store');
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(res.headers.get('referrer-policy')).toBe('no-referrer');
-    expect((await fetch(`${base}/health/live`)).headers.get('x-content-type-options')).toBe('nosniff');
+    expect((await fetch(`${base}/health/live`)).headers.get('x-content-type-options')).toBe(
+      'nosniff',
+    );
   });
 
   it('fails startup for a route without a scope (TC-AUT-01)', () => {
@@ -117,7 +119,10 @@ describe('main.api.js HTTP edge (real entry point)', () => {
         console.log('STARTED');
       } catch (error) { console.log(String(error.message)); process.exit(1); }
     `;
-    const run = spawnSync('node', ['--input-type=module', '-e', script], { cwd: apiDir, encoding: 'utf8' });
+    const run = spawnSync('node', ['--input-type=module', '-e', script], {
+      cwd: apiDir,
+      encoding: 'utf8',
+    });
     expect(run.status, run.stdout + run.stderr).toBe(1);
     expect(run.stdout).toContain('Loose.loose: no scope declared');
   });

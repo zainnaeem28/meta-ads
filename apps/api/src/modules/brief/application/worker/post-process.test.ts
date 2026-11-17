@@ -2,9 +2,32 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { countWords } from '../../domain/words.js';
-import { CALL_TO_ACTION, dropSensitiveSentences, finalizeDialogue, finalizeSegment, tooLong, trimOverLong } from './post-process.js';
+import {
+  CALL_TO_ACTION,
+  dropSensitiveSentences,
+  finalizeDialogue,
+  finalizeSegment,
+  tooLong,
+  trimOverLong,
+} from './post-process.js';
 
-const rulesFile = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', '..', '..', '..', '..', '..', 'config', 'brand-rules.json'), 'utf8')) as {
+const rulesFile = JSON.parse(
+  readFileSync(
+    join(
+      import.meta.dirname,
+      '..',
+      '..',
+      '..',
+      '..',
+      '..',
+      '..',
+      '..',
+      'config',
+      'brand-rules.json',
+    ),
+    'utf8',
+  ),
+) as {
   sensitiveAttributeFilter: { terms: string[] };
 };
 const TERMS = rulesFile.sensitiveAttributeFilter.terms;
@@ -27,7 +50,10 @@ describe('finalizeDialogue (TC-BRF-03, TC-BRF-04)', () => {
   });
 
   it('cleans the prompt of dashes too', () => {
-    expect(finalizeSegment({ position: 1, dialogue: 'Hi.', prompt: 'A kitchen — warm light' }, false).prompt).toBe('A kitchen, warm light');
+    expect(
+      finalizeSegment({ position: 1, dialogue: 'Hi.', prompt: 'A kitchen — warm light' }, false)
+        .prompt,
+    ).toBe('A kitchen, warm light');
   });
 });
 
@@ -36,7 +62,10 @@ describe('over-long dialogue', () => {
 
   it('flags a segment over 45 words and trims it at the limit, keeping the call to action whole', () => {
     expect(tooLong({ position: 1, dialogue: long, prompt: 'p' })).toBe(true);
-    const last = finalizeSegment({ position: 2, dialogue: `${long}. ${CALL_TO_ACTION}.`, prompt: 'p' }, true);
+    const last = finalizeSegment(
+      { position: 2, dialogue: `${long}. ${CALL_TO_ACTION}.`, prompt: 'p' },
+      true,
+    );
     const result = trimOverLong([{ position: 1, dialogue: long, prompt: 'p' }, last], 2);
     expect(result.trimmed).toEqual([1, 2]);
     expect(result.segments.every((segment) => countWords(segment.dialogue) <= 45)).toBe(true);
@@ -60,7 +89,9 @@ describe('dropSensitiveSentences (TC-UPL analysis, REQ-006)', () => {
   });
 
   it('matches whole words only, any case, and returns an empty string when nothing is left', () => {
-    expect(dropSensitiveSentences('Wheat-free blend in a Tin.', TERMS)).toBe('Wheat-free blend in a Tin.');
+    expect(dropSensitiveSentences('Wheat-free blend in a Tin.', TERMS)).toBe(
+      'Wheat-free blend in a Tin.',
+    );
     expect(dropSensitiveSentences('ELDERLY patient holding the jar.', TERMS)).toBe('');
   });
 });

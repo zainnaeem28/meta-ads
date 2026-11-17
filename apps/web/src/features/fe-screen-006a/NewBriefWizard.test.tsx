@@ -35,10 +35,17 @@ const draft = (over: Record<string, unknown> = {}) => ({
   updatedAt: '2026-11-16T08:00:00Z',
   ...over,
 });
-const ok = (data: unknown, status = 200, etag = `"${String((data as { version: number }).version)}"`) =>
+const ok = (
+  data: unknown,
+  status = 200,
+  etag = `"${String((data as { version: number }).version)}"`,
+) =>
   HttpResponse.json({ success: true, data, metaData: meta }, { status, headers: { ETag: etag } });
 const failure = (status: number, code: string, details: unknown[] = []) =>
-  HttpResponse.json({ success: false, error: { code, message: 'Refused.', details }, metaData: meta }, { status });
+  HttpResponse.json(
+    { success: false, error: { code, message: 'Refused.', details }, metaData: meta },
+    { status },
+  );
 
 let uninstall: () => void;
 beforeEach(() => {
@@ -57,8 +64,10 @@ const show = (props: NewBriefWizardProps = {}) =>
       <NewBriefWizard {...props} />
     </QueryClientProvider>,
   );
-const type = (label: string | RegExp, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-const resume = (over: Record<string, unknown> = {}) => server.use(http.get(`${BASE}/drafts/${ID}`, () => ok(draft(over))));
+const type = (label: string | RegExp, value: string) =>
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+const resume = (over: Record<string, unknown> = {}) =>
+  server.use(http.get(`${BASE}/drafts/${ID}`, () => ok(draft(over))));
 const next = (name: RegExp) => fireEvent.click(screen.getByRole('button', { name }));
 
 describe('SCREEN-006 steps 1 to 3', () => {
@@ -85,8 +94,16 @@ describe('SCREEN-006 steps 1 to 3', () => {
     show();
     fireEvent.click(screen.getByRole('radio', { name: /Paste a script/ }));
     next(/Next: Product/);
-    expect(await screen.findByRole('heading', { level: 2, name: COPY.step2.title })).toBeInTheDocument();
-    expect(bodies[0]).toMatchObject({ step: 2, adStyle: 'ugc', intakeMode: 'script', productName: null, audience: null });
+    expect(
+      await screen.findByRole('heading', { level: 2, name: COPY.step2.title }),
+    ).toBeInTheDocument();
+    expect(bodies[0]).toMatchObject({
+      step: 2,
+      adStyle: 'ugc',
+      intakeMode: 'script',
+      productName: null,
+      audience: null,
+    });
     expect(window.location.search).toBe(`?draft=${ID}`);
     expect(screen.getByTestId('save-status')).toHaveTextContent('Draft saved just now');
     expect(screen.getByRole('heading', { level: 2, name: COPY.step2.title })).toHaveFocus();
@@ -102,13 +119,17 @@ describe('SCREEN-006 steps 1 to 3', () => {
       }),
     );
     show({ draftId: ID });
-    expect(await screen.findByRole('heading', { level: 2, name: COPY.step2.title })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: COPY.step2.title }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId('save-status')).toHaveTextContent('Draft saved');
     type(/Product name/, 'Evening Calm');
     await waitFor(() => expect(seen).toHaveLength(1), { timeout: 3000 });
     expect(seen[0]!.match).toBe('"1"');
     expect(seen[0]!.body).toMatchObject({ step: 2, productName: 'Evening Calm' });
-    await waitFor(() => expect(screen.getByTestId('save-status')).toHaveTextContent('Draft saved just now'));
+    await waitFor(() =>
+      expect(screen.getByTestId('save-status')).toHaveTextContent('Draft saved just now'),
+    );
   });
 
   it('validation-error: a summary lists both fields, takes focus, links focus the field, input is kept', async () => {
@@ -131,7 +152,9 @@ describe('SCREEN-006 steps 1 to 3', () => {
     resume();
     server.use(
       http.patch(`${BASE}/drafts/${ID}`, () =>
-        failure(400, 'validation_failed', [{ field: 'productName', code: 'too_long', message: 'Shorten the product name.' }]),
+        failure(400, 'validation_failed', [
+          { field: 'productName', code: 'too_long', message: 'Shorten the product name.' },
+        ]),
       ),
     );
     show({ draftId: ID });
@@ -155,20 +178,26 @@ describe('SCREEN-006 steps 1 to 3', () => {
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step3.title });
     fireEvent.click(screen.getByRole('radio', { name: '3' }));
-    expect(screen.getByTestId('segments-total')).toHaveTextContent('3 segments × 15 s = 45 s total');
+    expect(screen.getByTestId('segments-total')).toHaveTextContent(
+      '3 segments × 15 s = 45 s total',
+    );
     fireEvent.click(screen.getByRole('radio', { name: '1' }));
     expect(screen.getByTestId('segments-total')).toHaveTextContent('1 segment × 15 s = 15 s total');
     type('Age from', '40');
     type('Age to', '30');
     next(/Next: Concept/);
-    expect(await screen.findByText(COPY.step3.ageOrder, { selector: 'p span' })).toBeInTheDocument();
+    expect(
+      await screen.findByText(COPY.step3.ageOrder, { selector: 'p span' }),
+    ).toBeInTheDocument();
     expect(bodies).toHaveLength(0);
     type('Age to', '52');
     type('Interests', 'trail running, nootropics');
     fireEvent.click(screen.getByRole('radio', { name: 'Conversion' }));
     type('Tone', 'Calm and grounded');
     next(/Next: Concept/);
-    expect(await screen.findByRole('heading', { level: 2, name: COPY.step4.title })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: COPY.step4.title }),
+    ).toBeInTheDocument();
     const last = bodies.at(-1)!;
     expect(last).toMatchObject({
       step: 4,
@@ -184,7 +213,10 @@ describe('SCREEN-006 steps 1 to 3', () => {
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
     next(/Next: Audience/);
-    expect(await screen.findByRole('button', { name: /Saving…/ })).toHaveAttribute('aria-busy', 'true');
+    expect(await screen.findByRole('button', { name: /Saving…/ })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     expect(screen.getByTestId('save-status')).toHaveTextContent('Saving draft…');
   });
 
@@ -204,7 +236,9 @@ describe('SCREEN-006 steps 1 to 3', () => {
     expect(screen.getByLabelText(/Product name/)).toHaveValue('Morning Focus Blend');
     await waitFor(() => expect(retry).toBeEnabled(), { timeout: 8000 });
     fireEvent.click(retry);
-    await waitFor(() => expect(screen.getByTestId('save-status')).toHaveTextContent('Draft saved just now'));
+    await waitFor(() =>
+      expect(screen.getByTestId('save-status')).toHaveTextContent('Draft saved just now'),
+    );
     expect(calls).toBe(2);
   });
 
@@ -216,7 +250,9 @@ describe('SCREEN-006 steps 1 to 3', () => {
     type(/Product name/, 'Mine');
     expect(await screen.findByText(COPY.conflictTitle, {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Next: Audience/ })).toBeDisabled();
-    server.use(http.get(`${BASE}/drafts/${ID}`, () => ok(draft({ version: 3, productName: 'Theirs' }))));
+    server.use(
+      http.get(`${BASE}/drafts/${ID}`, () => ok(draft({ version: 3, productName: 'Theirs' }))),
+    );
     fireEvent.click(screen.getByRole('button', { name: COPY.conflictAction }));
     await waitFor(() => expect(screen.getByLabelText(/Product name/)).toHaveValue('Theirs'));
     expect(screen.queryByText(COPY.conflictTitle)).toBeNull();
@@ -226,7 +262,10 @@ describe('SCREEN-006 steps 1 to 3', () => {
     resume();
     server.use(http.patch(`${BASE}/drafts/${ID}`, () => failure(401, 'unauthenticated')));
     const assign = vi.fn();
-    vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, assign } as unknown as Location);
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      assign,
+    } as unknown as Location);
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
     next(/Next: Audience/);
@@ -234,7 +273,9 @@ describe('SCREEN-006 steps 1 to 3', () => {
     expect(dialog).toHaveTextContent('you will return to step 2 of this draft');
     expect(screen.getByRole('button', { name: COPY.signInAgain })).toHaveFocus();
     fireEvent.click(screen.getByRole('button', { name: COPY.signInAgain }));
-    expect(assign).toHaveBeenCalledWith(`/sign-in?reason=session-expired&return=${encodeURIComponent(`/campaigns/new?draft=${ID}`)}`);
+    expect(assign).toHaveBeenCalledWith(
+      `/sign-in?reason=session-expired&return=${encodeURIComponent(`/campaigns/new?draft=${ID}`)}`,
+    );
   });
 
   it('resuming a missing draft explains it; a submitted draft is read-only', async () => {
@@ -242,7 +283,11 @@ describe('SCREEN-006 steps 1 to 3', () => {
     show({ draftId: ID });
     expect(await screen.findByText(COPY.notFoundTitle)).toBeInTheDocument();
     cleanup();
-    server.use(http.get(`${BASE}/drafts/${ID}`, () => ok(draft({ campaignId: '8f3a0000-0000-4000-8000-00000000c001' }))));
+    server.use(
+      http.get(`${BASE}/drafts/${ID}`, () =>
+        ok(draft({ campaignId: '8f3a0000-0000-4000-8000-00000000c001' })),
+      ),
+    );
     show({ draftId: ID });
     expect(await screen.findByText(COPY.submittedTitle)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Next/ })).toBeNull();
@@ -251,7 +296,12 @@ describe('SCREEN-006 steps 1 to 3', () => {
   it('Start over is a confirm dialog; confirming deletes the draft (API-025) and returns to a blank step 1', async () => {
     resume({ step: 1 });
     let deleted = 0;
-    server.use(http.delete(`${BASE}/drafts/${ID}`, () => { deleted += 1; return new HttpResponse(null, { status: 204 }); }));
+    server.use(
+      http.delete(`${BASE}/drafts/${ID}`, () => {
+        deleted += 1;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step1.title });
     fireEvent.click(screen.getByRole('button', { name: 'Start over' }));
@@ -260,7 +310,11 @@ describe('SCREEN-006 steps 1 to 3', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Start over' }));
-    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Start over?' })).getByRole('button', { name: COPY.startOverConfirm }));
+    fireEvent.click(
+      within(await screen.findByRole('dialog', { name: 'Start over?' })).getByRole('button', {
+        name: COPY.startOverConfirm,
+      }),
+    );
     await waitFor(() => expect(deleted).toBe(1));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(window.location.search).toBe('');
@@ -270,7 +324,10 @@ describe('SCREEN-006 steps 1 to 3', () => {
     resume({ step: 4 });
     show({ draftId: ID, initialBlock: 'key_missing' });
     expect(await screen.findByText(COPY.keyMissing.title)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: COPY.keyMissing.action })).toHaveAttribute('href', '/settings/provider-keys');
+    expect(screen.getByRole('link', { name: COPY.keyMissing.action })).toHaveAttribute(
+      'href',
+      '/settings/provider-keys',
+    );
     expect(screen.getByRole('button', { name: COPY.step4.generate })).toBeDisabled();
     cleanup();
     resume({ step: 4 });
@@ -281,15 +338,37 @@ describe('SCREEN-006 steps 1 to 3', () => {
 
 describe('draft model', () => {
   it('maps a draft to the form and back, clearing empty fields with null', () => {
-    const values = valuesFromDraft(draft({ audience: { ageMin: 30, gender: 'female', interests: ['a', 'b'] }, direction: { goal: 'awareness', segmentCount: 2 } }) as never);
-    expect(values).toMatchObject({ ageMin: '30', gender: 'female', interests: 'a, b', goal: 'awareness', segmentCount: '2' });
-    expect(toWrite(EMPTY_VALUES, 1)).toMatchObject({ productName: null, audience: null, direction: null });
-    expect(toWrite(values, 3)).toMatchObject({ audience: { ageMin: 30, gender: 'female' }, direction: { segmentCount: 2 } });
+    const values = valuesFromDraft(
+      draft({
+        audience: { ageMin: 30, gender: 'female', interests: ['a', 'b'] },
+        direction: { goal: 'awareness', segmentCount: 2 },
+      }) as never,
+    );
+    expect(values).toMatchObject({
+      ageMin: '30',
+      gender: 'female',
+      interests: 'a, b',
+      goal: 'awareness',
+      segmentCount: '2',
+    });
+    expect(toWrite(EMPTY_VALUES, 1)).toMatchObject({
+      productName: null,
+      audience: null,
+      direction: null,
+    });
+    expect(toWrite(values, 3)).toMatchObject({
+      audience: { ageMin: 30, gender: 'female' },
+      direction: { segmentCount: 2 },
+    });
   });
   it('checks steps, clamps the saved step, and reads the ETag', () => {
     expect(validateStep(2, EMPTY_VALUES)).toHaveLength(2);
-    expect(validateStep(3, { ...EMPTY_VALUES, ageMin: '15' })[0]?.message).toBe(COPY.step3.ageRange);
-    expect(validateStep(3, { ...EMPTY_VALUES, interests: Array(11).fill('x').join(',') })).toHaveLength(1);
+    expect(validateStep(3, { ...EMPTY_VALUES, ageMin: '15' })[0]?.message).toBe(
+      COPY.step3.ageRange,
+    );
+    expect(
+      validateStep(3, { ...EMPTY_VALUES, interests: Array(11).fill('x').join(',') }),
+    ).toHaveLength(1);
     expect(clampStep(5)).toBe(4);
     expect(clampStep(0)).toBe(1);
     expect(etagOf(null, 7)).toBe('"7"');

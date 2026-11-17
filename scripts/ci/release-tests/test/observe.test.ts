@@ -69,7 +69,10 @@ describe('observe.sh', () => {
   });
 
   it('aborts after three failed readiness probes in a row, not after two', async () => {
-    const aborted = await observe({ health: [503], metrics: quiet }, { OBSERVE_WINDOW_SECONDS: '60' });
+    const aborted = await observe(
+      { health: [503], metrics: quiet },
+      { OBSERVE_WINDOW_SECONDS: '60' },
+    );
     expect(aborted.result.code).toBe(1);
     expect(aborted.result.stderr).toContain('/health/ready failed 3 probes in a row');
     const recovered = await observe(
@@ -127,7 +130,8 @@ describe('observe.sh', () => {
 
   it('aborts when a required metric field is missing or not a number', async () => {
     for (const name of Object.keys(healthy)) {
-      const { [name]: _gone, ...rest } = healthy as Record<string, number>;
+      const rest = { ...(healthy as Record<string, number>) };
+      delete rest[name];
       const missing = await observe({ metrics: rest }, { OBSERVE_BASELINE_P95_MS: '100' });
       expect(missing.result.code, name).toBe(1);
       expect(missing.result.stderr).toContain(`no numeric '${name}' field`);

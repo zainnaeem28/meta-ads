@@ -15,7 +15,8 @@ function audienceOf(row: Row): Audience | null {
   } = {};
   if (row.audienceAgeMin !== null) audience.ageMin = row.audienceAgeMin;
   if (row.audienceAgeMax !== null) audience.ageMax = row.audienceAgeMax;
-  if (row.audienceGender !== null) audience.gender = row.audienceGender as 'all' | 'female' | 'male';
+  if (row.audienceGender !== null)
+    audience.gender = row.audienceGender as 'all' | 'female' | 'male';
   if (row.audienceInterests !== null) audience.interests = row.audienceInterests;
   return Object.keys(audience).length === 0 ? null : audience;
 }
@@ -26,7 +27,8 @@ function directionOf(row: Row): Direction | null {
     tone?: string;
     segmentCount?: number;
   } = {};
-  if (row.directionGoal !== null) direction.goal = row.directionGoal as 'awareness' | 'conversion' | 'retention';
+  if (row.directionGoal !== null)
+    direction.goal = row.directionGoal as 'awareness' | 'conversion' | 'retention';
   if (row.directionTone !== null) direction.tone = row.directionTone;
   if (row.segmentCount !== null) direction.segmentCount = row.segmentCount;
   return Object.keys(direction).length === 0 ? null : direction;
@@ -63,7 +65,8 @@ function columns(fields: DraftFields): Partial<typeof drafts.$inferInsert> {
     set.audienceAgeMin = fields.audience?.ageMin ?? null;
     set.audienceAgeMax = fields.audience?.ageMax ?? null;
     set.audienceGender = fields.audience?.gender ?? null;
-    set.audienceInterests = fields.audience?.interests === undefined ? null : [...fields.audience.interests];
+    set.audienceInterests =
+      fields.audience?.interests === undefined ? null : [...fields.audience.interests];
   }
   if (fields.direction !== undefined) {
     set.directionGoal = fields.direction?.goal ?? null;
@@ -95,7 +98,12 @@ export class DrizzleDraftRepository implements DraftRepository {
     return rows[0] === undefined ? null : toRecord(rows[0]);
   }
 
-  async listOpen(tx: DbTx, ownerId: string, limit: number, after?: DraftPosition): Promise<DraftRecord[]> {
+  async listOpen(
+    tx: DbTx,
+    ownerId: string,
+    limit: number,
+    after?: DraftPosition,
+  ): Promise<DraftRecord[]> {
     const rows = await tx
       .select()
       .from(drafts)
@@ -122,7 +130,11 @@ export class DrizzleDraftRepository implements DraftRepository {
   ): Promise<DraftRecord | null> {
     const rows = await tx
       .update(drafts)
-      .set({ ...columns(fields), version: sql`${drafts.version} + 1`, updatedAt: sql`clock_timestamp()` })
+      .set({
+        ...columns(fields),
+        version: sql`${drafts.version} + 1`,
+        updatedAt: sql`clock_timestamp()`,
+      })
       .where(
         and(
           eq(drafts.id, id),
@@ -163,4 +175,3 @@ export class DrizzleDraftRepository implements DraftRepository {
     return campaign.length > 0;
   }
 }
-

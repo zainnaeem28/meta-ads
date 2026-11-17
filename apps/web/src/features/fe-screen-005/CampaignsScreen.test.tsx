@@ -12,7 +12,13 @@ const NOW = '2026-11-16T12:00:00.000Z';
 const meta = { requestId: 'req-1', timestamp: NOW };
 const page = (n: number, next: string | null) => ({
   ...meta,
-  pagination: { type: 'cursor', limit: 10, returnedCount: n, hasNextPage: next !== null, nextCursor: next },
+  pagination: {
+    type: 'cursor',
+    limit: 10,
+    returnedCount: n,
+    hasNextPage: next !== null,
+    nextCursor: next,
+  },
 });
 
 const campaign = (n: number, over: Record<string, unknown> = {}) => ({
@@ -59,9 +65,13 @@ const keyOf = (provider: string, configured = true) => ({
   lastValidatedAt: null,
   inFlightJobCount: 0,
 });
-const ok = (data: unknown, m: unknown = meta) => HttpResponse.json({ success: true, data, metaData: m });
+const ok = (data: unknown, m: unknown = meta) =>
+  HttpResponse.json({ success: true, data, metaData: m });
 const fail = (status: number, code: string) =>
-  HttpResponse.json({ success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta }, { status });
+  HttpResponse.json(
+    { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta },
+    { status },
+  );
 
 interface Setup {
   campaigns?: (url: URL) => Response;
@@ -72,7 +82,11 @@ const calls: string[] = [];
 const seen: URL[] = [];
 const STATUS_TOTALS: Record<string, number> = { '': 24, processing: 3, completed: 19, failed: 2 };
 
-function serve({ campaigns, drafts = [draft(1), draft(2), draft(3)], keys = [keyOf('openai'), keyOf('wavespeed')] }: Setup = {}) {
+function serve({
+  campaigns,
+  drafts = [draft(1), draft(2), draft(3)],
+  keys = [keyOf('openai'), keyOf('wavespeed')],
+}: Setup = {}) {
   server.use(
     http.get(`${API}/campaigns`, ({ request }) => {
       const url = new URL(request.url);
@@ -80,13 +94,21 @@ function serve({ campaigns, drafts = [draft(1), draft(2), draft(3)], keys = [key
       if (campaigns) return campaigns(url);
       const limit = Number(url.searchParams.get('limit'));
       const filter = url.searchParams.get('filter') ?? '';
-      const total = limit === 50 ? STATUS_TOTALS[filter] ?? 0 : 24;
+      const total = limit === 50 ? (STATUS_TOTALS[filter] ?? 0) : 24;
       const all = Array.from({ length: Math.min(total, limit) }, (_, i) => campaign(i + 1));
       return ok(all, page(all.length, null));
     }),
     http.get(`${API}/drafts`, () => ok(drafts, page(drafts.length, null))),
     http.get(`${API}/me`, () =>
-      ok({ linkState: 'linked', id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'user', status: 'active', mfa: { required: true, satisfied: true }, recentAuth: { satisfied: true, maxAgeSeconds: 900 }, keyNotices: [] }),
+      ok({
+        linkState: 'linked',
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        role: 'user',
+        status: 'active',
+        mfa: { required: true, satisfied: true },
+        recentAuth: { satisfied: true, maxAgeSeconds: 900 },
+        keyNotices: [],
+      }),
     ),
     http.get(`${API}/me/provider-keys`, () => ok(keys)),
   );
@@ -118,17 +140,32 @@ describe('SCREEN-005 campaigns', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Campaigns' })).toBeVisible();
     const list = await screen.findByRole('list', { name: 'Campaign history' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(10);
-    expect(within(list).getByRole('link', { name: 'Product 1' })).toHaveAttribute('href', expect.stringMatching(/\/clips$/));
+    expect(within(list).getByRole('link', { name: 'Product 1' })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/\/clips$/),
+    );
     expect(within(list).getAllByText('Clips generating')).not.toHaveLength(0);
-    await waitFor(() => expect(screen.getByRole('tab', { name: /History/ })).toHaveTextContent('24'));
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /History/ })).toHaveTextContent('24'),
+    );
     expect(screen.getByRole('tab', { name: /Drafts/ })).toHaveTextContent('3');
     const chips = screen.getByRole('group', { name: 'Filter by status' });
-    await waitFor(() => expect(within(chips).getByRole('button', { name: /Failed/ })).toHaveTextContent('2'));
-    expect(within(chips).getByRole('button', { name: /^All/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getAllByRole('link', { name: 'New brief' })[0]).toHaveAttribute('href', '/campaigns/new');
+    await waitFor(() =>
+      expect(within(chips).getByRole('button', { name: /Failed/ })).toHaveTextContent('2'),
+    );
+    expect(within(chips).getByRole('button', { name: /^All/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getAllByRole('link', { name: 'New brief' })[0]).toHaveAttribute(
+      'href',
+      '/campaigns/new',
+    );
     expect(screen.queryByText('Add your provider keys to start generating')).toBeNull();
     // Only the listed operations plus the shell's identity and key-state reads.
-    expect(new Set(calls.map((c) => c.split('?')[0]))).toEqual(new Set(['GET /campaigns', 'GET /drafts', 'GET /me', 'GET /me/provider-keys']));
+    expect(new Set(calls.map((c) => c.split('?')[0]))).toEqual(
+      new Set(['GET /campaigns', 'GET /drafts', 'GET /me', 'GET /me/provider-keys']),
+    );
   });
 
   it('loading shows a status text and skeleton rows without fake data', async () => {
@@ -145,7 +182,9 @@ describe('SCREEN-005 campaigns', () => {
     cleanup();
     serve({ campaigns: () => ok([], page(0, null)) });
     mount('?q=reishi+gummies');
-    expect(await screen.findByRole('heading', { name: 'No campaigns match "reishi gummies"' })).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { name: 'No campaigns match "reishi gummies"' }),
+    ).toBeVisible();
     expect(screen.queryByText('No campaigns yet')).toBeNull();
     await click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(window.location.search).toBe('');
@@ -157,7 +196,12 @@ describe('SCREEN-005 campaigns', () => {
       campaigns: (url) => {
         const cursor = url.searchParams.get('cursor');
         if (url.searchParams.get('limit') === '50') return ok([campaign(1)], page(1, null));
-        return cursor ? ok([campaign(11)], page(1, null)) : ok(Array.from({ length: 10 }, (_, i) => campaign(i + 1)), page(10, 'cur-1'));
+        return cursor
+          ? ok([campaign(11)], page(1, null))
+          : ok(
+              Array.from({ length: 10 }, (_, i) => campaign(i + 1)),
+              page(10, 'cur-1'),
+            );
       },
     });
     mount();
@@ -165,9 +209,19 @@ describe('SCREEN-005 campaigns', () => {
     await click(screen.getByRole('button', { name: /Next/ }));
     await screen.findByRole('link', { name: 'Product 11' });
     expect(window.location.search).toBe('?page=2');
-    await click(within(screen.getByRole('group', { name: 'Filter by status' })).getByRole('button', { name: /Failed/ }));
+    await click(
+      within(screen.getByRole('group', { name: 'Filter by status' })).getByRole('button', {
+        name: /Failed/,
+      }),
+    );
     expect(window.location.search).toBe('?status=failed');
-    await waitFor(() => expect(seen.some((u) => u.searchParams.get('filter') === 'failed' && u.searchParams.get('limit') === '10')).toBe(true));
+    await waitFor(() =>
+      expect(
+        seen.some(
+          (u) => u.searchParams.get('filter') === 'failed' && u.searchParams.get('limit') === '10',
+        ),
+      ).toBe(true),
+    );
     await click(screen.getByRole('button', { name: 'Clear all' }));
     expect(window.location.search).toBe('');
   });
@@ -178,13 +232,20 @@ describe('SCREEN-005 campaigns', () => {
         if (url.searchParams.get('limit') === '50') return ok([], page(0, null));
         return url.searchParams.get('cursor')
           ? ok([campaign(10), campaign(11)], page(2, null))
-          : ok(Array.from({ length: 10 }, (_, i) => campaign(i + 1)), page(10, 'cur-1'));
+          : ok(
+              Array.from({ length: 10 }, (_, i) => campaign(i + 1)),
+              page(10, 'cur-1'),
+            );
       },
     });
     mount('?page=2');
     expect(await screen.findByRole('link', { name: 'Product 11' })).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Product 10' })).toBeNull();
-    expect(seen.filter((u) => u.searchParams.get('limit') === '10').map((u) => u.searchParams.get('cursor'))).toEqual([null, 'cur-1']);
+    expect(
+      seen
+        .filter((u) => u.searchParams.get('limit') === '10')
+        .map((u) => u.searchParams.get('cursor')),
+    ).toEqual([null, 'cur-1']);
     expect(screen.getByRole('button', { name: /Next/ })).toBeDisabled();
     await click(screen.getByRole('button', { name: /Previous/ }));
     expect(await screen.findByRole('link', { name: 'Product 1' })).toBeVisible();
@@ -206,7 +267,9 @@ describe('SCREEN-005 campaigns', () => {
 
   it('error: the load failure says so, keeps the data safe and Try again reloads', async () => {
     let fails = true;
-    serve({ campaigns: () => (fails ? fail(500, 'internal_error') : ok([campaign(1)], page(1, null))) });
+    serve({
+      campaigns: () => (fails ? fail(500, 'internal_error') : ok([campaign(1)], page(1, null))),
+    });
     mount();
     // The query client retries a 5xx twice (1 s and 2 s) before the page shows the failure.
     const retry = await screen.findByRole('button', { name: /Try again/ }, { timeout: 6000 });
@@ -218,16 +281,34 @@ describe('SCREEN-005 campaigns', () => {
   }, 12_000);
 
   it('drafts tab: rows with step and saved time, continue link, client search', async () => {
-    serve({ drafts: [draft(1, { productName: 'Lions Mane', step: 4 }), draft(2, { productName: null, step: 1, durationSeconds: null })] });
+    serve({
+      drafts: [
+        draft(1, { productName: 'Lions Mane', step: 4 }),
+        draft(2, { productName: null, step: 1, durationSeconds: null }),
+      ],
+    });
     mount('?tab=drafts');
     const list = await screen.findByRole('list', { name: 'Drafts' });
-    expect(within(list).getByRole('link', { name: 'Lions Mane' })).toHaveAttribute('href', '/campaigns/new?draft=d0000000-0000-4000-8000-000000000001');
+    expect(within(list).getByRole('link', { name: 'Lions Mane' })).toHaveAttribute(
+      'href',
+      '/campaigns/new?draft=d0000000-0000-4000-8000-000000000001',
+    );
     expect(within(list).getByRole('link', { name: 'Untitled draft' })).toBeVisible();
     expect(within(list).getByText(/Step 4 of 4: Concept and script · Saved /)).toBeVisible();
     expect(screen.queryByRole('group', { name: 'Filter by status' })?.children.length ?? 0).toBe(0);
-    await act(async () => void fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'lions' } }));
-    await waitFor(() => expect(within(screen.getByRole('list', { name: 'Drafts' })).getAllByRole('listitem')).toHaveLength(1));
-    await act(async () => void fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'zzz' } }));
+    await act(
+      async () =>
+        void fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'lions' } }),
+    );
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('list', { name: 'Drafts' })).getAllByRole('listitem'),
+      ).toHaveLength(1),
+    );
+    await act(
+      async () =>
+        void fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'zzz' } }),
+    );
     expect(await screen.findByRole('heading', { name: 'No campaigns match "zzz"' })).toBeVisible();
   });
 
@@ -243,7 +324,14 @@ describe('SCREEN-005 campaigns', () => {
     server.use(
       http.delete(`${API}/campaigns/:id`, ({ params }) => {
         removed.push(String(params.id));
-        return HttpResponse.json({ success: true, data: { deletionRunId: 'e0000000-0000-4000-8000-000000000001', state: 'running' }, metaData: meta }, { status: 202 });
+        return HttpResponse.json(
+          {
+            success: true,
+            data: { deletionRunId: 'e0000000-0000-4000-8000-000000000001', state: 'running' },
+            metaData: meta,
+          },
+          { status: 202 },
+        );
       }),
     );
     mount();
@@ -253,16 +341,32 @@ describe('SCREEN-005 campaigns', () => {
     expect(dialog).toHaveTextContent('removes the campaign for everyone');
     expect(dialog).toHaveTextContent('Credit already spent');
     await click(within(dialog).getByRole('button', { name: 'Delete campaign' }));
-    expect(await screen.findByText('Campaign deleted. Its media is being removed in the background.')).toBeVisible();
+    expect(
+      await screen.findByText('Campaign deleted. Its media is being removed in the background.'),
+    ).toBeVisible();
     expect(removed).toEqual(['c0000000-0000-4000-8000-000000000002']);
     expect(screen.queryByRole('link', { name: 'Product 2' })).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('a long product name is the full accessible name of the icon-only delete button', async () => {
-    serve({ campaigns: () => ok([campaign(1, { productName: 'Cordyceps Trail Mix, spring launch with the long working title' })], page(1, null)) });
+    serve({
+      campaigns: () =>
+        ok(
+          [
+            campaign(1, {
+              productName: 'Cordyceps Trail Mix, spring launch with the long working title',
+            }),
+          ],
+          page(1, null),
+        ),
+    });
     mount();
-    expect(await screen.findByRole('button', { name: 'Delete Cordyceps Trail Mix, spring launch with the long working title' })).toBeVisible();
+    expect(
+      await screen.findByRole('button', {
+        name: 'Delete Cordyceps Trail Mix, spring launch with the long working title',
+      }),
+    ).toBeVisible();
   });
 
   it('cancel keeps the record and calls nothing', async () => {
@@ -303,7 +407,9 @@ describe('SCREEN-005 campaigns', () => {
     await click(screen.getByRole('button', { name: 'Delete Product 1' }));
     const dialog = await screen.findByRole('dialog');
     await click(within(dialog).getByRole('button', { name: 'Delete campaign' }));
-    await waitFor(() => expect(within(screen.getByRole('dialog')).getByRole('alert')).toBeVisible());
+    await waitFor(() =>
+      expect(within(screen.getByRole('dialog')).getByRole('alert')).toBeVisible(),
+    );
   });
 
   it('key-missing: the banner links to the key screen', async () => {
@@ -311,7 +417,11 @@ describe('SCREEN-005 campaigns', () => {
     mount();
     const banner = await screen.findByText('Add your provider keys to start generating');
     expect(banner).toBeVisible();
-    expect(within(banner.closest('[role=status]') as HTMLElement).getByRole('link', { name: 'Add provider keys' })).toHaveAttribute('href', '/settings/provider-keys');
+    expect(
+      within(banner.closest('[role=status]') as HTMLElement).getByRole('link', {
+        name: 'Add provider keys',
+      }),
+    ).toHaveAttribute('href', '/settings/provider-keys');
   });
 
   it('switching tabs updates the URL and Back restores the previous one', async () => {

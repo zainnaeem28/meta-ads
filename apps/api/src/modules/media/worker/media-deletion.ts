@@ -46,7 +46,9 @@ export class MediaDeletion {
     let rows = 0;
     const owners = new Set<string>();
     for (;;) {
-      const batch = await this.database.uow.run((tx) => this.maintenance.listByCampaign(tx, campaignId, BATCH));
+      const batch = await this.database.uow.run((tx) =>
+        this.maintenance.listByCampaign(tx, campaignId, BATCH),
+      );
       if (batch.length === 0) break;
       for (const { ownerId } of batch) owners.add(ownerId);
       const done = await this.deleteObjects(batch.map((row) => row.id));
@@ -71,7 +73,8 @@ export class MediaDeletion {
       if (row === null || (eligible !== undefined && !eligible(row))) return false;
       await this.storage.delete(row.storageKey);
       // A sanitize that died after storing the clean copy leaves it under the `u/` key.
-      if (row.kind === 'upload' && row.state === 'processing') await this.storage.delete(uploadKey(row.ownerId, row.id));
+      if (row.kind === 'upload' && row.state === 'processing')
+        await this.storage.delete(uploadKey(row.ownerId, row.id));
       await this.repository.remove(tx, id);
       if (row.bytes !== null && row.bytes > 0) {
         await this.repository.lockUsage(tx, row.ownerId);

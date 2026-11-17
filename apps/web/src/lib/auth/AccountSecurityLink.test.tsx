@@ -9,7 +9,10 @@ afterEach(cleanup);
 describe('AccountSecurityLink without a provider key', () => {
   it('links to the local second-step page', () => {
     render(<AccountSecurityLink />);
-    expect(screen.getByRole('link', { name: 'Account and security' })).toHaveAttribute('href', '/mfa');
+    expect(screen.getByRole('link', { name: 'Account and security' })).toHaveAttribute(
+      'href',
+      '/mfa',
+    );
   });
   it('takes a custom label', () => {
     render(<AccountSecurityLink label="Security" />);

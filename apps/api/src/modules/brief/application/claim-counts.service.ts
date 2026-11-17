@@ -32,8 +32,15 @@ export class ClaimCountsService {
     const rows = await this.database.uow.run((tx) => this.repository.countEvents(tx, window));
     return CLASSES.map((cls) => {
       const of = (outcome: string): number =>
-        rows.filter((row) => row.class === cls && row.outcome === outcome).reduce((sum, row) => sum + row.count, 0);
-      return { class: cls, raised: of('raised'), closedByEdit: of('closed_by_edit'), clearedWithReason: of('cleared_with_reason') };
+        rows
+          .filter((row) => row.class === cls && row.outcome === outcome)
+          .reduce((sum, row) => sum + row.count, 0);
+      return {
+        class: cls,
+        raised: of('raised'),
+        closedByEdit: of('closed_by_edit'),
+        clearedWithReason: of('cleared_with_reason'),
+      };
     });
   }
 }

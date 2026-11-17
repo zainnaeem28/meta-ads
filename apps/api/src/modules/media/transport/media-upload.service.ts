@@ -34,7 +34,11 @@ export class MediaUploadService {
     return this.config.maxUploadBytes;
   }
 
-  async upload(ownerId: string, file: Readable, announcedBytes: number | undefined): Promise<UploadResult> {
+  async upload(
+    ownerId: string,
+    file: Readable,
+    announcedBytes: number | undefined,
+  ): Promise<UploadResult> {
     const { head, body } = await peek(file, this.config.maxUploadBytes);
     const contentType = sniffImageType(head);
     if (contentType === null) {
@@ -42,18 +46,26 @@ export class MediaUploadService {
       throw new DomainError('unsupported_media_type', 'This content type is not supported.');
     }
     // The announced length covers the multipart framing too, so it is only an upper bound for the reservation.
-    const declaredBytes = Math.min(announcedBytes ?? this.config.maxUploadBytes, this.config.maxUploadBytes);
+    const declaredBytes = Math.min(
+      announcedBytes ?? this.config.maxUploadBytes,
+      this.config.maxUploadBytes,
+    );
     let result: UploadResult;
     try {
       result = await this.media.upload({ ownerId, body, declaredBytes, contentType });
     } catch (error) {
-      if (error instanceof UploadTooLarge || (error as { cause?: unknown }).cause instanceof UploadTooLarge) {
+      if (
+        error instanceof UploadTooLarge ||
+        (error as { cause?: unknown }).cause instanceof UploadTooLarge
+      ) {
         throw new DomainError('payload_too_large', 'The file is too large.');
       }
       throw error;
     }
     try {
-      await this.database.uow.run((tx) => enqueue(this.boss, tx, SANITIZE_QUEUE, { mediaId: result.id }));
+      await this.database.uow.run((tx) =>
+        enqueue(this.boss, tx, SANITIZE_QUEUE, { mediaId: result.id }),
+      );
     } catch (error) {
       await this.discard(result);
       throw error;

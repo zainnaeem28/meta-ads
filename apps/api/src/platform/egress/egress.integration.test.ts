@@ -11,7 +11,8 @@ import { installJobs } from '../jobs/test-support.js';
 // named database of the shared test PostgreSQL: the process starts with the allow-list, and refuses to start with a bad one.
 
 const apiDir = join(import.meta.dirname, '..', '..', '..');
-const adminUrl = process.env['TEST_DATABASE_ADMIN_URL'] ?? 'postgres://postgres@test-db:5432/postgres';
+const adminUrl =
+  process.env['TEST_DATABASE_ADMIN_URL'] ?? 'postgres://postgres@test-db:5432/postgres';
 const database = `task031_${randomBytes(4).toString('hex')}`;
 const PORT = 3944;
 let databaseUrl = '';
@@ -46,7 +47,11 @@ describe('egress in the real api composition root', () => {
       encoding: 'utf8',
       env: {
         PATH: process.env['PATH'] ?? '',
-        ...validEnv('api', { DATABASE_URL: databaseUrl, API_PORT: String(PORT + 1), EGRESS_ALLOWED_HOSTS: '{"openai":["10.0.0.5"]}' }),
+        ...validEnv('api', {
+          DATABASE_URL: databaseUrl,
+          API_PORT: String(PORT + 1),
+          EGRESS_ALLOWED_HOSTS: '{"openai":["10.0.0.5"]}',
+        }),
       },
     });
     expect(run.status).toBe(1);
@@ -57,7 +62,10 @@ describe('egress in the real api composition root', () => {
   it('main.api.js starts with the default allow-list and the Egress service refuses unsafe fetches', async () => {
     child = spawn('node', ['dist/main.api.js'], {
       cwd: apiDir,
-      env: { PATH: process.env['PATH'] ?? '', ...validEnv('api', { DATABASE_URL: databaseUrl, API_PORT: String(PORT) }) },
+      env: {
+        PATH: process.env['PATH'] ?? '',
+        ...validEnv('api', { DATABASE_URL: databaseUrl, API_PORT: String(PORT) }),
+      },
       stdio: 'ignore',
     });
     const deadline = Date.now() + 30_000;
@@ -85,7 +93,10 @@ describe('egress in the real api composition root', () => {
       console.log(JSON.stringify(out));
       await app.close();
     `;
-    const run = spawnSync('node', ['--input-type=module', '-e', script], { cwd: apiDir, encoding: 'utf8' });
+    const run = spawnSync('node', ['--input-type=module', '-e', script], {
+      cwd: apiDir,
+      encoding: 'utf8',
+    });
     expect(run.status, run.stdout + run.stderr).toBe(0);
     expect(run.stdout.trim().split('\n').pop()).toBe(
       JSON.stringify(['host_not_allowed', 'host_not_allowed', 'not_https', 'provider_unknown']),

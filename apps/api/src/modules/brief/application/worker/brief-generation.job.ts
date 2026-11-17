@@ -5,7 +5,11 @@ import { DomainError } from '../../../../platform/http/domain-error.js';
 import { newId } from '../../../../platform/shared-kernel/index.js';
 import { UsageService } from '../../../usage/index.js';
 import type { BillableCall } from '../../../usage/index.js';
-import { WORD_COUNT_TRIMMED_MESSAGE, WORD_COUNT_TRIMMED_RULE_ID, checkBrief } from '../../domain/claim-check.js';
+import {
+  WORD_COUNT_TRIMMED_MESSAGE,
+  WORD_COUNT_TRIMMED_RULE_ID,
+  checkBrief,
+} from '../../domain/claim-check.js';
 import type { CompiledRules } from '../../domain/claim-check.js';
 import { reconcileIssues } from '../../domain/issues.js';
 import type { SegmentFinding } from '../../domain/issues.js';
@@ -13,11 +17,7 @@ import { HARD_MAX_WORDS, countWords } from '../../domain/words.js';
 import { gateKey } from './key-gate.js';
 import { ProviderCallRunner } from './provider-call.js';
 import { finalizeSegment, tooLong, trimOverLong } from './post-process.js';
-import {
-  BRIEF_JOB_REPOSITORY,
-  BRIEF_WORKER_CONFIG,
-  CLAIM_RULES,
-} from './ports.js';
+import { BRIEF_JOB_REPOSITORY, BRIEF_WORKER_CONFIG, CLAIM_RULES } from './ports.js';
 import type {
   BriefContext,
   BriefJobRepository,
@@ -44,7 +44,10 @@ interface Refusal {
   readonly message: string;
 }
 
-const UNUSABLE: Refusal = { cause: 'temporary', message: 'The provider returned an answer that could not be used. Try again.' };
+const UNUSABLE: Refusal = {
+  cause: 'temporary',
+  message: 'The provider returned an answer that could not be used. Try again.',
+};
 
 /**
  * `brief.generate` (ARCHITECTURE §5.3, §5.5): the cap check and the claim guards first, then at most two OpenAI calls.
@@ -69,7 +72,10 @@ export class BriefGenerationJob {
     const jobId = (job.data as { jobId?: unknown } | null)?.jobId;
     if (typeof jobId !== 'string') throw new TypeError('brief.generate job has no jobId');
     const outcome = await this.run(jobId, log);
-    log.info({ module: 'brief', outcome: outcome === 'failed' ? 'error' : 'ok', jobId }, `brief generation: ${outcome}`);
+    log.info(
+      { module: 'brief', outcome: outcome === 'failed' ? 'error' : 'ok', jobId },
+      `brief generation: ${outcome}`,
+    );
     return outcome;
   }
 
@@ -79,22 +85,43 @@ export class BriefGenerationJob {
     try {
       rules = await this.rules.activeRules();
     } catch {
-      return this.failBeforeClaim(jobId, { cause: 'temporary', message: 'The brief rules are not available. Try again shortly.' }, log);
+      return this.failBeforeClaim(
+        jobId,
+        { cause: 'temporary', message: 'The brief rules are not available. Try again shortly.' },
+        log,
+      );
     }
 
     const gate = await this.database.uow.run(async (tx) => {
       const job = await this.repository.findJob(tx, jobId);
-      if (job === null || job.state !== 'pending' || job.kind !== 'brief_generation' || job.campaignId === null) {
+      if (
+        job === null ||
+        job.state !== 'pending' ||
+        job.kind !== 'brief_generation' ||
+        job.campaignId === null
+      ) {
         return { kind: 'skipped' as const };
       }
       const context = await this.repository.findContext(tx, job.campaignId);
-      if (context === null) return this.refuse(tx, job, { cause: 'cancelled_campaign_deleted', message: 'The campaign no longer exists.' });
-      const keyGate = gateKey(job, job.keyId === null ? null : await this.repository.findKey(tx, job.keyId));
+      if (context === null)
+        return this.refuse(tx, job, {
+          cause: 'cancelled_campaign_deleted',
+          message: 'The campaign no longer exists.',
+        });
+      const keyGate = gateKey(
+        job,
+        job.keyId === null ? null : await this.repository.findKey(tx, job.keyId),
+      );
       if (!keyGate.ok) return this.refuse(tx, job, keyGate, context);
       // The cap check (REQ-019) is the reservation: it exists already when the api created the job, and is made here
       // under the owner's spend lock when it does not. No provider is called before it passes.
       try {
-        await this.usage.reserve(tx, { ownerId: job.ownerId, jobType: 'brief_generation', jobId, calls: [textCall, textCall] });
+        await this.usage.reserve(tx, {
+          ownerId: job.ownerId,
+          jobType: 'brief_generation',
+          jobId,
+          calls: [textCall, textCall],
+        });
       } catch (error) {
         if (!(error instanceof DomainError)) throw error;
         return this.refuse(tx, job, { cause: 'temporary', message: error.message }, context);
@@ -116,7 +143,9 @@ export class BriefGenerationJob {
     );
     if (!first.ok) return this.failAfterClaim(job, first, log);
 
-    let segments = first.value.segments.map((segment) => finalizeSegment(segment, segment.position === lastPosition));
+    let segments = first.value.segments.map((segment) =>
+      finalizeSegment(segment, segment.position === lastPosition),
+    );
     const over = segments.filter(tooLong);
     if (over.length > 0) {
       const second = await this.calls.run(
@@ -129,13 +158,20 @@ export class BriefGenerationJob {
         const shortened = new Map(second.value.map((segment) => [segment.position, segment]));
         segments = segments.map((segment) => {
           const next = shortened.get(segment.position);
-          return next === undefined ? segment : finalizeSegment({ ...segment, dialogue: next.dialogue }, segment.position === lastPosition);
+          return next === undefined
+            ? segment
+            : finalizeSegment(
+                { ...segment, dialogue: next.dialogue },
+                segment.position === lastPosition,
+              );
         });
       }
     }
     const trim = trimOverLong(segments, lastPosition);
     segments = trim.segments;
-    if (segments.some((s) => s.dialogue.length > DIALOGUE_COLUMN || s.prompt.length > PROMPT_COLUMN)) {
+    if (
+      segments.some((s) => s.dialogue.length > DIALOGUE_COLUMN || s.prompt.length > PROMPT_COLUMN)
+    ) {
       return this.failAfterClaim(job, { ...UNUSABLE, code: 'too_long' }, log);
     }
 
@@ -145,7 +181,10 @@ export class BriefGenerationJob {
       await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'brief_generation', jobId });
       return result;
     });
-    log.info({ module: 'brief', outcome: 'ok', jobId, written: settled.kind === 'written' }, 'brief generation written');
+    log.info(
+      { module: 'brief', outcome: 'ok', jobId, written: settled.kind === 'written' },
+      'brief generation written',
+    );
     return 'completed';
   }
 
@@ -166,10 +205,12 @@ export class BriefGenerationJob {
       wordCount: Math.min(countWords(segment.dialogue), 120),
     }));
     const segmentId = new Map(written.map((segment) => [segment.position, segment.id]));
-    const findings: SegmentFinding[] = checkBrief(rules, segments).map(({ position, ...finding }) => ({
-      ...finding,
-      segmentId: segmentId.get(position) ?? '',
-    }));
+    const findings: SegmentFinding[] = checkBrief(rules, segments).map(
+      ({ position, ...finding }) => ({
+        ...finding,
+        segmentId: segmentId.get(position) ?? '',
+      }),
+    );
     for (const position of trimmed) {
       findings.push({
         ruleId: WORD_COUNT_TRIMMED_RULE_ID,
@@ -185,7 +226,9 @@ export class BriefGenerationJob {
       written
         .filter((segment) => {
           const old = before.get(segment.position);
-          return old === undefined || old.dialogue !== segment.dialogue || old.prompt !== segment.prompt;
+          return (
+            old === undefined || old.dialogue !== segment.dialogue || old.prompt !== segment.prompt
+          );
         })
         .map((segment) => segment.id),
     );
@@ -218,22 +261,37 @@ export class BriefGenerationJob {
     context?: BriefContext,
   ): Promise<{ kind: 'refused' }> {
     await this.repository.failPending(tx, job.id, refusal.cause, refusal.message);
-    await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'brief_generation', jobId: job.id });
+    await this.usage.release(tx, {
+      ownerId: job.ownerId,
+      jobType: 'brief_generation',
+      jobId: job.id,
+    });
     if (job.campaignId !== null && context !== undefined) {
       await this.repository.settleBriefAfterFailure(tx, job.campaignId, job.generationSeq);
     }
     return { kind: 'refused' };
   }
 
-  private async failBeforeClaim(jobId: string, refusal: Refusal, log: JobLog): Promise<BriefGenerationOutcome> {
+  private async failBeforeClaim(
+    jobId: string,
+    refusal: Refusal,
+    log: JobLog,
+  ): Promise<BriefGenerationOutcome> {
     const failed = await this.database.uow.run(async (tx) => {
       const job = await this.repository.findJob(tx, jobId);
       if (job === null || job.state !== 'pending') return false;
-      const context = job.campaignId === null ? undefined : (await this.repository.findContext(tx, job.campaignId)) ?? undefined;
+      const context =
+        job.campaignId === null
+          ? undefined
+          : ((await this.repository.findContext(tx, job.campaignId)) ?? undefined);
       await this.refuse(tx, job, refusal, context);
       return true;
     });
-    if (failed) log.warn({ module: 'brief', outcome: 'error', jobId }, 'brief generation refused before any call');
+    if (failed)
+      log.warn(
+        { module: 'brief', outcome: 'error', jobId },
+        'brief generation refused before any call',
+      );
     return failed ? 'failed' : 'skipped';
   }
 
@@ -244,11 +302,25 @@ export class BriefGenerationJob {
     log: JobLog,
   ): Promise<BriefGenerationOutcome> {
     await this.database.uow.run(async (tx) => {
-      await this.repository.failSubmitting(tx, job.id, failure.cause, failure.message, failure.code);
-      await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'brief_generation', jobId: job.id });
-      if (job.campaignId !== null) await this.repository.settleBriefAfterFailure(tx, job.campaignId, job.generationSeq);
+      await this.repository.failSubmitting(
+        tx,
+        job.id,
+        failure.cause,
+        failure.message,
+        failure.code,
+      );
+      await this.usage.release(tx, {
+        ownerId: job.ownerId,
+        jobType: 'brief_generation',
+        jobId: job.id,
+      });
+      if (job.campaignId !== null)
+        await this.repository.settleBriefAfterFailure(tx, job.campaignId, job.generationSeq);
     });
-    log.warn({ module: 'brief', outcome: 'error', jobId: job.id, cause: failure.cause }, 'brief generation failed');
+    log.warn(
+      { module: 'brief', outcome: 'error', jobId: job.id, cause: failure.cause },
+      'brief generation failed',
+    );
     return 'failed';
   }
 }

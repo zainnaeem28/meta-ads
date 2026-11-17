@@ -29,8 +29,18 @@ export interface AdminUserQuery {
 export interface AdminUserStore {
   findById(db: Db, id: string): Promise<AdminUserRecord | undefined>;
   /** Optimistic update: `undefined` when `expectedVersion` is stale. */
-  setRole(db: Db, id: string, expectedVersion: number, role: Role): Promise<AdminUserRecord | undefined>;
-  setStatus(db: Db, id: string, expectedVersion: number, status: UserStatus): Promise<AdminUserRecord | undefined>;
+  setRole(
+    db: Db,
+    id: string,
+    expectedVersion: number,
+    role: Role,
+  ): Promise<AdminUserRecord | undefined>;
+  setStatus(
+    db: Db,
+    id: string,
+    expectedVersion: number,
+    status: UserStatus,
+  ): Promise<AdminUserRecord | undefined>;
   countActiveAdmins(db: Db): Promise<number>;
 }
 

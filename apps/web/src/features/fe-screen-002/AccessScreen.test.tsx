@@ -14,13 +14,25 @@ afterEach(cleanup);
 const ORIGIN = 'http://api.test';
 const meta = { requestId: 'req-1' };
 const notLinked = (state: 'none' | 'pending' | 'declined', formEnabled = true) =>
-  HttpResponse.json({ success: true, data: { linkState: 'not_linked', accessRequest: { formEnabled, state } }, metaData: meta });
+  HttpResponse.json({
+    success: true,
+    data: { linkState: 'not_linked', accessRequest: { formEnabled, state } },
+    metaData: meta,
+  });
 const failure = (status: number, code: string, headers?: Record<string, string>) =>
-  HttpResponse.json({ success: false, error: { code, message: code, details: [] }, metaData: meta }, { status, headers });
+  HttpResponse.json(
+    { success: false, error: { code, message: code, details: [] }, metaData: meta },
+    { status, headers },
+  );
 
 const view = (named: Parameters<typeof AccessScreen>[0]['named'], navigate = vi.fn()) =>
   render(
-    <ApiProvider origin={ORIGIN} getToken={() => Promise.resolve('tok')} identity="u" client={createQueryClient()}>
+    <ApiProvider
+      origin={ORIGIN}
+      getToken={() => Promise.resolve('tok')}
+      identity="u"
+      client={createQueryClient()}
+    >
       <AccessScreen named={named} navigate={navigate} />
     </ApiProvider>,
   );
@@ -39,13 +51,18 @@ describe('SCREEN-002 access states', () => {
       http.post(`${ORIGIN}/api/v1/access-requests`, async ({ request }) => {
         calls.push('POST /access-requests');
         body = await request.json();
-        return HttpResponse.json({ success: true, data: { state: 'received' }, metaData: meta }, { status: 202 });
+        return HttpResponse.json(
+          { success: true, data: { state: 'received' }, metaData: meta },
+          { status: 202 },
+        );
       }),
     );
     view(null);
     await screen.findByRole('textbox');
     expect(h1()).toHaveTextContent(SCREEN_002_COPY['not-linked'].title);
-    fireEvent.change(screen.getByLabelText(/Tell your administrator who you are/), { target: { value: 'Marketing, spring launch' } });
+    fireEvent.change(screen.getByLabelText(/Tell your administrator who you are/), {
+      target: { value: 'Marketing, spring launch' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Request access' }));
     await waitFor(() => expect(h1()).toHaveTextContent('Request sent'));
     expect(body).toEqual({ note: 'Marketing, spring launch' });
@@ -57,7 +74,10 @@ describe('SCREEN-002 access states', () => {
     view(null);
     await waitFor(() => expect(h1()).toHaveTextContent('Request sent'));
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute('href', '/sign-in');
+    expect(screen.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute(
+      'href',
+      '/sign-in',
+    );
   });
 
   it('a declined request looks exactly like none: the form shows with the neutral heading', async () => {
@@ -81,18 +101,28 @@ describe('SCREEN-002 access states', () => {
     expect(document.body.textContent).not.toMatch(/administrator/i);
   });
 
-  it.each(['suspended', 'removed', 'invite-invalid'] as const)('?state=%s renders without any api call', async (state) => {
-    const hit = vi.fn(() => failure(500, 'internal_error'));
-    server.use(http.get(`${ORIGIN}/api/v1/me`, hit), http.post(`${ORIGIN}/api/v1/access-requests`, hit));
-    view(state);
-    expect(h1()).toHaveTextContent(SCREEN_002_COPY[state].title);
-    expect(hit).not.toHaveBeenCalled();
-  });
+  it.each(['suspended', 'removed', 'invite-invalid'] as const)(
+    '?state=%s renders without any api call',
+    async (state) => {
+      const hit = vi.fn(() => failure(500, 'internal_error'));
+      server.use(
+        http.get(`${ORIGIN}/api/v1/me`, hit),
+        http.post(`${ORIGIN}/api/v1/access-requests`, hit),
+      );
+      view(state);
+      expect(h1()).toHaveTextContent(SCREEN_002_COPY[state].title);
+      expect(hit).not.toHaveBeenCalled();
+    },
+  );
 
   it('a linked account is sent to the campaigns', async () => {
     server.use(
       http.get(`${ORIGIN}/api/v1/me`, () =>
-        HttpResponse.json({ success: true, data: { linkState: 'linked', id: 'x', role: 'operator', status: 'active' }, metaData: meta }),
+        HttpResponse.json({
+          success: true,
+          data: { linkState: 'linked', id: 'x', role: 'operator', status: 'active' },
+          metaData: meta,
+        }),
       ),
     );
     const navigate = vi.fn();
@@ -121,11 +151,15 @@ describe('SCREEN-002 access states', () => {
   it('rate_limited shows the wait in an alert and keeps the form', async () => {
     server.use(
       http.get(`${ORIGIN}/api/v1/me`, () => notLinked('none')),
-      http.post(`${ORIGIN}/api/v1/access-requests`, () => failure(429, 'rate_limited', { 'Retry-After': '30' })),
+      http.post(`${ORIGIN}/api/v1/access-requests`, () =>
+        failure(429, 'rate_limited', { 'Retry-After': '30' }),
+      ),
     );
     view(null);
     fireEvent.click(await screen.findByRole('button', { name: 'Request access' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts. Try again in 30 seconds.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Too many attempts. Try again in 30 seconds.',
+    );
     expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
 

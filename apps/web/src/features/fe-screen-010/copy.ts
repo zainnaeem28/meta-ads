@@ -15,7 +15,8 @@ export const SCREEN_010_COPY = {
   loading: 'Loading provider keys',
   cardsLabel: 'Provider keys',
   emptyTitle: 'Add both keys to create ads',
-  emptyBody: 'Briefs run on your OpenAI key and clips on your WaveSpeed key. Nothing is charged to anyone else.',
+  emptyBody:
+    'Briefs run on your OpenAI key and clips on your WaveSpeed key. Nothing is charged to anyone else.',
   reminder: 'You will not be able to see the full key again.',
   protectedTitle: 'How your keys are protected',
   protectedBody:
@@ -28,7 +29,8 @@ export const SCREEN_010_COPY = {
   fieldPaste: 'Paste your key',
   fieldNew: 'Paste your new key',
   fieldEmpty: 'Paste your key before testing it.',
-  fieldHelp: 'Pasting is fine. Spaces at the ends are removed. The key is tested once without being charged and then stored encrypted.',
+  fieldHelp:
+    'Pasting is fine. Spaces at the ends are removed. The key is tested once without being charged and then stored encrypted.',
   replaceHelp: 'The new key is tested first. If the test fails, your current key stays.',
   testing: 'Testing the key. This can take a few seconds.',
   testAndSave: 'Test and save',
@@ -41,7 +43,10 @@ export const SCREEN_010_COPY = {
   retention: `Backups age out within ${String(BACKUP_RETENTION_DAYS)} days.`,
 } as const;
 
-export const PROVIDER_COPY: Record<ProviderName, { name: string; purpose: string; advice: string; uses: string }> = {
+export const PROVIDER_COPY: Record<
+  ProviderName,
+  { name: string; purpose: string; advice: string; uses: string }
+> = {
   openai: {
     name: 'OpenAI',
     purpose: 'Used for briefs, script suggestions, image analysis and audio checks.',
@@ -81,30 +86,75 @@ export const deleteBody = (name: string, jobs: number, uses: string): string[] =
   `You will not be able to generate ${uses} until you add a ${name} key again.`,
 ];
 
-const EVENT: Record<KeyEvent['kind'], { icon: IconName; tone: string; label: (name: string) => string }> = {
+const EVENT: Record<
+  KeyEvent['kind'],
+  { icon: IconName; tone: string; label: (name: string) => string }
+> = {
   added: { icon: 'circle-check', tone: 'text-success', label: (n) => `${n} key added` },
   replaced: { icon: 'refresh-cw', tone: 'text-foreground', label: (n) => `${n} key replaced` },
   deleted: { icon: 'trash-2', tone: 'text-foreground', label: (n) => `${n} key deleted` },
   test_passed: { icon: 'circle-check', tone: 'text-success', label: (n) => `${n} key test passed` },
-  test_failed: { icon: 'circle-x', tone: 'text-destructive', label: (n) => `${n} key test failed (authentication)` },
-  stored_untested: { icon: 'clock', tone: 'text-warning', label: (n) => `${n} key stored without a test` },
-  validated_by_job: { icon: 'circle-check', tone: 'text-success', label: (n) => `${n} key confirmed by a job` },
+  test_failed: {
+    icon: 'circle-x',
+    tone: 'text-destructive',
+    label: (n) => `${n} key test failed (authentication)`,
+  },
+  stored_untested: {
+    icon: 'clock',
+    tone: 'text-warning',
+    label: (n) => `${n} key stored without a test`,
+  },
+  validated_by_job: {
+    icon: 'circle-check',
+    tone: 'text-success',
+    label: (n) => `${n} key confirmed by a job`,
+  },
   auth_failed: { icon: 'circle-x', tone: 'text-destructive', label: (n) => `${n} refused the key` },
-  disabled: { icon: 'circle-x', tone: 'text-destructive', label: (n) => `${n} key disabled after repeated refusals` },
-  disabled_by_operator: { icon: 'circle-x', tone: 'text-destructive', label: (n) => `${n} key disabled by an administrator` },
-  attempt_rate_limited: { icon: 'clock', tone: 'text-warning', label: (n) => `Too many ${n} key attempts` },
-  rewrapped: { icon: 'shield-check', tone: 'text-foreground', label: (n) => `${n} key re-encrypted` },
+  disabled: {
+    icon: 'circle-x',
+    tone: 'text-destructive',
+    label: (n) => `${n} key disabled after repeated refusals`,
+  },
+  disabled_by_operator: {
+    icon: 'circle-x',
+    tone: 'text-destructive',
+    label: (n) => `${n} key disabled by an administrator`,
+  },
+  attempt_rate_limited: {
+    icon: 'clock',
+    tone: 'text-warning',
+    label: (n) => `Too many ${n} key attempts`,
+  },
+  rewrapped: {
+    icon: 'shield-check',
+    tone: 'text-foreground',
+    label: (n) => `${n} key re-encrypted`,
+  },
 };
 
 export function presentEvent(event: KeyEvent) {
   const name = PROVIDER_COPY[event.provider]?.name ?? 'Provider';
-  const row = EVENT[event.kind] ?? { icon: 'info' as IconName, tone: 'text-foreground', label: (n: string) => `${n} key activity` };
+  const row = EVENT[event.kind] ?? {
+    icon: 'info' as IconName,
+    tone: 'text-foreground',
+    label: (n: string) => `${n} key activity`,
+  };
   return { icon: row.icon, tone: row.tone, label: row.label(name) };
 }
 
-const STAMP = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+const STAMP = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+const TIME = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
 
 /** `3 Nov, 09:14` (the browser's time zone); empty for an unreadable instant. */
 export function formatEvent(instant: string): string {

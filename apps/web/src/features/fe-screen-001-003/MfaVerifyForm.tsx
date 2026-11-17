@@ -18,7 +18,13 @@ export function MfaVerifyForm({ returnTo, step }: { returnTo: string; step: MfaS
       <input type="hidden" name="return" value={returnTo} />
       <FormField label="6-digit code" error={state.error ? AUTH_COPY.mfaCodeError : undefined}>
         {(control) => (
-          <Input {...control} name="code" inputMode="numeric" autoComplete="one-time-code" required />
+          <Input
+            {...control}
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+          />
         )}
       </FormField>
       <Button type="submit" pending={pending} pendingLabel="Verifying…">

@@ -2,7 +2,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { configuredOperations } from './operations.js';
-import { PriceTableInvalidError, missingPrices, parsePriceTable, priceInForce } from './price-table.js';
+import {
+  PriceTableInvalidError,
+  missingPrices,
+  parsePriceTable,
+  priceInForce,
+} from './price-table.js';
 
 const row = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
   provider: 'openai',
@@ -37,7 +42,11 @@ describe('parsePriceTable', () => {
 
 describe('price lookup and validator', () => {
   const rows = parsePriceTable(
-    file([row(), row({ effectiveFrom: '2026-06-01', unitPriceUsd: '0.020000' }), row({ operation: 'later', effectiveFrom: '2027-01-01' })]),
+    file([
+      row(),
+      row({ effectiveFrom: '2026-06-01', unitPriceUsd: '0.020000' }),
+      row({ operation: 'later', effectiveFrom: '2027-01-01' }),
+    ]),
   );
 
   it('uses the latest row not after the day', () => {
@@ -58,7 +67,17 @@ describe('price lookup and validator', () => {
 });
 
 describe('config/price-table.json', () => {
-  const path = join(import.meta.dirname, '..', '..', '..', '..', '..', '..', 'config', 'price-table.json');
+  const path = join(
+    import.meta.dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    'config',
+    'price-table.json',
+  );
   const rows = parsePriceTable(JSON.parse(readFileSync(path, 'utf8')));
   const today = new Date().toISOString().slice(0, 10);
 

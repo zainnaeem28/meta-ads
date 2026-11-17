@@ -26,7 +26,12 @@ function entries(variable: string, raw: string): [number, string][] {
   const out: [number, string][] = [];
   for (const [key, value] of Object.entries(parsed)) {
     const version = Number(key);
-    if (!Number.isInteger(version) || version <= 0 || version > 32767 || typeof value !== 'string') {
+    if (
+      !Number.isInteger(version) ||
+      version <= 0 ||
+      version > 32767 ||
+      typeof value !== 'string'
+    ) {
       throw new KekConfigError(variable, 'versions must be positive integers with a PEM string');
     }
     out.push([version, value]);
@@ -42,11 +47,11 @@ function checked(variable: string, make: () => KeyObject, kind: 'public' | 'priv
   } catch {
     throw new KekConfigError(variable, `holds an unreadable ${kind} key`);
   }
-  if (
-    key.asymmetricKeyType !== 'rsa' ||
-    key.asymmetricKeyDetails?.modulusLength !== MODULUS_BITS
-  ) {
-    throw new KekConfigError(variable, `keys must be RSA with a ${String(MODULUS_BITS)}-bit modulus`);
+  if (key.asymmetricKeyType !== 'rsa' || key.asymmetricKeyDetails?.modulusLength !== MODULUS_BITS) {
+    throw new KekConfigError(
+      variable,
+      `keys must be RSA with a ${String(MODULUS_BITS)}-bit modulus`,
+    );
   }
   return key;
 }
@@ -73,10 +78,16 @@ export function parsePrivateKeys(raw: string): Map<number, KeyObject> {
   return map;
 }
 
-export function parseActiveVersion(raw: string | undefined, available: ReadonlyMap<number, unknown>): number {
+export function parseActiveVersion(
+  raw: string | undefined,
+  available: ReadonlyMap<number, unknown>,
+): number {
   const version = Number(raw);
   if (raw === undefined || !Number.isInteger(version) || !available.has(version)) {
-    throw new KekConfigError('KEK_ACTIVE_VERSION', 'must name a version present in KEK_PUBLIC_KEYS');
+    throw new KekConfigError(
+      'KEK_ACTIVE_VERSION',
+      'must name a version present in KEK_PUBLIC_KEYS',
+    );
   }
   return version;
 }

@@ -30,12 +30,14 @@ export function healthOptionsFrom(
     const raw = env[name];
     if (raw === undefined || raw === '') return fallback;
     const value = Number(raw);
-    if (!Number.isInteger(value) || value < 0) throw new Error(`${name} must be a non-negative integer`);
+    if (!Number.isInteger(value) || value < 0)
+      throw new Error(`${name} must be a non-negative integer`);
     return value;
   };
   const minSchemaHead = num('MIN_SCHEMA_HEAD', 0);
   const maxSchemaHead = num('MAX_SCHEMA_HEAD', Number.MAX_SAFE_INTEGER);
-  if (minSchemaHead > maxSchemaHead) throw new Error('MIN_SCHEMA_HEAD must not exceed MAX_SCHEMA_HEAD');
+  if (minSchemaHead > maxSchemaHead)
+    throw new Error('MIN_SCHEMA_HEAD must not exceed MAX_SCHEMA_HEAD');
   return {
     minSchemaHead,
     maxSchemaHead,
@@ -89,7 +91,8 @@ export class HealthService implements BeforeApplicationShutdown {
       }
       try {
         const head = await within(this.schemaHead(database), ms);
-        if (head < this.options.minSchemaHead || head > this.options.maxSchemaHead) return 'schema_head';
+        if (head < this.options.minSchemaHead || head > this.options.maxSchemaHead)
+          return 'schema_head';
       } catch {
         return 'schema_head';
       }
@@ -110,7 +113,9 @@ export class HealthService implements BeforeApplicationShutdown {
       `select to_regclass('drizzle.__drizzle_migrations') as t`,
     );
     if (present.rows[0]?.t === null || present.rows[0] === undefined) return 0;
-    const result = await database.db.execute(sql`select count(*)::int as head from drizzle.__drizzle_migrations`);
+    const result = await database.db.execute(
+      sql`select count(*)::int as head from drizzle.__drizzle_migrations`,
+    );
     return Number((result.rows[0] as { head: number } | undefined)?.head ?? 0);
   }
 }

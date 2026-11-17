@@ -17,14 +17,30 @@ import {
   VIDEO_WORKER_CONFIG,
   VIDEO_WORKER_REPOSITORY,
 } from './ports.js';
-import type { JobLog, ProductionMedia, VideoGenPort, VideoJobRow, VideoWorkerConfig, VideoWorkerRepository } from './ports.js';
+import type {
+  JobLog,
+  ProductionMedia,
+  VideoGenPort,
+  VideoJobRow,
+  VideoWorkerConfig,
+  VideoWorkerRepository,
+} from './ports.js';
 
 export { COPY_QUEUE } from './copy-queue.js';
 
 export type VideoCopyOutcome = 'completed' | 'discarded' | 'failed' | 'skipped';
 
 /** Refused for good: a retry would fetch the same thing (the table of ARCHITECTURE §5.10, "output URL" row). */
-const FINAL_FETCH = new Set(['provider_unknown', 'invalid_url', 'not_https', 'host_not_allowed', 'blocked_address', 'redirect_refused', 'too_large', 'wrong_type']);
+const FINAL_FETCH = new Set([
+  'provider_unknown',
+  'invalid_url',
+  'not_https',
+  'host_not_allowed',
+  'blocked_address',
+  'redirect_refused',
+  'too_large',
+  'wrong_type',
+]);
 
 const MESSAGES = {
   type: 'The provider returned a file that is not a video.',
@@ -69,7 +85,10 @@ export class VideoCopyJob {
     const jobId = (job.data as { jobId?: unknown } | null)?.jobId;
     if (typeof jobId !== 'string') throw new TypeError('video.copy-output job has no jobId');
     const outcome = await this.run(jobId, log);
-    log.info({ module: 'production', outcome: outcome === 'failed' ? 'error' : 'ok', jobId }, `video copy: ${outcome}`);
+    log.info(
+      { module: 'production', outcome: outcome === 'failed' ? 'error' : 'ok', jobId },
+      `video copy: ${outcome}`,
+    );
     return outcome;
   }
 
@@ -100,12 +119,14 @@ export class VideoCopyJob {
       try {
         return await this.video.status(credential, taskId);
       } catch (error) {
-        if (error instanceof ProviderCallFailed && error.classification.countsAsAuthFailure) await this.keys.report(key, false, log);
+        if (error instanceof ProviderCallFailed && error.classification.countsAsAuthFailure)
+          await this.keys.report(key, false, log);
         throw error;
       }
     });
     if (status === 'unreadable') throw new Error('provider key could not be opened');
-    if (status.state !== 'completed' || status.outputUrl === undefined) throw new Error('the provider has no finished output to copy yet');
+    if (status.state !== 'completed' || status.outputUrl === undefined)
+      throw new Error('the provider has no finished output to copy yet');
     return status.outputUrl;
   }
 
@@ -115,7 +136,10 @@ export class VideoCopyJob {
     const storageKey = campaignKey(job.ownerId, job.campaignId, 'clip', mediaId, 'mp4');
     let response: Awaited<ReturnType<Egress['fetchStream']>>;
     try {
-      response = await this.egress.fetchStream('wavespeed', { url, maxBytes: this.config.outputMaxBytes });
+      response = await this.egress.fetchStream('wavespeed', {
+        url,
+        maxBytes: this.config.outputMaxBytes,
+      });
     } catch (error) {
       return this.fetchFailed(job.id, error, log);
     }
@@ -135,7 +159,13 @@ export class VideoCopyJob {
     const target = { mediaId, storageKey, bytes };
     const guard = await this.database.uow.run((tx) =>
       this.repository.completeCopy(tx, job, target, (inner) =>
-        this.media.registerClip(inner, { id: mediaId, ownerId: job.ownerId, campaignId: job.campaignId, storageKey, bytes }),
+        this.media.registerClip(inner, {
+          id: mediaId,
+          ownerId: job.ownerId,
+          campaignId: job.campaignId,
+          storageKey,
+          bytes,
+        }),
       ),
     );
     if (guard.kind === 'refused') {
@@ -149,7 +179,8 @@ export class VideoCopyJob {
   /** The put; an object already there from an earlier attempt of this same job is the clip. */
   private async put(storageKey: string, body: Readable): Promise<number> {
     try {
-      return (await this.storage.put(storageKey, body, 'video/mp4', this.config.outputMaxBytes)).bytes;
+      return (await this.storage.put(storageKey, body, 'video/mp4', this.config.outputMaxBytes))
+        .bytes;
     } catch (error) {
       const name = (error as { name?: string }).name;
       if (name === 'StorageTooLarge') throw new OutputTooLarge();
@@ -166,8 +197,16 @@ export class VideoCopyJob {
   private async fetchFailed(jobId: string, error: unknown, log: JobLog): Promise<VideoCopyOutcome> {
     const egress = egressCause(error);
     if (egress !== undefined && FINAL_FETCH.has(egress.reason)) {
-      const message = egress.reason === 'too_large' ? MESSAGES.size : egress.reason === 'wrong_type' ? MESSAGES.type : MESSAGES.host;
-      log.warn({ module: 'production', outcome: 'error', jobId, reason: egress.reason }, 'provider output refused');
+      const message =
+        egress.reason === 'too_large'
+          ? MESSAGES.size
+          : egress.reason === 'wrong_type'
+            ? MESSAGES.type
+            : MESSAGES.host;
+      log.warn(
+        { module: 'production', outcome: 'error', jobId, reason: egress.reason },
+        'provider output refused',
+      );
       return this.fail(jobId, message, log);
     }
     throw error;
@@ -179,10 +218,15 @@ export class VideoCopyJob {
       if (!moved) return false;
       const job = await this.repository.findJob(tx, jobId);
       // The provider billed the clip and the submit event stands; the unused first QC part of the reservation goes.
-      if (job !== null) await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'video', jobId });
+      if (job !== null)
+        await this.usage.release(tx, { ownerId: job.ownerId, jobType: 'video', jobId });
       return true;
     });
-    if (failed) log.warn({ module: 'production', outcome: 'error', jobId }, 'video output could not be copied');
+    if (failed)
+      log.warn(
+        { module: 'production', outcome: 'error', jobId },
+        'video output could not be copied',
+      );
     return failed ? 'failed' : 'skipped';
   }
 
@@ -191,7 +235,10 @@ export class VideoCopyJob {
       await this.storage.delete(storageKey);
     } catch {
       // The campaign deletion run removes whatever is left under the campaign's prefix.
-      log.warn({ module: 'production', outcome: 'error', jobId }, 'discarded clip could not be deleted');
+      log.warn(
+        { module: 'production', outcome: 'error', jobId },
+        'discarded clip could not be deleted',
+      );
     }
   }
 
@@ -205,9 +252,13 @@ export class VideoCopyJob {
         await this.video.deleteTask(credential, taskId);
         return true;
       });
-      if (done === true) await this.database.uow.run((tx) => this.repository.markOutputDeleted(tx, job.id));
+      if (done === true)
+        await this.database.uow.run((tx) => this.repository.markOutputDeleted(tx, job.id));
     } catch {
-      log.warn({ module: 'production', outcome: 'error', jobId: job.id }, 'provider task could not be deleted; the hourly cleanup retries');
+      log.warn(
+        { module: 'production', outcome: 'error', jobId: job.id },
+        'provider task could not be deleted; the hourly cleanup retries',
+      );
     }
   }
 }

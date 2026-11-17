@@ -81,7 +81,6 @@ export function CampaignRow({
         className="flex aspect-9/16 w-11 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-media-placeholder text-foreground md:w-14"
       >
         {posterSrc ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={posterSrc} alt="" className="size-full object-cover" />
         ) : (
           <Icon name={variant === 'draft' ? 'file-text' : 'film'} size={20} />
@@ -104,7 +103,11 @@ export function CampaignRow({
       </Badge>
       {deleting ? (
         <p role="status" className="relative z-10 flex w-full items-center gap-2 text-ui md:w-auto">
-          <Icon name="loader-circle" size={16} className="animate-spin motion-reduce:animate-none" />
+          <Icon
+            name="loader-circle"
+            size={16}
+            className="animate-spin motion-reduce:animate-none"
+          />
           Deleting
         </p>
       ) : actions.length > 0 ? (
@@ -118,19 +121,23 @@ export function CampaignRow({
                 aria-label={a.label}
                 title={a.label}
                 onClick={a.onClick}
-                className={a.destructive ? 'hover:bg-destructive-subtle hover:text-destructive focus-visible:outline-destructive' : undefined}
+                className={
+                  a.destructive
+                    ? 'hover:bg-destructive-subtle hover:text-destructive focus-visible:outline-destructive'
+                    : undefined
+                }
               >
                 <Icon name={a.icon} size={16} />
               </Button>
             ) : (
-            <Button
-              key={a.id}
-              size="sm"
-              variant={a.destructive ? 'destructive-outline' : 'outline'}
-              onClick={a.onClick}
-            >
-              {a.label}
-            </Button>
+              <Button
+                key={a.id}
+                size="sm"
+                variant={a.destructive ? 'destructive-outline' : 'outline'}
+                onClick={a.onClick}
+              >
+                {a.label}
+              </Button>
             ),
           )}
         </div>

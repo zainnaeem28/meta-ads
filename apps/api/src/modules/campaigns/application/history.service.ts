@@ -5,7 +5,11 @@ import { DomainError } from '../../../platform/http/domain-error.js';
 import { HISTORY_REPOSITORY } from './history-ports.js';
 import type { CampaignRecord, HistoryPosition, HistoryRepository } from './history-ports.js';
 import { CAMPAIGN_PROGRESS_READER, NO_JOBS } from './progress-reader.js';
-import type { CampaignProgress, CampaignProgressReader, ProgressSnapshot } from './progress-reader.js';
+import type {
+  CampaignProgress,
+  CampaignProgressReader,
+  ProgressSnapshot,
+} from './progress-reader.js';
 
 export type HistoryFilter = 'all' | 'processing' | 'completed' | 'failed';
 

@@ -32,7 +32,12 @@ export class SubmitController {
     const ownerId = owner(actor);
     const { draftId } = parseWith(Params, rawParams);
     const key = parseIdempotencyKey(header);
-    const result = await this.submits.submit(ownerId, draftId, key, requestHash('POST', request.url, null));
+    const result = await this.submits.submit(
+      ownerId,
+      draftId,
+      key,
+      requestHash('POST', request.url, null),
+    );
     void reply.header('Location', `/api/v1/campaigns/${result.campaignId}`);
     return { campaignId: result.campaignId, briefJob: outcomeSummary(result) };
   }

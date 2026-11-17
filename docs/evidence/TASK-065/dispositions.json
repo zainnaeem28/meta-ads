@@ -1,0 +1,30 @@
+{
+  "dispositions": [
+    {
+      "match": "CVE-2026-112366",
+      "reason": "Transitive development dependency (picomatch 4.0.7, glob matching in build and test tooling). The ReDoS needs an attacker-controlled extglob pattern; none reaches it at run time and the package is not in the api or worker image. The advisory is new since the last green runs on dev and appears on every branch; the lockfile is outside TASK-065's allowed paths, so a bump is requested from the Orchestrator (see the ticket comment).",
+      "owner": "Backend Engineer",
+      "expires": "2026-12-17"
+    },
+    {
+      "match": "GHSA-fc5q-39xc-vjpf",
+      "reason": "Same advisory as CVE-2026-112366 (picomatch 4.0.7, development tooling only, not reachable from the api or worker at run time); the pnpm audit view of it.",
+      "owner": "Backend Engineer",
+      "expires": "2026-12-17"
+    },
+    {
+      "match": "openai-key-shaped",
+      "path": "docs/evidence/TASK-065/submit-check.md",
+      "reason": "False positive: an earlier commit of this branch holds a generated report whose branch name (task-065-...) matches the key-shaped rule. The file in the tree is a short placeholder; only the earlier commit in history carries the name. No credential exists.",
+      "owner": "Backend Engineer",
+      "expires": "2026-12-16"
+    },
+    {
+      "match": "openai-key-shaped",
+      "path": "apps/api/tests/conformance/zero-trust.conformance.test.ts",
+      "reason": "False positive: an earlier commit of this branch holds a made-up key-shaped string used as a request body in a test; the tree now takes it from the shared fixture, which assembles it from parts. No credential exists.",
+      "owner": "Backend Engineer",
+      "expires": "2026-12-16"
+    }
+  ]
+}

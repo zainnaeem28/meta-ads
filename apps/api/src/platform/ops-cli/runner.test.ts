@@ -33,7 +33,12 @@ describe('ops-cli runner', () => {
 
   it('exits 1 when the command did less than asked', async () => {
     const r = runtime('staging', { counts: { resumed: 0, not_stuck: 1 }, ok: false });
-    expect(await runOps(['erasure:resume', '0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b', '--env=staging'], r.fake)).toBe(EXIT_INCOMPLETE);
+    expect(
+      await runOps(
+        ['erasure:resume', '0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b', '--env=staging'],
+        r.fake,
+      ),
+    ).toBe(EXIT_INCOMPLETE);
     expect(r.lines[0]).toBe('ops erasure:resume: incomplete');
   });
 
@@ -52,12 +57,20 @@ describe('ops-cli runner', () => {
   });
 
   it('a refusal from the command itself exits 2', async () => {
-    const r = runtime('staging', new OpsRefusedError('connected database is not the configured one'));
+    const r = runtime(
+      'staging',
+      new OpsRefusedError('connected database is not the configured one'),
+    );
     expect(await runOps(['first-admin:reopen', '--env=staging'], r.fake)).toBe(EXIT_REFUSED);
   });
 
   it('a failure prints the kind of error and never its message', async () => {
-    const r = runtime('staging', Object.assign(new Error('password authentication failed for postgres://user:secret@db'), { name: 'DatabaseError' }));
+    const r = runtime(
+      'staging',
+      Object.assign(new Error('password authentication failed for postgres://user:secret@db'), {
+        name: 'DatabaseError',
+      }),
+    );
     expect(await runOps(['first-admin:reopen', '--env=staging'], r.fake)).toBe(EXIT_INCOMPLETE);
     expect(r.lines).toEqual(['ops first-admin:reopen: failed (DatabaseError)']);
     const other = runtime('staging', 'x' as unknown as Error);

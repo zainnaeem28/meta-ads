@@ -27,7 +27,8 @@ export class InvitationsController {
   constructor(@Inject(InvitationService) private readonly invitations: InvitationService) {}
 
   private actorOf(actor: ActorContext | undefined, request: FastifyRequest): InvitationActor {
-    if (actor === undefined) throw new DomainError('not_linked', 'This account is not linked to ShrooMap yet.');
+    if (actor === undefined)
+      throw new DomainError('not_linked', 'This account is not linked to ShrooMap yet.');
     return { userId: actor.userId, requestId: request.id };
   }
 
@@ -78,7 +79,11 @@ export class InvitationsController {
     const result = idParam.safeParse(raw);
     if (!result.success) {
       throw new DomainError('validation_failed', 'The request is not valid.', [
-        { field: 'invitationId', code: 'invalid_format', message: 'The value has the wrong format.' },
+        {
+          field: 'invitationId',
+          code: 'invalid_format',
+          message: 'The value has the wrong format.',
+        },
       ]);
     }
     return result.data;

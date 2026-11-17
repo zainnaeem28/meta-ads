@@ -32,10 +32,16 @@ export class AnalysisService {
   ) {}
 
   /** Starts the analysis, or returns the one that is live or done for this image (a failed one is started again). */
-  async request(ownerId: string, mediaId: string, key: string, requestHash: Buffer): Promise<JobOutcome> {
+  async request(
+    ownerId: string,
+    mediaId: string,
+    key: string,
+    requestHash: Buffer,
+  ): Promise<JobOutcome> {
     return this.jobs.inTransaction(async (tx) => {
       const media = await this.find(tx, ownerId, mediaId);
-      if (media.state !== 'ready') throw new DomainError('media_not_ready', 'The image is not ready to be analysed yet.');
+      if (media.state !== 'ready')
+        throw new DomainError('media_not_ready', 'The image is not ready to be analysed yet.');
       const spec = {
         ownerId,
         operationId: 'API-035',
@@ -55,8 +61,17 @@ export class AnalysisService {
   async latest(ownerId: string, mediaId: string): Promise<AnalysisView> {
     return this.database.uow.run(async (tx) => {
       await this.find(tx, ownerId, mediaId);
-      const owned = and(eq(briefJobs.ownerId, ownerId), eq(briefJobs.mediaId, mediaId), eq(briefJobs.kind, 'image_analysis'));
-      const [job] = await tx.select(JOB_COLUMNS).from(briefJobs).where(owned).orderBy(desc(briefJobs.createdAt), desc(briefJobs.id)).limit(1);
+      const owned = and(
+        eq(briefJobs.ownerId, ownerId),
+        eq(briefJobs.mediaId, mediaId),
+        eq(briefJobs.kind, 'image_analysis'),
+      );
+      const [job] = await tx
+        .select(JOB_COLUMNS)
+        .from(briefJobs)
+        .where(owned)
+        .orderBy(desc(briefJobs.createdAt), desc(briefJobs.id))
+        .limit(1);
       const [done] = await tx
         .select({ text: briefJobs.resultText })
         .from(briefJobs)
@@ -73,7 +88,8 @@ export class AnalysisService {
       .select({ state: mediaObjects.state, kind: mediaObjects.kind })
       .from(mediaObjects)
       .where(and(eq(mediaObjects.id, mediaId), eq(mediaObjects.ownerId, ownerId)));
-    if (media === undefined || media.kind !== 'upload') throw new DomainError('not_found', 'This image does not exist.');
+    if (media === undefined || media.kind !== 'upload')
+      throw new DomainError('not_found', 'This image does not exist.');
     return media;
   }
 }

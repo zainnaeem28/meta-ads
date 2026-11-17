@@ -23,17 +23,69 @@ const key = (provider: string, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 const none = (provider: string) =>
-  key(provider, { configured: false, status: null, last4: null, fingerprint: null, version: null, createdAt: null, updatedAt: null, lastValidatedAt: null });
+  key(provider, {
+    configured: false,
+    status: null,
+    last4: null,
+    fingerprint: null,
+    version: null,
+    createdAt: null,
+    updatedAt: null,
+    lastValidatedAt: null,
+  });
 
 const EVENTS = [
-  { id: '11111111-1111-4111-8111-111111111111', provider: 'wavespeed', kind: 'deleted', at: '2026-11-12T16:05:00.000Z' },
-  { id: '22222222-2222-4222-8222-222222222222', provider: 'wavespeed', kind: 'test_failed', at: '2026-11-12T16:02:00.000Z' },
-  { id: '33333333-3333-4333-8333-333333333333', provider: 'openai', kind: 'added', at: '2026-11-03T09:14:00.000Z' },
+  {
+    id: '11111111-1111-4111-8111-111111111111',
+    provider: 'wavespeed',
+    kind: 'deleted',
+    at: '2026-11-12T16:05:00.000Z',
+  },
+  {
+    id: '22222222-2222-4222-8222-222222222222',
+    provider: 'wavespeed',
+    kind: 'test_failed',
+    at: '2026-11-12T16:02:00.000Z',
+  },
+  {
+    id: '33333333-3333-4333-8333-333333333333',
+    provider: 'openai',
+    kind: 'added',
+    at: '2026-11-03T09:14:00.000Z',
+  },
 ];
 const ok = (data: unknown) => ({ status: 200, body: { success: true, data, metaData: meta } });
-const events = { status: 200, body: { success: true, data: EVENTS, metaData: { ...meta, pagination: { type: 'cursor', limit: 20, returnedCount: 3, hasNextPage: false, nextCursor: null } } } };
-const failure = (status: number, code: string, headers: Record<string, string> = {}) => ({ status, headers, body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta } });
-const linked = ok({ linkState: 'linked', id: '8f3a0000-0000-4000-8000-00000000c21d', role: 'user', status: 'active', mfa: { required: true, satisfied: true }, recentAuth: { satisfied: true, maxAgeSeconds: 600 }, keyNotices: [] });
+const events = {
+  status: 200,
+  body: {
+    success: true,
+    data: EVENTS,
+    metaData: {
+      ...meta,
+      pagination: {
+        type: 'cursor',
+        limit: 20,
+        returnedCount: 3,
+        hasNextPage: false,
+        nextCursor: null,
+      },
+    },
+  },
+};
+const failure = (status: number, code: string, headers: Record<string, string> = {}) => ({
+  status,
+  headers,
+  body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta },
+});
+const linked = ok({
+  linkState: 'linked',
+  id: '8f3a0000-0000-4000-8000-00000000c21d',
+  role: 'user',
+  status: 'active',
+  mfa: { required: true, satisfied: true },
+  recentAuth: { satisfied: true, maxAgeSeconds: 600 },
+  keyNotices: [],
+});
 
 type Answer = { status: number; body?: unknown; headers?: Record<string, string> } | 'hang';
 interface Api {
@@ -46,7 +98,11 @@ const signedIn = async (context: BrowserContext, baseURL: string) =>
   context.addCookies([
     {
       name: LOCAL_SESSION_COOKIE,
-      value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + 600 }),
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      }),
       url: baseURL,
     },
   ]);
@@ -67,7 +123,14 @@ async function mockApi(page: Page, api: Api) {
       'access-control-expose-headers': 'x-request-id,etag,retry-after',
     };
     if (request.method() === 'OPTIONS') {
-      return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*' } });
+      return route.fulfill({
+        status: 204,
+        headers: {
+          ...cors,
+          'access-control-allow-headers':
+            (await request.headerValue('access-control-request-headers')) ?? '*',
+        },
+      });
     }
     const url = new URL(request.url());
     calls.push(`${request.method()} ${url.pathname}${url.search}`);
@@ -86,7 +149,9 @@ async function mockApi(page: Page, api: Api) {
     return route.fulfill({
       status: answer.status,
       headers: { ...cors, ...(answer.headers ?? {}) },
-      ...(answer.status === 204 ? {} : { contentType: 'application/json', body: JSON.stringify(answer.body) }),
+      ...(answer.status === 204
+        ? {}
+        : { contentType: 'application/json', body: JSON.stringify(answer.body) }),
     });
   });
   return { calls, bodies };
@@ -109,14 +174,27 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
     await page.clock.setFixedTime(NOW);
   });
 
-  test('real api: the page calls API-010 on the running api; without a bearer it answers 401 and the user goes to sign-in', async ({ page }) => {
+  test('real api: the page calls API-010 on the running api; without a bearer it answers 401 and the user goes to sign-in', async ({
+    page,
+  }) => {
     const origin = process.env.E2E_API_URL!;
     const sent: string[] = [];
     await page.route(`${origin}/**`, async (route) => {
       const request = route.request();
-      const cors = { 'access-control-allow-origin': (await request.headerValue('origin')) ?? '*', 'access-control-allow-credentials': 'true', 'access-control-expose-headers': 'x-request-id' };
+      const cors = {
+        'access-control-allow-origin': (await request.headerValue('origin')) ?? '*',
+        'access-control-allow-credentials': 'true',
+        'access-control-expose-headers': 'x-request-id',
+      };
       if (request.method() === 'OPTIONS') {
-        return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*' } });
+        return route.fulfill({
+          status: 204,
+          headers: {
+            ...cors,
+            'access-control-allow-headers':
+              (await request.headerValue('access-control-request-headers')) ?? '*',
+          },
+        });
       }
       sent.push(`${request.method()} ${new URL(request.url()).pathname}`);
       const response = await route.fetch();
@@ -128,19 +206,28 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
     expect(new URL(page.url()).searchParams.get('return')).toBe('/settings/provider-keys');
   });
 
-  test('default: hint and fingerprint only, only the listed operations, no third-party script, keyboard-only replace', async ({ page }) => {
+  test('default: hint and fingerprint only, only the listed operations, no third-party script, keyboard-only replace', async ({
+    page,
+  }) => {
     const scripts: string[] = [];
     page.on('request', (r) => {
-      if (r.resourceType() === 'script' && !r.url().startsWith(page.url().split('/settings')[0]!)) scripts.push(r.url());
+      if (r.resourceType() === 'script' && !r.url().startsWith(page.url().split('/settings')[0]!))
+        scripts.push(r.url());
     });
-    const { calls, bodies } = await mockApi(page, { keys: both, put: (p) => putOk(p, { last4: 'Zz09', version: 2 }) });
+    const { calls, bodies } = await mockApi(page, {
+      keys: both,
+      put: (p) => putOk(p, { last4: 'Zz09', version: 2 }),
+    });
     await page.goto('/settings/provider-keys');
     await expect(page.getByRole('heading', { level: 1, name: 'Provider keys' })).toBeVisible();
     expect(await page.title()).toBe('Provider keys · ShrooMap');
     await expect(page.getByTestId('key-hint').first()).toHaveText('…7Q2d');
     await expect(page.getByText('4f9a·1c07')).toBeVisible();
     await expect(page.locator('body')).not.toContainText('sk-');
-    await page.getByRole('region', { name: 'OpenAI' }).getByRole('button', { name: 'Replace key' }).focus();
+    await page
+      .getByRole('region', { name: 'OpenAI' })
+      .getByRole('button', { name: 'Replace key' })
+      .focus();
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Replace OpenAI key?' });
     await expect(dialog).toBeVisible();
@@ -151,11 +238,20 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
     await expect(page.getByText(/It ends in …Zz09/)).toBeVisible();
     expect(bodies).toEqual([JSON.stringify({ apiKey: KEY })]);
     await expect(page.locator('body')).not.toContainText(KEY);
-    expect(new Set(calls.map((c) => c.split('?')[0]))).toEqual(new Set(['GET /api/v1/me', 'GET /api/v1/me/provider-keys', 'GET /api/v1/me/key-events', 'PUT /api/v1/me/provider-keys/openai']));
+    expect(new Set(calls.map((c) => c.split('?')[0]))).toEqual(
+      new Set([
+        'GET /api/v1/me',
+        'GET /api/v1/me/provider-keys',
+        'GET /api/v1/me/key-events',
+        'PUT /api/v1/me/provider-keys/openai',
+      ]),
+    );
     expect(scripts).toEqual([]);
   });
 
-  test('delete: the confirmation states the backup retention and calls API-012', async ({ page }) => {
+  test('delete: the confirmation states the backup retention and calls API-012', async ({
+    page,
+  }) => {
     const { calls } = await mockApi(page, { keys: both, del: () => ({ status: 204 }) });
     await page.goto('/settings/provider-keys');
     await open(page, 'Delete WaveSpeed key');
@@ -166,8 +262,13 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
     expect(calls).toContain('DELETE /api/v1/me/provider-keys/wavespeed');
   });
 
-  test('step-up: recent_auth_required shows the section 9.1 dialog and submits nothing again', async ({ page }) => {
-    const { calls } = await mockApi(page, { keys: wsMissing, put: () => failure(403, 'recent_auth_required') });
+  test('step-up: recent_auth_required shows the section 9.1 dialog and submits nothing again', async ({
+    page,
+  }) => {
+    const { calls } = await mockApi(page, {
+      keys: wsMissing,
+      put: () => failure(403, 'recent_auth_required'),
+    });
     await page.goto('/settings/provider-keys');
     await open(page, 'Add WaveSpeed key');
     await page.getByLabel('WaveSpeed API key').fill(KEY);
@@ -189,19 +290,101 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
   };
 
   const STATES: { state: string; api: () => Api; ready: (p: Page) => Promise<void> }[] = [
-    { state: 'default', api: () => ({ keys: wsMissing }), ready: (p) => expect(p.getByRole('heading', { name: 'OpenAI' })).toBeVisible() },
-    { state: 'loading', api: () => ({ keys: 'hang' }), ready: (p) => expect(p.getByText('Loading provider keys')).toBeVisible() },
-    { state: 'empty', api: () => ({ keys: ok([none('openai'), none('wavespeed')]) }), ready: (p) => expect(p.getByText('Add both keys to create ads')).toBeVisible() },
+    {
+      state: 'default',
+      api: () => ({ keys: wsMissing }),
+      ready: (p) => expect(p.getByRole('heading', { name: 'OpenAI' })).toBeVisible(),
+    },
+    {
+      state: 'loading',
+      api: () => ({ keys: 'hang' }),
+      ready: (p) => expect(p.getByText('Loading provider keys')).toBeVisible(),
+    },
+    {
+      state: 'empty',
+      api: () => ({ keys: ok([none('openai'), none('wavespeed')]) }),
+      ready: (p) => expect(p.getByText('Add both keys to create ads')).toBeVisible(),
+    },
     { state: 'add-dialog', api: () => ({ keys: wsMissing }), ready: OPEN_ADD },
-    { state: 'testing', api: () => ({ keys: wsMissing, put: () => 'hang' }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByText(/Testing the key/)).toBeVisible(); } },
-    { state: 'validation-error', api: () => ({ keys: wsMissing, put: () => failure(422, 'key_invalid') }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByText(/did not accept this key/)).toBeVisible(); } },
-    { state: 'rate-limited', api: () => ({ keys: wsMissing, put: () => failure(429, 'rate_limited', { 'retry-after': '420' }) }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByText('Too many attempts. Try again in 7 minutes.')).toBeVisible(); } },
-    { state: 'step-up', api: () => ({ keys: wsMissing, put: () => failure(403, 'recent_auth_required') }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByRole('dialog', { name: 'Confirm it is you' })).toBeVisible(); } },
-    { state: 'saved', api: () => ({ keys: wsMissing, put: (provider) => putOk(provider, { last4: '9fK2' }) }), ready: async (p) => { await OPEN_ADD(p); await SUBMIT(p); await expect(p.getByText('WaveSpeed key saved', { exact: true })).toBeVisible(); } },
-    { state: 'untested', api: () => ({ keys: ok([key('openai'), key('wavespeed', { status: 'untested', lastValidatedAt: null })]) }), ready: (p) => expect(p.getByTestId('untested-wavespeed')).toBeVisible() },
-    { state: 'replace-warning', api: () => ({ keys: ok([key('openai', { inFlightJobCount: 1 }), key('wavespeed')]) }), ready: async (p) => { await p.getByRole('region', { name: 'OpenAI' }).getByRole('button', { name: 'Replace key' }).click(); await expect(p.getByText(/1 job is running on the current key/)).toBeVisible(); } },
-    { state: 'delete-confirm', api: () => ({ keys: both }), ready: async (p) => { await open(p, 'Delete OpenAI key'); await expect(p.getByRole('dialog', { name: 'Delete OpenAI key?' })).toBeVisible(); } },
-    { state: 'disabled', api: () => ({ keys: ok([key('openai'), key('wavespeed', { status: 'disabled' })]) }), ready: (p) => expect(p.getByText('Your WaveSpeed key was disabled')).toBeVisible() },
+    {
+      state: 'testing',
+      api: () => ({ keys: wsMissing, put: () => 'hang' }),
+      ready: async (p) => {
+        await OPEN_ADD(p);
+        await SUBMIT(p);
+        await expect(p.getByText(/Testing the key/)).toBeVisible();
+      },
+    },
+    {
+      state: 'validation-error',
+      api: () => ({ keys: wsMissing, put: () => failure(422, 'key_invalid') }),
+      ready: async (p) => {
+        await OPEN_ADD(p);
+        await SUBMIT(p);
+        await expect(p.getByText(/did not accept this key/)).toBeVisible();
+      },
+    },
+    {
+      state: 'rate-limited',
+      api: () => ({
+        keys: wsMissing,
+        put: () => failure(429, 'rate_limited', { 'retry-after': '420' }),
+      }),
+      ready: async (p) => {
+        await OPEN_ADD(p);
+        await SUBMIT(p);
+        await expect(p.getByText('Too many attempts. Try again in 7 minutes.')).toBeVisible();
+      },
+    },
+    {
+      state: 'step-up',
+      api: () => ({ keys: wsMissing, put: () => failure(403, 'recent_auth_required') }),
+      ready: async (p) => {
+        await OPEN_ADD(p);
+        await SUBMIT(p);
+        await expect(p.getByRole('dialog', { name: 'Confirm it is you' })).toBeVisible();
+      },
+    },
+    {
+      state: 'saved',
+      api: () => ({ keys: wsMissing, put: (provider) => putOk(provider, { last4: '9fK2' }) }),
+      ready: async (p) => {
+        await OPEN_ADD(p);
+        await SUBMIT(p);
+        await expect(p.getByText('WaveSpeed key saved', { exact: true })).toBeVisible();
+      },
+    },
+    {
+      state: 'untested',
+      api: () => ({
+        keys: ok([key('openai'), key('wavespeed', { status: 'untested', lastValidatedAt: null })]),
+      }),
+      ready: (p) => expect(p.getByTestId('untested-wavespeed')).toBeVisible(),
+    },
+    {
+      state: 'replace-warning',
+      api: () => ({ keys: ok([key('openai', { inFlightJobCount: 1 }), key('wavespeed')]) }),
+      ready: async (p) => {
+        await p
+          .getByRole('region', { name: 'OpenAI' })
+          .getByRole('button', { name: 'Replace key' })
+          .click();
+        await expect(p.getByText(/1 job is running on the current key/)).toBeVisible();
+      },
+    },
+    {
+      state: 'delete-confirm',
+      api: () => ({ keys: both }),
+      ready: async (p) => {
+        await open(p, 'Delete OpenAI key');
+        await expect(p.getByRole('dialog', { name: 'Delete OpenAI key?' })).toBeVisible();
+      },
+    },
+    {
+      state: 'disabled',
+      api: () => ({ keys: ok([key('openai'), key('wavespeed', { status: 'disabled' })]) }),
+      ready: (p) => expect(p.getByText('Your WaveSpeed key was disabled')).toBeVisible(),
+    },
   ];
 
   for (const { name, width, height } of VIEWPORTS.filter((v) => v.name !== '768')) {
@@ -212,7 +395,10 @@ test.describe('@TASK-098 SCREEN-010 provider keys through the built web app', ()
         await page.goto('/settings/provider-keys');
         await ready(page);
         await settle(page);
-        await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-${state}-${name}.json`);
+        await expectNoAxeViolations(
+          page,
+          `${evidence}/axe/${info.project.name}-${state}-${name}.json`,
+        );
         // Size the viewport to the page so the fixed bottom nav sits at the page bottom, not over the content.
         const full = await page.evaluate(() => document.documentElement.scrollHeight);
         await page.setViewportSize({ width, height: Math.max(height, full) });

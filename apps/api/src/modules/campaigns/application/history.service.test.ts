@@ -9,8 +9,14 @@ const C = '0197a1b2-0000-7000-8000-0000000000c1';
 const tx = {} as never;
 
 const campaign = (id = C): CampaignRecord => ({
-  id, ownerId: A, productName: 'Tonic', productDescription: 'd', productMediaId: null, segmentCount: 2,
-  createdAt: '2026-11-16 10:00:00+00', updatedAt: '2026-11-16 10:00:00+00',
+  id,
+  ownerId: A,
+  productName: 'Tonic',
+  productDescription: 'd',
+  productMediaId: null,
+  segmentCount: 2,
+  createdAt: '2026-11-16 10:00:00+00',
+  updatedAt: '2026-11-16 10:00:00+00',
 });
 
 function setup(reader: CampaignProgressReader = noJobsReader, owned = true) {
@@ -35,11 +41,16 @@ describe('HistoryService', () => {
   it('lists with the escaped term and a campaign without jobs reads as in progress', async () => {
     const { service, repository } = setup();
     const rows = await service.list(A, 'all', '50%', 21);
-    expect(repository.list).toHaveBeenCalledWith(tx, A, { limit: 21, after: undefined, escapedTerm: '50\\%', ids: undefined });
+    expect(repository.list).toHaveBeenCalledWith(tx, A, {
+      limit: 21,
+      after: undefined,
+      escapedTerm: '50\\%',
+      ids: undefined,
+    });
     expect(rows[0]?.snapshot).toBe(NO_JOBS);
   });
 
-  it('restricts to the reader\'s IDs for a filter and returns nothing without touching the table when none match', async () => {
+  it("restricts to the reader's IDs for a filter and returns nothing without touching the table when none match", async () => {
     const reader: CampaignProgressReader = {
       progressFor: async () => new Map(),
       idsWithProgress: async (_o, p) => new Set(p === 'failed' ? [C] : []),
@@ -61,7 +72,9 @@ describe('HistoryService', () => {
 
   it('assertOwner passes for an owned campaign and 404s otherwise; isActive delegates', async () => {
     await expect(setup().service.assertOwner(tx, A, C)).resolves.toBeUndefined();
-    await expect(setup(noJobsReader, false).service.assertOwner(tx, A, C)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(setup(noJobsReader, false).service.assertOwner(tx, A, C)).rejects.toMatchObject({
+      code: 'not_found',
+    });
     expect(await setup().service.isActive(tx, C)).toBe(true);
   });
 

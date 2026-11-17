@@ -40,8 +40,10 @@ export function formatFingerprint(fingerprint: string): string {
   return `${fingerprint.slice(0, 4)}·${fingerprint.slice(4, 8)}`;
 }
 
-export interface ProviderKeyCardProps
-  extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'onReset'> {
+export interface ProviderKeyCardProps extends Omit<
+  HTMLAttributes<HTMLElement>,
+  'children' | 'onReset'
+> {
   provider: Provider;
   state: KeyCardState;
   /** Last four characters of the stored key. The full key is never shown and cannot be revealed. */
@@ -120,7 +122,13 @@ export function ProviderKeyCard({
                 <Icon name="refresh-cw" size={16} />
                 Replace key
               </Button>
-              <Button variant="destructive-outline" size="sm" disabled={testing} onClick={onDelete} aria-label={`Delete ${name} key`}>
+              <Button
+                variant="destructive-outline"
+                size="sm"
+                disabled={testing}
+                onClick={onDelete}
+                aria-label={`Delete ${name} key`}
+              >
                 <Icon name="trash-2" size={16} />
                 Delete
               </Button>

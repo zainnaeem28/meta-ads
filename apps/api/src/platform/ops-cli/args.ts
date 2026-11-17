@@ -4,7 +4,12 @@ import type { AppEnv } from '../config/index.js';
 // with `--env=<name>` and refuses to run unless that is the `APP_ENV` of the process: a command typed into the wrong
 // shell stops before it opens a database connection.
 
-export const OPS_COMMANDS = ['first-admin:reopen', 'keys:disable-all', 'kek:rewrap', 'erasure:resume'] as const;
+export const OPS_COMMANDS = [
+  'first-admin:reopen',
+  'keys:disable-all',
+  'kek:rewrap',
+  'erasure:resume',
+] as const;
 export type OpsCommand = (typeof OPS_COMMANDS)[number];
 
 /**
@@ -57,7 +62,8 @@ export function parseArgs(argv: readonly string[]): OpsInvocation {
   }
   if (env === undefined || env === '') throw new OpsRefusedError('--env=<APP_ENV> is required');
   if (known === 'erasure:resume') {
-    if (args.length !== 1 || !isRunId(args[0] ?? '')) throw new OpsRefusedError('erasure:resume takes one run id');
+    if (args.length !== 1 || !isRunId(args[0] ?? ''))
+      throw new OpsRefusedError('erasure:resume takes one run id');
   } else if (args.length > 0) {
     throw new OpsRefusedError(`${known} takes no argument`);
   }

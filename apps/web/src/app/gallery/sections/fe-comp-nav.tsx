@@ -18,13 +18,20 @@ export default function FeCompNavSection() {
         <Cell id="tabs-selected" label="CMP-014 selected, default, disabled, count badges">
           <TabsDemo initial="review" />
         </Cell>
-        <Cell id="tabs-first" label="CMP-014 first tab selected (hover and focus via the pointer and Tab)">
+        <Cell
+          id="tabs-first"
+          label="CMP-014 first tab selected (hover and focus via the pointer and Tab)"
+        >
           <TabsDemo initial="all" />
         </Cell>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {[0, 1, 3].map((current) => (
-          <Cell key={current} id={`stepper-${current}`} label={`CMP-015 current step ${current + 1} of 4`}>
+          <Cell
+            key={current}
+            id={`stepper-${current}`}
+            label={`CMP-015 current step ${current + 1} of 4`}
+          >
             <Stepper steps={STEPS} current={current} />
           </Cell>
         ))}

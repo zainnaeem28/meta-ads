@@ -9,7 +9,13 @@ export function corsOptions(webOrigin: string): {
   return {
     origin: [webOrigin],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'If-Match', 'X-Request-ID'],
+    allowedHeaders: [
+      'Authorization',
+      'Content-Type',
+      'Idempotency-Key',
+      'If-Match',
+      'X-Request-ID',
+    ],
     exposedHeaders: ['X-Request-ID', 'ETag', 'Retry-After', 'Location'],
     credentials: false,
   };

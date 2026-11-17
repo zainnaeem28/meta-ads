@@ -14,14 +14,21 @@ describe('adapter selection', () => {
     expect(flavourOf('http://127.0.0.1:9000')).toBe('minio');
     expect(flavourOf('https://minio.internal:9000')).toBe('minio');
     expect(createStorage(CONFIG)).toBeInstanceOf(R2Storage);
-    expect(createStorage({ ...CONFIG, endpoint: 'http://127.0.0.1:9000' })).toBeInstanceOf(MinioStorage);
+    expect(createStorage({ ...CONFIG, endpoint: 'http://127.0.0.1:9000' })).toBeInstanceOf(
+      MinioStorage,
+    );
     expect(new S3Storage(CONFIG).flavour).toBe('r2');
   });
 });
 
 describe('presignGet', () => {
   it('signs for region auto against the account endpoint, one key, with the disposition', async () => {
-    const url = new URL(await new R2Storage(CONFIG).presignGet('u/o/media/m', 300, { type: 'attachment', filename: 'Pé "x".png' }));
+    const url = new URL(
+      await new R2Storage(CONFIG).presignGet('u/o/media/m', 300, {
+        type: 'attachment',
+        filename: 'Pé "x".png',
+      }),
+    );
     expect(url.origin).toBe(R2);
     expect(url.pathname).toBe('/app/u/o/media/m');
     expect(url.searchParams.get('X-Amz-Expires')).toBe('300');
@@ -32,7 +39,11 @@ describe('presignGet', () => {
   });
 
   it('points at the public origin when one is configured, and leaves a bare type alone', async () => {
-    const storage = new MinioStorage({ ...CONFIG, endpoint: 'http://minio:9000', publicOrigin: 'https://files.example.test' });
+    const storage = new MinioStorage({
+      ...CONFIG,
+      endpoint: 'http://minio:9000',
+      publicOrigin: 'https://files.example.test',
+    });
     const url = new URL(await storage.presignGet('q/o/m', 600, { type: 'inline' }));
     expect(url.origin).toBe('https://files.example.test');
     expect(url.searchParams.get('response-content-disposition')).toBe('inline');
@@ -40,7 +51,9 @@ describe('presignGet', () => {
   });
 
   it.each([0, -1, 1.5, 604_801, Number.NaN])('refuses a life of %s seconds', async (ttl) => {
-    await expect(new R2Storage(CONFIG).presignGet('k', ttl, { type: 'inline' })).rejects.toThrow(RangeError);
+    await expect(new R2Storage(CONFIG).presignGet('k', ttl, { type: 'inline' })).rejects.toThrow(
+      RangeError,
+    );
   });
 });
 
@@ -48,12 +61,18 @@ describe('put guards that need no server', () => {
   const storage = new MinioStorage({ ...CONFIG, endpoint: 'http://127.0.0.1:1' });
 
   it('refuses a body over maxBytes before sending anything', async () => {
-    await expect(storage.put('k', Buffer.alloc(11), 'image/png', 10)).rejects.toBeInstanceOf(StorageTooLarge);
-    await expect(storage.put('k', Readable.from([Buffer.alloc(6), 'abcdefg']), 'image/png', 10)).rejects.toBeInstanceOf(StorageTooLarge);
+    await expect(storage.put('k', Buffer.alloc(11), 'image/png', 10)).rejects.toBeInstanceOf(
+      StorageTooLarge,
+    );
+    await expect(
+      storage.put('k', Readable.from([Buffer.alloc(6), 'abcdefg']), 'image/png', 10),
+    ).rejects.toBeInstanceOf(StorageTooLarge);
   });
 
   it('maps an unreachable store to StorageUnavailable on every operation', async () => {
-    await expect(storage.put('k', Buffer.from('x'), 'image/png', 10)).rejects.toBeInstanceOf(StorageUnavailable);
+    await expect(storage.put('k', Buffer.from('x'), 'image/png', 10)).rejects.toBeInstanceOf(
+      StorageUnavailable,
+    );
     await expect(storage.get('k')).rejects.toBeInstanceOf(StorageUnavailable);
     await expect(storage.delete('k')).rejects.toBeInstanceOf(StorageUnavailable);
     await expect(storage.list('p/')).rejects.toBeInstanceOf(StorageUnavailable);

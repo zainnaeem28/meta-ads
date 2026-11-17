@@ -12,17 +12,29 @@ const signedIn = async (context: BrowserContext, baseURL: string) =>
   context.addCookies([
     {
       name: LOCAL_SESSION_COOKIE,
-      value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + 600 }),
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      }),
       url: baseURL,
     },
   ]);
 
 type Me = 'none' | 'pending' | 'declined' | 'suspended' | 'removed' | 'form-off';
 const meta = { requestId: 'req-e2e' };
-const error = (code: string) => ({ success: false, error: { code, message: code, details: [] }, metaData: meta });
+const error = (code: string) => ({
+  success: false,
+  error: { code, message: code, details: [] },
+  metaData: meta,
+});
 
 /** Answers the two operations a not-linked token may call; the real-api proof is the flow ticket. Returns the calls made. */
-async function stubApi(page: Page, me: Me, access: { status: number; code?: string } = { status: 202 }) {
+async function stubApi(
+  page: Page,
+  me: Me,
+  access: { status: number; code?: string } = { status: 202 },
+) {
   const calls: string[] = [];
   await page.route(`${api()}/**`, async (route) => {
     const request = route.request();
@@ -36,7 +48,12 @@ async function stubApi(page: Page, me: Me, access: { status: number; code?: stri
     const path = new URL(request.url()).pathname;
     calls.push(`${request.method()} ${path}`);
     const json = (status: number, body: unknown) =>
-      route.fulfill({ status, contentType: 'application/json', headers: cors, body: JSON.stringify(body) });
+      route.fulfill({
+        status,
+        contentType: 'application/json',
+        headers: cors,
+        body: JSON.stringify(body),
+      });
     if (path === '/api/v1/me') {
       if (me === 'suspended' || me === 'removed') return json(403, error(`account_${me}`));
       const state = me === 'form-off' ? 'none' : me;
@@ -59,9 +76,24 @@ async function stubApi(page: Page, me: Me, access: { status: number; code?: stri
 const STATES = [
   { state: 'not-linked', path: '/access', me: 'none', title: 'This account has no access yet' },
   { state: 'request-pending', path: '/access', me: 'pending', title: 'Request sent' },
-  { state: 'suspended', path: '/access?state=suspended', me: 'none', title: 'This account is suspended' },
-  { state: 'removed', path: '/access?state=removed', me: 'none', title: 'This account has been removed' },
-  { state: 'invite-invalid', path: '/access?state=invite-invalid', me: 'none', title: 'This invitation cannot be used' },
+  {
+    state: 'suspended',
+    path: '/access?state=suspended',
+    me: 'none',
+    title: 'This account is suspended',
+  },
+  {
+    state: 'removed',
+    path: '/access?state=removed',
+    me: 'none',
+    title: 'This account has been removed',
+  },
+  {
+    state: 'invite-invalid',
+    path: '/access?state=invite-invalid',
+    me: 'none',
+    title: 'This invitation cannot be used',
+  },
 ] as const;
 
 test.describe('@TASK-088 SCREEN-002 access states through the built web app', () => {
@@ -73,19 +105,29 @@ test.describe('@TASK-088 SCREEN-002 access states through the built web app', ()
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
       expect(await page.title()).toBe('Access · ShrooMap');
-      expect(await page.locator('meta[name=robots]').evaluateAll((els) => els.map((e) => e.getAttribute('content')))).toEqual(
-        expect.arrayContaining([expect.stringMatching(/noindex/)]),
-      );
+      expect(
+        await page
+          .locator('meta[name=robots]')
+          .evaluateAll((els) => els.map((e) => e.getAttribute('content'))),
+      ).toEqual(expect.arrayContaining([expect.stringMatching(/noindex/)]));
       if (state === 'removed') {
-        await expect(page.getByText('This account has been removed.', { exact: true })).toBeVisible();
+        await expect(
+          page.getByText('This account has been removed.', { exact: true }),
+        ).toBeVisible();
         await expect(page.getByText(/administrator/i)).toHaveCount(0);
       }
-      if (state === 'suspended') await expect(page.getByText('Your account is suspended. Contact your administrator.')).toBeVisible();
+      if (state === 'suspended')
+        await expect(
+          page.getByText('Your account is suspended. Contact your administrator.'),
+        ).toBeVisible();
       // Only API-001 and API-002 are ever called (suspended, removed and invite-invalid make no call).
-      expect(calls.every((c) => c === 'GET /api/v1/me' || c === 'POST /api/v1/access-requests')).toBe(true);
+      expect(
+        calls.every((c) => c === 'GET /api/v1/me' || c === 'POST /api/v1/access-requests'),
+      ).toBe(true);
       if (state !== 'not-linked' && state !== 'request-pending') expect(calls).toEqual([]);
       const back = page.getByRole('link', { name: 'Back to sign in' });
-      for (let i = 0; i < 4 && !(await back.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
+      for (let i = 0; i < 4 && !(await back.evaluate((el) => el === document.activeElement)); i++)
+        await page.keyboard.press('Tab');
       await expect(back).toBeFocused();
     });
   }
@@ -102,7 +144,9 @@ test.describe('@TASK-088 SCREEN-002 access states through the built web app', ()
     }
   });
 
-  test('requesting access by keyboard sends the note only and shows the neutral confirmation', async ({ page }) => {
+  test('requesting access by keyboard sends the note only and shows the neutral confirmation', async ({
+    page,
+  }) => {
     const calls = await stubApi(page, 'none');
     let body: unknown;
     page.on('request', (r) => {
@@ -119,7 +163,9 @@ test.describe('@TASK-088 SCREEN-002 access states through the built web app', ()
     expect(calls).toEqual(['GET /api/v1/me', 'POST /api/v1/access-requests']);
   });
 
-  test('rate limited shows the wait and keeps the form; a disabled form shows neutral copy', async ({ page }) => {
+  test('rate limited shows the wait and keeps the form; a disabled form shows neutral copy', async ({
+    page,
+  }) => {
     await stubApi(page, 'none', { status: 429, code: 'rate_limited' });
     await page.goto('/access');
     await page.getByRole('button', { name: 'Request access' }).click();
@@ -141,10 +187,18 @@ test.describe('@TASK-088 SCREEN-002 access states through the built web app', ()
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
         await expect(page.getByRole('status')).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready);
-        await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-${state}-${name}.json`);
+        await expectNoAxeViolations(
+          page,
+          `${evidence}/axe/${info.project.name}-${state}-${name}.json`,
+        );
         mkdirSync(`${evidence}/screenshots`, { recursive: true });
-        await page.screenshot({ path: `${evidence}/screenshots/${state}-${name}.png`, fullPage: true });
-        await expect(page).toHaveScreenshot(`fe-screen-002-${state}-${name}.png`, { fullPage: true });
+        await page.screenshot({
+          path: `${evidence}/screenshots/${state}-${name}.png`,
+          fullPage: true,
+        });
+        await expect(page).toHaveScreenshot(`fe-screen-002-${state}-${name}.png`, {
+          fullPage: true,
+        });
       });
     }
   }
