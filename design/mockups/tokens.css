@@ -111,6 +111,7 @@
   --control-h: 40px;
   --control-h-sm: 32px;
   --control-h-touch: 44px;
+  --clip-thumb-col: 200px minmax(0, 1fr);
   --header-h: 56px;
   --tabbar-h: 64px;
   --sidebar-width: 240px;
