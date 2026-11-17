@@ -13,7 +13,8 @@ const evidence = process.env.EVIDENCE_DIR ?? '../../docs/evidence/TASK-110';
 const SIZES = VIEWPORTS.filter((v) => v.name !== '768');
 const NOW = '2026-11-16T12:00:00.000Z';
 const meta = { requestId: 'req-e2e', timestamp: NOW };
-const id = (prefix: string, n: number) => `${prefix}0000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const id = (prefix: string, n: number) =>
+  `${prefix}0000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 const campaign = (n: number, over: Record<string, unknown> = {}) => ({
   id: id('c', n),
@@ -60,25 +61,53 @@ const key = (provider: string) => ({
 });
 
 type Answer = { status: number; body?: unknown; headers?: Record<string, string> };
-const ok = (data: unknown, m: unknown = meta): Answer => ({ status: 200, body: { success: true, data, metaData: m } });
+const ok = (data: unknown, m: unknown = meta): Answer => ({
+  status: 200,
+  body: { success: true, data, metaData: m },
+});
 const failure = (status: number, code: string, headers: Record<string, string> = {}): Answer => ({
   status,
   headers,
   body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta },
 });
 const page1 = (rows: unknown[]): Answer =>
-  ok(rows, { ...meta, pagination: { type: 'cursor', limit: 10, returnedCount: rows.length, hasNextPage: false, nextCursor: null } });
+  ok(rows, {
+    ...meta,
+    pagination: {
+      type: 'cursor',
+      limit: 10,
+      returnedCount: rows.length,
+      hasNextPage: false,
+      nextCursor: null,
+    },
+  });
 
 /** One shared in-memory store: deleting removes the record from every later read, as the api does (BR-22). */
 function store() {
   const campaigns = [
     campaign(1, { productName: 'Morning Focus Blend' }),
-    campaign(2, { productName: 'Evening Calm Gummies', progress: 'completed', finalAvailable: true, segmentCount: 4, updatedAt: '2026-11-16T10:00:00.000Z' }),
-    campaign(3, { productName: 'Reishi Night Tincture', progress: 'in_progress', briefState: 'draft', updatedAt: '2026-11-15T08:00:00.000Z' }),
+    campaign(2, {
+      productName: 'Evening Calm Gummies',
+      progress: 'completed',
+      finalAvailable: true,
+      segmentCount: 4,
+      updatedAt: '2026-11-16T10:00:00.000Z',
+    }),
+    campaign(3, {
+      productName: 'Reishi Night Tincture',
+      progress: 'in_progress',
+      briefState: 'draft',
+      updatedAt: '2026-11-15T08:00:00.000Z',
+    }),
   ];
   const drafts = [
     draft(1, { productName: "Lion's Mane Sampler Pack", step: 3 }),
-    draft(2, { productName: 'Chaga Chai Latte Mix', step: 4, durationSeconds: 60, updatedAt: '2026-11-12T11:00:00.000Z' }),
+    draft(2, {
+      productName: 'Chaga Chai Latte Mix',
+      step: 4,
+      durationSeconds: 60,
+      updatedAt: '2026-11-12T11:00:00.000Z',
+    }),
   ];
   return { campaigns, drafts, deleted: new Set<string>() };
 }
@@ -92,12 +121,24 @@ const signedIn = async (context: BrowserContext, baseURL: string, expiresIn = 60
   context.addCookies([
     {
       name: LOCAL_SESSION_COOKIE,
-      value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + expiresIn }),
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + expiresIn,
+      }),
       url: baseURL,
     },
   ]);
 
-const linked = ok({ linkState: 'linked', id: id('a', 1), role: 'user', status: 'active', mfa: { required: true, satisfied: true }, recentAuth: { satisfied: true, maxAgeSeconds: 600 }, keyNotices: [] });
+const linked = ok({
+  linkState: 'linked',
+  id: id('a', 1),
+  role: 'user',
+  status: 'active',
+  mfa: { required: true, satisfied: true },
+  recentAuth: { satisfied: true, maxAgeSeconds: 600 },
+  keyNotices: [],
+});
 
 async function mockApi(page: Page, data: Store, faults: Faults = {}) {
   const origin = process.env.E2E_API_URL!;
@@ -111,7 +152,14 @@ async function mockApi(page: Page, data: Store, faults: Faults = {}) {
       'access-control-expose-headers': 'x-request-id,etag,retry-after',
     };
     if (request.method() === 'OPTIONS') {
-      return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*' } });
+      return route.fulfill({
+        status: 204,
+        headers: {
+          ...cors,
+          'access-control-allow-headers':
+            (await request.headerValue('access-control-request-headers')) ?? '*',
+        },
+      });
     }
     const url = new URL(request.url());
     calls.push(`${request.method()} ${url.pathname}`);
@@ -130,7 +178,17 @@ async function mockApi(page: Page, data: Store, faults: Faults = {}) {
       else {
         pool.splice(index, 1);
         data.deleted.add(recordId);
-        answer = kind === 'campaigns' ? { status: 202, body: { success: true, data: { deletionRunId: id('e', 1), state: 'running' }, metaData: meta } } : { status: 204 };
+        answer =
+          kind === 'campaigns'
+            ? {
+                status: 202,
+                body: {
+                  success: true,
+                  data: { deletionRunId: id('e', 1), state: 'running' },
+                  metaData: meta,
+                },
+              }
+            : { status: 204 };
       }
     } else if (target && !del && target[1] === 'campaigns') {
       // A record read (brief, clips, final): a deleted or unknown campaign is the one `not_found` answer (BR-22).
@@ -143,7 +201,9 @@ async function mockApi(page: Page, data: Store, faults: Faults = {}) {
     return route.fulfill({
       status: answer.status,
       headers: { ...cors, ...(answer.headers ?? {}) },
-      ...(answer.status === 204 ? {} : { contentType: 'application/json', body: JSON.stringify(answer.body) }),
+      ...(answer.status === 204
+        ? {}
+        : { contentType: 'application/json', body: JSON.stringify(answer.body) }),
     });
   });
   return { calls, deletes: () => calls.filter((c) => c.startsWith('DELETE')) };
@@ -163,7 +223,8 @@ async function capture(page: Page, step: string, project: string) {
 }
 
 const list = (page: Page) => page.getByRole('list', { name: 'Campaign history' });
-const noindex = (page: Page) => page.locator('meta[name=robots]').evaluateAll((els) => els.map((e) => e.getAttribute('content')));
+const noindex = (page: Page) =>
+  page.locator('meta[name=robots]').evaluateAll((els) => els.map((e) => e.getAttribute('content')));
 const DELETED_TOAST = 'Campaign deleted. Its media is being removed in the background.';
 const DRAFT_TOAST = 'Draft deleted. Its product image is removed.';
 
@@ -175,14 +236,27 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     await page.clock.setFixedTime(NOW);
   });
 
-  test('real api: the delete entry point reaches the running api; without a bearer it answers 401 and the user goes to sign-in', async ({ page }) => {
+  test('real api: the delete entry point reaches the running api; without a bearer it answers 401 and the user goes to sign-in', async ({
+    page,
+  }) => {
     const origin = process.env.E2E_API_URL!;
     const sent: string[] = [];
     await page.route(`${origin}/**`, async (route) => {
       const request = route.request();
-      const cors = { 'access-control-allow-origin': (await request.headerValue('origin')) ?? '*', 'access-control-allow-credentials': 'true', 'access-control-expose-headers': 'x-request-id' };
+      const cors = {
+        'access-control-allow-origin': (await request.headerValue('origin')) ?? '*',
+        'access-control-allow-credentials': 'true',
+        'access-control-expose-headers': 'x-request-id',
+      };
       if (request.method() === 'OPTIONS') {
-        return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*' } });
+        return route.fulfill({
+          status: 204,
+          headers: {
+            ...cors,
+            'access-control-allow-headers':
+              (await request.headerValue('access-control-request-headers')) ?? '*',
+          },
+        });
       }
       sent.push(`${request.method()} ${new URL(request.url()).pathname}`);
       const response = await route.fetch();
@@ -197,12 +271,16 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     expect((await res.json()).success).toBe(false);
   });
 
-  test('campaign: SCREEN-005 delete-confirm (keyboard only) -> deleted toast; the list no longer holds the record', async ({ page }, info) => {
+  test('campaign: SCREEN-005 delete-confirm (keyboard only) -> deleted toast; the list no longer holds the record', async ({
+    page,
+  }, info) => {
     const data = store();
     const { deletes } = await mockApi(page, data);
     await page.goto('/campaigns');
     await expect(list(page).getByRole('listitem')).toHaveCount(3);
-    const openHref = await list(page).getByRole('link', { name: 'Reishi Night Tincture' }).getAttribute('href');
+    const openHref = await list(page)
+      .getByRole('link', { name: 'Reishi Night Tincture' })
+      .getAttribute('href');
     expect(openHref).toBe(`/campaigns/${id('c', 3)}/brief`);
     await capture(page, '1-campaign-list', info.project.name);
 
@@ -212,20 +290,30 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Delete "Reishi Night Tincture"?' });
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText('including its brief, its clips, any final video and the product image');
-    await expect(dialog).toContainText('Credit already spent at WaveSpeed or OpenAI cannot be recovered');
+    await expect(dialog).toContainText(
+      'including its brief, its clips, any final video and the product image',
+    );
+    await expect(dialog).toContainText(
+      'Credit already spent at WaveSpeed or OpenAI cannot be recovered',
+    );
     await expect(dialog).toContainText('This cannot be undone.');
     expect(deletes(), 'opening the dialog deletes nothing').toEqual([]);
     await capture(page, '2-delete-confirm-campaign', info.project.name);
 
     // The dialog traps focus: Tab reaches the confirm button within its few controls (nothing outside is reachable).
-    const focused = () => page.evaluate(() => `${document.activeElement?.tagName}:${document.activeElement?.textContent?.trim() ?? ''}`);
+    const focused = () =>
+      page.evaluate(
+        () =>
+          `${document.activeElement?.tagName}:${document.activeElement?.textContent?.trim() ?? ''}`,
+      );
     const seen: string[] = [await focused()];
     for (let i = 0; i < 6 && !seen.at(-1)!.includes('Delete campaign'); i += 1) {
       await page.keyboard.press('Tab');
       seen.push(await focused());
     }
-    expect(seen.at(-1), `focus order inside the dialog: ${seen.join(' > ')}`).toContain('Delete campaign');
+    expect(seen.at(-1), `focus order inside the dialog: ${seen.join(' > ')}`).toContain(
+      'Delete campaign',
+    );
     await page.keyboard.press('Enter');
     await expect(page.getByText(DELETED_TOAST)).toBeVisible();
     await expect(dialog).toHaveCount(0);
@@ -245,12 +333,18 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     const { calls } = await mockApi(page, data);
     const res = await page.goto(`/campaigns/${gone.id}/brief`);
     expect(res?.status()).toBe(200);
-    await expect.poll(() => calls.some((c) => c === `GET /api/v1/campaigns/${gone.id}/brief`)).toBe(true);
+    await expect
+      .poll(() => calls.some((c) => c === `GET /api/v1/campaigns/${gone.id}/brief`))
+      .toBe(true);
   }
 
-  test('deleted record: the one not-available message with Go Home, no data and no hint (BR-22)', async ({ page }, info) => {
+  test('deleted record: the one not-available message with Go Home, no data and no hint (BR-22)', async ({
+    page,
+  }, info) => {
     await openDeleted(page);
-    await expect(page.getByRole('heading', { name: 'This page or item is not available.' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'This page or item is not available.' }),
+    ).toBeVisible();
     await expect(page.getByText('Reishi Night Tincture')).toHaveCount(0);
     await capture(page, '4-deleted-record-not-available', info.project.name);
     await page.getByRole('link', { name: 'Go Home' }).click();
@@ -263,16 +357,25 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
   // SCREEN-004 `unavailable`; SCREEN-007 shows the page-level not-found alert instead. The record screens and the shared
   // error presentation are owned by TASK-0xx tickets, outside this ticket's paths. `test.fail` keeps this check honest:
   // it turns red the day the screens redirect, and the annotation is then removed.
-  test('deleted record opens SCREEN-004 unavailable (open finding F-07-1)', async ({ page }, info) => {
-    test.fail(true, 'F-07-1: the record screens show the page-level not-found alert, not SCREEN-004');
+  test('deleted record opens SCREEN-004 unavailable (open finding F-07-1)', async ({
+    page,
+  }, info) => {
+    test.fail(
+      true,
+      'F-07-1: the record screens show the page-level not-found alert, not SCREEN-004',
+    );
     await openDeleted(page);
-    await expect(page.getByRole('heading', { level: 1, name: 'This campaign is unavailable' })).toBeVisible({ timeout: 3000 });
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'This campaign is unavailable' }),
+    ).toBeVisible({ timeout: 3000 });
     await expect(page.getByText("We can't tell you which.")).toBeVisible();
     expect(await noindex(page)).toEqual(expect.arrayContaining([expect.stringMatching(/noindex/)]));
     await capture(page, '4-deleted-record-unavailable', info.project.name);
   });
 
-  test('draft: delete-confirm -> deleted toast; the draft is gone from the list', async ({ page }, info) => {
+  test('draft: delete-confirm -> deleted toast; the draft is gone from the list', async ({
+    page,
+  }, info) => {
     const data = store();
     const { deletes } = await mockApi(page, data);
     await page.goto('/campaigns?tab=drafts');
@@ -290,7 +393,9 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     await capture(page, '6-deleted-toast-draft', info.project.name);
   });
 
-  test('cancel path: Cancel, Escape and the close control keep the record and call nothing', async ({ page }, info) => {
+  test('cancel path: Cancel, Escape and the close control keep the record and call nothing', async ({
+    page,
+  }, info) => {
     const data = store();
     const { deletes } = await mockApi(page, data);
     await page.goto('/campaigns');
@@ -316,9 +421,13 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     await expect(list(page).getByRole('listitem')).toHaveCount(3);
   });
 
-  test('error path: a failed delete keeps the dialog and the record with the documented message, never a success; retry works', async ({ page }, info) => {
+  test('error path: a failed delete keeps the dialog and the record with the documented message, never a success; retry works', async ({
+    page,
+  }, info) => {
     const data = store();
-    const { deletes } = await mockApi(page, data, { deleteAnswers: [failure(500, 'internal_error')] });
+    const { deletes } = await mockApi(page, data, {
+      deleteAnswers: [failure(500, 'internal_error')],
+    });
     await page.goto('/campaigns');
     await page.getByRole('button', { name: 'Delete Evening Calm Gummies' }).click();
     const dialog = page.getByRole('dialog', { name: 'Delete "Evening Calm Gummies"?' });
@@ -334,7 +443,9 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     expect(deletes()).toHaveLength(2);
   });
 
-  test('already deleted meanwhile (404): the record leaves the list, no false success toast', async ({ page }, info) => {
+  test('already deleted meanwhile (404): the record leaves the list, no false success toast', async ({
+    page,
+  }, info) => {
     const data = store();
     const { deletes } = await mockApi(page, data, { deleteAnswers: [failure(404, 'not_found')] });
     await page.goto('/campaigns');
@@ -351,7 +462,9 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
 
   // OPEN FINDING F-07-3 (UI-UX section 9.1 `not_found`, "An action on a record deleted meanwhile"): the dialog must close and
   // the same message appear as a toast; SCREEN-005 keeps the dialog open with the message in it. Owned by TASK-090.
-  test('already deleted meanwhile: the dialog closes and the not-available message shows as a toast (open finding F-07-3)', async ({ page }) => {
+  test('already deleted meanwhile: the dialog closes and the not-available message shows as a toast (open finding F-07-3)', async ({
+    page,
+  }) => {
     test.fail(true, 'F-07-3: SCREEN-005 keeps the delete dialog open on a 404');
     const data = store();
     await mockApi(page, data, { deleteAnswers: [failure(404, 'not_found')] });
@@ -359,10 +472,14 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     await page.getByRole('button', { name: 'Delete Morning Focus Blend' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Delete campaign' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 3000 });
-    await expect(page.getByRole('status').getByText('This page or item is not available.')).toBeVisible({ timeout: 3000 });
+    await expect(
+      page.getByRole('status').getByText('This page or item is not available.'),
+    ).toBeVisible({ timeout: 3000 });
   });
 
-  test('permission path: a refused delete (403) keeps the record and shows no success', async ({ page }, info) => {
+  test('permission path: a refused delete (403) keeps the record and shows no success', async ({
+    page,
+  }, info) => {
     const data = store();
     await mockApi(page, data, { deleteAnswers: [failure(403, 'forbidden_role')] });
     await page.goto('/campaigns');
@@ -377,7 +494,9 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
 
   // OPEN FINDING F-07-2 (UI-UX section 9.1 `unauthenticated`): a 401 on the delete must end at sign-in with the
   // session-ended message; SCREEN-005 keeps the dialog open with the message instead. Owned by TASK-090.
-  test('session expiry: a 401 on the delete returns to sign-in with the path to come back to (open finding F-07-2)', async ({ page }) => {
+  test('session expiry: a 401 on the delete returns to sign-in with the path to come back to (open finding F-07-2)', async ({
+    page,
+  }) => {
     test.fail(true, 'F-07-2: SCREEN-005 does not redirect to sign-in on a 401 from the delete');
     const data = store();
     await mockApi(page, data, { deleteAnswers: [failure(401, 'unauthenticated')] });
@@ -389,7 +508,11 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     expect(data.deleted.size).toBe(0);
   });
 
-  test('session expiry before the page: an ended session goes to sign-in, not to the list', async ({ page, context, baseURL }) => {
+  test('session expiry before the page: an ended session goes to sign-in, not to the list', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
     await signedIn(context, baseURL!, -60);
     await page.goto('/campaigns');
     expect(new URL(page.url()).pathname).toBe('/sign-in');
@@ -397,7 +520,9 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     await expect(page.getByText('Your session ended. Sign in to continue.')).toBeVisible();
   });
 
-  test('back path: back from the unavailable page returns to the list, which still omits the deleted record', async ({ page }) => {
+  test('back path: back from the unavailable page returns to the list, which still omits the deleted record', async ({
+    page,
+  }) => {
     const data = store();
     await mockApi(page, data);
     await page.goto('/campaigns');
@@ -405,7 +530,9 @@ test.describe('@TASK-110 @FLOW-07 delete a draft or campaign end to end', () => 
     await page.getByRole('dialog').getByRole('button', { name: 'Delete campaign' }).click();
     await expect(page.getByText(DELETED_TOAST)).toBeVisible();
     await page.goto(`/campaigns/${id('c', 3)}/brief`);
-    await expect(page.getByRole('heading', { name: 'This page or item is not available.' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'This page or item is not available.' }),
+    ).toBeVisible();
     await page.goBack();
     await expect(page.getByRole('heading', { level: 1, name: 'Campaigns' })).toBeVisible();
     await expect(list(page).getByRole('link', { name: 'Reishi Night Tincture' })).toHaveCount(0);

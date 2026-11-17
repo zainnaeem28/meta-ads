@@ -62,6 +62,31 @@ describe('ApiProvider', () => {
   });
 });
 
+describe('ApiProvider first identity', () => {
+  it('keeps cached queries when the first user becomes known and clearOnFirstIdentity is false', async () => {
+    const client = createQueryClient();
+    const tree = (identity: string | null, clear: boolean) => (
+      <ApiProvider
+        origin={ORIGIN}
+        getToken={() => Promise.resolve(null)}
+        identity={identity}
+        client={client}
+        clearOnFirstIdentity={clear}
+      >
+        <p>x</p>
+      </ApiProvider>
+    );
+    const view = render(tree(null, false));
+    client.setQueryData(['kept'], 1);
+    view.rerender(tree('user-a', false));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(client.getQueryData(['kept'])).toBe(1);
+    view.rerender(tree('user-b', false));
+    await waitFor(() => expect(client.getQueryData(['kept'])).toBeUndefined());
+    view.unmount();
+  });
+});
+
 describe('ApiProvider under StrictMode', () => {
   it('keeps the client installed after the mount, cleanup, mount cycle', () => {
     const base = () => (globalThis as { __SHROOMAP_API_BASE__?: string }).__SHROOMAP_API_BASE__;
