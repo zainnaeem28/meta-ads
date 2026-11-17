@@ -510,6 +510,7 @@ test.describe('@TASK-104 FLOW-01 keyboard only at 1440 px', () => {
 test.describe('@TASK-104 FLOW-01 screen to screen mismatches', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
+  // Tracked by AIU-271.
   // MISMATCH FLOW01-F2 (SCREEN-006 steps 3 and 4 against API-024): the api refuses to submit a draft without
   // `direction.segmentCount`, step 3 lets the person leave without choosing it, and step 4 maps the refusal to no
   // control, so the person sees "Check the highlighted fields and try again" with nothing highlighted. Expected to fail
@@ -549,6 +550,7 @@ test.describe('@TASK-104 FLOW-01 screen to screen mismatches', () => {
 });
 
 test.describe('@TASK-104 FLOW-01 api conformance', () => {
+  // Tracked by AIU-271.
   // MISMATCH FLOW01-F1: the generated client (packages/contracts/src/http.ts, TASK-019) sends `credentials: 'include'`;
   // the api (platform/http/cors.ts, TASK-023) is configured "no credentials mode" and so answers no
   // Access-Control-Allow-Credentials, which makes a browser refuse every response. The other tests add the header at the

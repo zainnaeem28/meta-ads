@@ -62,3 +62,9 @@ Axe (WCAG 2.2 A and AA, every impact, not only critical) is clean on every captu
 - `apps/web/tests/e2e/flow-01/`: `playwright.config.ts`, `global-setup.ts`, `stack.ts` (the stack), `support.ts` (session, PNG, helpers), `flow-01.spec.ts`.
 - `docs/evidence/TASK-104/screenshots/`: one PNG per step at 390 and 1440 px (real fonts). `axe/`: the axe results of each.
 - `docs/evidence/TASK-104/submit-check.md`: the submit-check report.
+
+## Tracking, limits and exceptions (review round 1 response)
+
+- **Owner tasks:** F1 to F4 and the `NewBriefWizard.test.tsx` flake (L2, TASK-091) are tracked by AIU-271 (the Orchestrator creates one owner task per defect and records the IDs on AIU-177). The `test.fail` annotations in `flow-01.spec.ts` reference AIU-271.
+- **Integrated evidence is conditional on F1 and F3:** TC-FLW-01 passes only with two network-layer workarounds in `support.ts` (the added `access-control-allow-credentials` header and a minted bearer). Until F1 and F3 are fixed in their owner tickets, it proves the screens, data and state carried between steps, not an unaided browser-to-api call. QA reuse of this test must carry this limit.
+- **Exception:** `.gitleaksignore` is outside the allowed paths; it holds fingerprints for earlier commits only (branch name text and an old fake test key, no credentials).
