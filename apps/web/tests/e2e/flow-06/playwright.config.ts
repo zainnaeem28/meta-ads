@@ -11,7 +11,11 @@ const webDir = resolve(__dirname, '../../..');
 const reports = resolve(webDir, process.env.REPORT_DIR ?? 'reports/flow-06');
 
 // One database per run, created by the first config load (workers inherit the variable) and dropped by global teardown.
-process.env.FLOW06_DATABASE_URL ??= execFileSync('node', [resolve(__dirname, 'database.mjs'), 'create'], { encoding: 'utf8' });
+process.env.FLOW06_DATABASE_URL ??= execFileSync(
+  'node',
+  [resolve(__dirname, 'database.mjs'), 'create'],
+  { encoding: 'utf8' },
+);
 
 export default defineConfig({
   ...base,
