@@ -15,9 +15,7 @@ if (process.argv[2] === 'create') {
   process.stdout.write(database.url);
 } else if (process.argv[2] === 'drop') {
   const { adminUrl } = await load('platform/db/test-database.js');
-  const { default: pg } = await import(
-    pathToFileURL(resolve(dist, '../node_modules/pg/lib/index.js')).href
-  );
+  const { default: pg } = await import(pathToFileURL(resolve(dist, '../node_modules/pg/lib/index.js')).href);
   const client = new pg.Client({ connectionString: adminUrl() });
   await client.connect();
   await client.query(`DROP DATABASE IF EXISTS "${process.argv[3]}" WITH (FORCE)`);
