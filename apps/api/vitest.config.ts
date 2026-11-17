@@ -31,6 +31,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/brief-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-worker/junit.xml' }],
+      ['junit', { outputFile: 'reports/prod-qc/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],

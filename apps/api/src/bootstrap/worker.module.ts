@@ -23,7 +23,7 @@ import type { StoragePort } from '../modules/media/index.js';
 import { MEDIA_REPOSITORY } from '../modules/media/application/ports.js';
 import type { MediaRepository } from '../modules/media/application/ports.js';
 import { mediaConfigFrom } from '../modules/media/media.module.js';
-import { ProductionWorkerModule, ProviderCopyCleanup, VideoCopyJob, VideoPollJob, VideoSubmitJob, productionJobHandlers } from '../modules/production/production.module.js';
+import { ProductionWorkerModule, ProviderCopyCleanup, QcRunJob, VideoCopyJob, VideoPollJob, VideoSubmitJob, productionJobHandlers } from '../modules/production/production.module.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
 import { IdentityModule, InvitationJobs, identityJobHandlers } from '../modules/identity/index.js';
 import { MediaModule, SanitizeJob, UnattachedSweep, mediaJobHandlers } from '../modules/media/media.module.js';
@@ -291,6 +291,7 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
             poll: () => context.get(VideoPollJob, { strict: false }),
             copy: () => context.get(VideoCopyJob, { strict: false }),
             cleanup: () => context.get(ProviderCopyCleanup, { strict: false }),
+            qc: () => context.get(QcRunJob, { strict: false }),
           })),
       ...options.handlers,
     },
