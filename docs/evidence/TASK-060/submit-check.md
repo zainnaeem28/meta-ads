@@ -34,8 +34,8 @@ the `submit-check` document.
    (pnpm audit), which are the files passed to `--findings`.
 
 ## Performance (TC-USG, 2 s budget at 150,000 events)
-`docs/evidence/TASK-060/perf.json`, written by `reporting.integration.test.ts` on the shared test PostgreSQL (150,000
-`usage_events` over 50 accounts and 3 providers, 8 runs through HTTP): see the file for p95 and max.
+`apps/api/reports/reporting/perf.json` (ignored), written by `reporting.integration.test.ts` on the shared test PostgreSQL (150,000
+`usage_events` over 50 accounts and 3 providers, 8 runs through HTTP): first run: p95 152 ms, max 152 ms (budget 2000 ms).
 
 ## Tests
 `reporting.test.ts` (window, CSV), `usage-report.service.test.ts` (composition, empty state, 503 per source, window errors),

@@ -1,7 +1,0 @@
-{
-  "events": 150000,
-  "runs": 8,
-  "p95Ms": 152,
-  "maxMs": 152,
-  "budgetMs": 2000
-}

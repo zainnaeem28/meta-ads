@@ -276,9 +276,11 @@ describe('API-130 and API-131 through the api composition root', () => {
     void admin;
     const sorted = [...times].sort((x, y) => x - y);
     const p95 = sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)] ?? 0;
-    mkdirSync(join(import.meta.dirname, '..', '..', '..', '..', '..', 'docs', 'evidence', 'TASK-060'), { recursive: true });
+    // Written under the ignored reports folder; the committed evidence quotes the numbers of the submitted run.
+    const perfDir = join(import.meta.dirname, '..', '..', '..', 'reports', 'reporting');
+    mkdirSync(perfDir, { recursive: true });
     writeFileSync(
-      join(import.meta.dirname, '..', '..', '..', '..', '..', 'docs', 'evidence', 'TASK-060', 'perf.json'),
+      join(perfDir, 'perf.json'),
       `${JSON.stringify({ events: 150000, runs: times.length, p95Ms: Math.round(p95), maxMs: Math.round(sorted.at(-1) ?? 0), budgetMs: 2000 }, null, 2)}\n`,
     );
     expect(p95).toBeLessThan(2000);
