@@ -16,7 +16,7 @@ import type { OpsRuntime } from './runner.js';
 
 /** The connected database is the configured one: a connection string pointing elsewhere is a refusal, not a run. */
 async function connected(config: ProcessConfig): Promise<Database> {
-  const database = createDatabase({ ...dbConfigOf({ ...config, DATABASE_POOL_MAX: 2 }) }, { applicationName: 'shroomap-ops', max: 2 });
+  const database = createDatabase(dbConfigOf({ ...config, DATABASE_POOL_MAX: 2, DATABASE_ACQUIRE_TIMEOUT_MS: config.DATABASE_ACQUIRE_TIMEOUT_MS ?? 5000 }), { applicationName: 'shroomap-ops', max: 2 });
   try {
     const identity = await database.pool.query<{ name: string }>('select current_database() as name');
     const expected = decodeURIComponent(new URL(config.DATABASE_URL ?? '').pathname.slice(1));

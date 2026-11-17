@@ -33,6 +33,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/prod-worker/junit.xml' }],
       ['junit', { outputFile: 'reports/lifecycle-del/junit.xml' }],
       ['junit', { outputFile: 'reports/erasure/junit.xml' }],
+      ['junit', { outputFile: 'reports/opscli/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -60,6 +61,7 @@ export default defineConfig({
         'src/platform/idempotency/**/*.ts',
         'src/platform/health/**/*.ts',
         'src/platform/metrics/**/*.ts',
+        'src/platform/ops-cli/**/*.ts',
       ],
       exclude: [
         'src/**/*.test.ts',
@@ -185,6 +187,12 @@ export default defineConfig({
         'src/modules/production/application/worker/provider-copy-cleanup.job.ts',
         'src/modules/production/infrastructure/wavespeed/video-worker.repository.ts',
         'src/modules/production/infrastructure/wavespeed/key-auth.reporter.ts',
+        // The ops-cli SQL of the four commands, their production binding and the barrel are proven on real PostgreSQL through
+        // `runOps` with the production `executeCommand`, the real worker composition root and the compiled `dist/bin/ops.js` by
+        // ops-cli.integration.test.ts; the argument rules, the runner and the key cryptography are unit tested here.
+        'src/platform/ops-cli/commands.ts',
+        'src/platform/ops-cli/runtime.ts',
+        'src/platform/ops-cli/index.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',
