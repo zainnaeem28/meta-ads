@@ -63,30 +63,34 @@ export function FilterBar({
           onChange={(e) => onQueryChange(e.target.value)}
         />
       </div>
-      <div role="group" aria-label="Filter by status" className="inline-flex flex-wrap gap-2">
-        {chips.map((chip) => {
-          const pressed = chip.id === status;
-          return (
-            <button
-              key={chip.id}
-              type="button"
-              aria-pressed={pressed}
-              data-state={pressed ? 'selected' : 'default'}
-              onClick={() => onStatusChange(pressed ? '' : chip.id)}
-              className={`${CHIP_CLASS} ${
-                pressed
-                  ? 'border-primary bg-primary-subtle text-primary-active'
-                  : 'border-input bg-card text-foreground hover:bg-accent'
-              }`}
-            >
-              {chip.label}{' '}
-              {chip.count !== undefined ? (
-                <span className="text-caption text-muted-foreground">{chip.count}</span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+      {chips.length > 0 ? (
+        <div role="group" aria-label="Filter by status" className="inline-flex flex-wrap gap-2">
+          {chips.map((chip) => {
+            const pressed = chip.id === status;
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                aria-pressed={pressed}
+                data-state={pressed ? 'selected' : 'default'}
+                onClick={() => onStatusChange(pressed ? '' : chip.id)}
+                className={`${CHIP_CLASS} ${
+                  pressed
+                    ? 'border-foreground bg-foreground text-card'
+                    : 'border-input bg-card text-foreground hover:bg-accent'
+                }`}
+              >
+                {chip.label}{' '}
+                {chip.count !== undefined ? (
+                  <span className={pressed ? 'text-caption' : 'text-caption text-muted-foreground'}>
+                    {chip.count}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       {active ? (
         <Button variant="ghost" size="sm" onClick={onClearAll}>
           Clear all
