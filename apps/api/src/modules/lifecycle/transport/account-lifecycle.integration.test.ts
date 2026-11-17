@@ -21,7 +21,8 @@ import { buildLogger, createHttpLogging } from '../../../platform/logging/index.
 import { STORAGE_PORT } from '../../media/index.js';
 import type { StoragePort } from '../../media/index.js';
 import { priceTableSeedStep } from '../../usage/index.js';
-import { IDENTITY_PORT, LocalIdentity } from '../../identity/index.js';
+import { IDENTITY_PORT } from '../../identity/index.js';
+import type { LocalIdentity } from '../../identity/index.js';
 import { AccountErasureJob } from '../lifecycle.module.js';
 import { AccountLifecycleService } from '../application/account-lifecycle.service.js';
 
@@ -351,7 +352,7 @@ async function populated(a: { id: string; email: string; sub: string }) {
     [randomUUID(), a.id, randomUUID()],
   );
   // The subject's own invitation (with a provider invitation), one they sent, and an access request of theirs.
-  const providerInvitation = await idp.createInvitation(a.email, 7, 'http://localhost/invite');
+  const providerInvitation = await idp.createInvitation(a.email, 7);
   await pool.query(`update invitations set idp_invitation_id = $2, state = 'invited', accepted_user_id = null where lower(email) = $1`, [a.email, providerInvitation]);
   const sent = randomUUID();
   await pool.query(`insert into invitations (id, email, invited_by, state, expires_at) values ($1, $2, $3, 'invited', now() + interval '1 day')`, [sent, `sent-${sent.slice(0, 8)}@example.test`, a.id]);
