@@ -417,7 +417,7 @@ describe('production.video-submit and the clip, through the worker process', () 
   it('submits once with the key and a signed reference URL, polls, copies the clip to storage and deletes the provider task', async () => {
     const f = await clip();
     await send('production.video-submit', f.job);
-    const job = await until(f.job, (row) => row['state'] === 'completed', 'did not complete');
+    const job = await until(f.job, (row) => row['state'] === 'completed' && row['provider_output_deleted_at'] != null, 'did not complete and delete the provider task');
     expect(job['call_count']).toBe(1);
     expect(job['provider_task_id']).toMatch(/^task-/);
     expect(job['provider_completed_at']).not.toBeNull();
