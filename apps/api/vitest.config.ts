@@ -26,6 +26,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/campaigns/junit.xml' }],
       ['junit', { outputFile: 'reports/campaigns-list/junit.xml' }],
       ['junit', { outputFile: 'reports/brief-data/junit.xml' }],
+      ['junit', { outputFile: 'reports/brief-api/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -121,6 +122,10 @@ export default defineConfig({
         'src/modules/brief/infrastructure/repositories/brand-rules-file.ts',
         'src/modules/brief/infrastructure/repositories/brand-rules.reader.ts',
         'src/modules/brief/infrastructure/repositories/brand-rules.repository.ts',
+        // The brief repository is proven on real PostgreSQL through the api composition root by brief.integration.test.ts
+        // (transport); the port file holds types only.
+        'src/modules/brief/application/brief-ports.ts',
+        'src/modules/brief/infrastructure/repositories/brief.repository.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',
