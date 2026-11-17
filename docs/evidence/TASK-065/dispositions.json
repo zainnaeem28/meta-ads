@@ -11,6 +11,20 @@
       "reason": "Same advisory as CVE-2026-112366 (picomatch 4.0.7, development tooling only, not reachable from the api or worker at run time); the pnpm audit view of it.",
       "owner": "Backend Engineer",
       "expires": "2026-12-17"
+    },
+    {
+      "match": "openai-key-shaped",
+      "path": "docs/evidence/TASK-065/submit-check.md",
+      "reason": "False positive: an earlier commit of this branch holds a generated report whose branch name (task-065-...) matches the key-shaped rule. The file in the tree is a short placeholder; only the earlier commit in history carries the name. No credential exists.",
+      "owner": "Backend Engineer",
+      "expires": "2026-12-16"
+    },
+    {
+      "match": "openai-key-shaped",
+      "path": "apps/api/tests/conformance/zero-trust.conformance.test.ts",
+      "reason": "False positive: an earlier commit of this branch holds a made-up key-shaped string used as a request body in a test; the tree now takes it from the shared fixture, which assembles it from parts. No credential exists.",
+      "owner": "Backend Engineer",
+      "expires": "2026-12-16"
     }
   ]
 }
