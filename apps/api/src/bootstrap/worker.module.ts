@@ -31,6 +31,7 @@ import { IdentityModule, InvitationJobs, identityJobHandlers } from '../modules/
 import { MediaModule, SanitizeJob, UnattachedSweep, mediaJobHandlers } from '../modules/media/media.module.js';
 import { KeyUnsealer } from '../modules/provider-keys/infrastructure/key-unsealer.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
+import { VendorGateModule } from '../platform/vendor-gate/index.js';
 import { runLoggedJob } from '../platform/logging/index.js';
 
 /**
@@ -321,6 +322,7 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
     imports: [
       DatabaseModule.forRoot(dbConfigOf(config)),
       JobsModule.forRoot({ DATABASE_URL: dbConfigOf(config).DATABASE_URL, role: 'worker' }),
+      VendorGateModule.register(env),
       audit,
       IdentityModule.registerWorker(env),
       ...keys,
