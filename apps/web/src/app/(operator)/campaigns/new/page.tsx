@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { NewBriefWizard, type SubmitBlock } from '../../../../features/fe-screen-006a/NewBriefWizard';
-import { SCREEN_006_COPY } from '../../../../features/fe-screen-006a/copy';
+import { NewBriefWizard, type SubmitBlock } from '../../../../features/fe-screen-006b/NewBriefWizard';
+import { SCREEN_006B_COPY } from '../../../../features/fe-screen-006b/copy';
 
 export const metadata: Metadata = {
-  title: SCREEN_006_COPY.title,
+  title: SCREEN_006B_COPY.title,
   robots: { index: false, follow: false },
 };
 
