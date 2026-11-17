@@ -31,12 +31,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       cache: 'no-store',
     });
     if (!res.ok) return NextResponse.json({ token: null }, { status: 502 });
-    const body = (await res.json()) as { token?: unknown; expiresInSeconds?: unknown };
-    if (typeof body.token !== 'string') return NextResponse.json({ token: null }, { status: 502 });
+    // The api wraps every answer as `{ success, data }`.
+    const envelope = (await res.json()) as {
+      data?: { token?: unknown; sub?: unknown; expiresInSeconds?: unknown };
+    };
+    const body = envelope.data;
+    if (typeof body?.token !== 'string') return NextResponse.json({ token: null }, { status: 502 });
     const expiresInSeconds =
       typeof body.expiresInSeconds === 'number' ? body.expiresInSeconds : 3600;
     return NextResponse.json(
-      { token: body.token, expiresInSeconds },
+      { token: body.token, sub: typeof body.sub === 'string' ? body.sub : null, expiresInSeconds },
       { headers: { 'cache-control': 'no-store' } },
     );
   } catch {

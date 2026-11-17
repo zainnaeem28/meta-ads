@@ -21,12 +21,18 @@ describe('GET /local-token', () => {
   it('exchanges the local session for the api local-mode token', async () => {
     vi.stubEnv('AUTH_MODE', 'local');
     const f = vi.fn(
-      async () => new Response(JSON.stringify({ token: 'tok', expiresInSeconds: 3600 })),
+      async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: { token: 'tok', sub: 'user_local_1', expiresInSeconds: 3600 },
+          }),
+        ),
     );
     vi.stubGlobal('fetch', f);
     const { GET } = await import('./route');
     const res = await GET(await req());
-    expect(await res.json()).toEqual({ token: 'tok', expiresInSeconds: 3600 });
+    expect(await res.json()).toEqual({ token: 'tok', sub: 'user_local_1', expiresInSeconds: 3600 });
     const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toMatch(/\/api\/v1\/dev\/token$/);
     expect(JSON.parse(init.body as string)).toEqual({ email: 'o@example.test' });
