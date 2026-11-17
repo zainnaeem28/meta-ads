@@ -30,6 +30,11 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/brief-api/junit.xml' }],
       ['junit', { outputFile: 'reports/brief-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-jobs/junit.xml' }],
+      ['junit', { outputFile: 'reports/prod-worker/junit.xml' }],
+      ['junit', { outputFile: 'reports/prod-qc/junit.xml' }],
+      ['junit', { outputFile: 'reports/lifecycle-del/junit.xml' }],
+      ['junit', { outputFile: 'reports/erasure/junit.xml' }],
+      ['junit', { outputFile: 'reports/opscli/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -53,11 +58,13 @@ export default defineConfig({
         'src/modules/brief/**/*.ts',
         'src/modules/production/**/*.ts',
         'src/modules/reporting/**/*.ts',
+        'src/modules/lifecycle/**/*.ts',
         'src/platform/jobs/**/*.ts',
         'src/platform/rate-limit/**/*.ts',
         'src/platform/idempotency/**/*.ts',
         'src/platform/health/**/*.ts',
         'src/platform/metrics/**/*.ts',
+        'src/platform/ops-cli/**/*.ts',
       ],
       exclude: [
         'src/**/*.test.ts',
@@ -132,6 +139,23 @@ export default defineConfig({
         // (transport); the port file holds types only.
         'src/modules/brief/application/brief-ports.ts',
         'src/modules/brief/infrastructure/repositories/brief.repository.ts',
+        // The SQL repository, the queue adapter, the S3 ledger adapter, the controller and the module wiring are proven on real
+        // PostgreSQL through the api and worker composition roots by campaign-deletion.integration.test.ts; the port file
+        // holds types only.
+        'src/modules/lifecycle/lifecycle.module.ts',
+        'src/modules/lifecycle/application/campaign-deletion-ports.ts',
+        'src/modules/lifecycle/infrastructure/campaign-deletion.repository.ts',
+        'src/modules/lifecycle/infrastructure/campaign-deletion.queueing.ts',
+        'src/modules/lifecycle/infrastructure/campaign-erasure-ledger.ts',
+        'src/modules/lifecycle/transport/campaign-deletion.controller.ts',
+        // Account lifecycle (TASK-059): the SQL repository, the queue adapter, the identity adapters, the controller and the
+        // port file are proven on real PostgreSQL through the api and worker composition roots by
+        // account-lifecycle.integration.test.ts; the service and the erasure job are unit tested here.
+        'src/modules/lifecycle/application/account-lifecycle-ports.ts',
+        'src/modules/lifecycle/infrastructure/account-lifecycle.repository.ts',
+        'src/modules/lifecycle/infrastructure/account-erasure.queueing.ts',
+        'src/modules/lifecycle/infrastructure/account-identity.adapters.ts',
+        'src/modules/lifecycle/transport/account-lifecycle.controller.ts',
         // The Drizzle repository of the brief jobs and the key-auth reporter are proven on real PostgreSQL through the worker
         // composition root by brief-ai.integration.test.ts; the handlers and the adapter are unit tested here.
         'src/modules/brief/infrastructure/brief-jobs.repository.ts',
@@ -161,6 +185,35 @@ export default defineConfig({
         'src/modules/reporting/application/ports.ts',
         'src/modules/reporting/infrastructure/usage-report.reader.ts',
         'src/modules/reporting/transport/reporting.controller.ts',
+        // The worker's handlers (submit, poll, copy, cleanup), the sweep hooks, the SQL repository, the key-auth reporter and the
+        // port file are proven on real PostgreSQL through the worker composition root by production-worker.integration.test.ts
+        // (TC-CLP-06, TC-PCA-01 to 08 and 10, TC-EGR); the WaveSpeed adapter, the MP4 check and the key gate are unit tested.
+        'src/modules/production/application/worker/ports.ts',
+        'src/modules/production/application/worker/copy-queue.ts',
+        'src/modules/production/application/worker/recovery.ts',
+        'src/modules/production/application/worker/video-submit.job.ts',
+        'src/modules/production/application/worker/video-poll.job.ts',
+        'src/modules/production/application/worker/video-copy.job.ts',
+        'src/modules/production/application/worker/provider-copy-cleanup.job.ts',
+        'src/modules/production/infrastructure/wavespeed/video-worker.repository.ts',
+        'src/modules/production/infrastructure/wavespeed/key-auth.reporter.ts',
+        // The QC re-run service (API-064), the first-QC start, the sweep hooks, the SQL repository, the OpenAI key-auth reporter, the
+        // controller and the port file are proven on real PostgreSQL through the api and worker composition roots by
+        // qc-api.integration.test.ts and qc-worker.integration.test.ts (TC-QC-01 to 04); the job, the word error rate, the adapter
+        // and the audio extractor are unit tested.
+        'src/modules/production/application/qc-ports.ts',
+        'src/modules/production/application/qc-runs.service.ts',
+        'src/modules/production/application/qc-start.ts',
+        'src/modules/production/application/qc-recovery.ts',
+        'src/modules/production/infrastructure/openai-transcribe/qc.repository.ts',
+        'src/modules/production/infrastructure/openai-transcribe/key-auth.reporter.ts',
+        'src/modules/production/transport/qc.controller.ts',
+        // The ops-cli SQL of the four commands, their production binding and the barrel are proven on real PostgreSQL through
+        // `runOps` with the production `executeCommand`, the real worker composition root and the compiled `dist/bin/ops.js` by
+        // ops-cli.integration.test.ts; the argument rules, the runner and the key cryptography are unit tested here.
+        'src/platform/ops-cli/commands.ts',
+        'src/platform/ops-cli/runtime.ts',
+        'src/platform/ops-cli/index.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',

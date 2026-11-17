@@ -25,6 +25,7 @@ import { UsageModule } from '../modules/usage/usage.module.js';
 import { BriefModule } from '../modules/brief/brief.module.js';
 import { ProductionModule, progressBridge } from '../modules/production/production.module.js';
 import { ReportingModule } from '../modules/reporting/reporting.module.js';
+import { LifecycleModule } from '../modules/lifecycle/lifecycle.module.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { JobsModule } from '../platform/jobs/boss.js';
 import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
@@ -88,7 +89,8 @@ function apiModule(
     config.DATABASE_URL === undefined
       ? undefined
       : BriefModule.register(process.env, media === undefined || usage === undefined ? undefined : { media, usage });
-  const production = usage === undefined ? undefined : ProductionModule.register(process.env, { usage }, progress.bind);
+  const production =
+    usage === undefined ? undefined : ProductionModule.register(process.env, { usage }, progress.bind);
   @Module({
     imports: [
       logging.module(),
@@ -123,6 +125,8 @@ function apiModule(
       ...(production === undefined ? [] : [production]),
       // The usage report and its CSV (API-130, API-131); read-only over usage events, job counters and claim counts.
       ...(brief === undefined || production === undefined ? [] : [ReportingModule.register(process.env, { audit, brief, production })]),
+      // Campaign deletion (API-042) and its worker run; needs the database, the job queue, usage and production.
+      ...(usage === undefined || production === undefined ? [] : [LifecycleModule.register(process.env, { audit, usage, production })]),
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),
     ],
