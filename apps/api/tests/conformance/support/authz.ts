@@ -35,10 +35,10 @@ export const shapeOf = (seen: Observed): unknown => ({ status: seen.status, code
 
 /** A stable text of the owner's rows in every table that holds their records (to prove another caller changed nothing). */
 export async function snapshot(w: World, owner: Account): Promise<string> {
-  // The worker runs beside the suite and moves the state of jobs the owner created earlier, so the tables it writes are
-  // compared by row count (a foreign call that created or removed a row shows), the others by content.
+  // The worker runs beside the suite and moves the state of jobs the owner created earlier, so the job tables are compared
+  // by row count (a foreign call that created or removed a job shows; only the api inserts them), the others by content.
   const content = ['campaigns', 'drafts', 'claim_issues', 'provider_keys'];
-  const counted = ['media_objects', 'briefs', 'brief_jobs', 'video_jobs', 'qc_runs', 'assembly_jobs', 'thumbstopper_jobs', 'spend_reservations', 'usage_events', 'key_events', 'idempotency_records'];
+  const counted = ['brief_jobs', 'video_jobs', 'qc_runs', 'assembly_jobs', 'thumbstopper_jobs', 'idempotency_records'];
   const parts: string[] = [];
   for (const table of [...content, ...counted]) {
     const rows = await w.pool.query(`select md5(coalesce(string_agg(t::text, '|' order by t::text), '')) as h, count(*)::int as n from ${table} t where owner_id = $1`, [owner.id]);

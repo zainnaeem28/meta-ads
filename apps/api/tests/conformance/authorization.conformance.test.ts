@@ -85,7 +85,8 @@ describe('records of another owner (TC-AUT-01, 02, 03, TC-ZT-03)', () => {
         expect(shapeOf(seen), `${op.id} must not tell a foreign id from a missing one`).toEqual(shapeOf(phantom));
         expect(Object.keys(seen.headers).filter((h) => ['allow', 'location', 'etag', 'retry-after'].includes(h))).toEqual([]);
       }
-      expect(await snapshot(w, owner), `${op.id} changed the owner's rows`).toBe(before);
+      const after = await snapshot(w, owner);
+      expect(after.split('\n').filter((line, i) => line !== before.split('\n')[i]), `${op.id} changed the owner's rows`).toEqual([]);
       // The id is real: its owner is not told it is missing (the 404 above is the ownership check, not an empty table).
       const mine = await send(w, op, owner.token, { params });
       expect([401, 403, 404], `${op.id} as the owner answered ${String(mine.status)}`).not.toContain(mine.status);
