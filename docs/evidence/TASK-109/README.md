@@ -16,8 +16,8 @@
 
 | Finding | Response |
 | --- | --- |
-| FE109-01 | Correction ticket AIU-263 (to the TASK-090 owner). New test "390 px: every product name in the history list is fully visible" is `test.fail` until it lands. |
-| FE109-02 | Correction tickets AIU-264 (SCREEN-007), AIU-265 (SCREEN-008), AIU-266 (SCREEN-009). Acceptance "unavailable link goes to SCREEN-004" is not met until they land; the strict `test.fail` flips when fixed. |
+| FE109-01 | Correction ticket AIU-263 (to the TASK-090 owner). Fixed in `f83cdb6` (CMP-027 CampaignRow: text column `min-w-40`, badge wraps below the title); the 390 px test "every product name in the history list is fully visible" now passes without `test.fail`. |
+| FE109-02 | Correction tickets AIU-264 (SCREEN-007), AIU-265 (SCREEN-008), AIU-266 (SCREEN-009). The three tickets are done on their own branches (commits 3060b49, f70c3c1, 1bf159e) but are not yet in `dev`; acceptance "unavailable link goes to SCREEN-004" is met once they merge; the strict `test.fail` flips when fixed. |
 | FE109-03 | Keyboard test now drives Tab through the box and all four chips, toggles a chip with Space and Enter, then Tabs to the first campaign link and opens it with Enter. |
 | FE109-04 | Go-live limitation for QA: signed-in api answers are a contract mock (no out-of-process operator token); QA closes it with the real signed-in journey. |
 | FE109-05 | Session-expiry test asserts `return=/campaigns?q=calm`; stray blank line removed. |
