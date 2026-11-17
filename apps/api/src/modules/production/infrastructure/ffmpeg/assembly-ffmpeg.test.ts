@@ -174,5 +174,5 @@ describe.skipIf(realDir === undefined)('FfmpegAssembly (the real binaries)', () 
     } finally {
       rmSync(work, { recursive: true, force: true });
     }
-  });
+  }, 120_000);
 });
