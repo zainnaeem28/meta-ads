@@ -8,3 +8,5 @@ export { BrandRulesReader } from './infrastructure/repositories/brand-rules.read
 export { checkSegment, compileRules } from './domain/claim-check.js';
 export type { CompiledRules, Finding } from './domain/claim-check.js';
 export type { BrandRule } from './domain/brand-rules.js';
+export { dropSensitiveSentences } from './application/worker/post-process.js';
+export { brandRulesSeedStep } from './infrastructure/repositories/brand-rules-file.js';

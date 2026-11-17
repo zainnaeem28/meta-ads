@@ -6,3 +6,4 @@ export { IN_FLIGHT_JOB_READER } from './application/ports.js';
 export type { Executor as KeyExecutor, InFlightJobReader } from './application/ports.js';
 export { KEY_WRAP_PORT, PROVIDERS } from './domain/key-wrap.js';
 export type { KeyWrapPort, Provider } from './domain/key-wrap.js';
+export { generateKek, kekEnv } from './infrastructure/test-support.js';

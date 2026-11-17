@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { dropSensitiveSentences } from '../../src/modules/brief/application/worker/post-process.js';
+import { dropSensitiveSentences } from '../../src/modules/brief/index.js';
 import { runImageAnalysis, seedSubject, uploadImage } from './support/data.js';
 import { APP_BUCKET, bootStack, rowsHolding, silentJobLog } from './support/stack.js';
 import type { Account, Stack } from './support/stack.js';
