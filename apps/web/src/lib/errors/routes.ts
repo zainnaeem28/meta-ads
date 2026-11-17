@@ -8,6 +8,8 @@ export const ROUTES = {
   access: '/access',
   mfa: '/mfa',
   campaigns: '/campaigns',
+  // SCREEN-004: a missing, deleted or not-yours record.
+  unavailable: '/not-found?state=unavailable',
   providerKeys: '/settings/provider-keys',
   // The brief of the current campaign: the caller passes its own link; this is the list fallback.
   brief: '/campaigns',
