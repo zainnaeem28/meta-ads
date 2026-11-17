@@ -5,7 +5,6 @@ import type { DbTx } from '../../../../platform/db/index.js';
 import { BOSS } from '../../../../platform/jobs/boss.js';
 import type { enqueue } from '../../../../platform/jobs/enqueue.js';
 import { pollRearmHook } from '../../../../platform/jobs/poll.js';
-import { submitOrphanHook } from '../../../../platform/jobs/at-most-once.js';
 import type { SweepHook, SweepRegistry } from '../../../../platform/jobs/sweep-registry.js';
 import { UsageService } from '../../../usage/index.js';
 import { enqueueCopy } from './copy-queue.js';
@@ -22,18 +21,32 @@ type Usage = Pick<UsageService, 'convertUnconfirmed' | 'release'>;
 
 interface Settled {
   id: string;
-  owner_id: string;
   provider_model: string;
 }
 
-/** The ids and what the usage ledger needs of video jobs the sweep just settled. */
-async function describe(tx: DbTx, ids: readonly string[]): Promise<Settled[]> {
-  if (ids.length === 0) return [];
-  const rows = await tx.execute(
-    sql`select id::text, owner_id::text, provider_model from video_jobs where id in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})`,
-  );
-  return rows.rows as unknown as Settled[];
+/**
+ * The lock order allows one `spend:` lock per transaction (platform/db/locks.ts) and a sweep hook has one transaction, so a
+ * hook that touches the spend ledger settles one owner's rows per run. This many identical hooks run in a row, each taking
+ * the first owner still waiting (the one before it has just been settled), so that many owners are settled per tick.
+ */
+const OWNER_SLOTS = 8;
+
+function perOwner(
+  name: string,
+  firstOwner: (tx: DbTx) => Promise<string | null>,
+  settle: (tx: DbTx, ownerId: string) => Promise<number>,
+): SweepHook[] {
+  return Array.from({ length: OWNER_SLOTS }, (_, slot) => ({
+    name: `${name}-${String(slot + 1)}`,
+    async run(tx: DbTx) {
+      const ownerId = await firstOwner(tx);
+      return { swept: ownerId === null ? 0 : await settle(tx, ownerId) };
+    },
+  }));
 }
+
+const ownerOf = async (tx: DbTx, query: ReturnType<typeof sql>): Promise<string | null> =>
+  ((await tx.execute(query)).rows[0] as { owner_id: string } | undefined)?.owner_id ?? null;
 
 /**
  * The production recovery-sweep hooks (ARCHITECTURE §5.5, §5.11), run every minute by `platform.recovery-sweep`:
@@ -44,8 +57,13 @@ async function describe(tx: DbTx, ids: readonly string[]): Promise<Settled[]> {
  * - a finished clip with no output yet gets its copy job again (a lost job, a worker killed after the commit), and one
  *   past `PROVIDER_OUTPUT_COPY_WINDOW_HOURS` fails `output_unreachable`;
  * - the reservation of a failed or cancelled clip is deleted (the part its first QC would have used).
+ * The two hooks that touch the spend ledger settle one owner per run (see `OWNER_SLOTS`).
  */
-export function videoRecoveryHooks(deps: { readonly boss: Boss; readonly usage: Usage; readonly config: VideoWorkerConfig }): SweepHook[] {
+export function videoRecoveryHooks(deps: {
+  readonly boss: Boss;
+  readonly usage: Usage;
+  readonly config: VideoWorkerConfig;
+}): SweepHook[] {
   const { boss, usage, config } = deps;
   const rearm = pollRearmHook(
     'production.video-poll-rearm',
@@ -54,18 +72,23 @@ export function videoRecoveryHooks(deps: { readonly boss: Boss; readonly usage: 
     { intervalSec: config.pollIntervalSec, leaseSec: config.pollLeaseSec },
     POLL_REARM_GRACE_SEC,
   );
-  const orphans = submitOrphanHook('production.video-submit-orphans', VIDEO_TABLE, config.submitOrphanAfterSec, async (ids, tx) => {
-    for (const job of await describe(tx, ids)) {
-      await usage.convertUnconfirmed(tx, {
-        ownerId: job.owner_id,
-        call: { provider: 'wavespeed', operation: job.provider_model },
-        jobType: 'video',
-        jobId: job.id,
-        callSeq: 1,
-      });
-      await usage.release(tx, { ownerId: job.owner_id, jobType: 'video', jobId: job.id });
-    }
-  });
+  const orphaned = sql`state = 'submitting' and provider_task_id is null
+    and submitting_at <= now() - make_interval(secs => ${config.submitOrphanAfterSec})`;
+  const orphans = perOwner(
+    'production.video-submit-orphans',
+    (tx) => ownerOf(tx, sql`select owner_id::text as owner_id from video_jobs where ${orphaned} order by submitting_at limit 1`),
+    async (tx, ownerId) => {
+      const settled = await tx.execute(
+        sql`update video_jobs set state = 'failed', cause_class = 'outcome_unknown', updated_at = now()
+            where ${orphaned} and owner_id = ${ownerId} returning id::text as id, provider_model`,
+      );
+      for (const job of settled.rows as unknown as Settled[]) {
+        await usage.convertUnconfirmed(tx, { ownerId, call: { provider: 'wavespeed', operation: job.provider_model }, jobType: 'video', jobId: job.id, callSeq: 1 });
+        await usage.release(tx, { ownerId, jobType: 'video', jobId: job.id });
+      }
+      return settled.rows.length;
+    },
+  );
   const copies: SweepHook = {
     name: 'production.video-copy',
     async run(tx) {
@@ -86,21 +109,18 @@ export function videoRecoveryHooks(deps: { readonly boss: Boss; readonly usage: 
       return { swept: expired.rows.length + enqueued };
     },
   };
-  const reservations: SweepHook = {
-    name: 'production.video-reservations',
-    async run(tx) {
-      const terminal = await tx.execute(
-        sql`select j.id::text as id, j.owner_id::text as owner_id
-            from video_jobs j join spend_reservations r on r.job_type = 'video' and r.job_id = j.id
-            where j.state in ('failed', 'cancelled') limit ${BATCH}`,
-      );
-      for (const row of terminal.rows as { id: string; owner_id: string }[]) {
-        await usage.release(tx, { ownerId: row.owner_id, jobType: 'video', jobId: row.id });
-      }
-      return { swept: terminal.rows.length };
+  const terminal = sql`from video_jobs j join spend_reservations r on r.job_type = 'video' and r.job_id = j.id
+    where j.state in ('failed', 'cancelled')`;
+  const reservations = perOwner(
+    'production.video-reservations',
+    (tx) => ownerOf(tx, sql`select j.owner_id::text as owner_id ${terminal} limit 1`),
+    async (tx, ownerId) => {
+      const jobs = await tx.execute(sql`select j.id::text as id ${terminal} and j.owner_id = ${ownerId} limit ${BATCH}`);
+      for (const { id } of jobs.rows as { id: string }[]) await usage.release(tx, { ownerId, jobType: 'video', jobId: id });
+      return jobs.rows.length;
     },
-  };
-  return [rearm, orphans, copies, reservations];
+  );
+  return [rearm, ...orphans, copies, ...reservations];
 }
 
 /** Registers the hooks with the worker's sweep registry when the module starts; a hook already registered is left alone. */

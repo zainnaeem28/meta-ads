@@ -5,12 +5,13 @@ import type { Database } from '../../../../platform/db/index.js';
 import { EGRESS, EgressError } from '../../../../platform/egress/index.js';
 import type { Egress } from '../../../../platform/egress/index.js';
 import { UsageService } from '../../../usage/index.js';
-import { STORAGE_PORT, campaignKey } from '../../../media/index.js';
+import { campaignKey } from '../../../media/index.js';
 import type { StoragePort } from '../../../media/index.js';
 import { KeySession, followUpKey } from './key-session.js';
 import { peekMp4 } from './mp4.js';
 import {
   PRODUCTION_MEDIA,
+  PRODUCTION_STORAGE,
   ProviderCallFailed,
   VIDEO_GEN_PORT,
   VIDEO_WORKER_CONFIG,
@@ -59,7 +60,7 @@ export class VideoCopyJob {
     @Inject(KeySession) private readonly keys: KeySession,
     @Inject(VIDEO_GEN_PORT) private readonly video: VideoGenPort,
     @Inject(EGRESS) private readonly egress: Pick<Egress, 'fetchStream'>,
-    @Inject(STORAGE_PORT) private readonly storage: StoragePort,
+    @Inject(PRODUCTION_STORAGE) private readonly storage: StoragePort,
     @Inject(PRODUCTION_MEDIA) private readonly media: ProductionMedia,
     @Inject(VIDEO_WORKER_CONFIG) private readonly config: VideoWorkerConfig,
   ) {}

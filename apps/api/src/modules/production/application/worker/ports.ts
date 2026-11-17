@@ -202,3 +202,6 @@ export interface JobLog {
 
 /** The worker's recovery-sweep registry, passed in by the composition root. */
 export const SWEEP_REGISTRY = Symbol('SWEEP_REGISTRY');
+
+/** The worker's object storage as this module reads it (resolved lazily from the media module's own storage). */
+export const PRODUCTION_STORAGE = Symbol('PRODUCTION_STORAGE');

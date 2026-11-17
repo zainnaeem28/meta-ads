@@ -12,6 +12,7 @@ import {
   KEY_AUTH_THRESHOLD,
   KEY_OPENER,
   PRODUCTION_MEDIA,
+  PRODUCTION_STORAGE,
   SWEEP_REGISTRY,
   VIDEO_GEN_PORT,
   VIDEO_WORKER_CONFIG,
@@ -28,7 +29,6 @@ import { WaveSpeedVideoGen } from './infrastructure/wavespeed/wavespeed-video-ge
 import { VideoProgressReader } from './infrastructure/video-progress.reader.js';
 import type { ProgressSnapshotShape } from './infrastructure/video-progress.reader.js';
 import { VideoController } from './transport/video.controller.js';
-import { STORAGE_PORT } from '../media/index.js';
 import type { MediaService, StoragePort } from '../media/index.js';
 import type { SweepRegistry } from '../../platform/jobs/sweep-registry.js';
 
@@ -163,7 +163,6 @@ function authThreshold(env: Env): number {
 /** The worker's settings, checked at start-up: one out of range stops the process naming the variable (TC-PCA-07). */
 export function videoWorkerConfigFrom(env: Env): VideoWorkerConfig {
   videoConfigFrom(env); // VIDEO_JOB_DEADLINE_MIN and the clip options
-  const baseUrl = optional(env, 'WAVESPEED_BASE_URL');
   return {
     runningJobsPerUser: integer(env, 'RUNNING_JOBS_PER_USER', 5, 1, 20),
     pollIntervalSec: integer(env, 'POLL_INTERVAL_SEC', 5, 2, 3600),
@@ -171,7 +170,6 @@ export function videoWorkerConfigFrom(env: Env): VideoWorkerConfig {
     submitOrphanAfterSec: integer(env, 'SUBMIT_ORPHAN_AFTER_SEC', 300, 1, 86_400),
     copyWindowHours: integer(env, 'PROVIDER_OUTPUT_COPY_WINDOW_HOURS', 24, 1, 72),
     outputMaxBytes: integer(env, 'PROVIDER_OUTPUT_MAX_BYTES', 209_715_200, 1, Number.MAX_SAFE_INTEGER),
-    ...(baseUrl === undefined ? {} : { baseUrl }),
   };
 }
 
@@ -193,7 +191,7 @@ function lazyStorage(resolve: () => StoragePort): StoragePort {
 @Module({})
 export class ProductionWorkerModule {
   static register(env: Env, edge: ProductionWorkerEdge): DynamicModule {
-    const config = videoWorkerConfigFrom(env);
+    const config: VideoWorkerConfig = { ...videoWorkerConfigFrom(env), ...(edge.baseUrl === undefined ? {} : { baseUrl: edge.baseUrl }) };
     return {
       module: ProductionWorkerModule,
       imports: [edge.audit, edge.egress, edge.usage],
@@ -204,7 +202,7 @@ export class ProductionWorkerModule {
         { provide: KEY_OPENER, useValue: edge.opener },
         { provide: KEY_AUTH_REPORTER, useClass: WaveSpeedKeyAuthReporter },
         { provide: VIDEO_GEN_PORT, useClass: WaveSpeedVideoGen },
-        { provide: STORAGE_PORT, useValue: lazyStorage(edge.storage) },
+        { provide: PRODUCTION_STORAGE, useValue: lazyStorage(edge.storage) },
         { provide: PRODUCTION_MEDIA, useValue: productionMediaOf(edge.media) },
         { provide: SWEEP_REGISTRY, useValue: edge.registry },
         KeySession,

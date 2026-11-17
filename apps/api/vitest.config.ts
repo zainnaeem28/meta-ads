@@ -30,6 +30,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/brief-api/junit.xml' }],
       ['junit', { outputFile: 'reports/brief-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-jobs/junit.xml' }],
+      ['junit', { outputFile: 'reports/prod-worker/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -152,6 +153,18 @@ export default defineConfig({
         'src/modules/production/application/video-jobs.service.ts',
         'src/modules/production/infrastructure/video-progress.reader.ts',
         'src/modules/production/transport/video.controller.ts',
+        // The worker's handlers (submit, poll, copy, cleanup), the sweep hooks, the SQL repository, the key-auth reporter and the
+        // port file are proven on real PostgreSQL through the worker composition root by production-worker.integration.test.ts
+        // (TC-CLP-06, TC-PCA-01 to 08 and 10, TC-EGR); the WaveSpeed adapter, the MP4 check and the key gate are unit tested.
+        'src/modules/production/application/worker/ports.ts',
+        'src/modules/production/application/worker/copy-queue.ts',
+        'src/modules/production/application/worker/recovery.ts',
+        'src/modules/production/application/worker/video-submit.job.ts',
+        'src/modules/production/application/worker/video-poll.job.ts',
+        'src/modules/production/application/worker/video-copy.job.ts',
+        'src/modules/production/application/worker/provider-copy-cleanup.job.ts',
+        'src/modules/production/infrastructure/wavespeed/video-worker.repository.ts',
+        'src/modules/production/infrastructure/wavespeed/key-auth.reporter.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',
