@@ -139,10 +139,10 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
     },
   });
 
-  const reason: string | null = dirty
-    ? COPY.reasonUnsaved
-    : tooLong
-      ? COPY.reasonTooLong(tooLong.position)
+  const reason: string | null = tooLong
+    ? COPY.reasonTooLong(tooLong.position)
+    : dirty
+      ? COPY.reasonUnsaved
       : openIssues.length > 0
         ? COPY.reasonOpenIssues(openIssues.length, highRisk)
         : null;
@@ -157,8 +157,9 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
     accept.mutate();
   };
   const refresh = (error: unknown) => {
-    void brief.refetch();
-    if (resolveError(error, { surface: 'context' }).code === 'version_conflict') setShowLatest(true);
+    const conflict = resolveError(error, { surface: 'context' }).code === 'version_conflict';
+    // The latest text is shown only once it has arrived, so it is never the stale copy.
+    void brief.refetch().then(() => conflict && setShowLatest(true));
   };
   const goTo = (id: string) => {
     if (id === 'clips' && accepted) window.location.assign(`/campaigns/${campaignId}/clips`);
@@ -187,15 +188,11 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
           </a>
         </Button>
       ) : (
-        <Button
-          pending={accept.isPending}
-          pendingLabel={COPY.accepting}
-          aria-disabled={reason ? true : undefined}
-          aria-describedby={reason ? 'accept-reason' : undefined}
-          onClick={onAccept}
-        >
-          <Icon name="check" size={16} />
-          {COPY.accept}
+        <Button asChild disabled={reason !== null || accept.isPending} pending={accept.isPending}>
+          <button type="button" aria-describedby={reason ? 'accept-reason' : undefined} onClick={onAccept}>
+            <Icon name="check" size={16} />
+            {accept.isPending ? COPY.accepting : COPY.accept}
+          </button>
         </Button>
       )}
     </>
@@ -409,7 +406,7 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
           })}
         </GridCol>
         <GridCol span={4} as="section" aria-label={COPY.aside} className="flex flex-col gap-4">
-          <Card title={name} headingLevel={2}>
+          <Card title={COPY.asideTitle} headingLevel={2}>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-ui">
               <dt className="text-muted-foreground">{COPY.asideProduct}</dt>
               <dd>{camp?.productName ?? '–'}</dd>

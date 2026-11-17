@@ -36,6 +36,7 @@ export const SCREEN_007_COPY = {
   visualPrompt: 'Visual prompt',
   promptHelp: 'The product must be visible, described in one sentence. Prompts are checked with the same brand rules.',
   aside: 'Campaign details',
+  asideTitle: 'Campaign',
   asideProduct: 'Product',
   asideLength: 'Length',
   asideAudience: 'Audience',
