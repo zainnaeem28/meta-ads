@@ -1,0 +1,3 @@
+{"level":"info","time":"2026-01-01T00:00:00.000Z","releaseSha":"abc","requestId":"r-1","route":"/api/v1/me","method":"GET","status":200,"msg":"request completed for fixture.person@example.test"}
+{"level":"error","time":"2026-01-01T00:00:01.000Z","releaseSha":"abc","msg":"provider call failed, header Authorization: Bearer 0123456789abcdef0123456789abcdef"}
+{"level":"info","time":"2026-01-01T00:00:02.000Z","releaseSha":"abc","msg":"served https://files.invalid/u/1/media/2?X-Amz-Signature=00ff"}
