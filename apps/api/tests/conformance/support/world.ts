@@ -9,9 +9,13 @@ import { REAL_MIGRATIONS } from '../../../src/platform/db/test-database.js';
 // configuration the matrix needs (metrics token, access-request form).
 
 export const METRICS_TOKEN = 'm'.repeat(48);
+/** The models the api prices a reservation with: the stubs the committed price table names. */
+const MODELS = { OPENAI_TEXT_MODEL: 'local-stub-text', OPENAI_VISION_MODEL: 'local-stub-vision', OPENAI_IMAGE_MODEL: 'local-stub-image', RATE_LIMIT_IP_KEY: 'r'.repeat(40) };
 const LATER_MIGRATIONS = ['0100_task-055-production-assembly.sql', '0110_task-057-production-thumbstopper.sql'];
 
 export interface World extends Stack {
+  /** A second app with the access-request form enabled (API-002 answers 404 while the form is off). */
+  form?: World;
   /** A request as `fastify.inject` sees it, at any path (root or `/api/v1`), with any headers. */
   raw(method: string, url: string, headers?: Record<string, string>, payload?: unknown): Promise<{ status: number; headers: Record<string, unknown>; text: string; body: Body }>;
 }
@@ -24,7 +28,7 @@ const sqlStatements = (file: string): string[] =>
 
 export async function bootWorld(label: string, env: Record<string, string> = {}): Promise<World> {
   const saved: Record<string, string | undefined> = {};
-  for (const [name, value] of Object.entries({ METRICS_TOKEN, ...env })) {
+  for (const [name, value] of Object.entries({ METRICS_TOKEN, ...MODELS, ...env })) {
     saved[name] = process.env[name];
     process.env[name] = value;
   }

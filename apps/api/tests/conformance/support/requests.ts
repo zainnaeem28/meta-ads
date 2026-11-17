@@ -10,6 +10,9 @@ const PNG = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000
 /** A key shape both provider formats accept (the stack's probe stand-in answers 200). */
 export const FAKE_KEY = ['sk', 'conformance', 'a1B2c3D4e5F6g7H8i9J0k1L2'].join('-');
 
+/** A key shape the wavespeed format accepts. */
+export const WAVE_KEY = 'wavecanary_conf_0123456789abcdefghij';
+
 const BODIES: Readonly<Record<string, () => unknown>> = {
   'API-002': () => ({}),
   'API-011': () => ({ apiKey: FAKE_KEY }),
