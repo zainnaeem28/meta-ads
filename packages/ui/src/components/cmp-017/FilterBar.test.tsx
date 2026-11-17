@@ -55,9 +55,15 @@ describe('CMP-017 FilterBar', () => {
     render(<Bar />);
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Failed 2' }));
-    expect(screen.getByRole('button', { name: 'Failed 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Failed 2' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await user.click(screen.getByRole('button', { name: 'Ready' }));
-    expect(screen.getByRole('button', { name: 'Failed 2' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Failed 2' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     expect(screen.getByRole('button', { name: 'Ready' })).toHaveAttribute('data-state', 'selected');
     await user.click(screen.getByRole('button', { name: 'Ready' }));
     expect(screen.getByRole('button', { name: 'Ready' })).toHaveAttribute('aria-pressed', 'false');

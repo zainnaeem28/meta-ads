@@ -1,10 +1,30 @@
 import { randomBytes } from 'node:crypto';
-import { Body, Controller, Delete, Get, Headers, HttpCode, Inject, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { CurrentActor } from '../../../platform/http/auth.guard.js';
 import type { ActorContext } from '../../../platform/http/index.js';
-import { DomainError, PageResult, buildPage, decodeCursor, parseWith } from '../../../platform/http/index.js';
+import {
+  DomainError,
+  PageResult,
+  buildPage,
+  decodeCursor,
+  parseWith,
+} from '../../../platform/http/index.js';
 import { Scope } from '../../../platform/http/scope-registry.js';
 import { RateLimitedError } from '../../../platform/rate-limit/index.js';
 import type { LimitRule, RateLimiter } from '../../../platform/rate-limit/index.js';
@@ -127,7 +147,8 @@ function parsePosition(key: string): DraftPosition {
   }
   if (!Array.isArray(parsed) || parsed.length !== 2) throw bad();
   const [updatedAt, id] = parsed as unknown[];
-  if (typeof updatedAt !== 'string' || typeof id !== 'string' || !Id.safeParse(id).success) throw bad();
+  if (typeof updatedAt !== 'string' || typeof id !== 'string' || !Id.safeParse(id).success)
+    throw bad();
   if (Number.isNaN(Date.parse(updatedAt))) throw bad();
   return { updatedAt, id };
 }
@@ -151,14 +172,25 @@ export class DraftsController {
   ) {}
 
   @Get()
-  async list(@CurrentActor() actor: ActorContext | undefined, @Query() rawQuery: unknown): Promise<PageResult<DraftView>> {
+  async list(
+    @CurrentActor() actor: ActorContext | undefined,
+    @Query() rawQuery: unknown,
+  ): Promise<PageResult<DraftView>> {
     const ownerId = owner(actor);
     const query = parseWith(ListQuery, rawQuery);
     const scope = { owner: ownerId };
     const after =
-      query.cursor === undefined ? undefined : parsePosition(decodeCursor(this.cursorKey, query.cursor, scope));
+      query.cursor === undefined
+        ? undefined
+        : parsePosition(decodeCursor(this.cursorKey, query.cursor, scope));
     const rows = await this.drafts.listOpen(ownerId, query.limit + 1, after);
-    const page = buildPage(rows, query.limit, (d) => JSON.stringify([d.updatedAt, d.id]), this.cursorKey, scope);
+    const page = buildPage(
+      rows,
+      query.limit,
+      (d) => JSON.stringify([d.updatedAt, d.id]),
+      this.cursorKey,
+      scope,
+    );
     return new PageResult(page.items.map(view), page.pagination);
   }
 
@@ -225,7 +257,12 @@ export class DraftsController {
   }
 
   /** The route's own limit, counted per user on top of the general one; a refusal carries `Retry-After`. */
-  private async limit(reply: FastifyReply, scope: string, ownerId: string, rule: LimitRule): Promise<void> {
+  private async limit(
+    reply: FastifyReply,
+    scope: string,
+    ownerId: string,
+    rule: LimitRule,
+  ): Promise<void> {
     const result = await this.limiter.consume(scope, ownerId, rule.limit, rule.windowSeconds);
     if (result.allowed) return;
     void reply.header('Retry-After', String(result.retryAfterSeconds));

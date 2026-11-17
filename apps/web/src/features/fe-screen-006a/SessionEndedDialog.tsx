@@ -13,7 +13,10 @@ export function SessionEndedDialog({ step, onSignIn }: { step: number; onSignIn:
   const focusButton = () => card.current?.querySelector('button')?.focus();
   useEffect(focusButton, []);
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-3" data-testid="session-ended">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-3"
+      data-testid="session-ended"
+    >
       <div
         ref={card}
         role="alertdialog"
@@ -35,9 +38,7 @@ export function SessionEndedDialog({ step, onSignIn }: { step: number; onSignIn:
           {COPY.sessionBody(step)}
         </p>
         <div className="flex flex-col gap-2 md:flex-row md:justify-end">
-          <Button onClick={onSignIn}>
-            {COPY.signInAgain}
-          </Button>
+          <Button onClick={onSignIn}>{COPY.signInAgain}</Button>
         </div>
       </div>
     </div>,

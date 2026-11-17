@@ -72,8 +72,19 @@ export function buildCsp(input: { nonce: string; pathname: string; env: Security
   if (provider) script.push(provider);
   if (provider && !keyPage) script.push(CLERK_CHALLENGE);
 
-  const connect = ["'self'", ...(api ? [api] : []), ...(provider ? [provider] : []), ...(sentry ? [sentry] : [])];
-  const images = ["'self'", 'data:', 'blob:', ...storage, ...(provider && !keyPage ? [CLERK_IMAGES] : [])];
+  const connect = [
+    "'self'",
+    ...(api ? [api] : []),
+    ...(provider ? [provider] : []),
+    ...(sentry ? [sentry] : []),
+  ];
+  const images = [
+    "'self'",
+    'data:',
+    'blob:',
+    ...storage,
+    ...(provider && !keyPage ? [CLERK_IMAGES] : []),
+  ];
 
   const directives: Record<string, string[]> = {
     'default-src': ["'none'"],
@@ -105,11 +116,16 @@ export function newNonce(): string {
 }
 
 /** Everything a response carries on top of the static list, including the policy itself. */
-export function dynamicHeaders(input: { nonce: string; pathname: string; env: SecurityEnv }): Record<string, string> {
+export function dynamicHeaders(input: {
+  nonce: string;
+  pathname: string;
+  env: SecurityEnv;
+}): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Security-Policy': buildCsp(input),
   };
-  if (isHosted(input.env)) headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains';
+  if (isHosted(input.env))
+    headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains';
   // The key page must never be stored by the browser or a shared cache.
   if (isKeyPage(input.pathname)) headers['Cache-Control'] = 'no-store';
   return headers;

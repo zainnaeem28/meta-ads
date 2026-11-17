@@ -66,13 +66,18 @@ const JOB_COLUMNS = {
   deadlineAt: briefJobs.deadlineAt,
 };
 
-const QUEUES = { brief_generation: 'brief.generate', image_analysis: 'brief.analyze-image' } as const;
+const QUEUES = {
+  brief_generation: 'brief.generate',
+  image_analysis: 'brief.analyze-image',
+} as const;
 const DEADLINE_MINUTES = 10;
 const NOT_LIVE = ['failed', 'cancelled'];
 
 /** SHA-256 of the work a job does, as 64 hex characters (the `reuse_hash` column). */
 export function reuseHashOf(kind: JobKind, subjectId: string, generationSeq = 0): string {
-  return createHash('sha256').update(`${kind}\n${subjectId}\n${String(generationSeq)}`).digest('hex');
+  return createHash('sha256')
+    .update(`${kind}\n${subjectId}\n${String(generationSeq)}`)
+    .digest('hex');
 }
 
 /**
@@ -102,7 +107,12 @@ export class BriefJobCreator {
 
   /** The idempotency scope of one request. */
   scope(spec: Pick<JobSpec, 'ownerId' | 'operationId' | 'key' | 'requestHash'>): IdempotencyScope {
-    return { ownerId: spec.ownerId, operationId: spec.operationId, key: spec.key, requestHash: spec.requestHash };
+    return {
+      ownerId: spec.ownerId,
+      operationId: spec.operationId,
+      key: spec.key,
+      requestHash: spec.requestHash,
+    };
   }
 
   /**
@@ -111,7 +121,10 @@ export class BriefJobCreator {
    */
   async createOrReuse(tx: DbTx, spec: JobSpec, prepare?: () => Promise<void>): Promise<JobOutcome> {
     const reusable = await this.findReusable(tx, spec.ownerId, spec.reuseHash);
-    const stored: Omit<StoredResource, 'resourceId'> = { resourceType: spec.resource.type, responseStatus: 202 };
+    const stored: Omit<StoredResource, 'resourceId'> = {
+      resourceType: spec.resource.type,
+      responseStatus: 202,
+    };
     const outcome = await withIdempotency(
       tx,
       this.scope(spec),
@@ -121,7 +134,14 @@ export class BriefJobCreator {
         // What the job hangs on (the campaign and brief of a submit) is written first, in this transaction.
         if (prepare !== undefined) await prepare();
         // The record's own ID is the job's when it stands for the job.
-        return { job: await this.create(tx, spec, spec.resource.type === 'brief_job' ? resourceId : newId()), reused: false };
+        return {
+          job: await this.create(
+            tx,
+            spec,
+            spec.resource.type === 'brief_job' ? resourceId : newId(),
+          ),
+          reused: false,
+        };
       },
     );
     if (!outcome.replayed) return outcome.result;
@@ -136,7 +156,12 @@ export class BriefJobCreator {
   async replay(tx: DbTx, spec: JobSpec): Promise<JobOutcome> {
     const campaignId = spec.resource.id;
     if (campaignId === undefined) throw new TypeError('a replay needs the stored campaign');
-    const stored = { resourceType: spec.resource.type, responseStatus: 202, ttlHours: this.ttlHours, resourceId: campaignId };
+    const stored = {
+      resourceType: spec.resource.type,
+      responseStatus: 202,
+      ttlHours: this.ttlHours,
+      resourceId: campaignId,
+    };
     await withIdempotency(tx, this.scope(spec), stored, () => Promise.resolve(undefined));
     return { job: await this.replayedJob(tx, spec, campaignId), reused: true };
   }
@@ -146,7 +171,10 @@ export class BriefJobCreator {
     const record = await lookupRecord(tx, spec);
     if (record === undefined) return undefined;
     if (!record.requestHash.equals(spec.requestHash)) {
-      throw new DomainError('idempotency_key_reused', 'This request key was already used for a different request.');
+      throw new DomainError(
+        'idempotency_key_reused',
+        'This request key was already used for a different request.',
+      );
     }
     return { job: await this.replayedJob(tx, spec, record.resourceId), reused: true };
   }
@@ -156,7 +184,13 @@ export class BriefJobCreator {
     const rows = await tx
       .select(JOB_COLUMNS)
       .from(briefJobs)
-      .where(and(eq(briefJobs.ownerId, ownerId), eq(briefJobs.reuseHash, reuseHash), notInArray(briefJobs.state, NOT_LIVE)));
+      .where(
+        and(
+          eq(briefJobs.ownerId, ownerId),
+          eq(briefJobs.reuseHash, reuseHash),
+          notInArray(briefJobs.state, NOT_LIVE),
+        ),
+      );
     return rows[0];
   }
 
@@ -165,21 +199,36 @@ export class BriefJobCreator {
     const where =
       spec.resource.type === 'brief_job'
         ? and(eq(briefJobs.id, resourceId), eq(briefJobs.ownerId, spec.ownerId))
-        : and(eq(briefJobs.campaignId, resourceId), eq(briefJobs.ownerId, spec.ownerId), eq(briefJobs.kind, 'brief_generation'));
-    const rows = await tx.select(JOB_COLUMNS).from(briefJobs).where(where).orderBy(desc(briefJobs.createdAt), desc(briefJobs.id)).limit(1);
+        : and(
+            eq(briefJobs.campaignId, resourceId),
+            eq(briefJobs.ownerId, spec.ownerId),
+            eq(briefJobs.kind, 'brief_generation'),
+          );
+    const rows = await tx
+      .select(JOB_COLUMNS)
+      .from(briefJobs)
+      .where(where)
+      .orderBy(desc(briefJobs.createdAt), desc(briefJobs.id))
+      .limit(1);
     const row = rows[0];
-    if (row === undefined) throw new DomainError('not_found', 'This request no longer has a result.');
+    if (row === undefined)
+      throw new DomainError('not_found', 'This request no longer has a result.');
     return row;
   }
 
   private calls(kind: JobKind): { jobType: JobType; calls: BillableCall[] } {
     const model = kind === 'brief_generation' ? this.models.text : this.models.vision;
     if (model === undefined) {
-      throw new DomainError('service_unavailable', 'This service is not configured for AI generation yet. Try again later.');
+      throw new DomainError(
+        'service_unavailable',
+        'This service is not configured for AI generation yet. Try again later.',
+      );
     }
     const call: BillableCall = { provider: 'openai', operation: model };
     // A brief generation may make two calls (the second shortens long segments), both reserved up front (§5.3).
-    return kind === 'brief_generation' ? { jobType: 'brief_generation', calls: [call, call] } : { jobType: 'image_analysis', calls: [call] };
+    return kind === 'brief_generation'
+      ? { jobType: 'brief_generation', calls: [call, call] }
+      : { jobType: 'image_analysis', calls: [call] };
   }
 
   /** SB-D14 after the reuse lookup: lock, key check, cap check, job and reservation, then the queue message. */
@@ -216,13 +265,25 @@ export class BriefJobCreator {
       .where(and(eq(providerKeys.ownerId, ownerId), eq(providerKeys.provider, 'openai')));
     if (key === undefined) {
       throw new DomainError('key_missing', 'Add your OpenAI key in Settings, then try again.', [
-        { field: 'openaiKey', code: 'missing', message: 'No OpenAI key is stored for your account.' },
+        {
+          field: 'openaiKey',
+          code: 'missing',
+          message: 'No OpenAI key is stored for your account.',
+        },
       ]);
     }
     if (key.status === 'disabled') {
-      throw new DomainError('key_disabled', 'Your OpenAI key is disabled. Enter it again in Settings, then try again.', [
-        { field: 'openaiKey', code: 'disabled', message: 'Your OpenAI key was disabled after repeated authentication failures.' },
-      ]);
+      throw new DomainError(
+        'key_disabled',
+        'Your OpenAI key is disabled. Enter it again in Settings, then try again.',
+        [
+          {
+            field: 'openaiKey',
+            code: 'disabled',
+            message: 'Your OpenAI key was disabled after repeated authentication failures.',
+          },
+        ],
+      );
     }
     return key;
   }

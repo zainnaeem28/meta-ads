@@ -1,6 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { assertNoEgress } from '../../../../platform/db/index.js';
-import { EGRESS, EgressError, classifyEgressFailure, classifyProviderFailure } from '../../../../platform/egress/index.js';
+import {
+  EGRESS,
+  EgressError,
+  classifyEgressFailure,
+  classifyProviderFailure,
+} from '../../../../platform/egress/index.js';
 import type { Egress } from '../../../../platform/egress/index.js';
 import { THUMB_CONFIG } from '../../application/thumb-ports.js';
 import type { GeneratedImage, ImageGenPort, ThumbConfig } from '../../application/thumb-ports.js';
@@ -21,7 +26,8 @@ const SIZE = '1024x1536';
 
 function errorCodeOf(body: Buffer): string | undefined {
   try {
-    const code = (JSON.parse(body.toString('utf8')) as { error?: { code?: unknown } } | null)?.error?.code;
+    const code = (JSON.parse(body.toString('utf8')) as { error?: { code?: unknown } } | null)?.error
+      ?.code;
     return typeof code === 'string' ? code : undefined;
   } catch {
     return undefined;
@@ -29,12 +35,22 @@ function errorCodeOf(body: Buffer): string | undefined {
 }
 
 /** The type of an image from its first bytes, never from what the provider claims. Only PNG, JPEG and WebP are stored. */
-export function sniffImage(bytes: Buffer): Pick<GeneratedImage, 'contentType' | 'extension'> | null {
-  if (bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+export function sniffImage(
+  bytes: Buffer,
+): Pick<GeneratedImage, 'contentType' | 'extension'> | null {
+  if (
+    bytes.length >= 8 &&
+    bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  ) {
     return { contentType: 'image/png', extension: 'png' };
   }
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return { contentType: 'image/jpeg', extension: 'jpg' };
-  if (bytes.length >= 12 && bytes.subarray(0, 4).toString('latin1') === 'RIFF' && bytes.subarray(8, 12).toString('latin1') === 'WEBP') {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)
+    return { contentType: 'image/jpeg', extension: 'jpg' };
+  if (
+    bytes.length >= 12 &&
+    bytes.subarray(0, 4).toString('latin1') === 'RIFF' &&
+    bytes.subarray(8, 12).toString('latin1') === 'WEBP'
+  ) {
     return { contentType: 'image/webp', extension: 'webp' };
   }
   return null;
@@ -53,13 +69,18 @@ const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 export class OpenAiImageGen implements ImageGenPort {
   constructor(
     @Inject(EGRESS) private readonly egress: Pick<Egress, 'fetch'>,
-    @Inject(THUMB_CONFIG) private readonly config: Pick<ThumbConfig, 'imageModel' | 'imageUrl' | 'outputMaxBytes'>,
+    @Inject(THUMB_CONFIG)
+    private readonly config: Pick<ThumbConfig, 'imageModel' | 'imageUrl' | 'outputMaxBytes'>,
   ) {}
 
-  async generate(credential: ProviderCredential, input: { readonly prompt: string }): Promise<GeneratedImage> {
+  async generate(
+    credential: ProviderCredential,
+    input: { readonly prompt: string },
+  ): Promise<GeneratedImage> {
     assertNoEgress('openai image generation');
     const model = this.config.imageModel;
-    if (model === undefined || !MODEL.test(model)) throw new RangeError('the image model name is not acceptable');
+    if (model === undefined || !MODEL.test(model))
+      throw new RangeError('the image model name is not acceptable');
     let response: Awaited<ReturnType<Egress['fetch']>>;
     try {
       response = await this.egress.fetch(PROVIDER, {
@@ -81,7 +102,11 @@ export class OpenAiImageGen implements ImageGenPort {
     }
     if (response.status < 200 || response.status >= 300) {
       throw new ProviderCallFailed(
-        classifyProviderFailure(PROVIDER_NAME, { kind: 'http', status: response.status, errorCode: errorCodeOf(response.body) }),
+        classifyProviderFailure(PROVIDER_NAME, {
+          kind: 'http',
+          status: response.status,
+          errorCode: errorCodeOf(response.body),
+        }),
         response.status,
       );
     }
@@ -92,9 +117,11 @@ export class OpenAiImageGen implements ImageGenPort {
       throw new ProviderInvalidResponse('body is not JSON');
     }
     const encoded = (json as { data?: { b64_json?: unknown }[] } | null)?.data?.[0]?.b64_json;
-    if (typeof encoded !== 'string' || encoded === '' || !BASE64.test(encoded)) throw new ProviderInvalidResponse('no image data');
+    if (typeof encoded !== 'string' || encoded === '' || !BASE64.test(encoded))
+      throw new ProviderInvalidResponse('no image data');
     const bytes = Buffer.from(encoded, 'base64');
-    if (bytes.length > this.config.outputMaxBytes) throw new ProviderInvalidResponse('image is too large');
+    if (bytes.length > this.config.outputMaxBytes)
+      throw new ProviderInvalidResponse('image is too large');
     const type = sniffImage(bytes);
     if (type === null) throw new ProviderInvalidResponse('image is not a PNG, JPEG or WebP');
     return { bytes, ...type };

@@ -48,7 +48,8 @@ export function p95(values: readonly number[]): number | null {
   return sorted[Math.ceil(0.95 * sorted.length) - 1] ?? null;
 }
 
-const round3 = (value: number | null): number | null => (value === null ? null : Math.round(value * 1000) / 1000);
+const round3 = (value: number | null): number | null =>
+  value === null ? null : Math.round(value * 1000) / 1000;
 
 export class WindowStore {
   private requests: RequestEntry[] = [];

@@ -33,7 +33,8 @@ export function brandRulesSeedStep(path?: string): SeedStep {
     run: (tx) =>
       repository.upsert(
         tx,
-        loadBrandRulesFile(path ?? process.env['BRAND_RULES_FILE'] ?? DEFAULT_BRAND_RULES_FILE).rules,
+        loadBrandRulesFile(path ?? process.env['BRAND_RULES_FILE'] ?? DEFAULT_BRAND_RULES_FILE)
+          .rules,
       ),
   };
 }

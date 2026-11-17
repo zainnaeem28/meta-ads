@@ -8,8 +8,20 @@ export interface AdminNavItem extends NavItem {
 /** Administration navigation, in order (UI-UX §3). */
 export const ADMIN_NAV: readonly AdminNavItem[] = [
   { id: 'accounts', label: 'Accounts', href: '/admin/accounts', icon: 'users' },
-  { id: 'invitations', label: 'Invitations', short: 'Invites', href: '/admin/invitations', icon: 'mail-plus' },
-  { id: 'usage', label: 'Usage report', short: 'Usage', href: '/admin/usage', icon: 'chart-column' },
+  {
+    id: 'invitations',
+    label: 'Invitations',
+    short: 'Invites',
+    href: '/admin/invitations',
+    icon: 'mail-plus',
+  },
+  {
+    id: 'usage',
+    label: 'Usage report',
+    short: 'Usage',
+    href: '/admin/usage',
+    icon: 'chart-column',
+  },
   { id: 'alerts', label: 'Alerts', href: '/admin/alerts', icon: 'bell' },
   { id: 'settings', label: 'Settings', href: '/admin/settings', icon: 'settings' },
 ];

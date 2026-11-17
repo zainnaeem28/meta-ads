@@ -4,7 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { axeViolations } from '../../../test/axe';
 import { KeyCardDemo } from './gallery-demos';
-import { KEY_CARD_STATES, PROVIDERS, PROVIDER_NAMES, ProviderKeyCard, formatFingerprint } from './index';
+import {
+  KEY_CARD_STATES,
+  PROVIDERS,
+  PROVIDER_NAMES,
+  ProviderKeyCard,
+  formatFingerprint,
+} from './index';
 
 afterEach(cleanup);
 
@@ -33,7 +39,14 @@ describe('CMP-025 Provider key card', () => {
   }
 
   it('puts status, Replace key and Delete in the title row, has no reveal control and no key-events link', () => {
-    render(<ProviderKeyCard provider="wavespeed" state="active" hint="7Q2d" fingerprint="4f9a1c07b21e" />);
+    render(
+      <ProviderKeyCard
+        provider="wavespeed"
+        state="active"
+        hint="7Q2d"
+        fingerprint="4f9a1c07b21e"
+      />,
+    );
     const heading = screen.getByRole('heading', { name: 'WaveSpeed' });
     const row = heading.parentElement as HTMLElement;
     expect(row).toContainElement(screen.getByText('Active'));
@@ -75,7 +88,13 @@ describe('CMP-025 Provider key card', () => {
   });
 
   it('empty state: Not added badge, description and Add key button, no rows', () => {
-    const { rerender } = render(<ProviderKeyCard provider="wavespeed" state="none" description="Used to generate the video clips." />);
+    const { rerender } = render(
+      <ProviderKeyCard
+        provider="wavespeed"
+        state="none"
+        description="Used to generate the video clips."
+      />,
+    );
     expect(screen.getByText('Not added')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add WaveSpeed key' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Delete/ })).toBeNull();

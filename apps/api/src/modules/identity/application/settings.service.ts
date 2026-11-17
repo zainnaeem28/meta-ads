@@ -18,7 +18,9 @@ export interface SettingsOptions {
   readonly abuseLimitsEnabled: boolean;
 }
 
-export function settingsOptionsFrom(env: Readonly<Record<string, string | undefined>>): SettingsOptions {
+export function settingsOptionsFrom(
+  env: Readonly<Record<string, string | undefined>>,
+): SettingsOptions {
   return {
     emailVerificationRequired: env['SIGNUP_OPEN_EMAIL_VERIFICATION'] === 'true',
     signupRateLimitEnabled: env['SIGNUP_OPEN_RATE_LIMIT'] === 'true',
@@ -31,7 +33,9 @@ export interface SettingsView {
   readonly accessRequestFormEnabled: boolean;
   readonly mfaRequiredFor: 'all' | 'admins';
   readonly inviteEmailDomains: readonly string[];
-  readonly openModePrerequisites: SettingsOptions & { readonly verificationRecordId: string | null };
+  readonly openModePrerequisites: SettingsOptions & {
+    readonly verificationRecordId: string | null;
+  };
 }
 
 /** Settings (API-120, API-121): the signup mode is editable, everything else is configuration shown read-only. */
@@ -53,7 +57,10 @@ export class SettingsService {
    * API-121. Flipping to `open` is refused with the missing prerequisites named; setting the current mode answers
    * unchanged and records no event. Existing accounts are never touched.
    */
-  async setSignupMode(actor: { userId: string; requestId: string }, mode: SignupMode): Promise<SettingsView> {
+  async setSignupMode(
+    actor: { userId: string; requestId: string },
+    mode: SignupMode,
+  ): Promise<SettingsView> {
     return this.database.uow.run(async (tx) => {
       const current = await this.store.read(tx, true);
       if (current.signupMode === mode) return this.view(current);
@@ -63,7 +70,11 @@ export class SettingsService {
           throw new DomainError(
             'signup_open_prerequisites',
             'Open signup needs its prerequisites first.',
-            missing.map((field) => ({ field, code: 'missing', message: 'This prerequisite is not in place.' })),
+            missing.map((field) => ({
+              field,
+              code: 'missing',
+              message: 'This prerequisite is not in place.',
+            })),
           );
         }
       }
@@ -90,7 +101,10 @@ export class SettingsService {
     return missing;
   }
 
-  private view(row: { signupMode: SignupMode; openModeVerificationId: string | null }): SettingsView {
+  private view(row: {
+    signupMode: SignupMode;
+    openModeVerificationId: string | null;
+  }): SettingsView {
     return {
       signupMode: row.signupMode,
       accessRequestFormEnabled: this.auth.accessRequestFormEnabled,

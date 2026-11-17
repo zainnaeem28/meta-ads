@@ -3,7 +3,12 @@ import { ModuleRef } from '@nestjs/core';
 import { AdminUsersService, IDENTITY_PORT, IdentityNotFound } from '../../identity/index.js';
 import type { IdentityPort } from '../../identity/index.js';
 import type { DbTx } from '../../../platform/db/index.js';
-import type { AccountAdmin, AccountIdentity, AccountStatus, AccountView } from '../application/account-lifecycle-ports.js';
+import type {
+  AccountAdmin,
+  AccountIdentity,
+  AccountStatus,
+  AccountView,
+} from '../application/account-lifecycle-ports.js';
 
 /**
  * The identity module's admin service, found when first used: the composition root imports the identity module itself,

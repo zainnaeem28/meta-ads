@@ -35,7 +35,9 @@ export class UnattachedSweep {
     let failed = 0;
     while (seen.size < MAX_PER_RUN) {
       const batch = (
-        await this.database.uow.run((tx) => this.maintenance.listUnattachedBefore(tx, cutoff, BATCH + seen.size))
+        await this.database.uow.run((tx) =>
+          this.maintenance.listUnattachedBefore(tx, cutoff, BATCH + seen.size),
+        )
       ).filter((row) => !seen.has(row.id));
       if (batch.length === 0) break;
       for (const { id } of batch.slice(0, BATCH)) {

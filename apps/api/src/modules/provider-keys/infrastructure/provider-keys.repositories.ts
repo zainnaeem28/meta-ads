@@ -61,7 +61,9 @@ const toRecord = (row: KeyRow): KeyRecord => ({
   status: row.status as KeyStatus,
 });
 
-const toAuth = (row: Omit<AuthResultRow, 'provider' | 'status'> & { provider: string; status: string }): AuthResultRow => ({
+const toAuth = (
+  row: Omit<AuthResultRow, 'provider' | 'status'> & { provider: string; status: string },
+): AuthResultRow => ({
   ...row,
   provider: row.provider as Provider,
   status: row.status as KeyStatus,
@@ -93,11 +95,20 @@ export class DrizzleProviderKeyRepository implements ProviderKeyRepository {
   }
 
   async list(db: Executor, ownerId: string): Promise<KeyRecord[]> {
-    const rows = await db.select(keyColumns).from(providerKeys).where(eq(providerKeys.ownerId, ownerId));
+    const rows = await db
+      .select(keyColumns)
+      .from(providerKeys)
+      .where(eq(providerKeys.ownerId, ownerId));
     return rows.map(toRecord);
   }
 
-  async insert(db: Executor, id: string, ownerId: string, provider: Provider, write: KeyWrite): Promise<boolean> {
+  async insert(
+    db: Executor,
+    id: string,
+    ownerId: string,
+    provider: Provider,
+    write: KeyWrite,
+  ): Promise<boolean> {
     const rows = await db
       .insert(providerKeys)
       .values({ id, ownerId, provider, ...writeValues(write) })
@@ -107,7 +118,12 @@ export class DrizzleProviderKeyRepository implements ProviderKeyRepository {
   }
 
   /** Overwrites the sealed bytes of the old key in place: nothing of it is kept (REQ-017). */
-  async replace(db: Executor, id: string, expectedVersion: number, write: KeyWrite): Promise<boolean> {
+  async replace(
+    db: Executor,
+    id: string,
+    expectedVersion: number,
+    write: KeyWrite,
+  ): Promise<boolean> {
     const rows = await db
       .update(providerKeys)
       .set({ ...writeValues(write), disabledAt: null, updatedAt: sql`now()` })
@@ -132,7 +148,12 @@ export class DrizzleProviderKeyRepository implements ProviderKeyRepository {
     return rows.map((row) => ({ id: row.id, provider: row.provider as Provider }));
   }
 
-  async recordFailure(db: Executor, id: string, version: number, threshold: number): Promise<AuthResultRow | null> {
+  async recordFailure(
+    db: Executor,
+    id: string,
+    version: number,
+    threshold: number,
+  ): Promise<AuthResultRow | null> {
     const next = sql`${providerKeys.consecutiveAuthFailures} + 1`;
     const reached: SQL = sql`${next} >= ${threshold}`;
     const rows = await db
@@ -143,7 +164,13 @@ export class DrizzleProviderKeyRepository implements ProviderKeyRepository {
         disabledAt: sql`case when ${reached} then now() else ${providerKeys.disabledAt} end`,
         updatedAt: sql`now()`,
       })
-      .where(and(eq(providerKeys.id, id), eq(providerKeys.version, version), ne(providerKeys.status, 'disabled')))
+      .where(
+        and(
+          eq(providerKeys.id, id),
+          eq(providerKeys.version, version),
+          ne(providerKeys.status, 'disabled'),
+        ),
+      )
       .returning(authColumns);
     return rows[0] === undefined ? null : toAuth(rows[0]);
   }
@@ -154,7 +181,11 @@ export class DrizzleProviderKeyRepository implements ProviderKeyRepository {
     version: number,
   ): Promise<{ row: AuthResultRow; activated: boolean } | null> {
     const live = and(eq(providerKeys.id, id), eq(providerKeys.version, version));
-    const reset = { consecutiveAuthFailures: 0, lastValidatedAt: sql`now()`, updatedAt: sql`now()` };
+    const reset = {
+      consecutiveAuthFailures: 0,
+      lastValidatedAt: sql`now()`,
+      updatedAt: sql`now()`,
+    };
     const activated = await db
       .update(providerKeys)
       .set({ ...reset, status: 'active' })
@@ -174,7 +205,11 @@ export class DrizzleProviderKeyRepository implements ProviderKeyRepository {
       .update(providerKeys)
       .set({ status: 'disabled', disabledAt: sql`now()`, updatedAt: sql`now()` })
       .where(ne(providerKeys.status, 'disabled'))
-      .returning({ id: providerKeys.id, ownerId: providerKeys.ownerId, provider: providerKeys.provider });
+      .returning({
+        id: providerKeys.id,
+        ownerId: providerKeys.ownerId,
+        provider: providerKeys.provider,
+      });
     return rows.map((row) => ({ ...row, provider: row.provider as Provider }));
   }
 }
@@ -189,10 +224,17 @@ export class DrizzleKeyEventRepository implements KeyEventRepository {
     const filters: SQL[] = [eq(keyEvents.ownerId, ownerId)];
     if (query.provider !== undefined) filters.push(eq(keyEvents.provider, query.provider));
     if (query.after !== undefined) {
-      filters.push(sql`(${keyEvents.at}, ${keyEvents.id}) < (${query.after.at}::timestamptz, ${query.after.id}::uuid)`);
+      filters.push(
+        sql`(${keyEvents.at}, ${keyEvents.id}) < (${query.after.at}::timestamptz, ${query.after.id}::uuid)`,
+      );
     }
     const rows = await db
-      .select({ id: keyEvents.id, provider: keyEvents.provider, kind: keyEvents.kind, at: sql<string>`${keyEvents.at}::text` })
+      .select({
+        id: keyEvents.id,
+        provider: keyEvents.provider,
+        kind: keyEvents.kind,
+        at: sql<string>`${keyEvents.at}::text`,
+      })
       .from(keyEvents)
       .where(and(...filters))
       .orderBy(desc(keyEvents.at), desc(keyEvents.id))
@@ -205,4 +247,3 @@ export class DrizzleKeyEventRepository implements KeyEventRepository {
     }));
   }
 }
-

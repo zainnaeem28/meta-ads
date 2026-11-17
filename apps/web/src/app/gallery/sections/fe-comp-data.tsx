@@ -56,7 +56,12 @@ export default function FeCompDataSection() {
           <Card title="Recent activity" state="loading" />
         </Cell>
         <Cell id="card-empty" label="CMP-018 empty">
-          <Card title="Recent activity" state="empty" emptyTitle="No activity yet" emptyDescription="Runs appear here." />
+          <Card
+            title="Recent activity"
+            state="empty"
+            emptyTitle="No activity yet"
+            emptyDescription="Runs appear here."
+          />
         </Cell>
         <Cell id="card-unavailable" label="CMP-018 unavailable">
           <Card title="Spend" state="unavailable" />
@@ -64,10 +69,17 @@ export default function FeCompDataSection() {
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Cell id="empty-empty" label="CMP-019 empty">
-          <EmptyState title="No campaigns yet" description="Create your first campaign to see it here." />
+          <EmptyState
+            title="No campaigns yet"
+            description="Create your first campaign to see it here."
+          />
         </Cell>
         <Cell id="empty-nomatches" label="CMP-019 no matches">
-          <EmptyState variant="no-matches" title="No results" description="Try a different search or clear the filters." />
+          <EmptyState
+            variant="no-matches"
+            title="No results"
+            description="Try a different search or clear the filters."
+          />
         </Cell>
         <Cell id="empty-error" label="CMP-019 load error (role=alert)">
           <ErrorDemo />

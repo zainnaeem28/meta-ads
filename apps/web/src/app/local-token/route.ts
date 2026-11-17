@@ -33,8 +33,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!res.ok) return NextResponse.json({ token: null }, { status: 502 });
     const body = (await res.json()) as { token?: unknown; expiresInSeconds?: unknown };
     if (typeof body.token !== 'string') return NextResponse.json({ token: null }, { status: 502 });
-    const expiresInSeconds = typeof body.expiresInSeconds === 'number' ? body.expiresInSeconds : 3600;
-    return NextResponse.json({ token: body.token, expiresInSeconds }, { headers: { 'cache-control': 'no-store' } });
+    const expiresInSeconds =
+      typeof body.expiresInSeconds === 'number' ? body.expiresInSeconds : 3600;
+    return NextResponse.json(
+      { token: body.token, expiresInSeconds },
+      { headers: { 'cache-control': 'no-store' } },
+    );
   } catch {
     return NextResponse.json({ token: null }, { status: 502 });
   }

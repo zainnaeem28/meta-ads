@@ -45,8 +45,12 @@ function harness(initial: DeletionRun, media?: Partial<CampaignMediaPurge>) {
         ...current,
         step: patch.step,
         attempts: 0,
-        remainingObjects: patch.remainingObjects === undefined ? current.remainingObjects : patch.remainingObjects,
-        notBefore: patch.notBeforeInMs === undefined ? current.notBefore : new Date(Date.now() + patch.notBeforeInMs).toISOString(),
+        remainingObjects:
+          patch.remainingObjects === undefined ? current.remainingObjects : patch.remainingObjects,
+        notBefore:
+          patch.notBeforeInMs === undefined
+            ? current.notBefore
+            : new Date(Date.now() + patch.notBeforeInMs).toISOString(),
       };
       events.push(`advance:${String(patch.step)}`);
       return Promise.resolve();
@@ -87,7 +91,9 @@ function harness(initial: DeletionRun, media?: Partial<CampaignMediaPurge>) {
   };
   const audit = { record: vi.fn(() => Promise.resolve('a')) };
   const announce = vi.fn();
-  const alerts = { raiseAlert: vi.fn(() => Promise.resolve({ raised: true, alertId: 'x', announce })) };
+  const alerts = {
+    raiseAlert: vi.fn(() => Promise.resolve({ raised: true, alertId: 'x', announce })),
+  };
   const job = new CampaignDeletionJob(
     { uow: { run: (fn: (t: DbTx) => Promise<unknown>) => fn(tx) } } as never,
     repository,
@@ -107,7 +113,10 @@ describe('campaign deletion run', () => {
     const h = harness(run());
     expect(await h.job.run('run-1', log)).toBe('waiting');
     expect(h.ledger.record).toHaveBeenCalledOnce();
-    expect(h.ledger.record).toHaveBeenCalledWith('erasure/2026-11-17T10-00-00-000Z-run-1', JSON.stringify({ runId: 'run-1', kind: 'campaign', subjectId: 'camp-1' }));
+    expect(h.ledger.record).toHaveBeenCalledWith(
+      'erasure/2026-11-17T10-00-00-000Z-run-1',
+      JSON.stringify({ runId: 'run-1', kind: 'campaign', subjectId: 'camp-1' }),
+    );
     expect(h.state().step).toBe(3);
     expect(h.sent).toHaveLength(1);
     expect(h.sent[0]?.startAfterSec).toBeGreaterThan(30 * 60);
@@ -118,7 +127,10 @@ describe('campaign deletion run', () => {
     expect(await moved.job.run('run-1', log)).toBe('completed');
     expect(moved.events).toEqual(['advance:4', 'hard-delete']);
     expect(moved.state()).toMatchObject({ state: 'completed', remainingObjects: 0 });
-    expect(moved.audit.record).toHaveBeenCalledWith(tx, expect.objectContaining({ action: 'campaign.deletion_completed', actorType: 'system' }));
+    expect(moved.audit.record).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ action: 'campaign.deletion_completed', actorType: 'system' }),
+    );
   });
 
   it('does not run before not_before and sends the job again for the remaining time', async () => {
@@ -129,7 +141,11 @@ describe('campaign deletion run', () => {
   });
 
   it('skips a missing, finished, stuck or account run', async () => {
-    for (const over of [{ state: 'completed' as const }, { state: 'stuck' as const }, { kind: 'account' as const }]) {
+    for (const over of [
+      { state: 'completed' as const },
+      { state: 'stuck' as const },
+      { kind: 'account' as const },
+    ]) {
       const h = harness(run(over));
       expect(await h.job.run('run-1', log)).toBe('skipped');
       expect(h.ledger.record).not.toHaveBeenCalled();
@@ -144,15 +160,23 @@ describe('campaign deletion run', () => {
   });
 
   it('a failing storage delete is retried by the queue, then stuck with one alert and an audit event', async () => {
-    const h = harness(run({ step: 2 }), { deleteForCampaign: () => Promise.reject(new TypeError('r2 down u/own-1')) });
+    const h = harness(run({ step: 2 }), {
+      deleteForCampaign: () => Promise.reject(new TypeError('r2 down u/own-1')),
+    });
     await expect(h.job.run('run-1', log)).rejects.toThrow('r2 down');
     expect(h.state()).toMatchObject({ state: 'running', attempts: 1, lastErrorClass: 'TypeError' });
     expect(await h.job.run('run-1', log)).toBe('stuck');
     expect(h.state().state).toBe('stuck');
     expect(h.alerts.raiseAlert).toHaveBeenCalledOnce();
-    expect(h.alerts.raiseAlert).toHaveBeenCalledWith(tx, 'campaign_deletion_stuck', 'own-1', { attempts: 2, step: 2 });
+    expect(h.alerts.raiseAlert).toHaveBeenCalledWith(tx, 'campaign_deletion_stuck', 'own-1', {
+      attempts: 2,
+      step: 2,
+    });
     expect(h.announce).toHaveBeenCalledOnce();
-    expect(h.audit.record).toHaveBeenCalledWith(tx, expect.objectContaining({ action: 'campaign.deletion_stuck', outcome: 'failed' }));
+    expect(h.audit.record).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ action: 'campaign.deletion_stuck', outcome: 'failed' }),
+    );
     // A stuck run is left alone: no second alert.
     expect(await h.job.run('run-1', log)).toBe('skipped');
     expect(h.alerts.raiseAlert).toHaveBeenCalledOnce();

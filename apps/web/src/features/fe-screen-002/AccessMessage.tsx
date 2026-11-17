@@ -26,7 +26,13 @@ const BADGE: Record<'neutral' | 'error', string> = {
 export function AccessMessage({ state }: { state: Exclude<Screen002State, 'not-linked'> }) {
   const { title, body } = SCREEN_002_COPY[state];
   return (
-    <AuthShell variant="message" panel={AUTH_PANEL} title={title} description={body} className={`${FLAT} ${CENTRED}`}>
+    <AuthShell
+      variant="message"
+      panel={AUTH_PANEL}
+      title={title}
+      description={body}
+      className={`${FLAT} ${CENTRED}`}
+    >
       <span
         aria-hidden="true"
         data-state={state}
@@ -45,8 +51,17 @@ export function AccessMessage({ state }: { state: Exclude<Screen002State, 'not-l
 export function AccessNotLinked({ children }: { children: ReactNode }) {
   const { title, body } = SCREEN_002_COPY['not-linked'];
   return (
-    <AuthShell variant="message" panel={AUTH_PANEL} title={title} description={body} className={FLAT}>
-      <div data-state="not-linked" className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
+    <AuthShell
+      variant="message"
+      panel={AUTH_PANEL}
+      title={title}
+      description={body}
+      className={FLAT}
+    >
+      <div
+        data-state="not-linked"
+        className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4"
+      >
         {children}
       </div>
       <Link href={ROUTES.signIn} className="text-ui text-primary underline underline-offset-2">

@@ -38,7 +38,13 @@ export class ThumbController {
     const { campaignId } = parseWith(CampaignParams, rawParams);
     const key = parseIdempotencyKey(header);
     const body = parseWith(Create, rawBody);
-    const result = await this.thumbs.generate(ownerId, campaignId, body.calloutText, key, requestHash('POST', request.url, rawBody));
+    const result = await this.thumbs.generate(
+      ownerId,
+      campaignId,
+      body.calloutText,
+      key,
+      requestHash('POST', request.url, rawBody),
+    );
     return thumbView(result.job, result.reused);
   }
 

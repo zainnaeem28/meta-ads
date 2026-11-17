@@ -28,7 +28,25 @@ import type { BriefDraft, DraftSegment, TextAIPort } from './text-ai.port.js';
 // usage settlement per outcome, key guards and the clean-up of the generated text. The SQL, the unsealer and the
 // provider are proven on PostgreSQL through the worker composition root by brief-ai.integration.test.ts.
 
-const set = parseBrandRules(JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', '..', '..', '..', '..', '..', 'config', 'brand-rules.json'), 'utf8')) as unknown);
+const set = parseBrandRules(
+  JSON.parse(
+    readFileSync(
+      join(
+        import.meta.dirname,
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        'config',
+        'brand-rules.json',
+      ),
+      'utf8',
+    ),
+  ) as unknown,
+);
 const RULES = compileRules(set.rules);
 const OWNER = '0197a1b2-0000-7000-8000-000000000001';
 const KEY_ID = '0197a1b2-0000-7000-8000-0000000000a1';
@@ -37,7 +55,9 @@ const CAMPAIGN = '0197a1b2-0000-7000-8000-0000000000c1';
 const MEDIA = '0197a1b2-0000-7000-8000-0000000000d1';
 const log = { info: () => undefined, warn: () => undefined };
 const calm = (n: number): string =>
-  Array.from({ length: n }, (_, i) => (i % 5 === 4 || i === n - 1 ? `calm${String(i)}.` : `calm${String(i)}`)).join(' ');
+  Array.from({ length: n }, (_, i) =>
+    i % 5 === 4 || i === n - 1 ? `calm${String(i)}.` : `calm${String(i)}`,
+  ).join(' ');
 
 const key = (over: Partial<SealedKeyRow> = {}): SealedKeyRow => ({
   id: KEY_ID,
@@ -45,54 +65,117 @@ const key = (over: Partial<SealedKeyRow> = {}): SealedKeyRow => ({
   provider: 'openai',
   status: 'active',
   version: 3,
-  sealed: { ciphertext: Buffer.from('c'), nonce: Buffer.from('n'), wrappedDek: Buffer.from('w'), kekVersion: 1 },
+  sealed: {
+    ciphertext: Buffer.from('c'),
+    nonce: Buffer.from('n'),
+    wrappedDek: Buffer.from('w'),
+    kekVersion: 1,
+  },
   ...over,
 });
 const generation = (over: Partial<BriefJobRow> = {}): BriefJobRow => ({
-  id: JOB, ownerId: OWNER, kind: 'brief_generation', campaignId: CAMPAIGN, mediaId: null, generationSeq: 1,
-  state: 'pending', keyId: KEY_ID, keyVersion: 3, callCount: 0, ...over,
+  id: JOB,
+  ownerId: OWNER,
+  kind: 'brief_generation',
+  campaignId: CAMPAIGN,
+  mediaId: null,
+  generationSeq: 1,
+  state: 'pending',
+  keyId: KEY_ID,
+  keyVersion: 3,
+  callCount: 0,
+  ...over,
 });
 const analysis = (over: Partial<BriefJobRow> = {}): BriefJobRow => ({
-  ...generation(), kind: 'image_analysis', campaignId: null, mediaId: MEDIA, ...over,
+  ...generation(),
+  kind: 'image_analysis',
+  campaignId: null,
+  mediaId: MEDIA,
+  ...over,
 });
 const context = (over: Partial<BriefContext> = {}): BriefContext => ({
-  briefId: 'brief-1', briefState: 'generating', briefGenerationSeq: 1,
+  briefId: 'brief-1',
+  briefState: 'generating',
+  briefGenerationSeq: 1,
   input: {
-    productName: 'Calm Cap', productDescription: 'drink', audience: { ageMin: 25, ageMax: 40, gender: null, interests: [] },
-    direction: { goal: null, tone: null }, segmentCount: 2, mode: 'description', source: 'x', callToAction: CALL_TO_ACTION,
+    productName: 'Calm Cap',
+    productDescription: 'drink',
+    audience: { ageMin: 25, ageMax: 40, gender: null, interests: [] },
+    direction: { goal: null, tone: null },
+    segmentCount: 2,
+    mode: 'description',
+    source: 'x',
+    callToAction: CALL_TO_ACTION,
   },
-  segments: [], issues: [], ...over,
+  segments: [],
+  issues: [],
+  ...over,
 });
 
 class Fakes implements BriefJobRepository {
   log: string[] = [];
   job: BriefJobRow | null = generation();
   keyRow: SealedKeyRow | null = key();
-  media: MediaFacts | null = { id: MEDIA, ownerId: OWNER, state: 'ready', storageKey: 'u/o/media/1', contentType: 'image/png' };
+  media: MediaFacts | null = {
+    id: MEDIA,
+    ownerId: OWNER,
+    state: 'ready',
+    storageKey: 'u/o/media/1',
+    contentType: 'image/png',
+  };
   ctx: BriefContext | null = context();
   startOk = true;
   claimOk = true;
-  written: { segments: readonly WrittenSegment[]; close: readonly string[]; raise: readonly NewIssue[] } | null = null;
-  failed: { cause: JobCause; message: string; code?: string | undefined; from: string } | null = null;
+  written: {
+    segments: readonly WrittenSegment[];
+    close: readonly string[];
+    raise: readonly NewIssue[];
+  } | null = null;
+  failed: { cause: JobCause; message: string; code?: string | undefined; from: string } | null =
+    null;
   analysisText: string | null = null;
   completeKind: 'written' | 'superseded' = 'written';
   findJob = () => Promise.resolve(this.job);
   findKey = () => Promise.resolve(this.keyRow);
   findMedia = () => Promise.resolve(this.media);
   findContext = () => Promise.resolve(this.ctx);
-  claim = () => { this.log.push('claim'); return Promise.resolve(this.claimOk); };
+  claim = () => {
+    this.log.push('claim');
+    return Promise.resolve(this.claimOk);
+  };
   failPending = (_tx: DbTx, _id: string, cause: JobCause, message: string) => {
-    this.failed = { cause, message, from: 'pending' }; this.log.push('failPending'); return Promise.resolve(true);
+    this.failed = { cause, message, from: 'pending' };
+    this.log.push('failPending');
+    return Promise.resolve(true);
   };
   failSubmitting = (_tx: DbTx, _id: string, cause: JobCause, message: string, code?: string) => {
-    this.failed = { cause, message, code, from: 'submitting' }; this.log.push('failSubmitting'); return Promise.resolve(true);
+    this.failed = { cause, message, code, from: 'submitting' };
+    this.log.push('failSubmitting');
+    return Promise.resolve(true);
   };
-  startCall = (_tx: DbTx, _id: string, seq: number) => { this.log.push(`startCall${String(seq)}`); return Promise.resolve(this.startOk); };
-  completeGeneration = (_tx: DbTx, _job: BriefJobRow, _c: BriefContext, write: NonNullable<Fakes['written']>) => {
-    this.written = write; this.log.push('completeGeneration'); return Promise.resolve({ kind: this.completeKind });
+  startCall = (_tx: DbTx, _id: string, seq: number) => {
+    this.log.push(`startCall${String(seq)}`);
+    return Promise.resolve(this.startOk);
   };
-  completeAnalysis = (_tx: DbTx, _id: string, text: string) => { this.analysisText = text; this.log.push('completeAnalysis'); return Promise.resolve(true); };
-  settleBriefAfterFailure = () => { this.log.push('settleBrief'); return Promise.resolve(); };
+  completeGeneration = (
+    _tx: DbTx,
+    _job: BriefJobRow,
+    _c: BriefContext,
+    write: NonNullable<Fakes['written']>,
+  ) => {
+    this.written = write;
+    this.log.push('completeGeneration');
+    return Promise.resolve({ kind: this.completeKind });
+  };
+  completeAnalysis = (_tx: DbTx, _id: string, text: string) => {
+    this.analysisText = text;
+    this.log.push('completeAnalysis');
+    return Promise.resolve(true);
+  };
+  settleBriefAfterFailure = () => {
+    this.log.push('settleBrief');
+    return Promise.resolve();
+  };
 }
 
 interface Setup {
@@ -100,7 +183,11 @@ interface Setup {
   usage: Record<string, unknown>;
   events: string[];
   reports: boolean[];
-  ai: { generate: (() => Promise<BriefDraft>)[]; shorten: (() => Promise<readonly DraftSegment[]>)[]; describe: (() => Promise<string>)[] };
+  ai: {
+    generate: (() => Promise<BriefDraft>)[];
+    shorten: (() => Promise<readonly DraftSegment[]>)[];
+    describe: (() => Promise<string>)[];
+  };
   opened: Buffer[];
   rulesFail: boolean;
   capError: Error | null;
@@ -112,33 +199,87 @@ interface Setup {
 
 function setup(): Setup {
   const fakes = new Fakes();
-  const s = { fakes, events: [] as string[], reports: [] as boolean[], opened: [] as Buffer[], rulesFail: false, capError: null as Error | null, unsealFails: false, readFails: false,
-    ai: { generate: [], shorten: [], describe: [] } } as unknown as Setup;
+  const s = {
+    fakes,
+    events: [] as string[],
+    reports: [] as boolean[],
+    opened: [] as Buffer[],
+    rulesFail: false,
+    capError: null as Error | null,
+    unsealFails: false,
+    readFails: false,
+    ai: { generate: [], shorten: [], describe: [] },
+  } as unknown as Setup;
   s.usage = {
-    reserve: () => { s.events.push('reserve'); fakes.log.push('reserve'); return s.capError === null ? Promise.resolve({}) : Promise.reject(s.capError); },
-    record: (_tx: unknown, input: { outcome: string; callSeq: number }) => { s.events.push(`record:${input.outcome}:${String(input.callSeq)}`); return Promise.resolve({ recorded: true }); },
-    convertUnconfirmed: (_tx: unknown, input: { callSeq: number }) => { s.events.push(`unconfirmed:${String(input.callSeq)}`); return Promise.resolve({ recorded: true }); },
-    release: () => { s.events.push('release'); return Promise.resolve(true); },
+    reserve: () => {
+      s.events.push('reserve');
+      fakes.log.push('reserve');
+      return s.capError === null ? Promise.resolve({}) : Promise.reject(s.capError);
+    },
+    record: (_tx: unknown, input: { outcome: string; callSeq: number }) => {
+      s.events.push(`record:${input.outcome}:${String(input.callSeq)}`);
+      return Promise.resolve({ recorded: true });
+    },
+    convertUnconfirmed: (_tx: unknown, input: { callSeq: number }) => {
+      s.events.push(`unconfirmed:${String(input.callSeq)}`);
+      return Promise.resolve({ recorded: true });
+    },
+    release: () => {
+      s.events.push('release');
+      return Promise.resolve(true);
+    },
   };
   const database = { uow: { run: <T>(fn: (tx: DbTx) => Promise<T>) => fn({} as DbTx) } } as never;
-  const next = <T>(queue: (() => Promise<T>)[]) => () => {
-    fakes.log.push('ai');
-    const step = queue.shift();
-    if (step === undefined) throw new Error('unexpected provider call');
-    return step();
-  };
+  const next =
+    <T>(queue: (() => Promise<T>)[]) =>
+    () => {
+      fakes.log.push('ai');
+      const step = queue.shift();
+      if (step === undefined) throw new Error('unexpected provider call');
+      return step();
+    };
   const ai: TextAIPort = {
     generateBrief: next(s.ai.generate),
     shortenSegments: next(s.ai.shorten),
     describeProduct: next(s.ai.describe),
   };
-  const opener = { unseal: () => { if (s.unsealFails) throw new Error('nope'); const b = Buffer.from('unit-secret-key'); s.opened.push(b); return b; } };
-  const reporter = { report: (_k: string, _v: number, ok: boolean) => { s.reports.push(ok); return Promise.resolve(); } };
+  const opener = {
+    unseal: () => {
+      if (s.unsealFails) throw new Error('nope');
+      const b = Buffer.from('unit-secret-key');
+      s.opened.push(b);
+      return b;
+    },
+  };
+  const reporter = {
+    report: (_k: string, _v: number, ok: boolean) => {
+      s.reports.push(ok);
+      return Promise.resolve();
+    },
+  };
   const runner = new ProviderCallRunner(database, fakes, s.usage as never, opener, reporter);
-  const rules = { activeRules: () => (s.rulesFail ? Promise.reject(new Error('not seeded')) : Promise.resolve(RULES)) };
-  const config = { textModel: 'text-m', visionModel: 'vision-m', sensitiveTerms: set.sensitiveTerms };
+  const rules = {
+    activeRules: () =>
+      s.rulesFail ? Promise.reject(new Error('not seeded')) : Promise.resolve(RULES),
+  };
+  const config = {
+    textModel: 'text-m',
+    visionModel: 'vision-m',
+    sensitiveTerms: set.sensitiveTerms,
+  };
   s.gen = new BriefGenerationJob(database, fakes, s.usage as never, runner, ai, rules, config);
-  s.img = new ImageAnalysisJob(database, fakes, s.usage as never, runner, ai, { read: () => (s.readFails ? Promise.reject(new Error('gone')) : Promise.resolve(Buffer.from([1, 2, 3]))) }, config);
+  s.img = new ImageAnalysisJob(
+    database,
+    fakes,
+    s.usage as never,
+    runner,
+    ai,
+    {
+      read: () =>
+        s.readFails ? Promise.reject(new Error('gone')) : Promise.resolve(Buffer.from([1, 2, 3])),
+    },
+    config,
+  );
   return s;
 }
 
@@ -151,10 +292,31 @@ const brief = (a: string, b: string): BriefDraft => ({
 const callFailed = (status: 401 | 429 | 500) =>
   new ProviderCallFailed(
     status === 401
-      ? { causeClass: 'configuration', message: 'your OpenAI key was not accepted', countsAsAuthFailure: true, countsTowardRateAlert: false, usageEvent: 'rejected_zero', final: true }
+      ? {
+          causeClass: 'configuration',
+          message: 'your OpenAI key was not accepted',
+          countsAsAuthFailure: true,
+          countsTowardRateAlert: false,
+          usageEvent: 'rejected_zero',
+          final: true,
+        }
       : status === 429
-        ? { causeClass: 'temporary', message: 'provider is busy, try again', countsAsAuthFailure: false, countsTowardRateAlert: true, usageEvent: 'rejected_zero', final: true }
-        : { causeClass: 'outcome_unknown', message: 'check your provider account before retrying', countsAsAuthFailure: false, countsTowardRateAlert: false, usageEvent: 'unconfirmed', final: true },
+        ? {
+            causeClass: 'temporary',
+            message: 'provider is busy, try again',
+            countsAsAuthFailure: false,
+            countsTowardRateAlert: true,
+            usageEvent: 'rejected_zero',
+            final: true,
+          }
+        : {
+            causeClass: 'outcome_unknown',
+            message: 'check your provider account before retrying',
+            countsAsAuthFailure: false,
+            countsTowardRateAlert: false,
+            usageEvent: 'unconfirmed',
+            final: true,
+          },
   );
 
 describe('gateKey', () => {
@@ -206,7 +368,9 @@ describe('brief.generate', () => {
     expect(await s.gen.run(JOB, log)).toBe('completed');
     expect(s.events).toEqual(['reserve', 'record:succeeded:1', 'record:succeeded:2', 'release']);
     expect(countWords(s.fakes.written?.segments[0]?.dialogue ?? '')).toBe(40);
-    expect(s.fakes.written?.raise.some((issue) => issue.ruleId === 'word_count_trimmed')).toBe(false);
+    expect(s.fakes.written?.raise.some((issue) => issue.ruleId === 'word_count_trimmed')).toBe(
+      false,
+    );
   });
 
   it('trims what call 2 left over 45 words and raises word_count_trimmed; a failed call 2 is trimmed the same way', async () => {
@@ -215,21 +379,35 @@ describe('brief.generate', () => {
     s.ai.shorten.push(() => Promise.resolve([{ position: 1, dialogue: calm(50), prompt: 'pa' }]));
     await s.gen.run(JOB, log);
     expect(countWords(s.fakes.written?.segments[0]?.dialogue ?? '')).toBeLessThanOrEqual(45);
-    expect(s.fakes.written?.raise.filter((issue) => issue.ruleId === 'word_count_trimmed')).toHaveLength(1);
+    expect(
+      s.fakes.written?.raise.filter((issue) => issue.ruleId === 'word_count_trimmed'),
+    ).toHaveLength(1);
 
     const t = setup();
     t.ai.generate.push(() => Promise.resolve(brief(calm(60), calm(30))));
     t.ai.shorten.push(() => Promise.reject(callFailed(429)));
     expect(await t.gen.run(JOB, log)).toBe('completed');
     expect(t.events).toEqual(['reserve', 'record:succeeded:1', 'record:rejected:2', 'release']);
-    expect(t.fakes.written?.raise.some((issue) => issue.ruleId === 'word_count_trimmed')).toBe(true);
+    expect(t.fakes.written?.raise.some((issue) => issue.ruleId === 'word_count_trimmed')).toBe(
+      true,
+    );
   });
 
   it('reconciles with the issues already on the brief and keeps stable segment rows', async () => {
     const s = setup();
     s.fakes.ctx = context({
-      segments: [{ id: 'seg-1', position: 1, state: 'active', revision: 2, dialogue: 'old', prompt: 'old' }],
-      issues: [{ id: 'issue-1', segmentId: 'seg-1', field: 'dialogue', ruleId: 'hr_dosing', resolution: 'open' }],
+      segments: [
+        { id: 'seg-1', position: 1, state: 'active', revision: 2, dialogue: 'old', prompt: 'old' },
+      ],
+      issues: [
+        {
+          id: 'issue-1',
+          segmentId: 'seg-1',
+          field: 'dialogue',
+          ruleId: 'hr_dosing',
+          resolution: 'open',
+        },
+      ],
     });
     s.ai.generate.push(() => Promise.resolve(brief(calm(36), calm(30))));
     await s.gen.run(JOB, log);
@@ -239,7 +417,12 @@ describe('brief.generate', () => {
   });
 
   it('does nothing for a job that is not pending, not a brief job, or has no campaign', async () => {
-    for (const job of [generation({ state: 'submitting' }), analysis(), generation({ campaignId: null }), null]) {
+    for (const job of [
+      generation({ state: 'submitting' }),
+      analysis(),
+      generation({ campaignId: null }),
+      null,
+    ]) {
       const s = setup();
       s.fakes.job = job;
       expect(await s.gen.run(JOB, log)).toBe('skipped');
@@ -386,7 +569,11 @@ describe('brief.analyze-image', () => {
   it('sends the sanitized bytes after the cap check and stores a description with no sensitive inference', async () => {
     const s = setup();
     s.fakes.job = analysis();
-    s.ai.describe.push(described('A small amber jar with a silver lid. A young woman of Asian descent holds it. She looks healthy.'));
+    s.ai.describe.push(
+      described(
+        'A small amber jar with a silver lid. A young woman of Asian descent holds it. She looks healthy.',
+      ),
+    );
     expect(await s.img.run(JOB, log)).toBe('completed');
     expect(s.fakes.analysisText).toBe('A small amber jar with a silver lid.');
     expect(s.fakes.log.indexOf('reserve')).toBeLessThan(s.fakes.log.indexOf('ai'));
@@ -405,9 +592,30 @@ describe('brief.analyze-image', () => {
 
   it.each([
     ['no media row', (): MediaFacts | null => null],
-    ['another owner', () => ({ id: MEDIA, ownerId: 'other', state: 'ready', storageKey: 'k', contentType: 'image/png' })],
-    ['a media object not ready', () => ({ id: MEDIA, ownerId: OWNER, state: 'processing', storageKey: 'k', contentType: 'image/png' })],
-    ['no content type', () => ({ id: MEDIA, ownerId: OWNER, state: 'ready', storageKey: 'k', contentType: null })],
+    [
+      'another owner',
+      () => ({
+        id: MEDIA,
+        ownerId: 'other',
+        state: 'ready',
+        storageKey: 'k',
+        contentType: 'image/png',
+      }),
+    ],
+    [
+      'a media object not ready',
+      () => ({
+        id: MEDIA,
+        ownerId: OWNER,
+        state: 'processing',
+        storageKey: 'k',
+        contentType: 'image/png',
+      }),
+    ],
+    [
+      'no content type',
+      () => ({ id: MEDIA, ownerId: OWNER, state: 'ready', storageKey: 'k', contentType: null }),
+    ],
   ] as const)('makes no call and no charge for %s', async (_name, row) => {
     const s = setup();
     s.fakes.job = analysis();
@@ -455,7 +663,12 @@ describe('brief.analyze-image', () => {
   });
 
   it('skips jobs that are not pending analyses and claims lost to another worker', async () => {
-    for (const job of [analysis({ state: 'completed' }), generation(), analysis({ mediaId: null }), null]) {
+    for (const job of [
+      analysis({ state: 'completed' }),
+      generation(),
+      analysis({ mediaId: null }),
+      null,
+    ]) {
       const s = setup();
       s.fakes.job = job;
       expect(await s.img.run(JOB, log)).toBe('skipped');

@@ -4,7 +4,9 @@ import { assertAudience, durationSeconds } from './draft.js';
 
 describe('durationSeconds (TC-INT-02)', () => {
   it('is 15 seconds per segment, 1 to 4 segments', () => {
-    expect([1, 2, 3, 4].map((segmentCount) => durationSeconds({ segmentCount }))).toEqual([15, 30, 45, 60]);
+    expect([1, 2, 3, 4].map((segmentCount) => durationSeconds({ segmentCount }))).toEqual([
+      15, 30, 45, 60,
+    ]);
   });
   it('is null without a direction or a count', () => {
     expect(durationSeconds(null)).toBeNull();
@@ -27,7 +29,10 @@ describe('assertAudience', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(DomainError);
       expect((error as DomainError).code).toBe('validation_failed');
-      expect((error as DomainError).details?.[0]).toMatchObject({ field: 'audience.ageMax', code: 'out_of_range' });
+      expect((error as DomainError).details?.[0]).toMatchObject({
+        field: 'audience.ageMax',
+        code: 'out_of_range',
+      });
     }
   });
 });

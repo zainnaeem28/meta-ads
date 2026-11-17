@@ -3,24 +3,43 @@ import type { DynamicModule } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { DATABASE } from '../../platform/db/index.js';
 import type { Database, DbTx } from '../../platform/db/index.js';
-import { ASSEMBLY_CONFIG, ASSEMBLY_RENDER_QUEUE, AssemblyService } from './application/assembly.service.js';
+import {
+  ASSEMBLY_CONFIG,
+  ASSEMBLY_RENDER_QUEUE,
+  AssemblyService,
+} from './application/assembly.service.js';
 import type { AssemblyConfig } from './application/assembly.service.js';
 import { QcKeySession } from './application/qc-key-session.js';
-import { AUDIO_EXTRACTOR, QC_CONFIG, QC_KEY_AUTH_REPORTER, QC_REPOSITORY, TRANSCRIBE_PORT } from './application/qc-ports.js';
+import {
+  AUDIO_EXTRACTOR,
+  QC_CONFIG,
+  QC_KEY_AUTH_REPORTER,
+  QC_REPOSITORY,
+  TRANSCRIBE_PORT,
+} from './application/qc-ports.js';
 import type { QcConfig } from './application/qc-ports.js';
 import { QcRecovery } from './application/qc-recovery.js';
 import { QC_RUN_QUEUE, QcRunJob } from './application/qc-run.job.js';
 import { QcRunsService } from './application/qc-runs.service.js';
 import { startFirstQc } from './application/qc-start.js';
 import { ThumbRecovery } from './application/thumb-recovery.js';
-import { CALLOUT_RULES, IMAGE_GEN_PORT, THUMB_CONFIG, THUMB_MEDIA, THUMB_REPOSITORY } from './application/thumb-ports.js';
+import {
+  CALLOUT_RULES,
+  IMAGE_GEN_PORT,
+  THUMB_CONFIG,
+  THUMB_MEDIA,
+  THUMB_REPOSITORY,
+} from './application/thumb-ports.js';
 import type { CalloutRules, ThumbConfig, ThumbMedia } from './application/thumb-ports.js';
 import { THUMB_SUBMIT_QUEUE, ThumbService } from './application/thumb.service.js';
 import { ThumbSubmitJob } from './application/thumb-submit.job.js';
 import { VideoJobsService } from './application/video-jobs.service.js';
 import { VIDEO_CONFIG } from './application/video-ports.js';
 import type { VideoConfig } from './application/video-ports.js';
-import { PROVIDER_COPY_CLEANUP_QUEUE, ProviderCopyCleanup } from './application/worker/provider-copy-cleanup.job.js';
+import {
+  PROVIDER_COPY_CLEANUP_QUEUE,
+  ProviderCopyCleanup,
+} from './application/worker/provider-copy-cleanup.job.js';
 import { KeySession } from './application/worker/key-session.js';
 import {
   KEY_AUTH_REPORTER,
@@ -33,9 +52,18 @@ import {
   VIDEO_WORKER_CONFIG,
   VIDEO_WORKER_REPOSITORY,
 } from './application/worker/ports.js';
-import type { JobLog, KeyOpener, ProductionMedia, VideoWorkerConfig } from './application/worker/ports.js';
+import type {
+  JobLog,
+  KeyOpener,
+  ProductionMedia,
+  VideoWorkerConfig,
+} from './application/worker/ports.js';
 import { AssemblyRecovery } from './application/worker/assembly-recovery.js';
-import { ASSEMBLY_MEDIA, ASSEMBLY_PORT, ASSEMBLY_WORKER_CONFIG } from './application/worker/assembly-ports.js';
+import {
+  ASSEMBLY_MEDIA,
+  ASSEMBLY_PORT,
+  ASSEMBLY_WORKER_CONFIG,
+} from './application/worker/assembly-ports.js';
 import type { AssemblyMedia, AssemblyWorkerConfig } from './application/worker/assembly-ports.js';
 import { AssemblyRenderJob } from './application/worker/assembly-render.job.js';
 import { ProductionRecovery } from './application/worker/recovery.js';
@@ -63,7 +91,15 @@ import type { MediaService, StoragePort } from '../media/index.js';
 import { BOSS } from '../../platform/jobs/boss.js';
 import type { SweepRegistry } from '../../platform/jobs/sweep-registry.js';
 
-export { AssemblyRenderJob, ProviderCopyCleanup, QcRunJob, ThumbSubmitJob, VideoCopyJob, VideoPollJob, VideoSubmitJob };
+export {
+  AssemblyRenderJob,
+  ProviderCopyCleanup,
+  QcRunJob,
+  ThumbSubmitJob,
+  VideoCopyJob,
+  VideoPollJob,
+  VideoSubmitJob,
+};
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -74,20 +110,33 @@ export interface ProductionEdge {
 
 /** The port campaigns declares (TD-D12), without importing it: the same shape, bound once the database exists. */
 export interface ProgressReaderShape {
-  progressFor(ownerId: string, campaignIds: readonly string[]): Promise<ReadonlyMap<string, ProgressSnapshotShape>>;
-  idsWithProgress(ownerId: string, progress: 'processing' | 'completed' | 'failed'): Promise<ReadonlySet<string>>;
+  progressFor(
+    ownerId: string,
+    campaignIds: readonly string[],
+  ): Promise<ReadonlyMap<string, ProgressSnapshotShape>>;
+  idsWithProgress(
+    ownerId: string,
+    progress: 'processing' | 'completed' | 'failed',
+  ): Promise<ReadonlySet<string>>;
 }
 
 /**
  * The reader campaigns is given at bootstrap before the database is open: it forwards to production's own reader, which
  * the production module binds when it is built. Until then no campaign has jobs.
  */
-export function progressBridge(): { reader: ProgressReaderShape; bind: (reader: ProgressReaderShape) => void } {
+export function progressBridge(): {
+  reader: ProgressReaderShape;
+  bind: (reader: ProgressReaderShape) => void;
+} {
   let target: ProgressReaderShape | undefined;
   return {
     reader: {
-      progressFor: (ownerId, ids) => (target === undefined ? Promise.resolve(new Map()) : target.progressFor(ownerId, ids)),
-      idsWithProgress: (ownerId, progress) => (target === undefined ? Promise.resolve(new Set()) : target.idsWithProgress(ownerId, progress)),
+      progressFor: (ownerId, ids) =>
+        target === undefined ? Promise.resolve(new Map()) : target.progressFor(ownerId, ids),
+      idsWithProgress: (ownerId, progress) =>
+        target === undefined
+          ? Promise.resolve(new Set())
+          : target.idsWithProgress(ownerId, progress),
     },
     bind: (reader) => {
       target = reader;
@@ -103,7 +152,8 @@ function optional(env: Env, name: string): string | undefined {
 function integer(env: Env, name: string, fallback: number, min: number, max: number): number {
   const text = optional(env, name);
   const value = text === undefined ? fallback : Number(text);
-  if (!Number.isInteger(value) || value < min || value > max) throw new Error(`${name} must be an integer from ${String(min)} to ${String(max)}`);
+  if (!Number.isInteger(value) || value < min || value > max)
+    throw new Error(`${name} must be an integer from ${String(min)} to ${String(max)}`);
   return value;
 }
 
@@ -135,7 +185,11 @@ export function assemblyConfigFrom(env: Env): AssemblyConfig {
  */
 @Module({})
 export class ProductionModule {
-  static register(env: Env, edge: ProductionEdge, bind?: (reader: ProgressReaderShape) => void): DynamicModule {
+  static register(
+    env: Env,
+    edge: ProductionEdge,
+    bind?: (reader: ProgressReaderShape) => void,
+  ): DynamicModule {
     return {
       module: ProductionModule,
       imports: [edge.usage],
@@ -146,7 +200,9 @@ export class ProductionModule {
         // The brief module's rule reader, found when first used: the brief module is built beside this one.
         {
           provide: CALLOUT_RULES,
-          useFactory: (modules: ModuleRef): CalloutRules => ({ activeRules: () => modules.get(BrandRulesReader, { strict: false }).activeRules() }),
+          useFactory: (modules: ModuleRef): CalloutRules => ({
+            activeRules: () => modules.get(BrandRulesReader, { strict: false }).activeRules(),
+          }),
           inject: [ModuleRef],
         },
         VideoJobsService,
@@ -164,7 +220,13 @@ export class ProductionModule {
         },
       ],
       controllers: [VideoController, QcController, AssemblyController, ThumbController],
-      exports: [VideoJobsService, QcRunsService, AssemblyService, ThumbService, VideoProgressReader],
+      exports: [
+        VideoJobsService,
+        QcRunsService,
+        AssemblyService,
+        ThumbService,
+        VideoProgressReader,
+      ],
     };
   }
 }
@@ -191,10 +253,14 @@ export interface ProductionWorkerEdge {
 export function productionMediaOf(
   resolve: () => Pick<MediaService, 'signedUrl' | 'registerObject'>,
   /** Runs in the transaction that completes the clip, after its object is registered: the clip's first QC (ARCHITECTURE §5.6). */
-  afterClip?: (tx: DbTx, clip: { readonly ownerId: string; readonly videoJobId: string }) => Promise<void>,
+  afterClip?: (
+    tx: DbTx,
+    clip: { readonly ownerId: string; readonly videoJobId: string },
+  ) => Promise<void>,
 ): ProductionMedia {
   return {
-    referenceUrl: async (ownerId, mediaId) => (await resolve().signedUrl('provider-fetch', { ownerId, mediaId })).url,
+    referenceUrl: async (ownerId, mediaId) =>
+      (await resolve().signedUrl('provider-fetch', { ownerId, mediaId })).url,
     registerClip: async (tx, input) => {
       await resolve().registerObject(tx, {
         id: input.id,
@@ -224,7 +290,13 @@ export function videoWorkerConfigFrom(env: Env): VideoWorkerConfig {
     pollLeaseSec: integer(env, 'POLL_LEASE_SEC', 60, 2, 3600),
     submitOrphanAfterSec: integer(env, 'SUBMIT_ORPHAN_AFTER_SEC', 300, 1, 86_400),
     copyWindowHours: integer(env, 'PROVIDER_OUTPUT_COPY_WINDOW_HOURS', 24, 1, 72),
-    outputMaxBytes: integer(env, 'PROVIDER_OUTPUT_MAX_BYTES', 209_715_200, 1, Number.MAX_SAFE_INTEGER),
+    outputMaxBytes: integer(
+      env,
+      'PROVIDER_OUTPUT_MAX_BYTES',
+      209_715_200,
+      1,
+      Number.MAX_SAFE_INTEGER,
+    ),
   };
 }
 
@@ -234,10 +306,12 @@ export function videoWorkerConfigFrom(env: Env): VideoWorkerConfig {
  */
 export function assemblyWorkerConfigFrom(env: Env): AssemblyWorkerConfig {
   const adapter = optional(env, 'ASSEMBLY_ADAPTER') ?? 'ffmpeg';
-  if (adapter !== 'ffmpeg') throw new Error(`ASSEMBLY_ADAPTER=${adapter} is not available: only ffmpeg is built`);
+  if (adapter !== 'ffmpeg')
+    throw new Error(`ASSEMBLY_ADAPTER=${adapter} is not available: only ffmpeg is built`);
   const text = optional(env, 'THUMBSTOPPER_FRAME_SECONDS');
   const frameSeconds = text === undefined ? 1.5 : Number(text);
-  if (!Number.isFinite(frameSeconds) || frameSeconds < 0.5 || frameSeconds > 5) throw new Error('THUMBSTOPPER_FRAME_SECONDS must be a number from 0.5 to 5');
+  if (!Number.isFinite(frameSeconds) || frameSeconds < 0.5 || frameSeconds > 5)
+    throw new Error('THUMBSTOPPER_FRAME_SECONDS must be a number from 0.5 to 5');
   return {
     leaseSec: 120,
     maxAttempts: 3,
@@ -249,7 +323,9 @@ export function assemblyWorkerConfigFrom(env: Env): AssemblyWorkerConfig {
 }
 
 /** The media operation the assembly worker needs, over the media module's public service: the final video's row and quota. */
-export function assemblyMediaOf(resolve: () => Pick<MediaService, 'registerObject'>): AssemblyMedia {
+export function assemblyMediaOf(
+  resolve: () => Pick<MediaService, 'registerObject'>,
+): AssemblyMedia {
   return {
     registerFinal: async (tx, input) => {
       await resolve().registerObject(tx, {
@@ -269,7 +345,8 @@ export function assemblyMediaOf(resolve: () => Pick<MediaService, 'registerObjec
 export function qcConfigFrom(env: Env, baseUrl?: string): QcConfig {
   const text = optional(env, 'QC_MAX_WORD_ERROR_RATE');
   const maxWordErrorRate = text === undefined ? 0.2 : Number(text);
-  if (!Number.isFinite(maxWordErrorRate) || maxWordErrorRate < 0 || maxWordErrorRate > 1) throw new Error('QC_MAX_WORD_ERROR_RATE must be a number from 0 to 1');
+  if (!Number.isFinite(maxWordErrorRate) || maxWordErrorRate < 0 || maxWordErrorRate > 1)
+    throw new Error('QC_MAX_WORD_ERROR_RATE must be a number from 0 to 1');
   const video = videoConfigFrom(env);
   return {
     transcribeModel: video.transcribeModel,
@@ -288,7 +365,8 @@ export function qcConfigFrom(env: Env, baseUrl?: string): QcConfig {
  */
 export function thumbConfigFrom(env: Env, baseUrl?: string): ThumbConfig {
   const imageModel = optional(env, 'OPENAI_IMAGE_MODEL');
-  if (imageModel !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/.test(imageModel)) throw new Error('OPENAI_IMAGE_MODEL is not an acceptable model name');
+  if (imageModel !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/.test(imageModel))
+    throw new Error('OPENAI_IMAGE_MODEL is not an acceptable model name');
   return {
     imageModel,
     deadlineMinutes: 5,
@@ -336,7 +414,10 @@ function lazyStorage(resolve: () => StoragePort): StoragePort {
 export class ProductionWorkerModule {
   static register(env: Env, edge: ProductionWorkerEdge): DynamicModule {
     const assemblyWorkerConfig = assemblyWorkerConfigFrom(env);
-    const config: VideoWorkerConfig = { ...videoWorkerConfigFrom(env), ...(edge.baseUrl === undefined ? {} : { baseUrl: edge.baseUrl }) };
+    const config: VideoWorkerConfig = {
+      ...videoWorkerConfigFrom(env),
+      ...(edge.baseUrl === undefined ? {} : { baseUrl: edge.baseUrl }),
+    };
     return {
       module: ProductionWorkerModule,
       imports: [edge.audit, edge.egress, edge.usage],
@@ -350,7 +431,10 @@ export class ProductionWorkerModule {
         { provide: PRODUCTION_STORAGE, useValue: lazyStorage(edge.storage) },
         {
           provide: PRODUCTION_MEDIA,
-          useFactory: (boss: Parameters<typeof startFirstQc>[0]) => productionMediaOf(edge.media, (tx, clip) => startFirstQc(boss, tx, clip).then(() => undefined)),
+          useFactory: (boss: Parameters<typeof startFirstQc>[0]) =>
+            productionMediaOf(edge.media, (tx, clip) =>
+              startFirstQc(boss, tx, clip).then(() => undefined),
+            ),
           inject: [BOSS],
         },
         { provide: QC_CONFIG, useValue: qcConfigFrom(env, edge.baseUrl) },
@@ -363,7 +447,10 @@ export class ProductionWorkerModule {
         { provide: THUMB_MEDIA, useValue: thumbMediaOf(edge.media) },
         { provide: AUDIO_EXTRACTOR, useValue: new FfmpegAudio() },
         { provide: ASSEMBLY_WORKER_CONFIG, useValue: assemblyWorkerConfig },
-        { provide: ASSEMBLY_PORT, useValue: new FfmpegAssembly({ frameSeconds: assemblyWorkerConfig.frameSeconds }) },
+        {
+          provide: ASSEMBLY_PORT,
+          useValue: new FfmpegAssembly({ frameSeconds: assemblyWorkerConfig.frameSeconds }),
+        },
         { provide: ASSEMBLY_MEDIA, useValue: assemblyMediaOf(edge.media) },
         { provide: SWEEP_REGISTRY, useValue: edge.registry },
         KeySession,
@@ -380,7 +467,15 @@ export class ProductionWorkerModule {
         ThumbSubmitJob,
         ThumbRecovery,
       ],
-      exports: [VideoSubmitJob, VideoPollJob, VideoCopyJob, ProviderCopyCleanup, QcRunJob, AssemblyRenderJob, ThumbSubmitJob],
+      exports: [
+        VideoSubmitJob,
+        VideoPollJob,
+        VideoCopyJob,
+        ProviderCopyCleanup,
+        QcRunJob,
+        AssemblyRenderJob,
+        ThumbSubmitJob,
+      ],
     };
   }
 }

@@ -36,7 +36,8 @@ function integer(env: Env, name: string, fallback: number, min: number, max: num
 function format(env: Env, provider: Provider): RegExp {
   const name = FORMAT_VARIABLES[provider];
   const raw = env[name] ?? DEFAULT_FORMATS[provider];
-  if (!raw.startsWith('^') || !raw.endsWith('$')) throw new KeyConfigError(name, 'must be anchored (^...$)');
+  if (!raw.startsWith('^') || !raw.endsWith('$'))
+    throw new KeyConfigError(name, 'must be anchored (^...$)');
   try {
     return new RegExp(raw);
   } catch {
@@ -49,7 +50,10 @@ export function keyPolicyFromEnv(env: Env): KeyPolicy {
     attemptsPerWindow: integer(env, 'KEY_ENTRY_ATTEMPTS_PER_WINDOW', 5, 1, 50),
     windowMinutes: integer(env, 'KEY_ENTRY_WINDOW_MIN', 10, 1, 60),
     autoDisableThreshold: integer(env, 'KEY_AUTO_DISABLE_THRESHOLD', 5, 1, 20),
-    formats: Object.fromEntries(PROVIDERS.map((p) => [p, format(env, p)])) as Record<Provider, RegExp>,
+    formats: Object.fromEntries(PROVIDERS.map((p) => [p, format(env, p)])) as Record<
+      Provider,
+      RegExp
+    >,
   };
 }
 
@@ -70,14 +74,26 @@ export function fingerprinterFromEnv(env: Env): HmacFingerprinter {
   for (const [version, value] of Object.entries(parsed)) {
     const number = Number(version);
     const bytes = typeof value === 'string' ? Buffer.from(value, 'base64') : undefined;
-    if (!Number.isInteger(number) || number <= 0 || number > 32767 || bytes === undefined || bytes.length < 32) {
-      throw new KeyConfigError('KEY_FINGERPRINT_PEPPERS', 'versions must be positive integers with at least 32 bytes of base64');
+    if (
+      !Number.isInteger(number) ||
+      number <= 0 ||
+      number > 32767 ||
+      bytes === undefined ||
+      bytes.length < 32
+    ) {
+      throw new KeyConfigError(
+        'KEY_FINGERPRINT_PEPPERS',
+        'versions must be positive integers with at least 32 bytes of base64',
+      );
     }
     peppers.set(number, bytes);
   }
   const active = Number(env['KEY_FINGERPRINT_PEPPER_ACTIVE']);
   if (!peppers.has(active)) {
-    throw new KeyConfigError('KEY_FINGERPRINT_PEPPER_ACTIVE', 'must name a version present in KEY_FINGERPRINT_PEPPERS');
+    throw new KeyConfigError(
+      'KEY_FINGERPRINT_PEPPER_ACTIVE',
+      'must name a version present in KEY_FINGERPRINT_PEPPERS',
+    );
   }
   return new HmacFingerprinter(peppers, active);
 }

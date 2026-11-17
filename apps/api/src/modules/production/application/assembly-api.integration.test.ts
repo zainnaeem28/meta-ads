@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -20,9 +21,23 @@ import { priceTableSeedStep } from '../../usage/index.js';
 // TC-ASM-02, 03, 05, 07, with the QC confirmation rules (REQ-010, TD-D35, TD-D36) and the daily render limit (NFR-11).
 
 const ORIGIN = 'http://localhost:3000';
-const contractsDir = join(import.meta.dirname, '..', '..', '..', '..', '..', '..', 'packages', 'contracts');
+const contractsDir = join(
+  import.meta.dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'packages',
+  'contracts',
+);
 
-const sink = new Writable({ write(_chunk: Buffer, _e, done) { done(); } });
+const sink = new Writable({
+  write(_chunk: Buffer, _e, done) {
+    done();
+  },
+});
 let testDb: TestDatabase;
 let pool: pg.Pool;
 let app: Awaited<ReturnType<typeof createApiApp>>['app'];
@@ -38,8 +53,10 @@ let local: Local;
 type Validate = ((value: unknown) => boolean) & { errors?: unknown };
 function contractValidator(schema: string): Validate {
   const requireFromContracts = createRequire(join(contractsDir, 'package.json'));
-  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any }).default; // eslint-disable-line @typescript-eslint/no-explicit-any
-  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void }).default;
+  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any })
+    .default;
+  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void })
+    .default;
   const yaml = requireFromContracts('js-yaml') as { load(text: string): { components: unknown } };
   const spec = yaml.load(readFileSync(join(contractsDir, 'openapi.yaml'), 'utf8'));
   const ajv = new Ajv2020({ strict: false, allErrors: true });
@@ -54,10 +71,21 @@ beforeAll(async () => {
   const statements = (file: string): string[] =>
     (readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants')[0] ?? '')
       .split('--> statement-breakpoint')
-      .map((statement) => statement.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim())
+      .map((statement) =>
+        statement
+          .split('\n')
+          .filter((line) => !line.trim().startsWith('--'))
+          .join('\n')
+          .trim(),
+      )
       .filter((statement) => statement !== '');
   for (const statement of statements('0001_task-025-platform.sql')) {
-    if (/^CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(statement)) await pool.query(statement);
+    if (
+      /^CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(
+        statement,
+      )
+    )
+      await pool.query(statement);
   }
   await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
   const files = [
@@ -73,7 +101,12 @@ beforeAll(async () => {
   ];
   for (const file of files) for (const statement of statements(file)) await pool.query(statement);
   await installJobs(testDb.url);
-  await runSeed({ dataset: 'reference', appEnv: 'development', databaseUrl: testDb.url, steps: [priceTableSeedStep()] });
+  await runSeed({
+    dataset: 'reference',
+    appEnv: 'development',
+    databaseUrl: testDb.url,
+    steps: [priceTableSeedStep()],
+  });
   const env: Record<string, string | undefined> = {
     KEK_PUBLIC_KEYS: undefined,
     R2_ENDPOINT: undefined,
@@ -97,8 +130,12 @@ beforeAll(async () => {
     },
     createHttpLogging({ level: 'silent', destination: sink }),
   ));
-  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [...m.providers.values()]);
-  const found = providers.map((p) => p.instance as Partial<Local> | undefined).find((i) => typeof i?.issueToken === 'function');
+  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [
+    ...m.providers.values(),
+  ]);
+  const found = providers
+    .map((p) => p.instance as Partial<Local> | undefined)
+    .find((i) => typeof i?.issueToken === 'function');
   if (found === undefined) throw new Error('local identity provider not found');
   local = found as Local;
 }, 300_000);
@@ -114,34 +151,72 @@ afterAll(async () => {
 });
 
 const fastify = () => app.getHttpAdapter().getInstance();
-interface Body { success: boolean; data?: any; error?: { code: string; message: string; details?: any[] }; metaData: any } // eslint-disable-line @typescript-eslint/no-explicit-any
-async function call(method: 'GET' | 'POST', url: string, token?: string, payload?: unknown, extra: Record<string, string> = {}) {
+interface Body {
+  success: boolean;
+  data?: any;
+  error?: { code: string; message: string; details?: any[] };
+  metaData: any;
+}
+async function call(
+  method: 'GET' | 'POST',
+  url: string,
+  token?: string,
+  payload?: unknown,
+  extra: Record<string, string> = {},
+) {
   const headers: Record<string, string> = { ...extra };
   if (token !== undefined) headers['authorization'] = `Bearer ${token}`;
-  const res = await fastify().inject({ method, url: `/api/v1${url}`, headers, ...(payload === undefined ? {} : { payload: payload as object }) });
-  return { status: res.statusCode, body: (res.body === '' ? { success: true, metaData: {} } : JSON.parse(res.body)) as Body };
+  const res = await fastify().inject({
+    method,
+    url: `/api/v1${url}`,
+    headers,
+    ...(payload === undefined ? {} : { payload: payload as object }),
+  });
+  return {
+    status: res.statusCode,
+    body: (res.body === '' ? { success: true, metaData: {} } : JSON.parse(res.body)) as Body,
+  };
 }
 
 async function account(keys: 'openai' | 'none' | 'disabled' = 'openai') {
   const sub = `user_t55_${String(++seq)}`;
   const email = `p${String(seq)}@example.test`;
   local.addUser(sub, email, true);
-  await pool.query(`insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`, [email]);
+  await pool.query(
+    `insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`,
+    [email],
+  );
   const token = local.issueToken({ sub, azp: ORIGIN, fva: [1, 1] });
   expect((await call('GET', '/me', token)).status).toBe(200);
-  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0].id as string;
+  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0]
+    .id as string;
   if (keys !== 'none') {
     await pool.query(
       `insert into provider_keys (id, owner_id, provider, status, version, ciphertext, nonce, wrapped_dek, kek_version, last4, fingerprint, fingerprint_pepper_version)
        values ($1, $2, 'openai', $3, 1, $4, $5, $6, 1, 'cdef', $7, 1)`,
-      [randomUUID(), id, keys === 'disabled' ? 'disabled' : 'active', Buffer.alloc(32, 1), Buffer.alloc(12, 2), Buffer.alloc(384, 3), 'b'.repeat(64)],
+      [
+        randomUUID(),
+        id,
+        keys === 'disabled' ? 'disabled' : 'active',
+        Buffer.alloc(32, 1),
+        Buffer.alloc(12, 2),
+        Buffer.alloc(384, 3),
+        'b'.repeat(64),
+      ],
     );
   }
   return { id, token };
 }
 
-interface Setup { campaign: string; brief: string; segments: string[] }
-async function campaign(owner: string, opts: { brief?: string; media?: string | null; segments?: number } = {}): Promise<Setup> {
+interface Setup {
+  campaign: string;
+  brief: string;
+  segments: string[];
+}
+async function campaign(
+  owner: string,
+  opts: { brief?: string; media?: string | null; segments?: number } = {},
+): Promise<Setup> {
   const campaignId = randomUUID();
   const briefId = randomUUID();
   const count = opts.segments ?? 2;
@@ -150,7 +225,10 @@ async function campaign(owner: string, opts: { brief?: string; media?: string | 
     [campaignId, owner, opts.media ?? null, Math.max(count, 1)],
   );
   const state = opts.brief ?? 'accepted';
-  await pool.query(`insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, $4, ${state === 'accepted' ? 'now()' : 'null'})`, [briefId, campaignId, owner, state]);
+  await pool.query(
+    `insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, $4, ${state === 'accepted' ? 'now()' : 'null'})`,
+    [briefId, campaignId, owner, state],
+  );
   const segments: string[] = [];
   for (let position = 1; position <= count; position += 1) {
     const id = randomUUID();
@@ -163,14 +241,19 @@ async function campaign(owner: string, opts: { brief?: string; media?: string | 
   return { campaign: campaignId, brief: briefId, segments };
 }
 
-
-
 async function completedClip(owner: string, setup: Setup, state = 'completed'): Promise<string> {
   const id = randomUUID();
   await pool.query(
     `insert into video_jobs (id, owner_id, campaign_id, segment_id, segment_revision, provider_model, options, state, reuse_hash, deadline_at, provider_task_id, provider_completed_at)
      values ($1, $2, $3, $4, 1, 'bytedance/seedance-2.0/text-to-video', '{"durationSeconds":15,"resolution":"1080p","aspectRatio":"9:16"}', $5, $6, now(), 'task-1', now())`,
-    [id, owner, setup.campaign, setup.segments[0], state, randomUUID().replace(/-/g, '').padEnd(64, '0')],
+    [
+      id,
+      owner,
+      setup.campaign,
+      setup.segments[0],
+      state,
+      randomUUID().replace(/-/g, '').padEnd(64, '0'),
+    ],
   );
   if (state === 'completed') {
     await pool.query(
@@ -182,12 +265,17 @@ async function completedClip(owner: string, setup: Setup, state = 'completed'): 
   return id;
 }
 
-
 const count = async (table: string, where: string, params: unknown[]) =>
-  (await pool.query(`select count(*)::int as n from ${table} where ${where}`, params)).rows[0].n as number;
-const queued = (assembly: string) => count('pgboss.job', "name = 'production.assembly-render' and data->>'jobId' = $1", [assembly]);
+  (await pool.query(`select count(*)::int as n from ${table} where ${where}`, params)).rows[0]
+    .n as number;
+const queued = (assembly: string) =>
+  count('pgboss.job', "name = 'production.assembly-render' and data->>'jobId' = $1", [assembly]);
 
-async function qc(job: string, state: 'pending' | 'passed' | 'failed' | 'skipped', ageSeconds = 0): Promise<void> {
+async function qc(
+  job: string,
+  state: 'pending' | 'passed' | 'failed' | 'skipped',
+  ageSeconds = 0,
+): Promise<void> {
   await pool.query(
     `insert into qc_runs (id, owner_id, video_job_id, qc_state, state, reuse_hash, deadline_at, created_at)
      select $1, owner_id, id, $2, 'completed', $3, now(), now() - make_interval(secs => $4) from video_jobs where id = $5`,
@@ -195,13 +283,32 @@ async function qc(job: string, state: 'pending' | 'passed' | 'failed' | 'skipped
   );
 }
 
-const postAsm = (campaignId: string, token: string | undefined, key: string | undefined, payload: unknown) =>
-  call('POST', `/campaigns/${campaignId}/assemblies`, token, payload, key === undefined ? {} : { 'idempotency-key': key });
+const postAsm = (
+  campaignId: string,
+  token: string | undefined,
+  key: string | undefined,
+  payload: unknown,
+) =>
+  call(
+    'POST',
+    `/campaigns/${campaignId}/assemblies`,
+    token,
+    payload,
+    key === undefined ? {} : { 'idempotency-key': key },
+  );
 
 /** A completed clip of segment `index` of the campaign (a new one for the same segment is a regenerated clip). */
-async function clip(owner: string, setup: Setup, index = 0, createdAgoSeconds = 0): Promise<string> {
+async function clip(
+  owner: string,
+  setup: Setup,
+  index = 0,
+  createdAgoSeconds = 0,
+): Promise<string> {
   const id = await completedClip(owner, setup);
-  await pool.query(`update video_jobs set segment_id = $2, created_at = now() - make_interval(secs => $3) where id = $1`, [id, setup.segments[index], createdAgoSeconds]);
+  await pool.query(
+    `update video_jobs set segment_id = $2, created_at = now() - make_interval(secs => $3) where id = $1`,
+    [id, setup.segments[index], createdAgoSeconds],
+  );
   return id;
 }
 
@@ -211,14 +318,40 @@ describe('API-070 create an assembly, API-071 read it', () => {
   it('creates one pending assembly with its clips in order and a queue message, through the real entry point (TC-ASM-01)', async () => {
     const a = await account();
     const c = await campaign(a.id, { segments: 4 });
-    const clips = [await clip(a.id, c, 2), await clip(a.id, c, 0), await clip(a.id, c, 3), await clip(a.id, c, 1)];
+    const clips = [
+      await clip(a.id, c, 2),
+      await clip(a.id, c, 0),
+      await clip(a.id, c, 3),
+      await clip(a.id, c, 1),
+    ];
     const res = await postAsm(c.campaign, a.token, 'asm-1', { clips });
     expect(res.status).toBe(202);
     expect(valid(res.body)).toBe(true);
-    expect(res.body.data).toMatchObject({ campaignId: c.campaign, state: 'pending', thumbstopperJobId: null, outputMediaId: null, outOfDate: false, causeClass: null, reused: false });
-    expect(res.body.data.clips).toEqual(clips.map((videoJobId, i) => ({ position: i + 1, videoJobId, outOfDate: false, qcOverrideConfirmed: false })));
-    const row = (await pool.query('select * from assembly_jobs where id = $1', [res.body.data.id])).rows[0];
-    expect(row).toMatchObject({ owner_id: a.id, campaign_id: c.campaign, state: 'pending', attempts: 0 });
+    expect(res.body.data).toMatchObject({
+      campaignId: c.campaign,
+      state: 'pending',
+      thumbstopperJobId: null,
+      outputMediaId: null,
+      outOfDate: false,
+      causeClass: null,
+      reused: false,
+    });
+    expect(res.body.data.clips).toEqual(
+      clips.map((videoJobId, i) => ({
+        position: i + 1,
+        videoJobId,
+        outOfDate: false,
+        qcOverrideConfirmed: false,
+      })),
+    );
+    const row = (await pool.query('select * from assembly_jobs where id = $1', [res.body.data.id]))
+      .rows[0];
+    expect(row).toMatchObject({
+      owner_id: a.id,
+      campaign_id: c.campaign,
+      state: 'pending',
+      attempts: 0,
+    });
     expect(row.render_day.toISOString().slice(0, 10)).toBe(new Date().toISOString().slice(0, 10));
     expect(await count('assembly_clips', 'assembly_job_id = $1', [row.id])).toBe(4);
     expect(await queued(row.id)).toBe(1);
@@ -226,7 +359,12 @@ describe('API-070 create an assembly, API-071 read it', () => {
     const read = await call('GET', `/assemblies/${row.id}`, a.token);
     expect(read.status).toBe(200);
     expect(valid(read.body)).toBe(true);
-    expect(read.body.data).toMatchObject({ id: row.id, state: 'pending', reused: false, outOfDate: false });
+    expect(read.body.data).toMatchObject({
+      id: row.id,
+      state: 'pending',
+      reused: false,
+      outOfDate: false,
+    });
     expect(read.body.data.clips.map((x: { videoJobId: string }) => x.videoJobId)).toEqual(clips);
   });
 
@@ -244,10 +382,17 @@ describe('API-070 create an assembly, API-071 read it', () => {
     expect(other.body.data.reused).toBe(false);
     expect(other.body.data.id).not.toBe(first.body.data.id);
 
-    await pool.query(`update assembly_jobs set state = 'failed', cause_class = 'render_failed', cause_message = 'The clip could not be read.' where id = $1`, [first.body.data.id]);
+    await pool.query(
+      `update assembly_jobs set state = 'failed', cause_class = 'render_failed', cause_message = 'The clip could not be read.' where id = $1`,
+      [first.body.data.id],
+    );
     const failed = await call('GET', `/assemblies/${first.body.data.id}`, a.token);
     expect(valid(failed.body)).toBe(true);
-    expect(failed.body.data).toMatchObject({ state: 'failed', causeClass: 'render_failed', causeMessage: 'The clip could not be read.' });
+    expect(failed.body.data).toMatchObject({
+      state: 'failed',
+      causeClass: 'render_failed',
+      causeMessage: 'The clip could not be read.',
+    });
     const again = await postAsm(c.campaign, a.token, 'reuse-4', { clips });
     expect(again.body.data).toMatchObject({ reused: false, state: 'pending' });
     expect(again.body.data.id).not.toBe(first.body.data.id);
@@ -275,11 +420,14 @@ describe('API-070 create an assembly, API-071 read it', () => {
     const stranger = await clip(b.id, await campaign(b.id), 0);
     const elsewhere = await clip(a.id, other, 0);
     const unfinished: string[] = [];
-    for (const state of ['pending', 'processing', 'failed', 'cancelled']) unfinished.push(await completedClip(a.id, c, state));
+    for (const state of ['pending', 'processing', 'failed', 'cancelled'])
+      unfinished.push(await completedClip(a.id, c, state));
     for (const bad of [...unfinished, stranger, elsewhere, randomUUID()]) {
       const res = await postAsm(c.campaign, a.token, `nc-${bad}`, { clips: [good, bad] });
       expect([res.status, res.body.error?.code]).toEqual([422, 'clip_not_completed']);
-      expect(res.body.error?.details).toEqual([expect.objectContaining({ field: 'clips[1]', code: 'clip_not_completed' })]);
+      expect(res.body.error?.details).toEqual([
+        expect.objectContaining({ field: 'clips[1]', code: 'clip_not_completed' }),
+      ]);
     }
     expect(await count('assembly_jobs', 'owner_id = $1', [a.id])).toBe(0);
     expect(await count('idempotency_records', 'owner_id = $1', [a.id])).toBe(0);
@@ -292,7 +440,10 @@ describe('API-070 create an assembly, API-071 read it', () => {
     const good = await clip(a.id, c, 0);
     expect((await postAsm(randomUUID(), a.token, 'nf-1', { clips: [good] })).status).toBe(404);
     expect((await postAsm(c.campaign, b.token, 'nf-2', { clips: [good] })).status).toBe(404);
-    const thumb = await postAsm(c.campaign, a.token, 'nf-3', { clips: [good], thumbstopperJobId: randomUUID() });
+    const thumb = await postAsm(c.campaign, a.token, 'nf-3', {
+      clips: [good],
+      thumbstopperJobId: randomUUID(),
+    });
     expect([thumb.status, thumb.body.error?.code]).toEqual([404, 'not_found']);
     await pool.query(`update campaigns set state = 'deleting' where id = $1`, [c.campaign]);
     expect((await postAsm(c.campaign, a.token, 'nf-4', { clips: [good] })).status).toBe(404);
@@ -317,27 +468,49 @@ describe('API-070 create an assembly, API-071 read it', () => {
     it('records the confirmation of a failed or skipped clip, and only of those', async () => {
       const a = await account();
       const c = await campaign(a.id, { segments: 4 });
-      const [failed, skipped, passed, pending] = [await clip(a.id, c, 0), await clip(a.id, c, 1), await clip(a.id, c, 2), await clip(a.id, c, 3)];
+      const [failed, skipped, passed, pending] = [
+        await clip(a.id, c, 0),
+        await clip(a.id, c, 1),
+        await clip(a.id, c, 2),
+        await clip(a.id, c, 3),
+      ];
       await qc(failed, 'failed');
       await qc(skipped, 'skipped');
       await qc(passed, 'passed');
       await qc(pending, 'pending');
-      const res = await postAsm(c.campaign, a.token, 'qc-ok', { clips: [failed, skipped, passed, pending], confirmations: { qcOverride: [failed, skipped, passed, pending] } });
+      const res = await postAsm(c.campaign, a.token, 'qc-ok', {
+        clips: [failed, skipped, passed, pending],
+        confirmations: { qcOverride: [failed, skipped, passed, pending] },
+      });
       expect(res.status).toBe(202);
-      expect(res.body.data.clips.map((x: { qcOverrideConfirmed: boolean }) => x.qcOverrideConfirmed)).toEqual([true, true, false, false]);
-      const stored = await pool.query('select position, qc_override_confirmed from assembly_clips where assembly_job_id = $1 order by position', [res.body.data.id]);
+      expect(
+        res.body.data.clips.map((x: { qcOverrideConfirmed: boolean }) => x.qcOverrideConfirmed),
+      ).toEqual([true, true, false, false]);
+      const stored = await pool.query(
+        'select position, qc_override_confirmed from assembly_clips where assembly_job_id = $1 order by position',
+        [res.body.data.id],
+      );
       expect(stored.rows.map((r) => r.qc_override_confirmed)).toEqual([true, true, false, false]);
     });
 
     it('needs no confirmation for a pending QC or a clip with no QC row; a confirmation sent anyway is ignored', async () => {
       const a = await account();
       const c = await campaign(a.id, { segments: 3 });
-      const [pending, bare, passed] = [await clip(a.id, c, 0), await clip(a.id, c, 1), await clip(a.id, c, 2)];
+      const [pending, bare, passed] = [
+        await clip(a.id, c, 0),
+        await clip(a.id, c, 1),
+        await clip(a.id, c, 2),
+      ];
       await qc(pending, 'pending');
       await qc(passed, 'passed');
-      const res = await postAsm(c.campaign, a.token, 'qc-pending', { clips: [pending, bare, passed], confirmations: { qcOverride: [pending, passed] } });
+      const res = await postAsm(c.campaign, a.token, 'qc-pending', {
+        clips: [pending, bare, passed],
+        confirmations: { qcOverride: [pending, passed] },
+      });
       expect(res.status).toBe(202);
-      expect(res.body.data.clips.every((x: { qcOverrideConfirmed: boolean }) => !x.qcOverrideConfirmed)).toBe(true);
+      expect(
+        res.body.data.clips.every((x: { qcOverrideConfirmed: boolean }) => !x.qcOverrideConfirmed),
+      ).toBe(true);
     });
 
     it('reads the latest QC, so a re-run that passed after a failure needs no confirmation', async () => {
@@ -350,7 +523,9 @@ describe('API-070 create an assembly, API-071 read it', () => {
       const second = await clip(a.id, c, 1);
       await qc(second, 'passed', 60);
       await qc(second, 'failed', 0);
-      expect((await postAsm(c.campaign, a.token, 'qc-latest-2', { clips: [second] })).status).toBe(422);
+      expect((await postAsm(c.campaign, a.token, 'qc-latest-2', { clips: [second] })).status).toBe(
+        422,
+      );
     });
 
     it('answers 400 at confirmations.qcOverride[i] for an ID that is not in clips, creating nothing', async () => {
@@ -358,9 +533,14 @@ describe('API-070 create an assembly, API-071 read it', () => {
       const c = await campaign(a.id);
       const job = await clip(a.id, c, 0);
       const foreign = randomUUID();
-      const res = await postAsm(c.campaign, a.token, 'qc-foreign', { clips: [job], confirmations: { qcOverride: [job, foreign] } });
+      const res = await postAsm(c.campaign, a.token, 'qc-foreign', {
+        clips: [job],
+        confirmations: { qcOverride: [job, foreign] },
+      });
       expect([res.status, res.body.error?.code]).toEqual([400, 'validation_failed']);
-      expect(res.body.error?.details).toEqual([expect.objectContaining({ field: 'confirmations.qcOverride[1]' })]);
+      expect(res.body.error?.details).toEqual([
+        expect.objectContaining({ field: 'confirmations.qcOverride[1]' }),
+      ]);
       expect(await count('assembly_jobs', 'owner_id = $1', [a.id])).toBe(0);
     });
   });
@@ -370,7 +550,14 @@ describe('API-070 create an assembly, API-071 read it', () => {
       for (let i = 0; i < n; i += 1) {
         await pool.query(
           `insert into assembly_jobs (id, owner_id, campaign_id, state, reuse_hash, render_day) values ($1, $2, $3, $4, $5, $6)`,
-          [randomUUID(), owner, setup.campaign, i % 2 === 0 ? 'done' : 'failed', randomUUID().replace(/-/g, '').padEnd(64, '1'), day],
+          [
+            randomUUID(),
+            owner,
+            setup.campaign,
+            i % 2 === 0 ? 'done' : 'failed',
+            randomUUID().replace(/-/g, '').padEnd(64, '1'),
+            day,
+          ],
         );
       }
     };
@@ -385,7 +572,9 @@ describe('API-070 create an assembly, API-071 read it', () => {
       expect((await postAsm(c.campaign, a.token, 'lim-1', { clips: [clips[0]] })).status).toBe(202);
       const last = await postAsm(c.campaign, a.token, 'lim-2', { clips: [clips[1]] });
       expect(last.status).toBe(202);
-      expect(await count('assembly_jobs', 'owner_id = $1 and render_day = $2', [a.id, today()])).toBe(20);
+      expect(
+        await count('assembly_jobs', 'owner_id = $1 and render_day = $2', [a.id, today()]),
+      ).toBe(20);
       const refused = await postAsm(c.campaign, a.token, 'lim-3', { clips: [clips[2]] });
       expect([refused.status, refused.body.error?.code]).toEqual([422, 'assembly_daily_limit']);
       expect(refused.body.error?.message).toContain('20 renders');
@@ -395,7 +584,10 @@ describe('API-070 create an assembly, API-071 read it', () => {
       const reused = await postAsm(c.campaign, a.token, 'lim-4', { clips: [clips[1]] });
       expect(reused.body.data).toMatchObject({ id: last.body.data.id, reused: true });
       // The next UTC day starts again from zero.
-      await pool.query(`update assembly_jobs set render_day = '2000-01-02' where owner_id = $1 and render_day = $2`, [a.id, today()]);
+      await pool.query(
+        `update assembly_jobs set render_day = '2000-01-02' where owner_id = $1 and render_day = $2`,
+        [a.id, today()],
+      );
       expect((await postAsm(c.campaign, a.token, 'lim-5', { clips: [clips[2]] })).status).toBe(202);
     });
 
@@ -406,10 +598,18 @@ describe('API-070 create an assembly, API-071 read it', () => {
       const d = await campaign(b.id);
       const clips = [await clip(a.id, c, 0), await clip(a.id, c, 1)];
       await seed(a.id, c, 19, today());
-      const [x, y] = await Promise.all([postAsm(c.campaign, a.token, 'race-1', { clips: [clips[0]] }), postAsm(c.campaign, a.token, 'race-2', { clips: [clips[1]] })]);
+      const [x, y] = await Promise.all([
+        postAsm(c.campaign, a.token, 'race-1', { clips: [clips[0]] }),
+        postAsm(c.campaign, a.token, 'race-2', { clips: [clips[1]] }),
+      ]);
       expect([x.status, y.status].sort()).toEqual([202, 422]);
-      expect(await count('assembly_jobs', 'owner_id = $1 and render_day = $2', [a.id, today()])).toBe(20);
-      expect((await postAsm(d.campaign, b.token, 'other-owner', { clips: [await clip(b.id, d, 0)] })).status).toBe(202);
+      expect(
+        await count('assembly_jobs', 'owner_id = $1 and render_day = $2', [a.id, today()]),
+      ).toBe(20);
+      expect(
+        (await postAsm(d.campaign, b.token, 'other-owner', { clips: [await clip(b.id, d, 0)] }))
+          .status,
+      ).toBe(202);
     });
   });
 
@@ -417,7 +617,10 @@ describe('API-070 create an assembly, API-071 read it', () => {
     const a = await account();
     const c = await campaign(a.id);
     const clips = [await clip(a.id, c, 0), await clip(a.id, c, 1)];
-    const [x, y] = await Promise.all([postAsm(c.campaign, a.token, 'same-1', { clips }), postAsm(c.campaign, a.token, 'same-2', { clips })]);
+    const [x, y] = await Promise.all([
+      postAsm(c.campaign, a.token, 'same-1', { clips }),
+      postAsm(c.campaign, a.token, 'same-2', { clips }),
+    ]);
     expect([x.status, y.status]).toEqual([202, 202]);
     expect(x.body.data.id).toBe(y.body.data.id);
     expect(await count('assembly_jobs', 'campaign_id = $1', [c.campaign])).toBe(1);
@@ -432,7 +635,9 @@ describe('API-070 create an assembly, API-071 read it', () => {
       const made = await postAsm(c.campaign, a.token, 'ood-1', { clips: [one, two] });
       const path = `/assemblies/${made.body.data.id}`;
       expect((await call('GET', path, a.token)).body.data.outOfDate).toBe(false);
-      await pool.query('update brief_segments set revision = revision + 1 where id = $1', [c.segments[1]]);
+      await pool.query('update brief_segments set revision = revision + 1 where id = $1', [
+        c.segments[1],
+      ]);
       const stale = (await call('GET', path, a.token)).body.data;
       expect(stale.outOfDate).toBe(true);
       expect(stale.clips.map((x: { outOfDate: boolean }) => x.outOfDate)).toEqual([false, true]);
@@ -444,9 +649,13 @@ describe('API-070 create an assembly, API-071 read it', () => {
       const one = await clip(a.id, c, 0, 100);
       const made = await postAsm(c.campaign, a.token, 'ood-2', { clips: [one] });
       await clip(a.id, c, 1, 0);
-      expect((await call('GET', `/assemblies/${made.body.data.id}`, a.token)).body.data.outOfDate).toBe(false);
+      expect(
+        (await call('GET', `/assemblies/${made.body.data.id}`, a.token)).body.data.outOfDate,
+      ).toBe(false);
       await clip(a.id, c, 0, 0);
-      expect((await call('GET', `/assemblies/${made.body.data.id}`, a.token)).body.data.outOfDate).toBe(true);
+      expect(
+        (await call('GET', `/assemblies/${made.body.data.id}`, a.token)).body.data.outOfDate,
+      ).toBe(true);
     });
   });
 
@@ -455,8 +664,14 @@ describe('API-070 create an assembly, API-071 read it', () => {
     const c = await campaign(a.id);
     const made = await postAsm(c.campaign, a.token, 'done-1', { clips: [await clip(a.id, c, 0)] });
     const media = randomUUID();
-    await pool.query(`insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'final', 'ready', $3, 10, 'video/mp4', $4)`, [media, a.id, `u/${a.id}/c/${c.campaign}/final/${media}.mp4`, c.campaign]);
-    await pool.query(`update assembly_jobs set state = 'done', output_media_id = $2 where id = $1`, [made.body.data.id, media]);
+    await pool.query(
+      `insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'final', 'ready', $3, 10, 'video/mp4', $4)`,
+      [media, a.id, `u/${a.id}/c/${c.campaign}/final/${media}.mp4`, c.campaign],
+    );
+    await pool.query(
+      `update assembly_jobs set state = 'done', output_media_id = $2 where id = $1`,
+      [made.body.data.id, media],
+    );
     const read = await call('GET', `/assemblies/${made.body.data.id}`, a.token);
     expect(valid(read.body)).toBe(true);
     expect(read.body.data).toMatchObject({ state: 'done', outputMediaId: media });

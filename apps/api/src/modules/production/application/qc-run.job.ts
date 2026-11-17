@@ -7,7 +7,14 @@ import type { BillableCall } from '../../usage/index.js';
 import type { StoragePort } from '../../media/index.js';
 import { QcKeySession, gateQcKey } from './qc-key-session.js';
 import { AUDIO_EXTRACTOR, QC_CONFIG, QC_REPOSITORY, TRANSCRIBE_PORT } from './qc-ports.js';
-import type { AudioExtractor, QcConfig, QcRepository, QcRunContext, QcSettlement, TranscribePort } from './qc-ports.js';
+import type {
+  AudioExtractor,
+  QcConfig,
+  QcRepository,
+  QcRunContext,
+  QcSettlement,
+  TranscribePort,
+} from './qc-ports.js';
 import { judge } from './qc-wer.js';
 import { PRODUCTION_STORAGE, ProviderCallFailed, ProviderInvalidResponse } from './worker/ports.js';
 import type { JobLog, SealedKeyRow } from './worker/ports.js';
@@ -31,7 +38,12 @@ const REASONS = {
   credit: 'Your OpenAI account has no credit left. Add credit, then re-run QC.',
 } as const;
 
-const skipped = (reason: string, errorCode: string | null = null): QcSettlement => ({ qcState: 'skipped', reason, wordErrorRate: null, errorCode });
+const skipped = (reason: string, errorCode: string | null = null): QcSettlement => ({
+  qcState: 'skipped',
+  reason,
+  wordErrorRate: null,
+  errorCode,
+});
 
 /** What the call closure learns, for the usage and key bookkeeping after the run is settled. */
 interface CallFacts {
@@ -76,7 +88,9 @@ export class QcRunJob {
   async run(runId: string, log: JobLog): Promise<QcRunOutcome> {
     const run = await this.database.uow.run((tx) => this.repository.findRun(tx, runId));
     if (run === null || run.state !== 'pending') return 'ignored';
-    const claim = await this.database.uow.run((tx) => claimWithUserLimit(tx, QC_TABLE, runId, { limit: null }));
+    const claim = await this.database.uow.run((tx) =>
+      claimWithUserLimit(tx, QC_TABLE, runId, { limit: null }),
+    );
     if (claim.kind !== 'claimed') return 'ignored';
 
     const facts: CallFacts = { usage: 'none', latencyMs: 0, key: null, keyOk: null };
@@ -86,16 +100,22 @@ export class QcRunJob {
     } catch {
       // Whatever went wrong is not the user's to fix; a call that may have gone out keeps its estimate counted.
       settlement = skipped(REASONS.unknown, 'qc_error');
-      if (facts.usage === 'none' && facts.key !== null && facts.keyOk === null) facts.usage = 'unconfirmed';
+      if (facts.usage === 'none' && facts.key !== null && facts.keyOk === null)
+        facts.usage = 'unconfirmed';
     }
     if (settlement === null) return 'ignored';
     await this.finish(run, settlement, facts);
-    if (facts.key !== null && facts.keyOk !== null) await this.keys.report(facts.key, facts.keyOk, log);
+    if (facts.key !== null && facts.keyOk !== null)
+      await this.keys.report(facts.key, facts.keyOk, log);
     return settlement.qcState;
   }
 
   /** Reads, checks and (at most once) calls. `null` when the run left `submitting` under it (cancelled, swept). */
-  private async evaluate(run: QcRunContext, facts: CallFacts, log: JobLog): Promise<QcSettlement | null> {
+  private async evaluate(
+    run: QcRunContext,
+    facts: CallFacts,
+    log: JobLog,
+  ): Promise<QcSettlement | null> {
     const plan = await this.plan(run);
     if (plan.kind === 'skip') return plan.settlement;
     const clip = await this.storage.get(plan.storageKey);
@@ -120,7 +140,12 @@ export class QcRunJob {
         facts.usage = 'succeeded';
         facts.keyOk = true;
         const verdict = judge(plan.dialogue, heard.text, this.config.maxWordErrorRate);
-        return { qcState: verdict.passed ? 'passed' : 'failed', reason: verdict.reason, wordErrorRate: verdict.rate, errorCode: null };
+        return {
+          qcState: verdict.passed ? 'passed' : 'failed',
+          reason: verdict.reason,
+          wordErrorRate: verdict.rate,
+          errorCode: null,
+        };
       } catch (error) {
         return this.refusal(error, facts);
       } finally {
@@ -135,13 +160,18 @@ export class QcRunJob {
   }
 
   /** Everything read before the call: the clip, the dialogue it was made from and the key gate. */
-  private async plan(run: QcRunContext): Promise<
+  private async plan(
+    run: QcRunContext,
+  ): Promise<
     | { kind: 'skip'; settlement: QcSettlement }
     | { kind: 'go'; storageKey: string; dialogue: string; key: SealedKeyRow }
   > {
-    if (!run.campaignActive || run.clipState !== 'completed' || run.storageKey === null) return { kind: 'skip', settlement: skipped(REASONS.unavailable) };
-    if (run.dialogue === null || run.dialogue.trim() === '') return { kind: 'skip', settlement: skipped(REASONS.noText) };
-    if (run.currentRevision !== run.segmentRevision) return { kind: 'skip', settlement: skipped(REASONS.outOfDate) };
+    if (!run.campaignActive || run.clipState !== 'completed' || run.storageKey === null)
+      return { kind: 'skip', settlement: skipped(REASONS.unavailable) };
+    if (run.dialogue === null || run.dialogue.trim() === '')
+      return { kind: 'skip', settlement: skipped(REASONS.noText) };
+    if (run.currentRevision !== run.segmentRevision)
+      return { kind: 'skip', settlement: skipped(REASONS.outOfDate) };
     const keys = await this.database.uow.run(async (tx) => ({
       stamped: run.keyId === null ? null : await this.repository.findKey(tx, run.keyId),
       current: run.keyId === null ? await this.repository.findOwnerKey(tx, run.ownerId) : null,
@@ -162,25 +192,43 @@ export class QcRunJob {
       return skipped(REASONS.unknown, 'qc_error');
     }
     const c = error.classification;
-    facts.usage = c.usageEvent === 'none' ? 'none' : c.usageEvent === 'rejected_zero' ? 'rejected' : 'unconfirmed';
+    facts.usage =
+      c.usageEvent === 'none'
+        ? 'none'
+        : c.usageEvent === 'rejected_zero'
+          ? 'rejected'
+          : 'unconfirmed';
     if (c.countsAsAuthFailure) facts.keyOk = false;
-    const reason = c.causeClass === 'configuration' || c.causeClass === 'credit' ? REASONS[c.causeClass] : REASONS.temporary;
+    const reason =
+      c.causeClass === 'configuration' || c.causeClass === 'credit'
+        ? REASONS[c.causeClass]
+        : REASONS.temporary;
     return skipped(reason, c.causeClass);
   }
 
   /** Settles the run, writes the call's usage event and drops the reservations (the run's own and the clip's QC part). */
-  private async finish(run: QcRunContext, settlement: QcSettlement, facts: CallFacts): Promise<void> {
+  private async finish(
+    run: QcRunContext,
+    settlement: QcSettlement,
+    facts: CallFacts,
+  ): Promise<void> {
     const call: BillableCall = { provider: 'openai', operation: this.config.transcribeModel };
     const base = { ownerId: run.ownerId, call, jobType: 'qc' as const, jobId: run.id, callSeq: 1 };
     await this.database.uow.run(async (tx) => {
       await this.repository.settle(tx, run.id, settlement);
       // Written whether or not the run was still ours: the call was made, so its cost is counted (idempotent per call).
-      if (facts.usage === 'succeeded') await this.usage.record(tx, { ...base, outcome: 'succeeded', latencyMs: facts.latencyMs });
-      else if (facts.usage === 'rejected') await this.usage.record(tx, { ...base, outcome: 'rejected', latencyMs: facts.latencyMs });
+      if (facts.usage === 'succeeded')
+        await this.usage.record(tx, { ...base, outcome: 'succeeded', latencyMs: facts.latencyMs });
+      else if (facts.usage === 'rejected')
+        await this.usage.record(tx, { ...base, outcome: 'rejected', latencyMs: facts.latencyMs });
       else if (facts.usage === 'unconfirmed') await this.usage.convertUnconfirmed(tx, base);
       await this.usage.release(tx, { ownerId: run.ownerId, jobType: 'qc', jobId: run.id });
       // The first check of a clip was reserved with the clip (ARCHITECTURE §5.5): that part goes with it.
-      await this.usage.release(tx, { ownerId: run.ownerId, jobType: 'video', jobId: run.videoJobId });
+      await this.usage.release(tx, {
+        ownerId: run.ownerId,
+        jobType: 'video',
+        jobId: run.videoJobId,
+      });
     });
   }
 }

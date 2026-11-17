@@ -4,10 +4,22 @@ import { Reflector } from '@nestjs/core';
 import type { ExecutionContext } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import type { DomainError } from '../http/domain-error.js';
-import { RATE_LIMIT_OPTIONS, RateLimit, RateLimitGuard, clientIp, isExempt } from './rate-limit.guard.js';
+import {
+  RATE_LIMIT_OPTIONS,
+  RateLimit,
+  RateLimitGuard,
+  clientIp,
+  isExempt,
+} from './rate-limit.guard.js';
 import type { IdentifiedRequest, RateLimitOptions } from './rate-limit.guard.js';
 import { JOB_CREATE_ROUTE, rateLimitOptionsFrom } from './rate-limit.module.js';
-import { GENERAL_IP_LIMIT, GENERAL_USER_LIMIT, RateLimitedError, RateLimiter, ipSubject } from './rate-limiter.js';
+import {
+  GENERAL_IP_LIMIT,
+  GENERAL_USER_LIMIT,
+  RateLimitedError,
+  RateLimiter,
+  ipSubject,
+} from './rate-limiter.js';
 
 /** A fake `execute` that counts per (scope, subject, window) like the upsert does. */
 function fakeDb(fail = false) {
@@ -32,7 +44,8 @@ describe('RateLimiter.consume', () => {
   it('allows up to the limit and refuses the next request with the seconds left in the window', async () => {
     const { db } = fakeDb();
     const limiter = new RateLimiter(db as never, () => Date.UTC(2026, 0, 1, 0, 0, 20));
-    for (let n = 1; n <= 3; n++) expect((await limiter.consume('s', 'u', 3, 60)).allowed).toBe(true);
+    for (let n = 1; n <= 3; n++)
+      expect((await limiter.consume('s', 'u', 3, 60)).allowed).toBe(true);
     const over = await limiter.consume('s', 'u', 3, 60);
     expect(over).toMatchObject({ allowed: false, count: 4, limit: 3, retryAfterSeconds: 40 });
   });
@@ -51,7 +64,10 @@ describe('RateLimiter.consume', () => {
 
   it('is 503 service_unavailable when the database fails, never a pass-through', async () => {
     const limiter = new RateLimiter(fakeDb(true).db as never);
-    await expect(limiter.consume('s', 'u', 1, 60)).rejects.toMatchObject({ code: 'service_unavailable', status: 503 });
+    await expect(limiter.consume('s', 'u', 1, 60)).rejects.toMatchObject({
+      code: 'service_unavailable',
+      status: 503,
+    });
   });
 
   it('rejects arguments the table cannot hold', async () => {
@@ -67,7 +83,9 @@ describe('RateLimiter.consume', () => {
   it('enforce throws 429 rate_limited naming the wait', async () => {
     const limiter = new RateLimiter(fakeDb().db as never, () => 0);
     await limiter.enforce('s', 'u', { limit: 1, windowSeconds: 60 });
-    const error = await limiter.enforce('s', 'u', { limit: 1, windowSeconds: 60 }).catch((e: unknown) => e);
+    const error = await limiter
+      .enforce('s', 'u', { limit: 1, windowSeconds: 60 })
+      .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(RateLimitedError);
     expect(error).toMatchObject({ code: 'rate_limited', status: 429, retryAfterSeconds: 60 });
     expect((error as DomainError).safeMessage).toBe('Too many attempts. Try again in 60 seconds.');
@@ -83,7 +101,8 @@ describe('addresses', () => {
   });
 
   it('takes the entry TRUST_PROXY_HOPS places from the right of X-Forwarded-For', () => {
-    const req = (header: string | string[] | undefined) => ({ ip: '10.0.0.1', headers: { 'x-forwarded-for': header } }) as never;
+    const req = (header: string | string[] | undefined) =>
+      ({ ip: '10.0.0.1', headers: { 'x-forwarded-for': header } }) as never;
     expect(clientIp(req('6.6.6.6, 1.2.3.4'), 1)).toBe('1.2.3.4');
     expect(clientIp(req('6.6.6.6, 1.2.3.4, 10.1.1.1'), 2)).toBe('1.2.3.4');
     expect(clientIp(req(['1.1.1.1', '2.2.2.2']), 1)).toBe('2.2.2.2');
@@ -93,16 +112,31 @@ describe('addresses', () => {
   });
 
   it('exempts health and internal metrics only', () => {
-    for (const url of ['/health/live', '/health/ready?x=1', '/health', '/internal/metrics', '/internal/metrics/window'])
+    for (const url of [
+      '/health/live',
+      '/health/ready?x=1',
+      '/health',
+      '/internal/metrics',
+      '/internal/metrics/window',
+    ])
       expect(isExempt(url)).toBe(true);
-    for (const url of ['/api/v1/me', '/healthy', '/internal/metricsx', '/api/v1/health/live']) expect(isExempt(url)).toBe(false);
+    for (const url of ['/api/v1/me', '/healthy', '/internal/metricsx', '/api/v1/health/live'])
+      expect(isExempt(url)).toBe(false);
   });
 });
 
 describe('configuration', () => {
   it('derives the job-create limit from the configured count and minutes', () => {
-    const options = rateLimitOptionsFrom({ RATE_LIMIT_IP_KEY: 'k'.repeat(32), JOB_CREATE_RATE_LIMIT: 7, JOB_CREATE_RATE_WINDOW_MIN: 2, TRUST_PROXY_HOPS: 2 });
-    expect(options).toMatchObject({ trustProxyHops: 2, routes: { [JOB_CREATE_ROUTE]: { limit: 7, windowSeconds: 120 } } });
+    const options = rateLimitOptionsFrom({
+      RATE_LIMIT_IP_KEY: 'k'.repeat(32),
+      JOB_CREATE_RATE_LIMIT: 7,
+      JOB_CREATE_RATE_WINDOW_MIN: 2,
+      TRUST_PROXY_HOPS: 2,
+    });
+    expect(options).toMatchObject({
+      trustProxyHops: 2,
+      routes: { [JOB_CREATE_ROUTE]: { limit: 7, windowSeconds: 120 } },
+    });
     expect(rateLimitOptionsFrom({ RATE_LIMIT_IP_KEY: 'k'.repeat(32) })).toMatchObject({
       trustProxyHops: 1,
       routes: { [JOB_CREATE_ROUTE]: { limit: 60, windowSeconds: 600 } },
@@ -123,21 +157,33 @@ class Probe {
   missing(): void {}
 }
 
-function context(request: Partial<IdentifiedRequest>, handler: keyof Probe, headers: Record<string, string>) {
+function context(
+  request: Partial<IdentifiedRequest>,
+  handler: keyof Probe,
+  headers: Record<string, string>,
+) {
   const sent: Record<string, string> = {};
   const reply = { header: (name: string, value: string) => void (sent[name] = value) };
   const ctx = {
     getType: () => 'http',
     getHandler: () => Probe.prototype[handler],
     getClass: () => Probe,
-    switchToHttp: () => ({ getRequest: () => ({ ip: '9.9.9.9', headers, url: '/api/v1/x', ...request }), getResponse: () => reply }),
+    switchToHttp: () => ({
+      getRequest: () => ({ ip: '9.9.9.9', headers, url: '/api/v1/x', ...request }),
+      getResponse: () => reply,
+    }),
   } as unknown as ExecutionContext;
   return { ctx, sent };
 }
 
 describe('RateLimitGuard', () => {
-  const options: RateLimitOptions = { ipKey: 'k'.repeat(32), trustProxyHops: 1, routes: { [JOB_CREATE_ROUTE]: { limit: 2, windowSeconds: 600 } } };
-  const guard = (db = fakeDb()) => new RateLimitGuard(new RateLimiter(db.db as never, () => 0), new Reflector(), options);
+  const options: RateLimitOptions = {
+    ipKey: 'k'.repeat(32),
+    trustProxyHops: 1,
+    routes: { [JOB_CREATE_ROUTE]: { limit: 2, windowSeconds: 600 } },
+  };
+  const guard = (db = fakeDb()) =>
+    new RateLimitGuard(new RateLimiter(db.db as never, () => 0), new Reflector(), options);
 
   it('limits unauthenticated requests by IP at 60 per minute and sets Retry-After', async () => {
     const g = guard();
@@ -162,7 +208,9 @@ describe('RateLimitGuard', () => {
     await g.canActivate(ctx);
     await expect(g.canActivate(ctx)).rejects.toBeInstanceOf(RateLimitedError);
     expect(sent['Retry-After']).toBe('600');
-    await expect(g.canActivate(context({}, 'missing', {}).ctx)).rejects.toThrow('"nope" is not configured');
+    await expect(g.canActivate(context({}, 'missing', {}).ctx)).rejects.toThrow(
+      '"nope" is not configured',
+    );
   });
 
   it('skips exempt URLs and non-http contexts and fails closed when the database fails', async () => {
@@ -170,7 +218,9 @@ describe('RateLimitGuard', () => {
     expect(await g.canActivate(context({ url: '/health/live' }, 'plain', {}).ctx)).toBe(true);
     const rpc = { getType: () => 'rpc' } as unknown as ExecutionContext;
     expect(await g.canActivate(rpc)).toBe(true);
-    await expect(g.canActivate(context({}, 'plain', {}).ctx)).rejects.toMatchObject({ code: 'service_unavailable' });
+    await expect(g.canActivate(context({}, 'plain', {}).ctx)).rejects.toMatchObject({
+      code: 'service_unavailable',
+    });
   });
 
   it('is provided through the options token', () => {

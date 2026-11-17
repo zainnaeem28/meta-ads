@@ -35,27 +35,55 @@ describe('completeness of a draft at submit', () => {
   it('accepts a complete draft and trims the name', () => {
     const { fields, missing } = completeness(draft(), null);
     expect(missing).toEqual([]);
-    expect(fields).toEqual({ productName: 'Calm Cap', productDescription: 'A slow morning drink', segmentCount: 2 });
+    expect(fields).toEqual({
+      productName: 'Calm Cap',
+      productDescription: 'A slow morning drink',
+      segmentCount: 2,
+    });
   });
 
   it('takes the description of a completed analysis when none was typed', () => {
-    expect(completeness(draft({ productDescription: '  ' }), 'A bottle.').fields?.productDescription).toBe('A bottle.');
-    expect(completeness(draft({ productDescription: null }), null).missing.map((m) => m.field)).toEqual(['productDescription']);
+    expect(
+      completeness(draft({ productDescription: '  ' }), 'A bottle.').fields?.productDescription,
+    ).toBe('A bottle.');
+    expect(
+      completeness(draft({ productDescription: null }), null).missing.map((m) => m.field),
+    ).toEqual(['productDescription']);
   });
 
   it('lists every missing field, each with the code required', () => {
     const { fields, missing } = completeness(
-      draft({ productName: null, audienceAgeMin: null, audienceAgeMax: null, directionGoal: null, segmentCount: null, concept: ' ' }),
+      draft({
+        productName: null,
+        audienceAgeMin: null,
+        audienceAgeMax: null,
+        directionGoal: null,
+        segmentCount: null,
+        concept: ' ',
+      }),
       null,
     );
     expect(fields).toBeUndefined();
-    expect(missing.map((m) => m.field)).toEqual(['productName', 'audience.ageMin', 'audience.ageMax', 'direction.goal', 'direction.segmentCount', 'concept']);
+    expect(missing.map((m) => m.field)).toEqual([
+      'productName',
+      'audience.ageMin',
+      'audience.ageMax',
+      'direction.goal',
+      'direction.segmentCount',
+      'concept',
+    ]);
     expect(missing.every((m) => m.code === 'required')).toBe(true);
   });
 
   it('asks for the script in script mode, and not for the concept', () => {
-    expect(completeness(draft({ intakeMode: 'script', script: null, concept: 'x' }), null).missing.map((m) => m.field)).toEqual(['script']);
-    expect(completeness(draft({ intakeMode: 'script', script: 'Hello', concept: null }), null).missing).toEqual([]);
+    expect(
+      completeness(draft({ intakeMode: 'script', script: null, concept: 'x' }), null).missing.map(
+        (m) => m.field,
+      ),
+    ).toEqual(['script']);
+    expect(
+      completeness(draft({ intakeMode: 'script', script: 'Hello', concept: null }), null).missing,
+    ).toEqual([]);
   });
 });
 
@@ -81,7 +109,12 @@ describe('job summary', () => {
       updatedAt: '2026-11-15 23:53:22+00',
       deadlineAt: '2026-11-16 00:03:22.5+00',
     };
-    expect(jobSummary(row, true)).toMatchObject({ label: 'queued', reused: true, createdAt: '2026-11-15T23:53:22.123456Z', deadlineAt: '2026-11-16T00:03:22.5Z' });
+    expect(jobSummary(row, true)).toMatchObject({
+      label: 'queued',
+      reused: true,
+      createdAt: '2026-11-15T23:53:22.123456Z',
+      deadlineAt: '2026-11-16T00:03:22.5Z',
+    });
     expect(jobSummary({ ...row, state: 'cancelled' }, false).label).toBe('failed');
     expect(jobSummary({ ...row, state: 'weird' }, false).label).toBe('pending');
     expect(instant('2026-11-15T23:53:22Z')).toBe('2026-11-15T23:53:22.000Z');

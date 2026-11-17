@@ -12,7 +12,10 @@ function service(rows: readonly ClaimCountRow[], seen: ClaimWindow[] = []): Clai
       return Promise.resolve(rows);
     },
   };
-  return new ClaimCountsService({ uow: { run: (body: never) => (body as (tx: unknown) => Promise<unknown>)({}) } } as never, repository);
+  return new ClaimCountsService(
+    { uow: { run: (body: never) => (body as (tx: unknown) => Promise<unknown>)({}) } } as never,
+    repository,
+  );
 }
 
 describe('ClaimCountsService', () => {

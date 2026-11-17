@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Writable } from 'node:stream';
@@ -44,7 +45,10 @@ async function applyBeforeGrants(file: string, only?: RegExp): Promise<void> {
 beforeAll(async () => {
   testDb = await createTestDatabase({ label: 'task036', migrations: false });
   pool = new pg.Pool({ connectionString: testDb.url, max: 4 });
-  await applyBeforeGrants('0001_task-025-platform.sql', /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets|idempotency_records_expiry_idx)/);
+  await applyBeforeGrants(
+    '0001_task-025-platform.sql',
+    /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets|idempotency_records_expiry_idx)/,
+  );
   await applyBeforeGrants('0010_task-032-audit.sql');
   await applyBeforeGrants('0020_task-033-identity.sql');
   await installJobs(testDb.url);
@@ -86,9 +90,14 @@ beforeAll(async () => {
       WORKER_WATCHDOG_SECONDS: 180,
       WORKER_DRAIN_SECONDS: 5,
     },
-    { logger: buildLogger({ level: 'silent' }).logger, env: { APP_ENV: 'development', WEB_ORIGIN: ORIGIN } },
+    {
+      logger: buildLogger({ level: 'silent' }).logger,
+      env: { APP_ENV: 'development', WEB_ORIGIN: ORIGIN },
+    },
   );
-  workerIdentity = worker.context.get<IdentityPort>(IDENTITY_PORT, { strict: false }) as LocalIdentity;
+  workerIdentity = worker.context.get<IdentityPort>(IDENTITY_PORT, {
+    strict: false,
+  }) as LocalIdentity;
 });
 
 // Each test starts with empty rate-limit windows (the 20 per hour limit has its own test).
@@ -97,7 +106,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  for (const key of ['OWNER_EMAIL', 'INVITE_EMAIL_DOMAINS', 'CURSOR_SIGNING_KEY']) delete process.env[key];
+  for (const key of ['OWNER_EMAIL', 'INVITE_EMAIL_DOMAINS', 'CURSOR_SIGNING_KEY'])
+    delete process.env[key];
   await worker?.runtime.drain().catch(() => undefined);
   await worker?.context.close().catch(() => undefined);
   await app?.close();
@@ -114,7 +124,7 @@ async function assertNoOpenTransaction(): Promise<void> {
   expect((rows.rows[0] as { n: number }).n).toBe(0);
 }
 
-type Body = { success: boolean; data?: any; error?: { code: string }; metaData?: any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+type Body = { success: boolean; data?: any; error?: { code: string }; metaData?: any };
 const fastify = () => app.getHttpAdapter().getInstance();
 async function call(method: 'GET' | 'POST', url: string, token?: string, payload?: unknown) {
   const res = await fastify().inject({
@@ -135,7 +145,11 @@ const token = (sub: string) => local.issueToken({ sub, azp: ORIGIN, fva: [1, 1] 
 const count = async (sql: string, params: unknown[] = []) =>
   Number(((await pool.query(sql, params)).rows[0] as { n: string }).n);
 const row = async (email: string) =>
-  (await pool.query('select * from invitations where lower(email) = $1 order by created_at desc', [email])).rows as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  (
+    await pool.query('select * from invitations where lower(email) = $1 order by created_at desc', [
+      email,
+    ])
+  ).rows as any[];
 
 let adminToken: string;
 let adminId: string;
@@ -143,10 +157,12 @@ let memberToken: string;
 
 async function newAdmin(label: string): Promise<{ token: string; id: string }> {
   const p = person(`${label}@example.test`);
-  const id = (await pool.query(
-    `insert into users (id, idp_subject, email, role, linked_via) values (gen_random_uuid(), $1, $2, 'admin', 'first_admin') returning id`,
-    [p.sub, p.email],
-  )).rows[0].id as string;
+  const id = (
+    await pool.query(
+      `insert into users (id, idp_subject, email, role, linked_via) values (gen_random_uuid(), $1, $2, 'admin', 'first_admin') returning id`,
+      [p.sub, p.email],
+    )
+  ).rows[0].id as string;
   return { token: token(p.sub), id };
 }
 
@@ -156,15 +172,21 @@ describe('setup: a first admin and an invited member', () => {
     adminToken = token(owner.sub);
     const me = await call('GET', '/me', adminToken);
     expect(me.body.data).toMatchObject({ linkState: 'linked', role: 'admin' });
-    adminId = (await pool.query('select id from users where idp_subject = $1', [owner.sub])).rows[0].id as string;
+    adminId = (await pool.query('select id from users where idp_subject = $1', [owner.sub])).rows[0]
+      .id as string;
 
-    const invite = await call('POST', '/admin/invitations', adminToken, { email: 'Member@Example.test ' });
+    const invite = await call('POST', '/admin/invitations', adminToken, {
+      email: 'Member@Example.test ',
+    });
     expect(invite.status).toBe(202);
     const member = person('member@example.test');
     memberToken = token(member.sub);
     const linked = await call('GET', '/me', memberToken);
     expect(linked.body.data).toMatchObject({ linkState: 'linked', role: 'user' });
-    expect((await pool.query('select status, role from users where idp_subject = $1', [member.sub])).rows[0]).toEqual({
+    expect(
+      (await pool.query('select status, role from users where idp_subject = $1', [member.sub]))
+        .rows[0],
+    ).toEqual({
       status: 'active',
       role: 'user',
     });
@@ -175,33 +197,61 @@ describe('setup: a first admin and an invited member', () => {
 describe('authorization and validation', () => {
   it('refuses anonymous 401, a member 403 forbidden_role (audited), bad bodies and ids 400', async () => {
     expect((await call('GET', '/admin/invitations')).status).toBe(401);
-    expect((await call('POST', '/admin/invitations', undefined, { email: 'a@example.test' })).status).toBe(401);
+    expect(
+      (await call('POST', '/admin/invitations', undefined, { email: 'a@example.test' })).status,
+    ).toBe(401);
     for (const [method, url] of [
       ['GET', '/admin/invitations'],
       ['POST', '/admin/invitations'],
       ['POST', '/admin/invitations/00000000-0000-4000-8000-000000000001/resend'],
       ['POST', '/admin/invitations/00000000-0000-4000-8000-000000000001/revoke'],
     ] as const) {
-      const r = await call(method, url, memberToken, method === 'POST' ? { email: 'a@example.test' } : undefined);
+      const r = await call(
+        method,
+        url,
+        memberToken,
+        method === 'POST' ? { email: 'a@example.test' } : undefined,
+      );
       expect([url, r.status, code(r)]).toEqual([url, 403, 'forbidden_role']);
     }
-    expect(await count(`select count(*) n from audit_events where action = 'auth.denied'`)).toBeGreaterThanOrEqual(4);
+    expect(
+      await count(`select count(*) n from audit_events where action = 'auth.denied'`),
+    ).toBeGreaterThanOrEqual(4);
 
-    for (const payload of [{}, { email: 'not-an-email' }, { email: 'a@example.test', extra: 1 }, { email: 'x'.repeat(330) + '@example.test' }]) {
+    for (const payload of [
+      {},
+      { email: 'not-an-email' },
+      { email: 'a@example.test', extra: 1 },
+      { email: 'x'.repeat(330) + '@example.test' },
+    ]) {
       const r = await call('POST', '/admin/invitations', adminToken, payload);
       expect([r.status, code(r)]).toEqual([400, 'validation_failed']);
     }
-    expect(code(await call('POST', '/admin/invitations/not-a-uuid/resend', adminToken))).toBe('validation_failed');
-    expect(code(await call('GET', '/admin/invitations?limit=0', adminToken))).toBe('validation_failed');
-    expect(code(await call('GET', '/admin/invitations?state=bogus', adminToken))).toBe('validation_failed');
-    expect(code(await call('GET', '/admin/invitations?cursor=garbage', adminToken))).toBe('validation_failed');
+    expect(code(await call('POST', '/admin/invitations/not-a-uuid/resend', adminToken))).toBe(
+      'validation_failed',
+    );
+    expect(code(await call('GET', '/admin/invitations?limit=0', adminToken))).toBe(
+      'validation_failed',
+    );
+    expect(code(await call('GET', '/admin/invitations?state=bogus', adminToken))).toBe(
+      'validation_failed',
+    );
+    expect(code(await call('GET', '/admin/invitations?cursor=garbage', adminToken))).toBe(
+      'validation_failed',
+    );
     const unknown = '00000000-0000-4000-8000-0000000000aa';
-    expect(await call('POST', `/admin/invitations/${unknown}/resend`, adminToken)).toMatchObject({ status: 404 });
-    expect(code(await call('POST', `/admin/invitations/${unknown}/revoke`, adminToken))).toBe('not_found');
+    expect(await call('POST', `/admin/invitations/${unknown}/resend`, adminToken)).toMatchObject({
+      status: 404,
+    });
+    expect(code(await call('POST', `/admin/invitations/${unknown}/revoke`, adminToken))).toBe(
+      'not_found',
+    );
   });
 
   it('refuses a domain outside INVITE_EMAIL_DOMAINS with 422 invite_domain_not_allowed and stores nothing', async () => {
-    const r = await call('POST', '/admin/invitations', adminToken, { email: 'someone@elsewhere.test' });
+    const r = await call('POST', '/admin/invitations', adminToken, {
+      email: 'someone@elsewhere.test',
+    });
     expect([r.status, code(r)]).toEqual([422, 'invite_domain_not_allowed']);
     expect(await row('someone@elsewhere.test')).toHaveLength(0);
   });
@@ -218,26 +268,49 @@ describe('create, list and the send states (TC-INV-01, 02, 08)', () => {
     const [stored] = await row('inv1@example.test');
     expect(stored).toMatchObject({ state: 'invited', send_state: 'sent', invited_by: adminId });
     expect(stored.idp_invitation_id).toMatch(new RegExp(`^inv_${CANARY}`));
-    expect(Date.parse(stored.expires_at) - Date.parse(stored.created_at)).toBeGreaterThan(6.9 * 86_400_000);
-    expect(local.invitations.get(stored.idp_invitation_id)).toMatchObject({ email: 'inv1@example.test', expiresInDays: 7 });
+    expect(Date.parse(stored.expires_at) - Date.parse(stored.created_at)).toBeGreaterThan(
+      6.9 * 86_400_000,
+    );
+    expect(local.invitations.get(stored.idp_invitation_id)).toMatchObject({
+      email: 'inv1@example.test',
+      expiresInDays: 7,
+    });
 
     const list = await call('GET', '/admin/invitations', adminToken);
-    const mine = (list.body.data as any[]).find((i) => i.email === 'inv1@example.test'); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const mine = (list.body.data as any[]).find((i) => i.email === 'inv1@example.test');
     expect(mine).toMatchObject({ state: 'invited', sendState: 'sent', invitedBy: adminId });
-    expect(Object.keys(mine).sort()).toEqual(
-      ['createdAt', 'email', 'expiresAt', 'id', 'invitedBy', 'sendState', 'state', 'updatedAt'],
-    );
+    expect(Object.keys(mine).sort()).toEqual([
+      'createdAt',
+      'email',
+      'expiresAt',
+      'id',
+      'invitedBy',
+      'sendState',
+      'state',
+      'updatedAt',
+    ]);
     expect(list.text).not.toContain('idp');
-    const columns = (await pool.query(`select column_name from information_schema.columns where table_name = 'invitations'`)).rows.map(
-      (c) => c.column_name as string,
-    );
+    const columns = (
+      await pool.query(
+        `select column_name from information_schema.columns where table_name = 'invitations'`,
+      )
+    ).rows.map((c) => c.column_name as string);
     expect(columns).not.toContain('token_hash');
-    expect(await count(`select count(*) n from audit_events where action = 'invitation.created' and object_id = $1`, [stored.id])).toBe(1);
+    expect(
+      await count(
+        `select count(*) n from audit_events where action = 'invitation.created' and object_id = $1`,
+        [stored.id],
+      ),
+    ).toBe(1);
   });
 
   it('answers a registered address exactly like a fresh one and creates no row (TC-INV-08, TC-ACC-05)', async () => {
-    const fresh = await call('POST', '/admin/invitations', adminToken, { email: 'fresh1@example.test' });
-    const registered = await call('POST', '/admin/invitations', adminToken, { email: 'member@example.test' });
+    const fresh = await call('POST', '/admin/invitations', adminToken, {
+      email: 'fresh1@example.test',
+    });
+    const registered = await call('POST', '/admin/invitations', adminToken, {
+      email: 'member@example.test',
+    });
     expect(registered.status).toBe(fresh.status);
     expect(Object.keys(registered.body.data).sort()).toEqual(Object.keys(fresh.body.data).sort());
     expect(registered.body.data.message).toBe(fresh.body.data.message);
@@ -247,23 +320,39 @@ describe('create, list and the send states (TC-INV-01, 02, 08)', () => {
 
   it('a provider error then a timeout leave the row invited/send_failed; resend recovers it with a restarted expiry (TC-INV-02, TC-ACC-11)', async () => {
     const original = local.createInvitation;
-    local.createInvitation = () => Promise.reject(new IdentityUnavailable('createInvitation', 'provider'));
+    local.createInvitation = () =>
+      Promise.reject(new IdentityUnavailable('createInvitation', 'provider'));
     let created;
     try {
-      created = await call('POST', '/admin/invitations', adminToken, { email: 'inv2@example.test' });
+      created = await call('POST', '/admin/invitations', adminToken, {
+        email: 'inv2@example.test',
+      });
       expect(created.status).toBe(202);
-      local.createInvitation = () => Promise.reject(new IdentityUnavailable('createInvitation', 'timeout'));
-      expect((await call('POST', '/admin/invitations', adminToken, { email: 'inv2b@example.test' })).status).toBe(202);
+      local.createInvitation = () =>
+        Promise.reject(new IdentityUnavailable('createInvitation', 'timeout'));
+      expect(
+        (await call('POST', '/admin/invitations', adminToken, { email: 'inv2b@example.test' }))
+          .status,
+      ).toBe(202);
     } finally {
       local.createInvitation = original;
     }
     const [failed] = await row('inv2@example.test');
-    expect(failed).toMatchObject({ state: 'invited', send_state: 'send_failed', idp_invitation_id: null });
+    expect(failed).toMatchObject({
+      state: 'invited',
+      send_state: 'send_failed',
+      idp_invitation_id: null,
+    });
     expect((await row('inv2b@example.test'))[0].send_state).toBe('send_failed');
-    const shown = (await call('GET', '/admin/invitations?state=invited', adminToken)).body.data.find((i: any) => i.id === failed.id); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const shown = (
+      await call('GET', '/admin/invitations?state=invited', adminToken)
+    ).body.data.find((i: any) => i.id === failed.id);
     expect(shown.sendState).toBe('send_failed');
 
-    await pool.query(`update invitations set expires_at = now() + interval '1 hour' where id = $1`, [failed.id]);
+    await pool.query(
+      `update invitations set expires_at = now() + interval '1 hour' where id = $1`,
+      [failed.id],
+    );
     const resent = await call('POST', `/admin/invitations/${failed.id}/resend`, adminToken);
     expect(resent.status).toBe(200);
     expect(resent.body.data).toMatchObject({ id: failed.id, state: 'invited', sendState: 'sent' });
@@ -271,7 +360,12 @@ describe('create, list and the send states (TC-INV-01, 02, 08)', () => {
     expect(after.send_state).toBe('sent');
     expect(after.idp_invitation_id).toMatch(new RegExp(CANARY));
     expect(Date.parse(after.expires_at)).toBeGreaterThan(Date.now() + 6.9 * 86_400_000);
-    expect(await count(`select count(*) n from audit_events where action = 'invitation.resent' and object_id = $1`, [failed.id])).toBe(1);
+    expect(
+      await count(
+        `select count(*) n from audit_events where action = 'invitation.resent' and object_id = $1`,
+        [failed.id],
+      ),
+    ).toBe(1);
   });
 });
 
@@ -322,7 +416,8 @@ describe('replace, resend and revoke (TC-INV-04, 05, 06)', () => {
       await call('POST', '/admin/invitations', adminToken, { email });
       const [r] = await row(email);
       await pool.query(`update invitations set send_state = $2 where id = $1`, [r.id, sendState]);
-      if (sendState !== 'sent') await pool.query(`update invitations set idp_invitation_id = null where id = $1`, [r.id]);
+      if (sendState !== 'sent')
+        await pool.query(`update invitations set idp_invitation_id = null where id = $1`, [r.id]);
       const res = await call('POST', `/admin/invitations/${r.id}/resend`, adminToken);
       expect([sendState, res.status, res.body.data?.sendState]).toEqual([sendState, 200, 'sent']);
     }
@@ -346,7 +441,10 @@ describe('replace, resend and revoke (TC-INV-04, 05, 06)', () => {
     const [after] = await row('handle@example.test');
     expect(after.idp_invitation_id).not.toBe(oldHandle);
 
-    await pool.query(`update invitations set send_state = 'pending', idp_invitation_id = null where id = $1`, [r.id]);
+    await pool.query(
+      `update invitations set send_state = 'pending', idp_invitation_id = null where id = $1`,
+      [r.id],
+    );
     const seen: string[] = [];
     const original = local.revokeInvitation.bind(local);
     local.revokeInvitation = async (id: string) => {
@@ -354,7 +452,9 @@ describe('replace, resend and revoke (TC-INV-04, 05, 06)', () => {
       return original(id);
     };
     try {
-      expect((await call('POST', `/admin/invitations/${r.id}/resend`, adminToken)).body.data.sendState).toBe('sent');
+      expect(
+        (await call('POST', `/admin/invitations/${r.id}/resend`, adminToken)).body.data.sendState,
+      ).toBe('sent');
     } finally {
       local.revokeInvitation = original;
     }
@@ -366,7 +466,8 @@ describe('replace, resend and revoke (TC-INV-04, 05, 06)', () => {
     await call('POST', '/admin/invitations', adminToken, { email: 'stuck@example.test' });
     const [r] = await row('stuck@example.test');
     const original = local.revokeInvitation;
-    local.revokeInvitation = () => Promise.reject(new IdentityUnavailable('revokeInvitation', 'provider'));
+    local.revokeInvitation = () =>
+      Promise.reject(new IdentityUnavailable('revokeInvitation', 'provider'));
     try {
       const res = await call('POST', `/admin/invitations/${r.id}/resend`, adminToken);
       expect([res.status, res.body.data.sendState]).toEqual([200, 'send_failed']);
@@ -374,16 +475,21 @@ describe('replace, resend and revoke (TC-INV-04, 05, 06)', () => {
       local.revokeInvitation = original;
     }
     expect((await row('stuck@example.test'))[0].idp_invitation_id).toBe(r.idp_invitation_id);
-    expect((await call('POST', `/admin/invitations/${r.id}/resend`, adminToken)).body.data.sendState).toBe('sent');
+    expect(
+      (await call('POST', `/admin/invitations/${r.id}/resend`, adminToken)).body.data.sendState,
+    ).toBe('sent');
   });
 
   it('a resend whose new provider invitation fails clears the revoked old handle and ends send_failed', async () => {
     await call('POST', '/admin/invitations', adminToken, { email: 'halfway@example.test' });
     const [r] = await row('halfway@example.test');
     const original = local.createInvitation;
-    local.createInvitation = () => Promise.reject(new IdentityUnavailable('createInvitation', 'provider'));
+    local.createInvitation = () =>
+      Promise.reject(new IdentityUnavailable('createInvitation', 'provider'));
     try {
-      expect((await call('POST', `/admin/invitations/${r.id}/resend`, adminToken)).body.data.sendState).toBe('send_failed');
+      expect(
+        (await call('POST', `/admin/invitations/${r.id}/resend`, adminToken)).body.data.sendState,
+      ).toBe('send_failed');
     } finally {
       local.createInvitation = original;
     }
@@ -395,7 +501,8 @@ describe('replace, resend and revoke (TC-INV-04, 05, 06)', () => {
     await call('POST', '/admin/invitations', adminToken, { email: 'rev1@example.test' });
     const [r] = await row('rev1@example.test');
     const original = local.revokeInvitation;
-    local.revokeInvitation = () => Promise.reject(new IdentityUnavailable('revokeInvitation', 'provider'));
+    local.revokeInvitation = () =>
+      Promise.reject(new IdentityUnavailable('revokeInvitation', 'provider'));
     try {
       const res = await call('POST', `/admin/invitations/${r.id}/revoke`, adminToken);
       expect([res.status, res.body.data.state]).toEqual([200, 'revoked']);
@@ -403,19 +510,37 @@ describe('replace, resend and revoke (TC-INV-04, 05, 06)', () => {
       local.revokeInvitation = original;
     }
     expect((await row('rev1@example.test'))[0].idp_invitation_id).toBe(r.idp_invitation_id);
-    expect(await count(`select count(*) n from audit_events where action = 'invitation.revoked' and object_id = $1`, [r.id])).toBe(1);
+    expect(
+      await count(
+        `select count(*) n from audit_events where action = 'invitation.revoked' and object_id = $1`,
+        [r.id],
+      ),
+    ).toBe(1);
 
     // the worker owns the retry: its provider knows the invitation here, and the job settles it
-    workerIdentity.invitations.set(r.idp_invitation_id, { id: r.idp_invitation_id, email: 'rev1@example.test', expiresInDays: 7, revoked: false });
+    workerIdentity.invitations.set(r.idp_invitation_id, {
+      id: r.idp_invitation_id,
+      email: 'rev1@example.test',
+      expiresInDays: 7,
+      revoked: false,
+    });
     await worker.context.get(InvitationJobs).run();
     expect(workerIdentity.invitations.get(r.idp_invitation_id)?.revoked).toBe(true);
     expect((await row('rev1@example.test'))[0].idp_invitation_id).toBeNull();
 
     const again = await call('POST', `/admin/invitations/${r.id}/revoke`, adminToken);
     expect(again.body.data).toMatchObject({ id: r.id, state: 'revoked' });
-    expect(await count(`select count(*) n from audit_events where action = 'invitation.revoked' and object_id = $1`, [r.id])).toBe(1);
+    expect(
+      await count(
+        `select count(*) n from audit_events where action = 'invitation.revoked' and object_id = $1`,
+        [r.id],
+      ),
+    ).toBe(1);
 
-    await pool.query(`update invitations set state = 'invited', send_state = 'send_failed', idp_invitation_id = null where id = $1`, [r.id]);
+    await pool.query(
+      `update invitations set state = 'invited', send_state = 'send_failed', idp_invitation_id = null where id = $1`,
+      [r.id],
+    );
     const seen: string[] = [];
     const spy = local.revokeInvitation.bind(local);
     local.revokeInvitation = async (id: string) => {
@@ -423,18 +548,25 @@ describe('replace, resend and revoke (TC-INV-04, 05, 06)', () => {
       return spy(id);
     };
     try {
-      expect((await call('POST', `/admin/invitations/${r.id}/revoke`, adminToken)).body.data.state).toBe('revoked');
+      expect(
+        (await call('POST', `/admin/invitations/${r.id}/revoke`, adminToken)).body.data.state,
+      ).toBe('revoked');
     } finally {
       local.revokeInvitation = spy;
     }
     expect(seen).toEqual([]);
 
     const [accepted] = await row('member@example.test');
-    expect(code(await call('POST', `/admin/invitations/${accepted.id}/revoke`, adminToken))).toBe('state_conflict');
+    expect(code(await call('POST', `/admin/invitations/${accepted.id}/revoke`, adminToken))).toBe(
+      'state_conflict',
+    );
   });
 
   it('a revoked, expired or used invitation gives the neutral failure at sign-in (no account)', async () => {
-    for (const [email, state] of [['neutral-revoked@example.test', 'revoked'], ['neutral-expired@example.test', 'expired']] as const) {
+    for (const [email, state] of [
+      ['neutral-revoked@example.test', 'revoked'],
+      ['neutral-expired@example.test', 'expired'],
+    ] as const) {
       await call('POST', '/admin/invitations', adminToken, { email });
       const [r] = await row(email);
       await pool.query(`update invitations set state = $2 where id = $1`, [r.id, state]);
@@ -443,20 +575,33 @@ describe('replace, resend and revoke (TC-INV-04, 05, 06)', () => {
     }
     await call('POST', '/admin/invitations', adminToken, { email: 'neutral-late@example.test' });
     const [late] = await row('neutral-late@example.test');
-    await pool.query(`update invitations set expires_at = now() - interval '1 minute', created_at = now() - interval '2 days' where id = $1`, [late.id]);
-    expect((await call('GET', '/me', token(person('neutral-late@example.test').sub))).body.data.linkState).toBe('not_linked');
+    await pool.query(
+      `update invitations set expires_at = now() - interval '1 minute', created_at = now() - interval '2 days' where id = $1`,
+      [late.id],
+    );
+    expect(
+      (await call('GET', '/me', token(person('neutral-late@example.test').sub))).body.data
+        .linkState,
+    ).toBe('not_linked');
     // the used one: the second sign-in with the accepted address finds the account, never a second one
-    expect(await count(`select count(*) n from users where lower(email) = 'member@example.test'`)).toBe(1);
+    expect(
+      await count(`select count(*) n from users where lower(email) = 'member@example.test'`),
+    ).toBe(1);
   });
 });
 
 describe('list: paging, filter and computed states', () => {
   it('pages by (created_at desc, id desc) with a signed cursor, filters by state, and shows an overdue invitation as expired', async () => {
     const admin = await newAdmin('lister');
-    for (let i = 0; i < 5; i += 1) await call('POST', '/admin/invitations', admin.token, { email: `page${String(i)}@example.test` });
-    await pool.query(`update invitations set expires_at = now() - interval '1 minute', created_at = now() - interval '3 days' where email = 'page0@example.test'`);
+    for (let i = 0; i < 5; i += 1)
+      await call('POST', '/admin/invitations', admin.token, {
+        email: `page${String(i)}@example.test`,
+      });
+    await pool.query(
+      `update invitations set expires_at = now() - interval '1 minute', created_at = now() - interval '3 days' where email = 'page0@example.test'`,
+    );
 
-    const seen: any[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const seen: any[] = [];
     let cursor: string | null = null;
     let pages = 0;
     do {
@@ -464,7 +609,7 @@ describe('list: paging, filter and computed states', () => {
       const page = await call('GET', url, admin.token);
       expect(page.status).toBe(200);
       expect(page.body.metaData.pagination).toMatchObject({ type: 'cursor', limit: 4 });
-      seen.push(...(page.body.data as any[])); // eslint-disable-line @typescript-eslint/no-explicit-any
+      seen.push(...(page.body.data as any[]));
       cursor = page.body.metaData.pagination.nextCursor as string | null;
       pages += 1;
     } while (cursor !== null && pages < 20);
@@ -475,34 +620,62 @@ describe('list: paging, filter and computed states', () => {
     expect(stamps).toEqual([...stamps].sort((a, b) => b - a));
     expect(seen.find((i) => i.email === 'page0@example.test').state).toBe('expired');
 
-    const expired = (await call('GET', '/admin/invitations?state=expired&limit=50', admin.token)).body.data as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const expired = (await call('GET', '/admin/invitations?state=expired&limit=50', admin.token))
+      .body.data as any[];
     expect(expired.map((i) => i.email)).toContain('page0@example.test');
     expect(expired.every((i) => i.state === 'expired')).toBe(true);
-    const invited = (await call('GET', '/admin/invitations?state=invited&limit=50', admin.token)).body.data as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const invited = (await call('GET', '/admin/invitations?state=invited&limit=50', admin.token))
+      .body.data as any[];
     expect(invited.map((i) => i.email)).not.toContain('page0@example.test');
 
     // a cursor is bound to its list: another admin or another filter cannot use it
     const first = await call('GET', '/admin/invitations?limit=1', admin.token);
     const foreign = encodeURIComponent(first.body.metaData.pagination.nextCursor as string);
-    expect(code(await call('GET', `/admin/invitations?limit=1&cursor=${foreign}`, adminToken))).toBe('validation_failed');
-    expect(code(await call('GET', `/admin/invitations?limit=1&state=invited&cursor=${foreign}`, admin.token))).toBe('validation_failed');
+    expect(
+      code(await call('GET', `/admin/invitations?limit=1&cursor=${foreign}`, adminToken)),
+    ).toBe('validation_failed');
+    expect(
+      code(
+        await call(
+          'GET',
+          `/admin/invitations?limit=1&state=invited&cursor=${foreign}`,
+          admin.token,
+        ),
+      ),
+    ).toBe('validation_failed');
 
     // an overdue invitation cannot be resent or revoked as if it were waiting
     const overdue = seen.find((i) => i.email === 'page0@example.test');
-    expect(code(await call('POST', `/admin/invitations/${overdue.id}/resend`, admin.token))).toBe('state_conflict');
-    expect(code(await call('POST', `/admin/invitations/${overdue.id}/revoke`, admin.token))).toBe('state_conflict');
+    expect(code(await call('POST', `/admin/invitations/${overdue.id}/resend`, admin.token))).toBe(
+      'state_conflict',
+    );
+    expect(code(await call('POST', `/admin/invitations/${overdue.id}/revoke`, admin.token))).toBe(
+      'state_conflict',
+    );
   });
 
   it('limits 20 invitations or resends per admin per hour with 429 rate_limited', async () => {
     const admin = await newAdmin('limited');
     for (let i = 0; i < 20; i += 1) {
-      expect((await call('POST', '/admin/invitations', admin.token, { email: `rate${String(i)}@example.test` })).status).toBe(202);
+      expect(
+        (
+          await call('POST', '/admin/invitations', admin.token, {
+            email: `rate${String(i)}@example.test`,
+          })
+        ).status,
+      ).toBe(202);
     }
-    const r = await call('POST', '/admin/invitations', admin.token, { email: 'rate21@example.test' });
+    const r = await call('POST', '/admin/invitations', admin.token, {
+      email: 'rate21@example.test',
+    });
     expect([r.status, code(r)]).toEqual([429, 'rate_limited']);
     const [any] = await row('rate0@example.test');
-    expect((await call('POST', `/admin/invitations/${any.id}/resend`, admin.token)).status).toBe(429);
-    expect((await call('POST', `/admin/invitations/${any.id}/revoke`, admin.token)).status).toBe(200);
+    expect((await call('POST', `/admin/invitations/${any.id}/resend`, admin.token)).status).toBe(
+      429,
+    );
+    expect((await call('POST', `/admin/invitations/${any.id}/revoke`, admin.token)).status).toBe(
+      200,
+    );
   });
 });
 
@@ -512,15 +685,26 @@ describe('the hourly job through the real worker (identity.expire-invitations)',
     await call('POST', '/admin/invitations', adminToken, { email: 'job-stale@example.test' });
     const [expiring] = await row('job-expire@example.test');
     const [stale] = await row('job-stale@example.test');
-    workerIdentity.invitations.set(expiring.idp_invitation_id, { id: expiring.idp_invitation_id, email: 'job-expire@example.test', expiresInDays: 7, revoked: false });
-    await pool.query(`update invitations set expires_at = now() - interval '1 minute', created_at = now() - interval '3 days' where id = $1`, [expiring.id]);
+    workerIdentity.invitations.set(expiring.idp_invitation_id, {
+      id: expiring.idp_invitation_id,
+      email: 'job-expire@example.test',
+      expiresInDays: 7,
+      revoked: false,
+    });
+    await pool.query(
+      `update invitations set expires_at = now() - interval '1 minute', created_at = now() - interval '3 days' where id = $1`,
+      [expiring.id],
+    );
     await pool.query(
       `update invitations set send_state = 'pending', idp_invitation_id = null, updated_at = now() - interval '30 minutes' where id = $1`,
       [stale.id],
     );
     // the api shows the stale send as send_failed before the job has run
     expect(
-      ((await call('GET', '/admin/invitations?state=invited&limit=50', adminToken)).body.data as any[]).find((i) => i.id === stale.id).sendState, // eslint-disable-line @typescript-eslint/no-explicit-any
+      (
+        (await call('GET', '/admin/invitations?state=invited&limit=50', adminToken)).body
+          .data as any[]
+      ).find((i) => i.id === stale.id).sendState,
     ).toBe('send_failed');
 
     const boss = createRuntimeBoss({ DATABASE_URL: testDb.url, role: 'api' });
@@ -530,8 +714,14 @@ describe('the hourly job through the real worker (identity.expire-invitations)',
       await boss.send('identity.expire-invitations', {});
       await vi.waitFor(
         async () => {
-          expect((await row('job-expire@example.test'))[0]).toMatchObject({ state: 'expired', idp_invitation_id: null });
-          expect((await row('job-stale@example.test'))[0]).toMatchObject({ state: 'invited', send_state: 'send_failed' });
+          expect((await row('job-expire@example.test'))[0]).toMatchObject({
+            state: 'expired',
+            idp_invitation_id: null,
+          });
+          expect((await row('job-stale@example.test'))[0]).toMatchObject({
+            state: 'invited',
+            send_state: 'send_failed',
+          });
         },
         { timeout: 20_000 },
       );
@@ -546,7 +736,10 @@ describe('the hourly job through the real worker (identity.expire-invitations)',
   it('a pending send that never got its provider answer is recovered by resend after the job marked it failed (TC-INV-03)', async () => {
     await call('POST', '/admin/invitations', adminToken, { email: 'crash@example.test' });
     const [r] = await row('crash@example.test');
-    await pool.query(`update invitations set send_state = 'pending', idp_invitation_id = null, updated_at = now() - interval '1 hour' where id = $1`, [r.id]);
+    await pool.query(
+      `update invitations set send_state = 'pending', idp_invitation_id = null, updated_at = now() - interval '1 hour' where id = $1`,
+      [r.id],
+    );
     const outcome = await worker.context.get(InvitationJobs).run();
     expect(outcome.staleSends).toBeGreaterThanOrEqual(1);
     expect((await row('crash@example.test'))[0].send_state).toBe('send_failed');

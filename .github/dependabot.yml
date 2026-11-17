@@ -11,7 +11,7 @@ updates:
     versioning-strategy: increase # keep exact pins: the bot rewrites the pinned version, never a range
     open-pull-requests-limit: 5
     commit-message:
-      prefix: "chore(deps)"
+      prefix: 'chore(deps)'
     labels:
       - dependencies
     groups:
@@ -27,13 +27,13 @@ updates:
       day: monday
     open-pull-requests-limit: 3
     commit-message:
-      prefix: "chore(ci)"
+      prefix: 'chore(ci)'
     labels:
       - dependencies
     groups:
       actions:
         patterns:
-          - "*"
+          - '*'
   - package-ecosystem: pip
     directory: /scripts/ci
     target-branch: dev
@@ -42,10 +42,10 @@ updates:
       day: monday
     open-pull-requests-limit: 2
     commit-message:
-      prefix: "chore(ci-tools)"
+      prefix: 'chore(ci-tools)'
     labels:
       - dependencies
     groups:
       ci-tools:
         patterns:
-          - "*"
+          - '*'

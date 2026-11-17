@@ -522,12 +522,8 @@
           "name": "invitations_invited_by_users_id_fk",
           "tableFrom": "invitations",
           "tableTo": "users",
-          "columnsFrom": [
-            "invited_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invited_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -535,12 +531,8 @@
           "name": "invitations_accepted_user_id_users_id_fk",
           "tableFrom": "invitations",
           "tableTo": "users",
-          "columnsFrom": [
-            "accepted_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["accepted_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -876,11 +868,7 @@
       "compositePrimaryKeys": {
         "idempotency_records_owner_id_operation_id_key_pk": {
           "name": "idempotency_records_owner_id_operation_id_key_pk",
-          "columns": [
-            "owner_id",
-            "operation_id",
-            "key"
-          ]
+          "columns": ["owner_id", "operation_id", "key"]
         }
       },
       "uniqueConstraints": {},
@@ -927,11 +915,7 @@
       "compositePrimaryKeys": {
         "rate_limit_buckets_scope_subject_window_start_pk": {
           "name": "rate_limit_buckets_scope_subject_window_start_pk",
-          "columns": [
-            "scope",
-            "subject",
-            "window_start"
-          ]
+          "columns": ["scope", "subject", "window_start"]
         }
       },
       "uniqueConstraints": {},

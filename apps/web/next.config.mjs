@@ -2,7 +2,8 @@ import { fileURLToPath } from 'node:url';
 import { STATIC_SECURITY_HEADERS } from './src/lib/security/static-headers.mjs';
 
 /** The paths the middleware does not run on (its matcher): build output and the static brand files. */
-const UNGUARDED = '/:path((?:_next/static|_next/image|favicon|apple-touch-icon|icon-|site\\.webmanifest|social-preview).*)';
+const UNGUARDED =
+  '/:path((?:_next/static|_next/image|favicon|apple-touch-icon|icon-|site\\.webmanifest|social-preview).*)';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

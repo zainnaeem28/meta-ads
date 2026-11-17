@@ -53,6 +53,8 @@ export function devTokenRouteAllowed(mode: string, appEnv: string): boolean {
 /** Startup check: the token route is never configured outside local/test with local identity. */
 export function assertDevTokenRoute(config: IdentityConfig, appEnv: string): void {
   if (config.devTokens === true && !devTokenRouteAllowed(config.mode, appEnv)) {
-    throw new Error(`the local token route is refused with IDENTITY_MODE=${config.mode} and APP_ENV=${appEnv}`);
+    throw new Error(
+      `the local token route is refused with IDENTITY_MODE=${config.mode} and APP_ENV=${appEnv}`,
+    );
   }
 }

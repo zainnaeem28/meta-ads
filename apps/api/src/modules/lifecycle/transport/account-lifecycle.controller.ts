@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { CurrentActor } from '../../../platform/http/auth.guard.js';
@@ -22,7 +33,9 @@ const listQuery = z.object({
 @Controller('admin')
 @Scope('A')
 export class AccountLifecycleController {
-  constructor(@Inject(AccountLifecycleService) private readonly accounts: AccountLifecycleService) {}
+  constructor(
+    @Inject(AccountLifecycleService) private readonly accounts: AccountLifecycleService,
+  ) {}
 
   @Post('users/:userId/suspend')
   @HttpCode(200)
@@ -32,7 +45,11 @@ export class AccountLifecycleController {
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<AccountView> {
-    const view = await this.accounts.suspend(actor.userId, parseWith(userIdSchema, userId), request.id);
+    const view = await this.accounts.suspend(
+      actor.userId,
+      parseWith(userIdSchema, userId),
+      request.id,
+    );
     void reply.header('ETag', `"${String(view.version)}"`);
     return view;
   }
@@ -45,7 +62,11 @@ export class AccountLifecycleController {
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<AccountView> {
-    const view = await this.accounts.reinstate(actor.userId, parseWith(userIdSchema, userId), request.id);
+    const view = await this.accounts.reinstate(
+      actor.userId,
+      parseWith(userIdSchema, userId),
+      request.id,
+    );
     void reply.header('ETag', `"${String(view.version)}"`);
     return view;
   }
@@ -64,7 +85,10 @@ export class AccountLifecycleController {
   }
 
   @Get('erasures')
-  erasures(@CurrentActor() actor: ActorContext, @Query() query: unknown): Promise<PageResult<ErasureRunView>> {
+  erasures(
+    @CurrentActor() actor: ActorContext,
+    @Query() query: unknown,
+  ): Promise<PageResult<ErasureRunView>> {
     return this.accounts.listErasures(actor.userId, parseWith(listQuery, query ?? {}));
   }
 }

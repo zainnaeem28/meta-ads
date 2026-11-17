@@ -774,7 +774,10 @@ describe('real entry points on the migrated database', () => {
 
   it('the built API (dist/main.api.js) starts as app_api on the migrated database and closes its pool', async () => {
     // The release order: db:migrate, then jobs:migrate; the api fails closed without the pg-boss schema and queues.
-    await migrateJobs(env.urlFor('migrator'), QUEUES, { api: env.roles.api, worker: env.roles.worker });
+    await migrateJobs(env.urlFor('migrator'), QUEUES, {
+      api: env.roles.api,
+      worker: env.roles.worker,
+    });
     let stderr = '';
     child = spawn('node', ['dist/main.api.js'], {
       cwd: apiDir,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
@@ -16,7 +17,17 @@ import { ModulesContainer } from '@nestjs/core';
 // TC-ALR-*, TC-AUD-*.
 
 const ORIGIN = 'http://localhost:3000';
-const contractsDir = join(import.meta.dirname, '..', '..', '..', '..', '..', '..', 'packages', 'contracts');
+const contractsDir = join(
+  import.meta.dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'packages',
+  'contracts',
+);
 
 let testDb: TestDatabase;
 let app: Awaited<ReturnType<typeof createApiApp>>['app'];
@@ -32,8 +43,10 @@ let seq = 0;
 type Validate = ((value: unknown) => boolean) & { errors?: unknown };
 function contractValidator(schema: string): Validate {
   const requireFromContracts = createRequire(join(contractsDir, 'package.json'));
-  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any }).default; // eslint-disable-line @typescript-eslint/no-explicit-any
-  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void }).default;
+  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any })
+    .default;
+  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void })
+    .default;
   const yaml = requireFromContracts('js-yaml') as { load(text: string): { components: unknown } };
   const spec = yaml.load(readFileSync(join(contractsDir, 'openapi.yaml'), 'utf8'));
   const ajv = new Ajv2020({ strict: false, allErrors: true });
@@ -53,7 +66,10 @@ async function applyBeforeGrants(file: string, only?: RegExp): Promise<void> {
 beforeAll(async () => {
   testDb = await createTestDatabase({ label: 'task038', migrations: false });
   pool = new pg.Pool({ connectionString: testDb.url, max: 3 });
-  await applyBeforeGrants('0001_task-025-platform.sql', /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets|idempotency_records_expiry_idx)/);
+  await applyBeforeGrants(
+    '0001_task-025-platform.sql',
+    /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets|idempotency_records_expiry_idx)/,
+  );
   await applyBeforeGrants('0010_task-032-audit.sql');
   await applyBeforeGrants('0020_task-033-identity.sql');
   await installJobs(testDb.url);
@@ -71,8 +87,12 @@ beforeAll(async () => {
     },
     createHttpLogging({ level: 'silent' }),
   ));
-  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [...m.providers.values()]);
-  const found = providers.map((p) => p.instance as Partial<Local> | undefined).find((i) => typeof i?.issueToken === 'function');
+  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [
+    ...m.providers.values(),
+  ]);
+  const found = providers
+    .map((p) => p.instance as Partial<Local> | undefined)
+    .find((i) => typeof i?.issueToken === 'function');
   if (found === undefined) throw new Error('local identity provider not found');
   local = found as Local;
 });
@@ -87,7 +107,12 @@ afterAll(async () => {
 });
 
 const fastify = () => app.getHttpAdapter().getInstance();
-interface Body { success: boolean; data?: any; error?: { code: string }; metaData: any } // eslint-disable-line @typescript-eslint/no-explicit-any
+interface Body {
+  success: boolean;
+  data?: any;
+  error?: { code: string };
+  metaData: any;
+}
 async function call(method: 'GET' | 'POST', url: string, tok?: string) {
   const headers: Record<string, string> = {};
   if (tok !== undefined) headers['authorization'] = `Bearer ${tok}`;
@@ -107,7 +132,8 @@ async function account(admin: boolean, fva: [number, number] = [1, 1]) {
   const tok = (f: [number, number] = fva) => local.issueToken({ sub, azp: ORIGIN, fva: f });
   expect((await call('GET', '/me', tok())).status).toBe(200);
   if (admin) await pool.query(`update users set role = 'admin' where idp_subject = $1`, [sub]);
-  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0].id as string;
+  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0]
+    .id as string;
   return { id, token: tok(), stale: tok([30, 30]) };
 }
 
@@ -121,7 +147,10 @@ async function seedAlert(kind: string, raised: string, ack?: { at: string; by: s
   return id;
 }
 const denied = async () =>
-  Number((await pool.query(`select count(*) n from audit_events where action = 'auth.denied'`)).rows[0].n);
+  Number(
+    (await pool.query(`select count(*) n from audit_events where action = 'auth.denied'`)).rows[0]
+      .n,
+  );
 
 describe('API-125 and API-126 through the api composition root', () => {
   it('refuses a non-admin with 403 forbidden_role and audits the denial, and 401 without a token', async () => {
@@ -129,7 +158,11 @@ describe('API-125 and API-126 through the api composition root', () => {
     const before = await denied();
     const r = await call('GET', '/admin/alerts', user.token);
     expect([r.status, r.body.error?.code]).toEqual([403, 'forbidden_role']);
-    const p = await call('POST', `/admin/alerts/${'0'.repeat(8)}-0000-4000-8000-000000000000/acknowledge`, user.token);
+    const p = await call(
+      'POST',
+      `/admin/alerts/${'0'.repeat(8)}-0000-4000-8000-000000000000/acknowledge`,
+      user.token,
+    );
     expect([p.status, p.body.error?.code]).toEqual([403, 'forbidden_role']);
     expect(await denied()).toBe(before + 2);
     expect((await call('GET', '/admin/alerts')).status).toBe(401);
@@ -144,7 +177,10 @@ describe('API-125 and API-126 through the api composition root', () => {
     const p = await call('POST', `/admin/alerts/${id}/acknowledge`, admin.stale);
     expect([p.status, p.body.error?.code]).toEqual([403, 'recent_auth_required']);
     expect(await denied()).toBe(before + 2);
-    expect((await pool.query(`select acknowledged_at from admin_alerts where id = $1`, [id])).rows[0].acknowledged_at).toBeNull();
+    expect(
+      (await pool.query(`select acknowledged_at from admin_alerts where id = $1`, [id])).rows[0]
+        .acknowledged_at,
+    ).toBeNull();
   });
 
   it('acknowledges once; a second administrator gets the first acknowledger; unknown and malformed IDs fail', async () => {
@@ -159,7 +195,11 @@ describe('API-125 and API-126 through the api composition root', () => {
     expect(b.status).toBe(200);
     expect(b.body.data.acknowledgedBy).toBe(first.id);
     expect(b.body.data.acknowledgedAt).toBe(a.body.data.acknowledgedAt);
-    const missing = await call('POST', `/admin/alerts/${'1'.repeat(8)}-1111-4111-8111-111111111111/acknowledge`, first.token);
+    const missing = await call(
+      'POST',
+      `/admin/alerts/${'1'.repeat(8)}-1111-4111-8111-111111111111/acknowledge`,
+      first.token,
+    );
     expect([missing.status, missing.body.error?.code]).toEqual([404, 'not_found']);
     const bad = await call('POST', '/admin/alerts/not-a-uuid/acknowledge', first.token);
     expect([bad.status, bad.body.error?.code]).toEqual([400, 'validation_failed']);
@@ -170,13 +210,21 @@ describe('API-125 and API-126 through the api composition root', () => {
     await pool.query(`delete from admin_alerts`);
     const ids: string[] = [];
     const ack = { at: '2026-02-01T00:00:00.000001Z', by: admin.id };
-    for (let i = 0; i < 4; i++) ids.push(await seedAlert('job_burst', `2026-01-0${String(i + 1)}T00:00:00.000123Z`));
+    for (let i = 0; i < 4; i++)
+      ids.push(await seedAlert('job_burst', `2026-01-0${String(i + 1)}T00:00:00.000123Z`));
     for (let i = 0; i < 3; i++) {
-      ids.push(await seedAlert('job_burst', `2026-01-1${String(i)}T00:00:00Z`, { at: i === 2 ? '2026-02-01T00:00:00.000002Z' : ack.at, by: admin.id }));
+      ids.push(
+        await seedAlert('job_burst', `2026-01-1${String(i)}T00:00:00Z`, {
+          at: i === 2 ? '2026-02-01T00:00:00.000002Z' : ack.at,
+          by: admin.id,
+        }),
+      );
     }
-    const all = (await pool.query(
-      `select id from admin_alerts order by acknowledged_at asc nulls first, raised_at desc, id desc`,
-    )).rows.map((r: { id: string }) => r.id);
+    const all = (
+      await pool.query(
+        `select id from admin_alerts order by acknowledged_at asc nulls first, raised_at desc, id desc`,
+      )
+    ).rows.map((r: { id: string }) => r.id);
     const seen: string[] = [];
     let cursor: string | null = null;
     const isPage = contractValidator('AlertPage');
@@ -198,11 +246,18 @@ describe('API-125 and API-126 through the api composition root', () => {
     expect(done.body.data.map((a: { id: string }) => a.id)).toEqual(all.slice(4, 6));
     // A cursor from one filter is refused under another, and a tampered one is refused.
     const next = done.body.metaData.pagination.nextCursor as string;
-    for (const url of [`/admin/alerts?cursor=${next}`, `/admin/alerts?acknowledged=true&cursor=${next}x`]) {
+    for (const url of [
+      `/admin/alerts?cursor=${next}`,
+      `/admin/alerts?acknowledged=true&cursor=${next}x`,
+    ]) {
       const r = await call('GET', url, admin.token);
       expect([r.status, r.body.error?.code]).toEqual([400, 'validation_failed']);
     }
-    for (const url of ['/admin/alerts?limit=0', '/admin/alerts?limit=51', '/admin/alerts?acknowledged=maybe']) {
+    for (const url of [
+      '/admin/alerts?limit=0',
+      '/admin/alerts?limit=51',
+      '/admin/alerts?acknowledged=maybe',
+    ]) {
       expect((await call('GET', url, admin.token)).status).toBe(400);
     }
   });
