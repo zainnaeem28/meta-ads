@@ -182,7 +182,7 @@ test.describe('@TASK-090 SCREEN-005 campaigns through the built web app', () => 
     await expect(page.getByRole('heading', { level: 1, name: 'Campaigns' })).toBeVisible();
     expect(await page.title()).toBe('Campaigns · ShrooMap');
     await expect(list(page).getByRole('listitem')).toHaveCount(5);
-    await expect(list(page).getByRole('button', { name: 'Delete Cordyceps Trail Mix, spring…' })).toBeVisible();
+    await expect(list(page).getByRole('button', { name: 'Delete Cordyceps Trail Mix, spring launch with the long working title the team keeps' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expect(list(page).getByRole('link', { name: 'Morning Focus Blend' })).toHaveAttribute('href', `/campaigns/${id('c', 1)}/clips`);
     await expect(list(page).getByRole('link', { name: 'Evening Calm Gummies' })).toHaveAttribute('href', `/campaigns/${id('c', 2)}/final`);

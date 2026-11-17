@@ -54,6 +54,25 @@ describe('CMP-027 Campaign row', () => {
     expect(screen.getByText('Draft')).toHaveAttribute('data-variant', 'neutral');
   });
 
+  it('an icon action is a ghost icon-only button named in full; a draft has no segment count', async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn();
+    const { container } = renderRow({
+      variant: 'draft',
+      segments: undefined,
+      duration: undefined,
+      format: 'UGC ad',
+      status: { label: 'Draft' },
+      actions: [{ id: 'delete', label: 'Delete draft A very long product name indeed', icon: 'trash-2', destructive: true, onClick: onDelete }],
+    });
+    expect(screen.getByText('UGC ad · 12 Nov 2026')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Delete draft A very long product name indeed' });
+    expect(button).toHaveTextContent('');
+    await user.click(button);
+    expect(onDelete).toHaveBeenCalled();
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
   it('history defaults to the success badge', () => {
     renderRow();
     expect(screen.getByText('Ready')).toHaveAttribute('data-variant', 'success');

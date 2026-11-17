@@ -138,7 +138,7 @@ describe('SCREEN-005 campaigns', () => {
     expect(screen.queryByRole('list', { name: 'Campaign history' })).toBeNull();
   });
 
-  it('empty differs from no-results: first action is New brief, then a search offers Clear search and filters', async () => {
+  it('empty differs from no-results: first action is New brief, then a search offers Clear filters', async () => {
     serve({ campaigns: () => ok([], page(0, null)) });
     mount();
     expect(await screen.findByRole('heading', { name: 'No campaigns yet' })).toBeVisible();
@@ -147,7 +147,7 @@ describe('SCREEN-005 campaigns', () => {
     mount('?q=reishi+gummies');
     expect(await screen.findByRole('heading', { name: 'No campaigns match "reishi gummies"' })).toBeVisible();
     expect(screen.queryByText('No campaigns yet')).toBeNull();
-    await click(screen.getByRole('button', { name: 'Clear search and filters' }));
+    await click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(window.location.search).toBe('');
     expect(await screen.findByRole('heading', { name: 'No campaigns yet' })).toBeVisible();
   });
@@ -259,10 +259,10 @@ describe('SCREEN-005 campaigns', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('a long product name is cut in the delete button so the row stays inside the screen', async () => {
+  it('a long product name is the full accessible name of the icon-only delete button', async () => {
     serve({ campaigns: () => ok([campaign(1, { productName: 'Cordyceps Trail Mix, spring launch with the long working title' })], page(1, null)) });
     mount();
-    expect(await screen.findByRole('button', { name: 'Delete Cordyceps Trail Mix, spring…' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Delete Cordyceps Trail Mix, spring launch with the long working title' })).toBeVisible();
   });
 
   it('cancel keeps the record and calls nothing', async () => {

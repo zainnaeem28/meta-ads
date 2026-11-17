@@ -7,7 +7,6 @@ import {
   draftHref,
   draftMatches,
   draftName,
-  draftSegments,
   draftStepLabel,
   parseUrl,
   updatedLabel,
@@ -46,7 +45,7 @@ describe('SCREEN-005 rows', () => {
 
   it('maps a campaign to a badge and to the stage it opens', () => {
     const c = { id: 'c1', progress: 'processing', briefState: 'accepted', finalAvailable: false } as const;
-    expect(campaignStatus(c)).toEqual({ label: 'Clips generating', variant: 'info' });
+    expect(campaignStatus(c)).toEqual({ label: 'Clips generating', variant: 'info', icon: 'loader-circle' });
     expect(campaignHref(c)).toBe('/campaigns/c1/clips');
     const done = { ...c, progress: 'completed', finalAvailable: true } as const;
     expect(campaignStatus(done).label).toBe('Final ready');
@@ -55,17 +54,15 @@ describe('SCREEN-005 rows', () => {
     expect(campaignStatus({ ...c, briefState: 'draft' }).label).toBe('Brief ready to review');
     expect(campaignStatus({ ...c, briefState: 'generating' }).label).toBe('Brief generating');
     expect(campaignHref({ ...c, briefState: 'draft' })).toBe('/campaigns/c1/brief');
-    expect(campaignStatus({ ...c, progress: 'failed' })).toEqual({ label: 'Needs attention', variant: 'destructive' });
+    expect(campaignStatus({ ...c, progress: 'failed' })).toEqual({ label: 'Needs attention', variant: 'destructive', icon: 'circle-x' });
   });
 
-  it('presents a draft: name, step, segments and the search match', () => {
+  it('presents a draft: name, step and the search match', () => {
     expect(draftName({ productName: null })).toBe('Untitled draft');
     expect(draftName({ productName: ' Chai ' })).toBe('Chai');
     expect(draftHref({ id: 'd1' })).toBe('/campaigns/new?draft=d1');
     expect(draftStepLabel(3)).toBe('Step 3 of 4: Audience and direction');
     expect(draftStepLabel(5)).toBe('Step 4 of 4: Concept and script');
-    expect(draftSegments({ durationSeconds: 45 })).toBe(3);
-    expect(draftSegments({ durationSeconds: null })).toBe(0);
     expect(draftMatches({ productName: 'Reishi', productDescription: null }, 'REI')).toBe(true);
     expect(draftMatches({ productName: null, productDescription: 'night tincture' }, 'tinct')).toBe(true);
     expect(draftMatches({ productName: 'Chai', productDescription: null }, 'reishi')).toBe(false);

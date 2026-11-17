@@ -44,7 +44,6 @@ import {
   draftHref,
   draftMatches,
   draftName,
-  draftSegments,
   draftStepLabel,
   parseUrl,
   updatedLabel,
@@ -373,6 +372,7 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
                     id: 'delete',
                     label: COPY.deleteLabel(c.productName, false),
                     destructive: true,
+                    icon: 'trash-2',
                     onClick: () => ask({ kind: 'campaign', id: c.id, name: c.productName }),
                   },
                 ]}
@@ -412,7 +412,6 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
                 variant="draft"
                 name={name}
                 href={draftHref(d)}
-                segments={draftSegments(d)}
                 date={`${draftStepLabel(d.step)} · ${updatedLabel(d.updatedAt, now, 'Saved')}`}
                 status={{ label: COPY.draftStatus, variant: 'neutral' }}
                 deleting={remove.isPending && target?.id === d.id}
@@ -421,6 +420,7 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
                     id: 'delete',
                     label: COPY.deleteLabel(name, true),
                     destructive: true,
+                    icon: 'trash-2',
                     onClick: () => ask({ kind: 'draft', id: d.id, name }),
                   },
                 ]}

@@ -11,7 +11,7 @@ export const SCREEN_005_COPY = {
   historyLabel: 'Campaign history',
   draftsLabel: 'Drafts',
   loading: 'Loading campaigns',
-  perPage: (n: number) => `${n} per page`,
+  perPage: (n: number) => `${n} campaigns per page`,
   previous: 'Previous',
   next: 'Next',
   pagination: 'Pagination',
@@ -27,7 +27,7 @@ export const SCREEN_005_COPY = {
     title: (what: string) => `No campaigns match ${what}`,
     body: 'Try a different product name or description, or clear the status filter.',
     draftsBody: 'Try a different product name or description.',
-    action: 'Clear search and filters',
+    action: 'Clear filters',
   },
   error: {
     title: 'Campaigns could not be loaded',
@@ -57,9 +57,5 @@ export const SCREEN_005_COPY = {
   untitledDraft: 'Untitled draft',
   draftStatus: 'Draft',
   steps: ['Format', 'Product', 'Audience and direction', 'Concept and script'],
-  /** CMP-027 shows an action's name as its text, so a long product name is cut to keep the row inside a phone. */
-  deleteLabel: (name: string, draft: boolean) => {
-    const short = name.length > 28 ? `${name.slice(0, 27).trimEnd()}…` : name;
-    return draft ? `Delete draft ${short}` : `Delete ${short}`;
-  },
+  deleteLabel: (name: string, draft: boolean) => (draft ? `Delete draft ${name}` : `Delete ${name}`),
 } as const;

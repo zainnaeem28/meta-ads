@@ -1,4 +1,5 @@
 import type { BadgeVariant } from '@shroomap/ui/cmp-007';
+import type { IconName } from '@shroomap/ui/icons';
 import type { CampaignSummary, Draft } from '@shroomap/contracts';
 import { SCREEN_005_COPY as COPY } from './copy';
 
@@ -65,16 +66,17 @@ export function updatedLabel(iso: string, now: number, prefix = 'Updated'): stri
 export interface RowStatus {
   label: string;
   variant: BadgeVariant;
+  icon: IconName;
 }
 
 /** Badge of a campaign: what the user does next, from the derived progress and the brief state. */
 export function campaignStatus(c: Pick<CampaignSummary, 'progress' | 'briefState' | 'finalAvailable'>): RowStatus {
-  if (c.briefState === 'failed' || c.progress === 'failed') return { label: 'Needs attention', variant: 'destructive' };
-  if (c.briefState === 'generating') return { label: 'Brief generating', variant: 'info' };
-  if (c.briefState === 'draft') return { label: 'Brief ready to review', variant: 'warning' };
-  if (c.finalAvailable) return { label: 'Final ready', variant: 'success' };
-  if (c.progress === 'completed') return { label: 'Clips ready', variant: 'success' };
-  return { label: 'Clips generating', variant: 'info' };
+  if (c.briefState === 'failed' || c.progress === 'failed') return { label: 'Needs attention', variant: 'destructive', icon: 'circle-x' };
+  if (c.briefState === 'generating') return { label: 'Brief generating', variant: 'info', icon: 'loader-circle' };
+  if (c.briefState === 'draft') return { label: 'Brief ready to review', variant: 'warning', icon: 'clock' };
+  if (c.finalAvailable) return { label: 'Final ready', variant: 'success', icon: 'circle-check' };
+  if (c.progress === 'completed') return { label: 'Clips ready', variant: 'success', icon: 'circle-check' };
+  return { label: 'Clips generating', variant: 'info', icon: 'loader-circle' };
 }
 
 /** The stage a campaign opens at: SCREEN-007, 008 or 009. */
@@ -94,9 +96,6 @@ export const draftStepLabel = (step: number): string => {
   const at = Math.min(Math.max(step, 1), COPY.steps.length);
   return `Step ${at} of ${COPY.steps.length}: ${COPY.steps[at - 1]}`;
 };
-
-export const draftSegments = (d: Pick<Draft, 'durationSeconds'>): number =>
-  d.durationSeconds ? d.durationSeconds / 15 : 0;
 
 /** A draft matches when the search is in its product name or description (the drafts api has no search). */
 export function draftMatches(d: Pick<Draft, 'productName' | 'productDescription'>, q: string): boolean {
