@@ -1,6 +1,6 @@
 {
   "matrix-edge": "browserType.launch: Chromium distribution 'msedge' is not found at /opt/microsoft/msedge/msedge",
-  "matrix-firefox": "browserType.launch: Executable doesn't exist at /tmp/paperclip-ai-49d7702a-17ba-48f6-936a-6f2503a0a47e-f88f0cdf-1db8-45da-b8f4-6bad673cc19a-0gpvLk/.cache/ms-playwright/firefox-1572/firefox/firefox",
-  "matrix-webkit": "browserType.launch: Executable doesn't exist at /tmp/paperclip-ai-49d7702a-17ba-48f6-936a-6f2503a0a47e-f88f0cdf-1db8-45da-b8f4-6bad673cc19a-0gpvLk/.cache/ms-playwright/webkit-2388/pw_run.sh",
-  "matrix-ios-safari": "browserType.launch: Executable doesn't exist at /tmp/paperclip-ai-49d7702a-17ba-48f6-936a-6f2503a0a47e-f88f0cdf-1db8-45da-b8f4-6bad673cc19a-0gpvLk/.cache/ms-playwright/webkit-2388/pw_run.sh"
+  "matrix-firefox": "browserType.launch: Executable doesn't exist at /tmp/paperclip-ai-49d7702a-17ba-48f6-936a-6f2503a0a47e-f88f0cdf-1db8-45da-b8f4-6bad673cc19a-fxH2HL/.cache/ms-playwright/firefox-1572/firefox/firefox",
+  "matrix-webkit": "browserType.launch: Executable doesn't exist at /tmp/paperclip-ai-49d7702a-17ba-48f6-936a-6f2503a0a47e-f88f0cdf-1db8-45da-b8f4-6bad673cc19a-fxH2HL/.cache/ms-playwright/webkit-2388/pw_run.sh",
+  "matrix-ios-safari": "browserType.launch: Executable doesn't exist at /tmp/paperclip-ai-49d7702a-17ba-48f6-936a-6f2503a0a47e-f88f0cdf-1db8-45da-b8f4-6bad673cc19a-fxH2HL/.cache/ms-playwright/webkit-2388/pw_run.sh"
 }
