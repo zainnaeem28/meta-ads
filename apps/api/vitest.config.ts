@@ -33,6 +33,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/prod-worker/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-qc/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-asm/junit.xml' }],
+      ['junit', { outputFile: 'reports/prod-ffmpeg/junit.xml' }],
       ['junit', { outputFile: 'reports/lifecycle-del/junit.xml' }],
       ['junit', { outputFile: 'reports/erasure/junit.xml' }],
       ['junit', { outputFile: 'reports/opscli/junit.xml' }],
