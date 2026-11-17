@@ -3,7 +3,7 @@ import type { DynamicModule } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { DATABASE } from '../../platform/db/index.js';
 import type { Database, DbTx } from '../../platform/db/index.js';
-import { ASSEMBLY_CONFIG, AssemblyService } from './application/assembly.service.js';
+import { ASSEMBLY_CONFIG, ASSEMBLY_RENDER_QUEUE, AssemblyService } from './application/assembly.service.js';
 import type { AssemblyConfig } from './application/assembly.service.js';
 import { QcKeySession } from './application/qc-key-session.js';
 import { AUDIO_EXTRACTOR, QC_CONFIG, QC_KEY_AUTH_REPORTER, QC_REPOSITORY, TRANSCRIBE_PORT } from './application/qc-ports.js';
@@ -34,10 +34,15 @@ import {
   VIDEO_WORKER_REPOSITORY,
 } from './application/worker/ports.js';
 import type { JobLog, KeyOpener, ProductionMedia, VideoWorkerConfig } from './application/worker/ports.js';
+import { AssemblyRecovery } from './application/worker/assembly-recovery.js';
+import { ASSEMBLY_MEDIA, ASSEMBLY_PORT, ASSEMBLY_WORKER_CONFIG } from './application/worker/assembly-ports.js';
+import type { AssemblyMedia, AssemblyWorkerConfig } from './application/worker/assembly-ports.js';
+import { AssemblyRenderJob } from './application/worker/assembly-render.job.js';
 import { ProductionRecovery } from './application/worker/recovery.js';
 import { COPY_QUEUE, VideoCopyJob } from './application/worker/video-copy.job.js';
 import { POLL_QUEUE, VideoPollJob } from './application/worker/video-poll.job.js';
 import { VIDEO_SUBMIT_QUEUE, VideoSubmitJob } from './application/worker/video-submit.job.js';
+import { FfmpegAssembly } from './infrastructure/ffmpeg/assembly-ffmpeg.js';
 import { FfmpegAudio } from './infrastructure/openai-transcribe/ffmpeg-audio.js';
 import { OpenAiKeyAuthReporter } from './infrastructure/openai-transcribe/key-auth.reporter.js';
 import { OpenAiTranscribe } from './infrastructure/openai-transcribe/openai-transcribe.js';
@@ -58,7 +63,7 @@ import type { MediaService, StoragePort } from '../media/index.js';
 import { BOSS } from '../../platform/jobs/boss.js';
 import type { SweepRegistry } from '../../platform/jobs/sweep-registry.js';
 
-export { ProviderCopyCleanup, QcRunJob, ThumbSubmitJob, VideoCopyJob, VideoPollJob, VideoSubmitJob };
+export { AssemblyRenderJob, ProviderCopyCleanup, QcRunJob, ThumbSubmitJob, VideoCopyJob, VideoPollJob, VideoSubmitJob };
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -223,6 +228,43 @@ export function videoWorkerConfigFrom(env: Env): VideoWorkerConfig {
   };
 }
 
+/**
+ * The assembly worker's settings, checked at start-up: `ASSEMBLY_ADAPTER` (only `ffmpeg` is built: Shotstack was descoped
+ * by owner decision OD-08), `ASSEMBLY_CONCURRENCY` (1 to 4) and `THUMBSTOPPER_FRAME_SECONDS` (0.5 to 5).
+ */
+export function assemblyWorkerConfigFrom(env: Env): AssemblyWorkerConfig {
+  const adapter = optional(env, 'ASSEMBLY_ADAPTER') ?? 'ffmpeg';
+  if (adapter !== 'ffmpeg') throw new Error(`ASSEMBLY_ADAPTER=${adapter} is not available: only ffmpeg is built`);
+  const text = optional(env, 'THUMBSTOPPER_FRAME_SECONDS');
+  const frameSeconds = text === undefined ? 1.5 : Number(text);
+  if (!Number.isFinite(frameSeconds) || frameSeconds < 0.5 || frameSeconds > 5) throw new Error('THUMBSTOPPER_FRAME_SECONDS must be a number from 0.5 to 5');
+  return {
+    leaseSec: 120,
+    maxAttempts: 3,
+    concurrency: integer(env, 'ASSEMBLY_CONCURRENCY', 1, 1, 4),
+    frameSeconds,
+    outputMaxBytes: 1_073_741_824,
+    requeueAfterSec: 120,
+  };
+}
+
+/** The media operation the assembly worker needs, over the media module's public service: the final video's row and quota. */
+export function assemblyMediaOf(resolve: () => Pick<MediaService, 'registerObject'>): AssemblyMedia {
+  return {
+    registerFinal: async (tx, input) => {
+      await resolve().registerObject(tx, {
+        id: input.id,
+        ownerId: input.ownerId,
+        kind: 'final',
+        storageKey: input.storageKey,
+        bytes: input.bytes,
+        contentType: 'video/mp4',
+        campaignId: input.campaignId,
+      });
+    },
+  };
+}
+
 /** The QC settings, checked at start-up: `QC_MAX_WORD_ERROR_RATE` (0 to 1, 0.20 by default) and the clip's transcribe model. */
 export function qcConfigFrom(env: Env, baseUrl?: string): QcConfig {
   const text = optional(env, 'QC_MAX_WORD_ERROR_RATE');
@@ -293,6 +335,7 @@ function lazyStorage(resolve: () => StoragePort): StoragePort {
 @Module({})
 export class ProductionWorkerModule {
   static register(env: Env, edge: ProductionWorkerEdge): DynamicModule {
+    const assemblyWorkerConfig = assemblyWorkerConfigFrom(env);
     const config: VideoWorkerConfig = { ...videoWorkerConfigFrom(env), ...(edge.baseUrl === undefined ? {} : { baseUrl: edge.baseUrl }) };
     return {
       module: ProductionWorkerModule,
@@ -319,6 +362,9 @@ export class ProductionWorkerModule {
         { provide: IMAGE_GEN_PORT, useClass: OpenAiImageGen },
         { provide: THUMB_MEDIA, useValue: thumbMediaOf(edge.media) },
         { provide: AUDIO_EXTRACTOR, useValue: new FfmpegAudio() },
+        { provide: ASSEMBLY_WORKER_CONFIG, useValue: assemblyWorkerConfig },
+        { provide: ASSEMBLY_PORT, useValue: new FfmpegAssembly({ frameSeconds: assemblyWorkerConfig.frameSeconds }) },
+        { provide: ASSEMBLY_MEDIA, useValue: assemblyMediaOf(edge.media) },
         { provide: SWEEP_REGISTRY, useValue: edge.registry },
         KeySession,
         VideoSubmitJob,
@@ -329,10 +375,12 @@ export class ProductionWorkerModule {
         QcKeySession,
         QcRunJob,
         QcRecovery,
+        AssemblyRenderJob,
+        AssemblyRecovery,
         ThumbSubmitJob,
         ThumbRecovery,
       ],
-      exports: [VideoSubmitJob, VideoPollJob, VideoCopyJob, ProviderCopyCleanup, QcRunJob, ThumbSubmitJob],
+      exports: [VideoSubmitJob, VideoPollJob, VideoCopyJob, ProviderCopyCleanup, QcRunJob, AssemblyRenderJob, ThumbSubmitJob],
     };
   }
 }
@@ -344,6 +392,7 @@ export function productionJobHandlers(resolve: {
   readonly copy: () => VideoCopyJob;
   readonly cleanup: () => ProviderCopyCleanup;
   readonly qc: () => QcRunJob;
+  readonly assembly: () => AssemblyRenderJob;
   readonly thumb: () => ThumbSubmitJob;
 }): Readonly<Record<string, (job: { id: string; data: unknown }, log: JobLog) => Promise<void>>> {
   return {
@@ -358,6 +407,9 @@ export function productionJobHandlers(resolve: {
     },
     [QC_RUN_QUEUE]: async (job, log) => {
       await resolve.qc().handle(job, log);
+    },
+    [ASSEMBLY_RENDER_QUEUE]: async (job, log) => {
+      await resolve.assembly().handle(job, log);
     },
     [THUMB_SUBMIT_QUEUE]: async (job, log) => {
       await resolve.thumb().handle(job, log);

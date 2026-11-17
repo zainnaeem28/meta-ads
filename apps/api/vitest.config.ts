@@ -33,6 +33,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/prod-worker/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-qc/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-asm/junit.xml' }],
+      ['junit', { outputFile: 'reports/prod-ffmpeg/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-thumb/junit.xml' }],
       ['junit', { outputFile: 'reports/lifecycle-del/junit.xml' }],
       ['junit', { outputFile: 'reports/erasure/junit.xml' }],
@@ -214,6 +215,11 @@ export default defineConfig({
         'src/modules/production/infrastructure/openai-transcribe/qc.repository.ts',
         'src/modules/production/infrastructure/openai-transcribe/key-auth.reporter.ts',
         'src/modules/production/transport/qc.controller.ts',
+        // The assembly render handler (claim, lease, fetch, render, save) and its recovery hooks are SQL proven on real PostgreSQL
+        // through the worker composition root with the real FFmpeg binary by assembly-worker.integration.test.ts; the ports file
+        // has no statements to speak of. The FFmpeg adapter itself is unit tested.
+        'src/modules/production/application/worker/assembly-render.job.ts',
+        'src/modules/production/application/worker/assembly-recovery.ts',
         // The thumbstopper service (API-075, API-076), its job, the sweep hooks, the SQL repository, the controller and the port file are
         // proven on real PostgreSQL through the api and worker composition roots by thumb-api.integration.test.ts and
         // thumb-worker.integration.test.ts (TC-THM-01 to 08); the adapter, the call-out check, the view and the settings are unit tested.
