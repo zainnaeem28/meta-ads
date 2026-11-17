@@ -265,8 +265,8 @@ describe('token verification', () => {
 
 describe('configuration', () => {
   it('defaults to local away from a hosted environment and to clerk on one', () => {
-    expect(identityConfigFrom({}, 'development', undefined)).toEqual({ mode: 'local' });
-    expect(identityConfigFrom({ IDENTITY_MODE: '' }, 'test', undefined)).toEqual({ mode: 'local' });
+    expect(identityConfigFrom({}, 'development', undefined)).toEqual({ mode: 'local', devTokens: true });
+    expect(identityConfigFrom({ IDENTITY_MODE: '' }, 'test', undefined)).toEqual({ mode: 'local', devTokens: true });
     expect(() => identityConfigFrom({}, 'production', ORIGIN)).toThrow(/CLERK_SECRET_KEY/);
   });
 
@@ -302,5 +302,21 @@ describe('configuration', () => {
 
   it('normalizes emails', () => {
     expect(normalizeEmail('  Ada@Example.TEST ')).toBe('ada@example.test');
+  });
+});
+
+describe('local/test token route switch (AIU-251)', () => {
+  it('is on only for local identity in development or test, and refused to be configured elsewhere', async () => {
+    const { assertDevTokenRoute, devTokenRouteAllowed } = await import('./identity.config.js');
+    expect(devTokenRouteAllowed('local', 'development')).toBe(true);
+    expect(devTokenRouteAllowed('local', 'test')).toBe(true);
+    for (const env of ['staging', 'production']) expect(devTokenRouteAllowed('local', env)).toBe(false);
+    expect(devTokenRouteAllowed('clerk', 'development')).toBe(false);
+    expect(identityConfigFrom({ IDENTITY_MODE: 'clerk', CLERK_SECRET_KEY: 'k', CLERK_JWT_ISSUER: 'https://i' }, 'development', ORIGIN).devTokens).toBeUndefined();
+    for (const env of ['staging', 'production']) {
+      expect(() => assertDevTokenRoute({ mode: 'local', devTokens: true }, env)).toThrow(/refused/);
+      expect(() => assertDevTokenRoute({ mode: 'clerk', devTokens: true }, 'development')).toThrow(/refused/);
+    }
+    expect(() => assertDevTokenRoute({ mode: 'local', devTokens: true }, 'test')).not.toThrow();
   });
 });
