@@ -7,6 +7,7 @@
 //  - an in-process S3 stand-in the worker writes clips to and the api presigns links for;
 //  - real FFmpeg and ffprobe (quality check audio extraction), real clip files made once by FFmpeg;
 //  - a small control server the spec uses to seed accounts and to steer the stub (it never touches the product's code).
+import { Buffer } from 'node:buffer';
 import { createHash, generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createServer as createHttpServer } from 'node:http';
