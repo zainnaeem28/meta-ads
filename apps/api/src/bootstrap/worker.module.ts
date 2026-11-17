@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Inject, Injectable, Module } from '@nestjs/common';
-import type { INestApplicationContext, OnApplicationBootstrap } from '@nestjs/common';
+import type { DynamicModule, INestApplicationContext, OnApplicationBootstrap } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { Logger } from 'pino';
 import type { PgBoss } from 'pg-boss';
@@ -14,7 +14,13 @@ import { SWEEP_QUEUE, runRecoverySweep, sweepLockOf } from '../platform/jobs/swe
 import { sweepRegistry } from '../platform/jobs/sweep-registry.js';
 import type { SweepRegistry } from '../platform/jobs/sweep-registry.js';
 import { EXIT_WATCHDOG, Watchdog } from '../platform/jobs/watchdog.js';
+import { EgressModule } from '../platform/egress/index.js';
+import type { EgressModuleConfig } from '../platform/egress/index.js';
 import { AuditModule } from '../modules/audit/index.js';
+import { BriefGenerationJob, BriefModule, ImageAnalysisJob, briefJobHandlers } from '../modules/brief/brief.module.js';
+import { STORAGE_PORT } from '../modules/media/index.js';
+import type { StoragePort } from '../modules/media/index.js';
+import { UsageModule } from '../modules/usage/usage.module.js';
 import { IdentityModule, InvitationJobs, identityJobHandlers } from '../modules/identity/index.js';
 import { MediaModule, SanitizeJob, UnattachedSweep, mediaJobHandlers } from '../modules/media/media.module.js';
 import { KeyUnsealer } from '../modules/provider-keys/infrastructure/key-unsealer.js';
@@ -47,7 +53,8 @@ export interface WorkerJob {
 /** A queue's handler, registered by the module that owns the queue. It throws to fail the job. */
 export type JobHandler = (job: WorkerJob, log: Logger) => Promise<void>;
 
-export type WorkerConfig = Pick<
+export type WorkerConfig = Partial<Pick<ProcessConfig, keyof EgressModuleConfig>> &
+  Pick<
   ProcessConfig,
   | 'DATABASE_URL'
   | 'DATABASE_POOL_MAX'
@@ -69,6 +76,10 @@ export interface WorkerOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** Replaces `process.exit` (tests). */
   readonly exit?: (code: number) => void;
+  /** Replaces the egress module instance (tests point the OpenAI host at a local server); the product never sets it. */
+  readonly egress?: DynamicModule;
+  /** Replaces the OpenAI chat completions URL with a local server's (tests); the product never sets it. */
+  readonly openAiChatUrl?: string;
 }
 
 const DEFAULT_DRAIN_SEC = 25;
@@ -194,12 +205,30 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
   // Provider-key custody (REQ-015/016): the seal port and the one unsealer binding in the product. Unreadable or
   // non-RSA-3072 maps stop the start-up here.
   const keys = env['KEK_PUBLIC_KEYS'] === undefined ? [] : [ProviderKeysModule.register(env, 'worker')];
-  const unsealer =
-    env['KEK_PRIVATE_KEYS'] === undefined
-      ? []
-      : [{ provide: KeyUnsealer, useValue: KeyUnsealer.fromEnv(env) }];
+  const keyUnsealer = env['KEK_PRIVATE_KEYS'] === undefined ? undefined : KeyUnsealer.fromEnv(env);
+  const unsealer = keyUnsealer === undefined ? [] : [{ provide: KeyUnsealer, useValue: keyUnsealer }];
   // Media (TASK-043): the sanitize job, the hourly sweep and the deletion helpers, on the worker's own storage token.
   const media = env['R2_ENDPOINT'] === undefined ? [] : [MediaModule.registerWorker(env)];
+  // Brief (TASK-049): `brief.generate` and `brief.analyze-image` over the OpenAI adapter. Needs the key custody (the
+  // unsealer), the two OpenAI models and the object storage; the spend ledger and egress it runs on come with it.
+  const audit = AuditModule.register(options.logger);
+  const briefEnabled =
+    keyUnsealer !== undefined &&
+    media.length > 0 &&
+    env['OPENAI_TEXT_MODEL'] !== undefined &&
+    env['OPENAI_VISION_MODEL'] !== undefined;
+  const brief = briefEnabled
+    ? [
+        BriefModule.registerWorker(env, {
+          audit,
+          egress: options.egress ?? EgressModule.register(config),
+          usage: UsageModule.register(env),
+          opener: keyUnsealer,
+          storage: () => context.get<StoragePort>(STORAGE_PORT, { strict: false }),
+          ...(options.openAiChatUrl === undefined ? {} : { chatUrl: options.openAiChatUrl }),
+        }),
+      ]
+    : [];
   // Queue handlers of the modules (the owning module's jobs); a handler a caller passes for the same queue wins.
   const moduleHandlers = identityJobHandlers(() => context.get(InvitationJobs, { strict: false }));
   const merged: WorkerOptions = {
@@ -212,6 +241,12 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
             sanitize: () => context.get(SanitizeJob, { strict: false }),
             sweep: () => context.get(UnattachedSweep, { strict: false }),
           })),
+      ...(brief.length === 0
+        ? {}
+        : briefJobHandlers({
+            generate: () => context.get(BriefGenerationJob, { strict: false }),
+            analyze: () => context.get(ImageAnalysisJob, { strict: false }),
+          })),
       ...options.handlers,
     },
   };
@@ -219,10 +254,11 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
     imports: [
       DatabaseModule.forRoot(dbConfigOf(config)),
       JobsModule.forRoot({ DATABASE_URL: dbConfigOf(config).DATABASE_URL, role: 'worker' }),
-      AuditModule.register(options.logger),
+      audit,
       IdentityModule.registerWorker(env),
       ...keys,
       ...media,
+      ...brief,
     ],
     providers: [
       ...unsealer,
