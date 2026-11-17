@@ -1,12 +1,17 @@
 'use client';
 
 import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { Icon, type IconName } from '../../icons';
 
 export interface TabItem {
   id: string;
   label: string;
   /** Count badge, shown for stage tabs. */
   count?: number;
+  /** Leading icon. */
+  icon?: IconName;
+  /** Status chip after the label, e.g. "Needs review". */
+  chip?: ReactNode;
   /** Not reachable yet: stays in the list, is skipped by arrow keys and cannot be selected. */
   disabled?: boolean;
 }
@@ -89,7 +94,8 @@ export function Tabs({ tabs, value, onValueChange, label, children, className }:
               onKeyDown={(e) => onKeyDown(e, tab.id)}
               className={`${TAB_CLASS} ${state}`}
             >
-              {tab.label}{' '}
+              {tab.icon ? <Icon name={tab.icon} size={16} /> : null}
+              {tab.label} {tab.chip ?? null}
               {tab.count !== undefined ? (
                 <span className="rounded-full border border-border-strong bg-muted px-2 text-caption font-semibold text-foreground">
                   {tab.count}
