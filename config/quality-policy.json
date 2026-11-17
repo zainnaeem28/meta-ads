@@ -167,6 +167,48 @@
       "profiles": ["release"]
     }
   ],
+  "baselines": {
+    "owner": "QUALITY-RELEASE-PLAN sections 6 and 7 (TC-NFR-01, TC-NFR-02, TC-NFR-10); scripts: tests/baselines, scripts/ci/dast.sh, load.sh, lighthouse.sh",
+    "dast": {
+      "tool": "OWASP ZAP baseline (spider and passive scan, no active attack)",
+      "contexts": ["anonymous", "user", "admin"],
+      "failOnSource": "zap",
+      "maxUnauthorizedShare": 0.5,
+      "minAuthenticatedRequests": 20
+    },
+    "load": {
+      "accounts": 25,
+      "virtualUsers": 10,
+      "stubJobsPerAccount": 5,
+      "thinkTimeSec": 3,
+      "pollIntervalSec": 3,
+      "rampSec": 60,
+      "steadySec": 600,
+      "readShare": 0.8,
+      "p95Ms": 500,
+      "maxErrorRate": 0.01,
+      "maxUnauthorizedShare": 0.05,
+      "minRequests": 1000
+    },
+    "frontend": {
+      "samplesPerRoute": 5,
+      "profiles": ["mobile", "desktop"],
+      "lcpMs": 2500,
+      "inpMs": 200,
+      "cls": 0.1,
+      "tbtMs": 200,
+      "routes": [
+        { "id": "sign-in", "path": "/sign-in", "session": "none" },
+        { "id": "history", "path": "/campaigns", "session": "user" },
+        { "id": "intake-wizard", "path": "/campaigns/new", "session": "user" },
+        { "id": "brief-review", "path": "/campaigns/{campaign}/brief", "session": "user" },
+        { "id": "clips-status", "path": "/campaigns/{campaign}/clips", "session": "user" },
+        { "id": "review-download", "path": "/campaigns/{campaign}/final", "session": "user" },
+        { "id": "key-management", "path": "/settings/provider-keys", "session": "user" },
+        { "id": "admin-usage-report", "path": "/admin/usage", "session": "admin" }
+      ]
+    }
+  },
   "workflow": {
     "file": ".github/workflows/ci.yml",
     "requiredJobs": [
