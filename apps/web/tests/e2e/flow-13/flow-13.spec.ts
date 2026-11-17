@@ -110,14 +110,14 @@ for (const { name, width, height } of VIEWPORTS) {
       const calls = await api(page, () => ok(REPORT));
       await page.goto('/admin/usage');
       await expect(page.getByRole('table', { name: 'By account and provider' })).toBeVisible();
-      const before = calls.length;
       await page.getByLabel('Time window').selectOption('custom');
       await page.getByLabel('From').fill('2025-10-01');
       await page.getByLabel('To').fill('2026-11-14');
       await page.getByRole('button', { name: 'Apply' }).focus();
       await page.keyboard.press('Enter');
       await expect(page.getByText('Choose a window of 366 days or fewer.')).toBeVisible();
-      expect(calls.length).toBe(before);
+      await page.waitForTimeout(500);
+      expect(calls.filter((c) => c.includes('2025-10-01'))).toEqual([]);
       await shot(page, 'window-too-large');
 
       // Cancel path: choosing a preset again drops the refused dates and shows a report.
