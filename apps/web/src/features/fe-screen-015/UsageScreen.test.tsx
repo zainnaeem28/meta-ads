@@ -102,7 +102,28 @@ describe('SCREEN-015 usage report', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Usage report' })).toBeInTheDocument();
   });
 
-  it('default: tiles, estimated cost, per-account and per-provider tables, claim checks, user IDs only', async () => {
+  it('Export CSV in the header downloads the window as text/csv', async () => {
+    let seen = '';
+    server.use(
+      http.get(URL_, () => HttpResponse.json(report())),
+      http.get(`${ORIGIN}/api/v1/admin/usage-report.csv`, ({ request }) => {
+        seen = new URL(request.url).search;
+        return new HttpResponse('a,b\n1,2\n', {
+          headers: { 'Content-Type': 'text/csv; charset=utf-8' },
+        });
+      }),
+    );
+    URL.createObjectURL = () => 'blob:x';
+    URL.revokeObjectURL = () => undefined;
+    show();
+    await screen.findByText('US$239.60');
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    await waitFor(() => expect(seen).toBe(''));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Export CSV' })).toBeEnabled());
+    expect(screen.queryByText(/could not be downloaded/)).toBeNull();
+  });
+
+  it('default: tiles, estimated cost, per-account table, claim checks, user IDs only', async () => {
     let seen = '';
     server.use(
       http.get(
@@ -121,9 +142,9 @@ describe('SCREEN-015 usage report', () => {
     expect(accounts).toHaveTextContent('94 s');
     expect(accounts).toHaveTextContent('6.1 s');
     expect(accounts).not.toHaveTextContent('@');
-    expect(screen.getByRole('table', { name: 'By provider' })).toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(2);
+    expect(screen.queryByRole('table', { name: 'Jobs by state' })).toBeNull();
     expect(screen.getByRole('table', { name: 'Brand checks' })).toHaveTextContent('(not allowed)');
-    expect(screen.getByRole('table', { name: 'Jobs by state' })).toHaveTextContent('succeeded');
     expect(screen.getByText('As of')).toBeInTheDocument();
     expect(screen.getByText('14 Nov 2026, 22:40 UTC')).toBeInTheDocument();
   });
