@@ -10,7 +10,8 @@
 //
 // Writes screen-coverage.json (machine readable, feeds QA-REPORT) and screen-coverage.md (the UI/UX per-screen comparison:
 // design frame beside the approved baseline) to apps/web/reports/a11y and docs/evidence/TASK-118.
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { Buffer } from 'node:buffer';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
