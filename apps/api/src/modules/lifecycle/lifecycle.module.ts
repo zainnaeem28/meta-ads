@@ -1,5 +1,16 @@
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
+import { AccountErasureJob } from './application/account-erasure.job.js';
+import { ACCOUNT_ERASURE_QUEUE } from './application/account-erasure-steps.js';
+import {
+  ACCOUNT_ADMIN,
+  ACCOUNT_CURSOR_KEY,
+  ACCOUNT_ERASURE_QUEUEING,
+  ACCOUNT_HOLD_HOURS,
+  ACCOUNT_IDENTITY,
+  ACCOUNT_LIFECYCLE_REPOSITORY,
+} from './application/account-lifecycle-ports.js';
+import { AccountLifecycleService } from './application/account-lifecycle.service.js';
 import { CampaignDeletionJob } from './application/campaign-deletion.job.js';
 import {
   CAMPAIGN_BRIEF_TEXT_MODEL,
@@ -18,9 +29,13 @@ import type {
 } from './application/campaign-deletion-ports.js';
 import { CampaignDeletionService } from './application/campaign-deletion.service.js';
 import { CAMPAIGN_DELETION_QUEUE } from './domain/campaign-deletion.js';
+import { IdentityAccountAdmin, IdentityProviderAccounts } from './infrastructure/account-identity.adapters.js';
+import { PgBossAccountErasureQueueing } from './infrastructure/account-erasure.queueing.js';
+import { DrizzleAccountLifecycleRepository } from './infrastructure/account-lifecycle.repository.js';
 import { DrizzleCampaignDeletionRepository } from './infrastructure/campaign-deletion.repository.js';
 import { PgBossCampaignDeletionQueueing } from './infrastructure/campaign-deletion.queueing.js';
 import { S3ErasureLedger } from './infrastructure/campaign-erasure-ledger.js';
+import { AccountLifecycleController } from './transport/account-lifecycle.controller.js';
 import { CampaignDeletionController } from './transport/campaign-deletion.controller.js';
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -64,7 +79,8 @@ export interface LifecycleWorkerEdge {
 
 /**
  * Lifecycle (layer 7): campaign deletion, API-042 and the `lifecycle.campaign-deletion` run over `deletion_runs` (M0007,
- * TASK-058). Needs the database and the job queue. Account removal and erasure come with the following slice.
+ * TASK-058); account suspension, reinstatement and removal, API-101..103 and 105, and the `lifecycle.account-erasure`
+ * run (TASK-059). Needs the database and the job queue.
  */
 @Module({})
 export class LifecycleModule {
@@ -77,8 +93,14 @@ export class LifecycleModule {
         { provide: CAMPAIGN_DELETION_QUEUEING, useClass: PgBossCampaignDeletionQueueing },
         { provide: CAMPAIGN_BRIEF_TEXT_MODEL, useValue: optional(env, 'OPENAI_TEXT_MODEL') ?? 'brief-text' },
         CampaignDeletionService,
+        { provide: ACCOUNT_LIFECYCLE_REPOSITORY, useClass: DrizzleAccountLifecycleRepository },
+        { provide: ACCOUNT_ADMIN, useClass: IdentityAccountAdmin },
+        { provide: ACCOUNT_ERASURE_QUEUEING, useClass: PgBossAccountErasureQueueing },
+        { provide: ACCOUNT_HOLD_HOURS, useValue: integer(env, 'ERASURE_HOLD_PERIOD_HOURS', 0, 0, 8760) },
+        { provide: ACCOUNT_CURSOR_KEY, useValue: optional(env, 'CURSOR_SIGNING_KEY') },
+        AccountLifecycleService,
       ],
-      controllers: [CampaignDeletionController],
+      controllers: [CampaignDeletionController, AccountLifecycleController],
     };
   }
 
@@ -116,8 +138,12 @@ export class LifecycleModule {
         { provide: CAMPAIGN_MEDIA_PURGE, useValue: lazyMedia },
         { provide: CAMPAIGN_PROVIDER_TASKS, useValue: providerTasks },
         CampaignDeletionJob,
+        { provide: ACCOUNT_LIFECYCLE_REPOSITORY, useClass: DrizzleAccountLifecycleRepository },
+        { provide: ACCOUNT_IDENTITY, useClass: IdentityProviderAccounts },
+        { provide: ACCOUNT_ERASURE_QUEUEING, useClass: PgBossAccountErasureQueueing },
+        AccountErasureJob,
       ],
-      exports: [CampaignDeletionJob],
+      exports: [CampaignDeletionJob, AccountErasureJob],
     };
   }
 }
@@ -125,12 +151,16 @@ export class LifecycleModule {
 /** The queue handlers of this module, resolved when a job arrives (the worker composition root binds them). */
 export function lifecycleJobHandlers(resolve: {
   readonly campaignDeletion: () => CampaignDeletionJob;
+  readonly accountErasure: () => AccountErasureJob;
 }): Readonly<Record<string, (job: { id: string; data: unknown }, log: JobLog) => Promise<void>>> {
   return {
     [CAMPAIGN_DELETION_QUEUE]: async (job, log) => {
       await resolve.campaignDeletion().handle(job, log);
     },
+    [ACCOUNT_ERASURE_QUEUE]: async (job, log) => {
+      await resolve.accountErasure().handle(job, log);
+    },
   };
 }
 
-export { CampaignDeletionJob };
+export { AccountErasureJob, CampaignDeletionJob };
