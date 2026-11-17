@@ -62,9 +62,9 @@ describe('OpenAiTranscribe', () => {
   });
 
   it('classifies an egress refusal before the request left as unsent, and one after as unknown', async () => {
-    const before = await failure(adapter({ fail: new EgressError('blocked_address', 'before_send') }).port.transcribe(credential, wav, 'en'));
+    const before = await failure(adapter({ fail: new EgressError('blocked_address', 'before_send', 'refused') }).port.transcribe(credential, wav, 'en'));
     expect(before.classification.usageEvent).toBe('none');
-    const after = await failure(adapter({ fail: new EgressError('timeout', 'after_send') }).port.transcribe(credential, wav, 'en'));
+    const after = await failure(adapter({ fail: new EgressError('timeout', 'after_send', 'timed out') }).port.transcribe(credential, wav, 'en'));
     expect(after.classification.causeClass).toBe('outcome_unknown');
     const plain = await failure(adapter({ fail: new Error('boom') }).port.transcribe(credential, wav, 'en'));
     expect(plain.classification.causeClass).toBe('outcome_unknown');

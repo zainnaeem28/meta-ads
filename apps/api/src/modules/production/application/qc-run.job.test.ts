@@ -1,5 +1,6 @@
 import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as ClaimModule from '../../../platform/jobs/claim.js';
 import { classifyProviderFailure } from '../../../platform/egress/index.js';
 import { QcKeySession, gateQcKey, NO_KEY_REASON } from './qc-key-session.js';
 import type { AudioExtractor, QcRepository, QcRunContext, QcSettlement, TranscribePort } from './qc-ports.js';
@@ -9,7 +10,7 @@ import type { JobLog, KeyAuthReporter, KeyOpener, SealedKeyRow } from './worker/
 
 const claim = vi.hoisted(() => ({ kind: 'claimed' as 'claimed' | 'not_pending' }));
 vi.mock('../../../platform/jobs/claim.js', async (original) => ({
-  ...(await original<typeof import('../../../platform/jobs/claim.js')>()),
+  ...(await original<typeof ClaimModule>()),
   claimWithUserLimit: async () => (claim.kind === 'claimed' ? { kind: 'claimed', ownerId: 'owner' } : { kind: 'not_pending' }),
 }));
 
