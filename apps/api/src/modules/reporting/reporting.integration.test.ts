@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -20,8 +21,21 @@ import { priceTableSeedStep } from '../usage/index.js';
 // 503 on a failed source, the CSV, its audit event and the no-secret scan, and the 150,000-event time budget. TC-USG-*.
 
 const ORIGIN = 'http://localhost:3000';
-const contractsDir = join(import.meta.dirname, '..', '..', '..', '..', '..', 'packages', 'contracts');
-const sink = new Writable({ write(_chunk: Buffer, _e, done) { done(); } });
+const contractsDir = join(
+  import.meta.dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'packages',
+  'contracts',
+);
+const sink = new Writable({
+  write(_chunk: Buffer, _e, done) {
+    done();
+  },
+});
 let testDb: TestDatabase;
 let pool: pg.Pool;
 let app: Awaited<ReturnType<typeof createApiApp>>['app'];
@@ -37,8 +51,10 @@ let local: Local;
 type Validate = ((value: unknown) => boolean) & { errors?: unknown };
 function contractValidator(schema: string): Validate {
   const requireFromContracts = createRequire(join(contractsDir, 'package.json'));
-  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any }).default; // eslint-disable-line @typescript-eslint/no-explicit-any
-  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void }).default;
+  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any })
+    .default;
+  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void })
+    .default;
   const yaml = requireFromContracts('js-yaml') as { load(text: string): { components: unknown } };
   const spec = yaml.load(readFileSync(join(contractsDir, 'openapi.yaml'), 'utf8'));
   const ajv = new Ajv2020({ strict: false, allErrors: true });
@@ -53,10 +69,21 @@ beforeAll(async () => {
   const statements = (file: string): string[] =>
     (readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants')[0] ?? '')
       .split('--> statement-breakpoint')
-      .map((statement) => statement.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim())
+      .map((statement) =>
+        statement
+          .split('\n')
+          .filter((line) => !line.trim().startsWith('--'))
+          .join('\n')
+          .trim(),
+      )
       .filter((statement) => statement !== '');
   for (const statement of statements('0001_task-025-platform.sql')) {
-    if (/^CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(statement)) await pool.query(statement);
+    if (
+      /^CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(
+        statement,
+      )
+    )
+      await pool.query(statement);
   }
   await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
   const files = [
@@ -71,7 +98,12 @@ beforeAll(async () => {
   ];
   for (const file of files) for (const statement of statements(file)) await pool.query(statement);
   await installJobs(testDb.url);
-  await runSeed({ dataset: 'reference', appEnv: 'development', databaseUrl: testDb.url, steps: [priceTableSeedStep()] });
+  await runSeed({
+    dataset: 'reference',
+    appEnv: 'development',
+    databaseUrl: testDb.url,
+    steps: [priceTableSeedStep()],
+  });
   const env: Record<string, string | undefined> = {
     KEK_PUBLIC_KEYS: undefined,
     R2_ENDPOINT: undefined,
@@ -95,8 +127,12 @@ beforeAll(async () => {
     },
     createHttpLogging({ level: 'silent', destination: sink }),
   ));
-  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [...m.providers.values()]);
-  const found = providers.map((p) => p.instance as Partial<Local> | undefined).find((i) => typeof i?.issueToken === 'function');
+  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [
+    ...m.providers.values(),
+  ]);
+  const found = providers
+    .map((p) => p.instance as Partial<Local> | undefined)
+    .find((i) => typeof i?.issueToken === 'function');
   if (found === undefined) throw new Error('local identity provider not found');
   local = found as Local;
 }, 300_000);
@@ -112,35 +148,72 @@ afterAll(async () => {
 });
 
 const fastify = () => app.getHttpAdapter().getInstance();
-interface Body { success: boolean; data?: any; error?: { code: string; message: string; details?: any[] }; metaData: any } // eslint-disable-line @typescript-eslint/no-explicit-any
+interface Body {
+  success: boolean;
+  data?: any;
+  error?: { code: string; message: string; details?: any[] };
+  metaData: any;
+}
 async function call(url: string, token?: string) {
   const headers: Record<string, string> = {};
   if (token !== undefined) headers['authorization'] = `Bearer ${token}`;
   const res = await fastify().inject({ method: 'GET', url: `/api/v1${url}`, headers });
-  return { status: res.statusCode, raw: res.body, headers: res.headers, json: () => JSON.parse(res.body) as Body };
+  return {
+    status: res.statusCode,
+    raw: res.body,
+    headers: res.headers,
+    json: () => JSON.parse(res.body) as Body,
+  };
 }
 
 async function account(admin: boolean) {
   const sub = `user_t60_${String(++seq)}`;
   const email = `p${String(seq)}@example.test`;
   local.addUser(sub, email, true);
-  await pool.query(`insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`, [email]);
+  await pool.query(
+    `insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`,
+    [email],
+  );
   const tok = (f: [number, number]) => local.issueToken({ sub, azp: ORIGIN, fva: f });
   expect((await call('/me', tok([1, 1]))).status).toBe(200);
   if (admin) await pool.query(`update users set role = 'admin' where idp_subject = $1`, [sub]);
-  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0].id as string;
+  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0]
+    .id as string;
   return { id, token: tok([1, 1]), stale: tok([30, 30]) };
 }
 
 const count = async (action: string): Promise<number> =>
-  Number((await pool.query(`select count(*) n from audit_events where action = $1`, [action])).rows[0].n);
+  Number(
+    (await pool.query(`select count(*) n from audit_events where action = $1`, [action])).rows[0].n,
+  );
 
-const usageRow = (owner: string, provider: string, outcome: string, at: string, latency: number | null) => {
-  const basis = outcome === 'rejected' ? 'zero_rejected' : outcome === 'unconfirmed' ? 'unconfirmed_estimate' : 'estimate';
+const usageRow = (
+  owner: string,
+  provider: string,
+  outcome: string,
+  at: string,
+  latency: number | null,
+) => {
+  const basis =
+    outcome === 'rejected'
+      ? 'zero_rejected'
+      : outcome === 'unconfirmed'
+        ? 'unconfirmed_estimate'
+        : 'estimate';
   return pool.query(
     `insert into usage_events (id, owner_id, provider, operation, job_type, job_id, call_seq, outcome, estimated_cost_usd, cost_basis, latency_ms, at)
      values ($1, $2, $3, 'op', 'video', $4, 1, $5, $6, $7, $8, $9)`,
-    [randomUUID(), owner, provider, randomUUID(), outcome, outcome === 'rejected' ? 0 : 0.01, basis, latency, at],
+    [
+      randomUUID(),
+      owner,
+      provider,
+      randomUUID(),
+      outcome,
+      outcome === 'rejected' ? 0 : 0.01,
+      basis,
+      latency,
+      at,
+    ],
   );
 };
 
@@ -164,9 +237,18 @@ describe('API-130 and API-131 through the api composition root', () => {
   it('returns the empty state (empty: true, empty arrays), then the report with counts, p50/p95 and claim checks', async () => {
     const admin = await account(true);
     const owner = admin.id;
-    const empty = await call('/admin/usage-report?from=2026-01-01T00:00:00Z&to=2026-01-08T00:00:00Z', admin.token);
+    const empty = await call(
+      '/admin/usage-report?from=2026-01-01T00:00:00Z&to=2026-01-08T00:00:00Z',
+      admin.token,
+    );
     expect(empty.status).toBe(200);
-    expect(empty.json().data).toMatchObject({ empty: true, accounts: [], providers: [], jobStates: {}, claimChecks: [] });
+    expect(empty.json().data).toMatchObject({
+      empty: true,
+      accounts: [],
+      providers: [],
+      jobStates: {},
+      claimChecks: [],
+    });
     await usageRow(owner, 'openai', 'succeeded', '2026-01-02T00:00:00Z', 100);
     await usageRow(owner, 'openai', 'succeeded', '2026-01-03T00:00:00Z', 300);
     await usageRow(owner, 'openai', 'failed', '2026-01-04T00:00:00Z', null);
@@ -176,16 +258,31 @@ describe('API-130 and API-131 through the api composition root', () => {
       `insert into claim_events (id, owner_id, brief_id, issue_id, class, outcome, at) values ($1, $2, $3, $4, 'other', 'raised', '2026-01-03T00:00:00Z')`,
       [randomUUID(), owner, randomUUID(), randomUUID()],
     );
-    const res = await call('/admin/usage-report?from=2026-01-01T00:00:00Z&to=2026-01-08T00:00:00Z', admin.token);
+    const res = await call(
+      '/admin/usage-report?from=2026-01-01T00:00:00Z&to=2026-01-08T00:00:00Z',
+      admin.token,
+    );
     const body = res.json();
     expect(res.status).toBe(200);
     expect(contractValidator('UsageReportResponse')(body)).toBe(true);
     expect(body.data.empty).toBe(false);
     const openai = body.data.providers.find((p: { provider: string }) => p.provider === 'openai');
-    expect(openai).toMatchObject({ calls: 3, succeeded: 2, failed: 1, estimatedCostUsd: '0.0300', latencyP50Ms: 100, latencyP95Ms: 300 });
+    expect(openai).toMatchObject({
+      calls: 3,
+      succeeded: 2,
+      failed: 1,
+      estimatedCostUsd: '0.0300',
+      latencyP50Ms: 100,
+      latencyP95Ms: 300,
+    });
     expect(body.data.accounts).toHaveLength(1);
     expect(body.data.accounts[0].userId).toBe(owner);
-    expect(body.data.claimChecks).toContainEqual({ class: 'other', raised: 1, closedByEdit: 0, clearedWithReason: 0 });
+    expect(body.data.claimChecks).toContainEqual({
+      class: 'other',
+      raised: 1,
+      closedByEdit: 0,
+      clearedWithReason: 0,
+    });
     expect(Number.isNaN(Date.parse(body.data.asOf))).toBe(false);
     // No email, key, hint or content anywhere in the body (REQ-027).
     expect(res.raw).not.toMatch(/@example\.test|ciphertext|last4|fingerprint|wrapped_dek/);
@@ -193,12 +290,21 @@ describe('API-130 and API-131 through the api composition root', () => {
 
   it('refuses more than 366 days with 422 report_window_too_large naming the limit, and a bad window with 400', async () => {
     const admin = await account(true);
-    const big = await call('/admin/usage-report?from=2024-01-01T00:00:00Z&to=2026-01-01T00:00:00Z', admin.token);
+    const big = await call(
+      '/admin/usage-report?from=2024-01-01T00:00:00Z&to=2026-01-01T00:00:00Z',
+      admin.token,
+    );
     expect([big.status, big.json().error?.code]).toEqual([422, 'report_window_too_large']);
     expect(big.json().error?.message).toContain('366');
-    const edge = await call('/admin/usage-report?from=2025-01-01T00:00:00Z&to=2026-01-02T00:00:00Z', admin.token);
+    const edge = await call(
+      '/admin/usage-report?from=2025-01-01T00:00:00Z&to=2026-01-02T00:00:00Z',
+      admin.token,
+    );
     expect(edge.status).toBe(200); // 366 days exactly
-    const csv = await call('/admin/usage-report.csv?from=2024-01-01T00:00:00Z&to=2026-01-01T00:00:00Z', admin.token);
+    const csv = await call(
+      '/admin/usage-report.csv?from=2024-01-01T00:00:00Z&to=2026-01-01T00:00:00Z',
+      admin.token,
+    );
     expect([csv.status, csv.json().error?.code]).toEqual([422, 'report_window_too_large']);
     for (const q of ['from=nope', 'from=2026-02-01T00:00:00Z&to=2026-01-01T00:00:00Z', 'x=1']) {
       const bad = await call(`/admin/usage-report?${q}`, admin.token);
@@ -210,16 +316,25 @@ describe('API-130 and API-131 through the api composition root', () => {
     const admin = await account(true);
     await usageRow(admin.id, 'openai', 'succeeded', '2026-02-02T00:00:00Z', 50);
     const before = await count('usage_report.exported');
-    const res = await call('/admin/usage-report.csv?from=2026-02-01T00:00:00Z&to=2026-02-08T00:00:00Z', admin.token);
+    const res = await call(
+      '/admin/usage-report.csv?from=2026-02-01T00:00:00Z&to=2026-02-08T00:00:00Z',
+      admin.token,
+    );
     expect(res.status).toBe(200);
     expect(String(res.headers['content-type'])).toContain('text/csv');
     expect(String(res.headers['content-disposition'])).toContain('usage-2026-02-01-2026-02-08.csv');
     const lines = res.raw.trimEnd().split('\r\n');
-    expect(lines[0]).toBe('user_id,provider,calls,succeeded,failed,rejected,unconfirmed,estimated_cost_usd,latency_p50_ms,latency_p95_ms');
+    expect(lines[0]).toBe(
+      'user_id,provider,calls,succeeded,failed,rejected,unconfirmed,estimated_cost_usd,latency_p50_ms,latency_p95_ms',
+    );
     expect(lines).toContain(`${admin.id},openai,1,1,0,0,0,0.0100,50,50`);
     expect(res.raw).not.toMatch(/@example\.test|ciphertext|last4|fingerprint|wrapped_dek|sk-/);
     expect(await count('usage_report.exported')).toBe(before + 1);
-    const event = (await pool.query(`select actor_id, outcome from audit_events where action = 'usage_report.exported' order by at desc limit 1`)).rows[0];
+    const event = (
+      await pool.query(
+        `select actor_id, outcome from audit_events where action = 'usage_report.exported' order by at desc limit 1`,
+      )
+    ).rows[0];
     expect(event).toEqual({ actor_id: admin.id, outcome: 'allowed' });
     // A refused export leaves no export event.
     await call('/admin/usage-report.csv?from=2020-01-01T00:00:00Z', admin.token);
@@ -229,11 +344,13 @@ describe('API-130 and API-131 through the api composition root', () => {
   it('limits the report to 10 a minute and the CSV to 5 a minute per administrator (429)', async () => {
     const admin = await account(true);
     const statuses: number[] = [];
-    for (let i = 0; i < 11; i += 1) statuses.push((await call('/admin/usage-report', admin.token)).status);
+    for (let i = 0; i < 11; i += 1)
+      statuses.push((await call('/admin/usage-report', admin.token)).status);
     expect(statuses.slice(0, 10).every((s) => s === 200)).toBe(true);
     expect(statuses[10]).toBe(429);
     const csv: number[] = [];
-    for (let i = 0; i < 6; i += 1) csv.push((await call('/admin/usage-report.csv', admin.token)).status);
+    for (let i = 0; i < 6; i += 1)
+      csv.push((await call('/admin/usage-report.csv', admin.token)).status);
     expect(csv.slice(0, 5).every((s) => s === 200)).toBe(true);
     expect(csv[5]).toBe(429);
   });
@@ -271,7 +388,10 @@ describe('API-130 and API-131 through the api composition root', () => {
       const res = await call(url, a.token);
       times.push(performance.now() - started);
       expect(res.status).toBe(200);
-      if (i === 0) expect(res.json().data.providers.reduce((n: number, p: { calls: number }) => n + p.calls, 0)).toBeGreaterThanOrEqual(150000);
+      if (i === 0)
+        expect(
+          res.json().data.providers.reduce((n: number, p: { calls: number }) => n + p.calls, 0),
+        ).toBeGreaterThanOrEqual(150000);
     }
     void admin;
     const sorted = [...times].sort((x, y) => x - y);

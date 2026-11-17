@@ -10,15 +10,33 @@ export interface MediaMaintenanceRepository {
   markReady(
     tx: DbTx,
     id: string,
-    ready: { storageKey: string; bytes: number; contentType: string; width: number; height: number },
+    ready: {
+      storageKey: string;
+      bytes: number;
+      contentType: string;
+      width: number;
+      height: number;
+    },
   ): Promise<void>;
   /** `processing` to `rejected`: the reservation is returned by the caller (bytes drop to 0). */
   markRejected(tx: DbTx, id: string, reason: RejectReason): Promise<void>;
   /** Ids of uploads never attached and created before `cutoff`, oldest first. */
-  listUnattachedBefore(tx: DbTx, cutoff: Date, limit: number): Promise<{ id: string; ownerId: string }[]>;
-  listByCampaign(tx: DbTx, campaignId: string, limit: number): Promise<{ id: string; ownerId: string }[]>;
+  listUnattachedBefore(
+    tx: DbTx,
+    cutoff: Date,
+    limit: number,
+  ): Promise<{ id: string; ownerId: string }[]>;
+  listByCampaign(
+    tx: DbTx,
+    campaignId: string,
+    limit: number,
+  ): Promise<{ id: string; ownerId: string }[]>;
   /** How many retries the job has used and how many it may use, or null when pg-boss no longer holds it. */
-  jobAttempts(tx: DbTx, queue: string, jobId: string): Promise<{ retryCount: number; retryLimit: number } | null>;
+  jobAttempts(
+    tx: DbTx,
+    queue: string,
+    jobId: string,
+  ): Promise<{ retryCount: number; retryLimit: number } | null>;
 }
 
 export const MEDIA_MAINTENANCE_REPOSITORY = Symbol('MEDIA_MAINTENANCE_REPOSITORY');

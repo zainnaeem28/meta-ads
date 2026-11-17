@@ -15,10 +15,15 @@ export function finalizeDialogue(dialogue: string, isLast: boolean): string {
 }
 
 export function finalizeSegment(segment: DraftSegment, isLast: boolean): DraftSegment {
-  return { position: segment.position, dialogue: finalizeDialogue(segment.dialogue, isLast), prompt: removeDashes(segment.prompt) };
+  return {
+    position: segment.position,
+    dialogue: finalizeDialogue(segment.dialogue, isLast),
+    prompt: removeDashes(segment.prompt),
+  };
 }
 
-export const tooLong = (segment: DraftSegment): boolean => countWords(segment.dialogue) > HARD_MAX_WORDS;
+export const tooLong = (segment: DraftSegment): boolean =>
+  countWords(segment.dialogue) > HARD_MAX_WORDS;
 
 /** The last resort when the second call did not bring a segment under the limit: trim, and say which were trimmed. */
 export function trimOverLong(

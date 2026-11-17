@@ -1,6 +1,27 @@
 // Word error rate of a clip's spoken words against the segment's dialogue (ARCHITECTURE §5.6). Pure: no I/O, no logging.
 
-const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const ONES = [
+  'zero',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
+  'thirteen',
+  'fourteen',
+  'fifteen',
+  'sixteen',
+  'seventeen',
+  'eighteen',
+  'nineteen',
+];
 const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
 const MAX_NUMBER = 999_999_999;
 /** Words listed per side in a mismatch summary, and the column's length. */
@@ -24,10 +45,15 @@ function below1000(n: number): string[] {
 /** A whole number as English words ("42" is "forty two"); a number too large to say stays digit by digit. */
 export function numberWords(digits: string): string[] {
   const n = Number(digits);
-  if (!Number.isSafeInteger(n) || n > MAX_NUMBER) return [...digits].map((digit) => ONES[Number(digit)] as string);
+  if (!Number.isSafeInteger(n) || n > MAX_NUMBER)
+    return [...digits].map((digit) => ONES[Number(digit)] as string);
   if (n === 0) return ['zero'];
   const words: string[] = [];
-  for (const [size, name] of [[1_000_000, 'million'], [1000, 'thousand'], [1, '']] as const) {
+  for (const [size, name] of [
+    [1_000_000, 'million'],
+    [1000, 'thousand'],
+    [1, ''],
+  ] as const) {
     const part = Math.floor(n / size) % 1000;
     if (part === 0) continue;
     words.push(...below1000(part));
@@ -49,7 +75,12 @@ export function normalizeWords(text: string): string[] {
   for (const token of spaced.split(' ')) {
     if (token === '') continue;
     if (/^\d+$/.test(token)) words.push(...numberWords(token));
-    else if (/\d/.test(token)) words.push(...token.split(/(\d+)/).flatMap((part) => (/^\d+$/.test(part) ? numberWords(part) : part === '' ? [] : [part])));
+    else if (/\d/.test(token))
+      words.push(
+        ...token
+          .split(/(\d+)/)
+          .flatMap((part) => (/^\d+$/.test(part) ? numberWords(part) : part === '' ? [] : [part])),
+      );
     else words.push(token);
   }
   return words;
@@ -85,7 +116,12 @@ export function wordErrorRate(reference: readonly string[], heard: readonly stri
   let j = heard.length;
   while (i > 0 || j > 0) {
     const here = (cost[i] as number[])[j] as number;
-    if (i > 0 && j > 0 && here === ((cost[i - 1] as number[])[j - 1] as number) + (reference[i - 1] === heard[j - 1] ? 0 : 1)) {
+    if (
+      i > 0 &&
+      j > 0 &&
+      here ===
+        ((cost[i - 1] as number[])[j - 1] as number) + (reference[i - 1] === heard[j - 1] ? 0 : 1)
+    ) {
       if (reference[i - 1] !== heard[j - 1]) {
         missing.push(reference[i - 1] as string);
         extra.push(heard[j - 1] as string);
@@ -101,7 +137,8 @@ export function wordErrorRate(reference: readonly string[], heard: readonly stri
     }
   }
   const edits = (cost[reference.length] as number[])[heard.length] as number;
-  const rate = reference.length === 0 ? (heard.length === 0 ? 0 : 1) : Math.min(1, edits / reference.length);
+  const rate =
+    reference.length === 0 ? (heard.length === 0 ? 0 : 1) : Math.min(1, edits / reference.length);
   return { rate, missing: missing.reverse(), extra: extra.reverse() };
 }
 
@@ -109,7 +146,9 @@ export function wordErrorRate(reference: readonly string[], heard: readonly stri
 export function mismatchSummary(result: WerResult): string {
   const list = (words: readonly string[]): string => {
     const shown = words.slice(0, LISTED_WORDS).join(', ');
-    return words.length > LISTED_WORDS ? `${shown} and ${String(words.length - LISTED_WORDS)} more` : shown;
+    return words.length > LISTED_WORDS
+      ? `${shown} and ${String(words.length - LISTED_WORDS)} more`
+      : shown;
   };
   const parts = [`${String(Math.round(result.rate * 100))}% of the words differ from the script.`];
   if (result.missing.length > 0) parts.push(`Missing: ${list(result.missing)}.`);
@@ -119,7 +158,11 @@ export function mismatchSummary(result: WerResult): string {
 }
 
 /** The outcome of a comparison at `maxRate` (`WER <= QC_MAX_WORD_ERROR_RATE` passes). */
-export function judge(dialogue: string, heard: string, maxRate: number): { passed: boolean; rate: number; reason: string | null } {
+export function judge(
+  dialogue: string,
+  heard: string,
+  maxRate: number,
+): { passed: boolean; rate: number; reason: string | null } {
   const result = wordErrorRate(normalizeWords(dialogue), normalizeWords(heard));
   const rate = Math.round(result.rate * 1000) / 1000;
   const passed = result.rate <= maxRate;

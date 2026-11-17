@@ -24,7 +24,15 @@ async function start(port: number, env: Record<string, string>): Promise<string>
   let err = '';
   const child = spawn('node', ['dist/main.api.js'], {
     cwd: apiDir,
-    env: { PATH: process.env['PATH'] ?? '', ...validEnv('api', { DATABASE_URL: testDb.url, API_PORT: String(port), OWNER_EMAIL: OWNER, ...env }) },
+    env: {
+      PATH: process.env['PATH'] ?? '',
+      ...validEnv('api', {
+        DATABASE_URL: testDb.url,
+        API_PORT: String(port),
+        OWNER_EMAIL: OWNER,
+        ...env,
+      }),
+    },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
   child.stderr.on('data', (chunk: Buffer) => (err += chunk.toString()));
@@ -35,7 +43,8 @@ async function start(port: number, env: Record<string, string>): Promise<string>
     try {
       if ((await fetch(`${base}/health/live`)).ok) return base;
     } catch {
-      if (Date.now() > deadline || child.exitCode !== null) throw new Error(`api did not start: ${err}`);
+      if (Date.now() > deadline || child.exitCode !== null)
+        throw new Error(`api did not start: ${err}`);
     }
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
@@ -50,7 +59,9 @@ async function mint(base: string, payload: unknown): Promise<{ status: number; j
   return { status: res.status, json: (await res.json()) as Json };
 }
 const me = async (base: string, token?: string) => {
-  const res = await fetch(`${base}/api/v1/me`, { headers: token === undefined ? {} : { authorization: `Bearer ${token}` } });
+  const res = await fetch(`${base}/api/v1/me`, {
+    headers: token === undefined ? {} : { authorization: `Bearer ${token}` },
+  });
   return { status: res.status, json: (await res.json()) as Json };
 };
 
@@ -67,7 +78,10 @@ beforeAll(async () => {
       if (text !== '' && (only === undefined || only.test(text))) await pool.query(text);
     }
   };
-  await apply('0001_task-025-platform.sql', /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets|idempotency_records_expiry_idx)/);
+  await apply(
+    '0001_task-025-platform.sql',
+    /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets|idempotency_records_expiry_idx)/,
+  );
   await apply('0010_task-032-audit.sql');
   await apply('0020_task-033-identity.sql');
   await pool.end();
@@ -88,8 +102,15 @@ describe('local mode (development, IDENTITY_MODE=local)', () => {
     expect(owner.status).toBe(200);
     expect(owner.json['data']).toMatchObject({ email: OWNER, expiresInSeconds: 3600 });
     const token = owner.json['data']['token'] as string;
-    const claims = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString()) as Json;
-    expect(claims).toMatchObject({ iss: 'https://identity.local.invalid', sub: owner.json['data']['sub'], fva: [0, 0], azp: 'http://localhost:3000' });
+    const claims = JSON.parse(
+      Buffer.from(token.split('.')[1] ?? '', 'base64url').toString(),
+    ) as Json;
+    expect(claims).toMatchObject({
+      iss: 'https://identity.local.invalid',
+      sub: owner.json['data']['sub'],
+      fva: [0, 0],
+      azp: 'http://localhost:3000',
+    });
     expect(typeof claims['sid']).toBe('string');
     const signedIn = await me(base, token);
     expect(signedIn.status).toBe(200);
@@ -108,7 +129,9 @@ describe('local mode (development, IDENTITY_MODE=local)', () => {
     const forged = `${h}.${Buffer.from('{"sub":"user_local_x","iss":"https://identity.local.invalid"}').toString('base64url')}.${s}`;
     expect((await me(base, forged)).status).toBe(401);
     // Without a second factor the token says so (`fva[1] = -1`), and the guard's server-side MFA rule applies to it.
-    const claims = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString()) as Json;
+    const claims = JSON.parse(
+      Buffer.from(token.split('.')[1] ?? '', 'base64url').toString(),
+    ) as Json;
     expect(claims['fva']).toEqual([0, -1]);
     for (const bad of [{}, { email: 'not-an-email' }, { email: 'a@example.test', role: 'admin' }]) {
       const r = await mint(base, bad);
@@ -134,7 +157,11 @@ describe('outside local mode', () => {
         DATABASE_URL: 'postgres://app_api@127.0.0.1:1/app?sslmode=require',
         API_PORT: appEnv === 'staging' ? '3964' : '3965',
       };
-      const child = spawn('node', ['dist/main.api.js'], { cwd: apiDir, env: { PATH: process.env['PATH'] ?? '', ...env }, stdio: ['ignore', 'ignore', 'pipe'] });
+      const child = spawn('node', ['dist/main.api.js'], {
+        cwd: apiDir,
+        env: { PATH: process.env['PATH'] ?? '', ...env },
+        stdio: ['ignore', 'ignore', 'pipe'],
+      });
       running.push(child);
       let err = '';
       child.stderr.on('data', (chunk: Buffer) => (err += chunk.toString()));

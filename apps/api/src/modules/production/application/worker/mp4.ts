@@ -3,9 +3,7 @@ import { Readable } from 'node:stream';
 /** Bytes needed to see an MP4's first box header: 4 size bytes, then the type. */
 const HEADER_BYTES = 12;
 
-export type Mp4Peek =
-  | { readonly ok: true; readonly stream: Readable }
-  | { readonly ok: false };
+export type Mp4Peek = { readonly ok: true; readonly stream: Readable } | { readonly ok: false };
 
 /**
  * Type-checks a download before anything is stored (ARCHITECTURE §5.5): an MP4 starts with an `ftyp` box. Reads just

@@ -2,8 +2,18 @@ import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { DbTx } from '../../platform/db/index.js';
 import type { SeedStep } from '../index.js';
-import { SeedRefusedError, buildSeedSteps, DEV_CAMPAIGNS, DEV_IDENTITY_USERS, DEV_STUB_KEYS } from './index.js';
-import { developmentCampaignsStep, developmentKeysStep, developmentUsersStep } from './development.js';
+import {
+  SeedRefusedError,
+  buildSeedSteps,
+  DEV_CAMPAIGNS,
+  DEV_IDENTITY_USERS,
+  DEV_STUB_KEYS,
+} from './index.js';
+import {
+  developmentCampaignsStep,
+  developmentKeysStep,
+  developmentUsersStep,
+} from './development.js';
 import { platformSettingsStep } from './reference.js';
 
 /** A transaction that records the statements it is given. */
@@ -18,10 +28,14 @@ function recorder(): { tx: DbTx; calls: unknown[] } {
   return { tx, calls };
 }
 
-function kekEnv(overrides: Record<string, string | undefined> = {}): Record<string, string | undefined> {
+function kekEnv(
+  overrides: Record<string, string | undefined> = {},
+): Record<string, string | undefined> {
   const { publicKey } = generateKeyPairSync('rsa', { modulusLength: 3072 });
   return {
-    KEK_PUBLIC_KEYS: JSON.stringify({ 1: publicKey.export({ type: 'spki', format: 'pem' }).toString() }),
+    KEK_PUBLIC_KEYS: JSON.stringify({
+      1: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    }),
     KEK_ACTIVE_VERSION: '1',
     KEY_FINGERPRINT_PEPPERS: JSON.stringify({ 1: Buffer.alloc(32, 7).toString('base64') }),
     KEY_FINGERPRINT_PEPPER_ACTIVE: '1',
@@ -73,7 +87,9 @@ describe('seed datasets', () => {
       { KEY_FINGERPRINT_PEPPER_ACTIVE: '9' },
     ];
     for (const overrides of cases) {
-      await expect(developmentKeysStep(kekEnv(overrides)).run(recorder().tx)).rejects.toThrow(SeedRefusedError);
+      await expect(developmentKeysStep(kekEnv(overrides)).run(recorder().tx)).rejects.toThrow(
+        SeedRefusedError,
+      );
     }
   });
 

@@ -1,11 +1,16 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { providerKeys } from '../../../../database/schema/provider-keys.js';
 import type { DbTx } from '../../../../platform/db/index.js';
-import type { ThumbCause, ThumbJobContext, ThumbRepository } from '../../application/thumb-ports.js';
+import type {
+  ThumbCause,
+  ThumbJobContext,
+  ThumbRepository,
+} from '../../application/thumb-ports.js';
 import type { SealedKeyRow } from '../../application/worker/ports.js';
 
 const MESSAGE_MAX = 300;
-const clip = (text: string, max: number): string => (text.length <= max ? text : text.slice(0, max));
+const clip = (text: string, max: number): string =>
+  text.length <= max ? text : text.slice(0, max);
 
 interface JobSqlRow {
   id: string;
@@ -48,7 +53,10 @@ export class SqlThumbRepository implements ThumbRepository {
 
   /** Reads the sealed columns: the worker role is the only one granted them (M0004). */
   async findKey(tx: DbTx, keyId: string): Promise<SealedKeyRow | null> {
-    const rows = await tx.select().from(providerKeys).where(and(eq(providerKeys.id, keyId)));
+    const rows = await tx
+      .select()
+      .from(providerKeys)
+      .where(and(eq(providerKeys.id, keyId)));
     const row = rows[0];
     if (row === undefined) return null;
     return {
@@ -57,7 +65,12 @@ export class SqlThumbRepository implements ThumbRepository {
       provider: row.provider as SealedKeyRow['provider'],
       status: row.status as SealedKeyRow['status'],
       version: row.version,
-      sealed: { ciphertext: row.ciphertext, nonce: row.nonce, wrappedDek: row.wrappedDek, kekVersion: row.kekVersion },
+      sealed: {
+        ciphertext: row.ciphertext,
+        nonce: row.nonce,
+        wrappedDek: row.wrappedDek,
+        kekVersion: row.kekVersion,
+      },
     };
   }
 
@@ -77,7 +90,13 @@ export class SqlThumbRepository implements ThumbRepository {
     return result.rows.length === 1;
   }
 
-  async fail(tx: DbTx, jobId: string, cause: ThumbCause, message: string, errorCode: string | null): Promise<boolean> {
+  async fail(
+    tx: DbTx,
+    jobId: string,
+    cause: ThumbCause,
+    message: string,
+    errorCode: string | null,
+  ): Promise<boolean> {
     const result = await tx.execute(
       sql`update thumbstopper_jobs
              set state = 'failed', cause_class = ${cause}, cause_message = ${clip(message, MESSAGE_MAX)},
@@ -87,7 +106,12 @@ export class SqlThumbRepository implements ThumbRepository {
     return result.rows.length === 1;
   }
 
-  async complete(tx: DbTx, job: ThumbJobContext, mediaId: string, register: (tx: DbTx) => Promise<void>): Promise<boolean> {
+  async complete(
+    tx: DbTx,
+    job: ThumbJobContext,
+    mediaId: string,
+    register: (tx: DbTx) => Promise<void>,
+  ): Promise<boolean> {
     const guard = await tx.execute(
       sql`select t.id from thumbstopper_jobs t join campaigns c on c.id = t.campaign_id
           where t.id = ${job.id} and t.state = 'submitting' and c.state = 'active' for update of t`,

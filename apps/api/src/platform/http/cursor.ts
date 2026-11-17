@@ -35,7 +35,11 @@ function canonical(value: unknown): string {
 }
 
 export function filterHash(filters: unknown): string {
-  return b64(createHash('sha256').update(canonical(filters ?? null)).digest());
+  return b64(
+    createHash('sha256')
+      .update(canonical(filters ?? null))
+      .digest(),
+  );
 }
 
 const sign = (key: string, body: string): Buffer => createHmac('sha256', key).update(body).digest();

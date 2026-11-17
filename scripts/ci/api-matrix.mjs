@@ -42,12 +42,22 @@ for (const [path, item] of Object.entries(spec.paths)) {
   for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
     const op = item[method];
     if (op === undefined) continue;
-    for (const status of Object.keys(op.responses)) cells.push({ id: op['x-api-id'], method: method.toUpperCase(), path, status: Number(status) });
+    for (const status of Object.keys(op.responses))
+      cells.push({
+        id: op['x-api-id'],
+        method: method.toUpperCase(),
+        path,
+        status: Number(status),
+      });
   }
 }
 const registry = spec.components.schemas.ErrorCode.enum;
 const statusTable = {};
-for (const [, code, status] of need(join(root, 'apps/api/src/platform/http/domain-error.ts'), 'the error table').matchAll(/^\s+([a-z_]+): (\d{3}),$/gm)) statusTable[code] = Number(status);
+for (const [, code, status] of need(
+  join(root, 'apps/api/src/platform/http/domain-error.ts'),
+  'the error table',
+).matchAll(/^\s+([a-z_]+): (\d{3}),$/gm))
+  statusTable[code] = Number(status);
 
 // The report: one testcase per cell, named "API-nnn sss" (with " [waived FINDING]" when the product cannot answer it).
 const junit = need(junitFile, 'the junit report');
@@ -58,7 +68,9 @@ for (const match of junit.matchAll(/<testcase\s+([^>]*?)(\/>|>([\s\S]*?)<\/testc
   const name = /(?:^|\s)name="([^"]*)"/.exec(attributes)?.[1] ?? '';
   const failed = match[3] !== undefined && /<(failure|error)\b/.test(match[3]);
   const skipped = match[3] !== undefined && /<skipped\b/.test(match[3]);
-  const cell = /(?:^|>\s)(API-\d{3} \d{3})(?: \[waived ([A-Z0-9-]+)\])?$/.exec(name.replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+  const cell = /(?:^|>\s)(API-\d{3} \d{3})(?: \[waived ([A-Z0-9-]+)\])?$/.exec(
+    name.replace(/&gt;/g, '>').replace(/&amp;/g, '&'),
+  );
   if (failed) failures.push(`test failed: ${name}`);
   if (cell === null) continue;
   results.set(cell[1], (results.get(cell[1]) ?? true) && !failed && !skipped);
@@ -71,24 +83,44 @@ for (const cell of cells) {
   else if (results.get(key) !== true) failures.push(`${key} does not pass`);
 }
 const known = new Set(cells.map((cell) => `${cell.id} ${String(cell.status)}`));
-for (const key of results.keys()) if (!known.has(key)) failures.push(`${key} is tested but the file does not declare it`);
+for (const key of results.keys())
+  if (!known.has(key)) failures.push(`${key} is tested but the file does not declare it`);
 
 // The ledger: every registry code answered, with the registry's own status.
-const ledger = need(ledgerFile, 'the ledger of observed replies').split('\n').filter(Boolean).map((line) => JSON.parse(line));
+const ledger = need(ledgerFile, 'the ledger of observed replies')
+  .split('\n')
+  .filter(Boolean)
+  .map((line) => JSON.parse(line));
 const answered = new Map();
-for (const entry of ledger) if (entry.code !== undefined) answered.set(entry.code, new Set([...(answered.get(entry.code) ?? []), entry.status]));
+for (const entry of ledger)
+  if (entry.code !== undefined)
+    answered.set(entry.code, new Set([...(answered.get(entry.code) ?? []), entry.status]));
 for (const code of registry) {
-  if (statusTable[code] === undefined) failures.push(`registry code ${code} has no status in apps/api/src/platform/http/domain-error.ts`);
-  else if (!answered.get(code)?.has(statusTable[code])) failures.push(`registry code ${code} (${String(statusTable[code])}) was never answered by the running app`);
+  if (statusTable[code] === undefined)
+    failures.push(
+      `registry code ${code} has no status in apps/api/src/platform/http/domain-error.ts`,
+    );
+  else if (!answered.get(code)?.has(statusTable[code]))
+    failures.push(
+      `registry code ${code} (${String(statusTable[code])}) was never answered by the running app`,
+    );
 }
 for (const [code, statuses] of answered) {
-  if (!registry.includes(code)) failures.push(`the app answered ${code}, which is not in the registry`);
-  else for (const status of statuses) if (status !== statusTable[code]) failures.push(`code ${code} was answered with ${String(status)}, the registry says ${String(statusTable[code])}`);
+  if (!registry.includes(code))
+    failures.push(`the app answered ${code}, which is not in the registry`);
+  else
+    for (const status of statuses)
+      if (status !== statusTable[code])
+        failures.push(
+          `code ${code} was answered with ${String(status)}, the registry says ${String(statusTable[code])}`,
+        );
 }
 
 // The waivers: each names a finding that is written down.
 const findings = existsSync(findingsFile) ? readFileSync(findingsFile, 'utf8') : '';
-for (const [key, finding] of waived) if (!findings.includes(finding)) failures.push(`${key} is waived for ${finding}, which is not in ${findingsFile}`);
+for (const [key, finding] of waived)
+  if (!findings.includes(finding))
+    failures.push(`${key} is waived for ${finding}, which is not in ${findingsFile}`);
 
 const report = {
   operations: new Set(cells.map((cell) => cell.id)).size,
@@ -96,12 +128,15 @@ const report = {
   passing: cells.filter((cell) => results.get(`${cell.id} ${String(cell.status)}`) === true).length,
   waived: Object.fromEntries(waived),
   registryCodes: registry.length,
-  registryCodesAnswered: registry.filter((code) => answered.get(code)?.has(statusTable[code])).length,
+  registryCodesAnswered: registry.filter((code) => answered.get(code)?.has(statusTable[code]))
+    .length,
   failures,
 };
 mkdirSync(dirname(outFile), { recursive: true });
 writeFileSync(outFile, `${JSON.stringify(report, null, 2)}\n`);
-console.log(`api-matrix: ${String(report.operations)} operations, ${String(report.passing)}/${String(report.cells)} cells pass (${String(waived.size)} waived with a finding), ${String(report.registryCodesAnswered)}/${String(report.registryCodes)} registry codes answered by the running app`);
+console.log(
+  `api-matrix: ${String(report.operations)} operations, ${String(report.passing)}/${String(report.cells)} cells pass (${String(waived.size)} waived with a finding), ${String(report.registryCodesAnswered)}/${String(report.registryCodes)} registry codes answered by the running app`,
+);
 if (failures.length > 0) {
   for (const failure of failures) console.error(`api-matrix: FAIL ${failure}`);
   process.exit(1);

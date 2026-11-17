@@ -8,7 +8,12 @@ import { VideoJobsService } from '../../production/index.js';
 import { isFault, resolveWindow } from '../domain/window.js';
 import type { ReportWindow } from '../domain/window.js';
 import { REPORTING_CLOCK, REPORTING_CONFIG, REPORTING_USAGE } from './ports.js';
-import type { AccountUsageRow, ProviderUsageRow, ReportingConfig, UsageReportReader } from './ports.js';
+import type {
+  AccountUsageRow,
+  ProviderUsageRow,
+  ReportingConfig,
+  UsageReportReader,
+} from './ports.js';
 
 export interface ProviderUsage {
   provider: string;
@@ -47,7 +52,10 @@ const providerView = (row: ProviderUsageRow): ProviderUsage => ({
 });
 
 const unavailable = (): DomainError =>
-  new DomainError('service_unavailable', 'The report could not be produced right now. Try again shortly.');
+  new DomainError(
+    'service_unavailable',
+    'The report could not be produced right now. Try again shortly.',
+  );
 
 /** Every source gets the same budget as the report query; a slow one fails the report like a broken one (never zeros). */
 function within<T>(work: Promise<T>, ms: number): Promise<T> {
@@ -96,7 +104,9 @@ export class UsageReportService {
     let claimChecks: readonly ClaimCheckCounts[];
     try {
       [totals, jobStats, claimChecks] = await Promise.all([
-        this.database.uow.run((tx) => this.usage.totals(tx, window.from, window.to), { statementTimeoutMs: budget }),
+        this.database.uow.run((tx) => this.usage.totals(tx, window.from, window.to), {
+          statementTimeoutMs: budget,
+        }),
         within(this.jobs.jobStatsWindow(window.from, window.to), budget),
         within(this.claims.claimCounts({ from: window.from, to: window.to }), budget),
       ]);
@@ -116,9 +126,14 @@ export class UsageReportService {
       videoCancelled: jobStats.videoCancelled,
       qcCreated: jobStats.qcCreated,
     };
-    const claimTotal = claimChecks.reduce((n, c) => n + c.raised + c.closedByEdit + c.clearedWithReason, 0);
+    const claimTotal = claimChecks.reduce(
+      (n, c) => n + c.raised + c.closedByEdit + c.clearedWithReason,
+      0,
+    );
     const empty =
-      totals.providers.length === 0 && Object.values(jobStates).every((n) => n === 0) && claimTotal === 0;
+      totals.providers.length === 0 &&
+      Object.values(jobStates).every((n) => n === 0) &&
+      claimTotal === 0;
     return {
       from: window.from.toISOString(),
       to: window.to.toISOString(),

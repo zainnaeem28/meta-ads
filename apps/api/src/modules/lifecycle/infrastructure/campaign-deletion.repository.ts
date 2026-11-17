@@ -3,7 +3,10 @@ import { briefJobs } from '../../../database/schema/brief.js';
 import { campaigns } from '../../../database/schema/campaigns.js';
 import { deletionRuns } from '../../../database/schema/lifecycle.js';
 import type { DbTx } from '../../../platform/db/index.js';
-import type { CampaignDeletionRepository, CancelledBriefJob } from '../application/campaign-deletion-ports.js';
+import type {
+  CampaignDeletionRepository,
+  CancelledBriefJob,
+} from '../application/campaign-deletion-ports.js';
 import type { DeletionRun, RunState } from '../domain/campaign-deletion.js';
 
 const BRIEF_NON_TERMINAL = ['pending', 'submitting', 'submitted', 'processing'];
@@ -30,12 +33,22 @@ export class DrizzleCampaignDeletionRepository implements CampaignDeletionReposi
     const rows = await tx
       .update(campaigns)
       .set({ state: 'deleting', updatedAt: sql`now()` })
-      .where(and(eq(campaigns.id, campaignId), eq(campaigns.ownerId, ownerId), eq(campaigns.state, 'active')))
+      .where(
+        and(
+          eq(campaigns.id, campaignId),
+          eq(campaigns.ownerId, ownerId),
+          eq(campaigns.state, 'active'),
+        ),
+      )
       .returning({ id: campaigns.id });
     return rows.length === 1;
   }
 
-  async cancelBriefJobs(tx: DbTx, ownerId: string, campaignId: string): Promise<CancelledBriefJob[]> {
+  async cancelBriefJobs(
+    tx: DbTx,
+    ownerId: string,
+    campaignId: string,
+  ): Promise<CancelledBriefJob[]> {
     const live = await tx
       .select({ id: briefJobs.id, state: briefJobs.state, callCount: briefJobs.callCount })
       .from(briefJobs)
@@ -56,11 +69,19 @@ export class DrizzleCampaignDeletionRepository implements CampaignDeletionReposi
         causeMessage: 'The campaign was deleted.',
         updatedAt: sql`now()`,
       })
-      .where(inArray(briefJobs.id, live.map((job) => job.id)));
+      .where(
+        inArray(
+          briefJobs.id,
+          live.map((job) => job.id),
+        ),
+      );
     return live;
   }
 
-  async insertRun(tx: DbTx, run: { id: string; ownerId: string; campaignId: string }): Promise<void> {
+  async insertRun(
+    tx: DbTx,
+    run: { id: string; ownerId: string; campaignId: string },
+  ): Promise<void> {
     await tx.insert(deletionRuns).values({
       id: run.id,
       kind: 'campaign',
@@ -87,7 +108,9 @@ export class DrizzleCampaignDeletionRepository implements CampaignDeletionReposi
         step: patch.step,
         attempts: 0,
         lastErrorClass: null,
-        ...(patch.remainingObjects === undefined ? {} : { remainingObjects: patch.remainingObjects }),
+        ...(patch.remainingObjects === undefined
+          ? {}
+          : { remainingObjects: patch.remainingObjects }),
         ...(patch.notBeforeInMs === undefined
           ? {}
           : { notBefore: sql`now() + make_interval(secs => ${patch.notBeforeInMs / 1000})` }),
@@ -99,7 +122,11 @@ export class DrizzleCampaignDeletionRepository implements CampaignDeletionReposi
   async recordFailure(tx: DbTx, runId: string, errorClass: string): Promise<number> {
     const [row] = await tx
       .update(deletionRuns)
-      .set({ attempts: sql`${deletionRuns.attempts} + 1`, lastErrorClass: errorClass, updatedAt: sql`now()` })
+      .set({
+        attempts: sql`${deletionRuns.attempts} + 1`,
+        lastErrorClass: errorClass,
+        updatedAt: sql`now()`,
+      })
       .where(and(eq(deletionRuns.id, runId), eq(deletionRuns.state, 'running')))
       .returning({ attempts: deletionRuns.attempts });
     return row?.attempts ?? 0;
@@ -113,7 +140,9 @@ export class DrizzleCampaignDeletionRepository implements CampaignDeletionReposi
   }
 
   async hardDeleteCampaign(tx: DbTx, campaignId: string): Promise<void> {
-    await tx.delete(campaigns).where(and(eq(campaigns.id, campaignId), eq(campaigns.state, 'deleting')));
+    await tx
+      .delete(campaigns)
+      .where(and(eq(campaigns.id, campaignId), eq(campaigns.state, 'deleting')));
   }
 
   async complete(tx: DbTx, runId: string): Promise<void> {

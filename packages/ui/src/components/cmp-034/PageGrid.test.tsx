@@ -22,8 +22,12 @@ describe('CMP-034 PageGrid', () => {
   it('defaults to full width, supports list semantics and has no axe violations', async () => {
     const { container } = render(
       <PageGrid as="ul">
-        <GridCol as="li" data-testid="d">A</GridCol>
-        <GridCol as="li" span={6}>B</GridCol>
+        <GridCol as="li" data-testid="d">
+          A
+        </GridCol>
+        <GridCol as="li" span={6}>
+          B
+        </GridCol>
       </PageGrid>,
     );
     expect(screen.getByTestId('d').className).toContain('md:col-span-12');

@@ -25,12 +25,18 @@ export interface RateLimitOptions {
 const ROUTE_KEY = 'rate-limit:route';
 
 /** Applies the named per-route limit (on top of the general limit) to a route. */
-export const RateLimit = (name: string): MethodDecorator & ClassDecorator => SetMetadata(ROUTE_KEY, name);
+export const RateLimit = (name: string): MethodDecorator & ClassDecorator =>
+  SetMetadata(ROUTE_KEY, name);
 
 /** Health probes (API-900/901) and internal metrics (API-902/903) are exempt (ARCHITECTURE 3.7). */
 export function isExempt(url: string): boolean {
   const path = url.split('?')[0] ?? '';
-  return path === '/health' || path.startsWith('/health/') || path === '/internal/metrics' || path.startsWith('/internal/metrics/');
+  return (
+    path === '/health' ||
+    path.startsWith('/health/') ||
+    path === '/internal/metrics' ||
+    path.startsWith('/internal/metrics/')
+  );
 }
 
 /** The client address: the entry `hops` places from the right of X-Forwarded-For (the proxy appends the peer it saw). */
@@ -67,10 +73,16 @@ export class RateLimitGuard implements CanActivate {
     if (isExempt(request.url)) return true;
     const reply = http.getResponse<FastifyReply>();
     const userId = request.userId;
-    const subject = userId ?? ipSubject(this.options.ipKey, clientIp(request, this.options.trustProxyHops));
+    const subject =
+      userId ?? ipSubject(this.options.ipKey, clientIp(request, this.options.trustProxyHops));
     const general = userId === undefined ? GENERAL_IP_LIMIT : GENERAL_USER_LIMIT;
-    const checks: [string, LimitRule][] = [[userId === undefined ? 'general-ip' : 'general-user', general]];
-    const name = this.reflector.getAllAndOverride<string | undefined>(ROUTE_KEY, [context.getHandler(), context.getClass()]);
+    const checks: [string, LimitRule][] = [
+      [userId === undefined ? 'general-ip' : 'general-user', general],
+    ];
+    const name = this.reflector.getAllAndOverride<string | undefined>(ROUTE_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (name !== undefined) {
       const rule = this.options.routes[name];
       if (rule === undefined) throw new Error(`rate limit "${name}" is not configured`);

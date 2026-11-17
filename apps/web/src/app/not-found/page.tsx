@@ -4,7 +4,11 @@ import { SCREEN_004_COPY, parseScreen004State } from '../../features/fe-screen-0
 
 type Search = Promise<Record<string, string | string[] | undefined>>;
 
-export async function generateMetadata({ searchParams }: { searchParams: Search }): Promise<Metadata> {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Search;
+}): Promise<Metadata> {
   const { title } = SCREEN_004_COPY[parseScreen004State((await searchParams)['state'])];
   return { title, robots: { index: false, follow: false } };
 }

@@ -30,8 +30,15 @@ const headTags = (page: Page) =>
   }));
 
 test.describe('@TASK-084 Clerk integration, route protection and sign-in through the built web app (local mode)', () => {
-  for (const path of ['/campaigns', '/campaigns/42/brief?tab=clips', '/settings/provider-keys', '/access']) {
-    test(`anonymous visitor to ${path} lands on sign-in and no data is requested`, async ({ page }) => {
+  for (const path of [
+    '/campaigns',
+    '/campaigns/42/brief?tab=clips',
+    '/settings/provider-keys',
+    '/access',
+  ]) {
+    test(`anonymous visitor to ${path} lands on sign-in and no data is requested`, async ({
+      page,
+    }) => {
       const apiCalls: string[] = [];
       page.on('request', (req) => {
         if (req.url().startsWith(process.env.E2E_API_URL!)) apiCalls.push(req.url());
@@ -41,21 +48,31 @@ test.describe('@TASK-084 Clerk integration, route protection and sign-in through
       expect(url.pathname).toBe('/sign-in');
       expect(url.searchParams.get('return')).toBe(path);
       expect(url.searchParams.get('reason')).toBeNull();
-      await expect(page.getByRole('heading', { level: 1, name: 'AI UGC Ad Director' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'AI UGC Ad Director' }),
+      ).toBeVisible();
       expect(apiCalls).toEqual([]);
     });
   }
 
-  test('signing in returns to the requested URL; a wrong password shows the invalid state', async ({ page }) => {
+  test('signing in returns to the requested URL; a wrong password shows the invalid state', async ({
+    page,
+  }) => {
     await page.goto('/campaigns/42/brief?tab=clips');
     await signIn(page, 'wrong-password');
-    await expect(page.getByRole('alert').filter({ hasText: 'That email and password do not match' })).toBeVisible();
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'That email and password do not match' }),
+    ).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/sign-in');
     await signIn(page);
     await page.waitForURL('**/campaigns/42/brief?tab=clips');
   });
 
-  test('an expired session returns to the same URL after sign-in, with the session-ended message', async ({ page, context, baseURL }) => {
+  test('an expired session returns to the same URL after sign-in, with the session-ended message', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
     await cookieFor(context, baseURL!, 1);
     await page.goto('/campaigns/7/clips');
     const url = new URL(page.url());
@@ -65,7 +82,11 @@ test.describe('@TASK-084 Clerk integration, route protection and sign-in through
     await page.waitForURL('**/campaigns/7/clips');
   });
 
-  test('home route: signed out goes to sign-in, signed in goes to the campaign list', async ({ page, context, baseURL }) => {
+  test('home route: signed out goes to sign-in, signed in goes to the campaign list', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
     await page.goto('/');
     expect(new URL(page.url()).pathname).toBe('/sign-in');
     await cookieFor(context, baseURL!, Math.floor(Date.now() / 1000) + 600);
@@ -80,16 +101,25 @@ test.describe('@TASK-084 Clerk integration, route protection and sign-in through
     expect(page.url()).not.toContain('evil.example');
   });
 
-  test('every route carries noindex, Referrer-Policy same-origin and the document title pattern', async ({ page, request }) => {
+  test('every route carries noindex, Referrer-Policy same-origin and the document title pattern', async ({
+    page,
+    request,
+  }) => {
     for (const path of ['/sign-in', '/mfa', '/campaigns', '/']) {
       const res = await request.get(path, { maxRedirects: 0 });
       expect(res.headers()['referrer-policy'], path).toBe('same-origin');
       expect(res.headers()['x-robots-tag'], path).toMatch(/noindex/);
     }
     await page.goto('/sign-in');
-    expect(await headTags(page)).toEqual({ title: 'Sign in · ShrooMap', robots: 'noindex, nofollow' });
+    expect(await headTags(page)).toEqual({
+      title: 'Sign in · ShrooMap',
+      robots: 'noindex, nofollow',
+    });
     await page.goto('/mfa');
-    expect(await headTags(page)).toEqual({ title: 'Two-step verification · ShrooMap', robots: 'noindex, nofollow' });
+    expect(await headTags(page)).toEqual({
+      title: 'Two-step verification · ShrooMap',
+      robots: 'noindex, nofollow',
+    });
   });
 
   test('the sign-in page loads nothing from a third party', async ({ page, baseURL }) => {
@@ -103,7 +133,11 @@ test.describe('@TASK-084 Clerk integration, route protection and sign-in through
     expect(foreign).toEqual([]);
   });
 
-  test('the second step accepts the local code and rejects another', async ({ page, context, baseURL }) => {
+  test('the second step accepts the local code and rejects another', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
     await cookieFor(context, baseURL!, Math.floor(Date.now() / 1000) + 600);
     await page.goto('/mfa?return=%2Fcampaigns%2F9');
     await page.getByLabel('6-digit code').fill('123456');
@@ -114,7 +148,9 @@ test.describe('@TASK-084 Clerk integration, route protection and sign-in through
     await page.waitForURL('**/campaigns/9');
   });
 
-  test('the running api answers an anonymous caller with 401 and the web runs beside it', async ({ request }) => {
+  test('the running api answers an anonymous caller with 401 and the web runs beside it', async ({
+    request,
+  }) => {
     expect((await request.get(`${process.env.E2E_API_URL}/health/live`)).ok()).toBe(true);
     expect((await request.get(`${process.env.E2E_API_URL}/api/v1/me`)).status()).toBe(401);
   });
@@ -124,15 +160,26 @@ test.describe('@TASK-084 Clerk integration, route protection and sign-in through
       test(`${state} at ${name} px: no axe violations and a screenshot`, async ({ page }, info) => {
         await page.setViewportSize({ width, height });
         if (state === 'mfa') await page.goto('/mfa');
-        else await page.goto(state === 'session-expired' ? '/sign-in?reason=session-expired&return=%2Fcampaigns' : '/sign-in');
+        else
+          await page.goto(
+            state === 'session-expired'
+              ? '/sign-in?reason=session-expired&return=%2Fcampaigns'
+              : '/sign-in',
+          );
         if (state === 'invalid') {
           await signIn(page, 'wrong-password');
           await expect(page.getByRole('alert').filter({ hasText: 'do not match' })).toBeVisible();
         }
         await page.evaluate(() => document.fonts.ready);
-        await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-${state}-${name}.json`);
+        await expectNoAxeViolations(
+          page,
+          `${evidence}/axe/${info.project.name}-${state}-${name}.json`,
+        );
         mkdirSync(`${evidence}/screenshots`, { recursive: true });
-        await page.screenshot({ path: `${evidence}/screenshots/${state}-${name}.png`, fullPage: true });
+        await page.screenshot({
+          path: `${evidence}/screenshots/${state}-${name}.png`,
+          fullPage: true,
+        });
         await expect(page).toHaveScreenshot(`clerk-${state}-${name}.png`, { fullPage: true });
       });
     }

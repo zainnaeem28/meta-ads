@@ -47,7 +47,8 @@ export interface AuthenticatedRequest extends FastifyRequest {
 }
 
 export function requireRole(actor: ActorContext, role: ActorRole): void {
-  if (actor.role !== role) throw new DomainError('forbidden_role', 'You do not have access to this.');
+  if (actor.role !== role)
+    throw new DomainError('forbidden_role', 'You do not have access to this.');
 }
 
 /** Server-side MFA (TR-08): enforced from `fva` whatever the provider screen did. */
@@ -89,13 +90,16 @@ export function authorizeScope(scope: RouteScope, result: AuthResult): ActorCont
 }
 
 /** The authenticated account of the request (set by `AuthGuard`); handlers of scope T use `@Session()` instead. */
-export const CurrentActor = createParamDecorator((_data: unknown, context: ExecutionContext): ActorContext | undefined => {
-  const result = context.switchToHttp().getRequest<AuthenticatedRequest>().auth;
-  return result?.linked === true ? result.actor : undefined;
-});
+export const CurrentActor = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): ActorContext | undefined => {
+    const result = context.switchToHttp().getRequest<AuthenticatedRequest>().auth;
+    return result?.linked === true ? result.actor : undefined;
+  },
+);
 
-export const CurrentSession = createParamDecorator((_data: unknown, context: ExecutionContext): AuthResult | undefined =>
-  context.switchToHttp().getRequest<AuthenticatedRequest>().auth,
+export const CurrentSession = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): AuthResult | undefined =>
+    context.switchToHttp().getRequest<AuthenticatedRequest>().auth,
 );
 
 /**
@@ -115,7 +119,8 @@ export class AuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (scope === undefined) throw new DomainError('forbidden_role', 'You do not have access to this.');
+    if (scope === undefined)
+      throw new DomainError('forbidden_role', 'You do not have access to this.');
     if (!needsSession(scope)) return true;
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = bearerToken(request.headers.authorization);

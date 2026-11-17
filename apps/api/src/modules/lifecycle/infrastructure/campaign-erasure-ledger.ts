@@ -45,7 +45,8 @@ export class S3ErasureLedger implements CampaignErasureLedger {
         }),
       );
     } catch (error) {
-      const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+      const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode;
       if (status === 412 || (error as { name?: string }).name === 'PreconditionFailed') return;
       throw new Error('erasure ledger put failed', { cause: error });
     }

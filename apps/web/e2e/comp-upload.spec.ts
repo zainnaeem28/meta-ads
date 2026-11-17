@@ -10,7 +10,9 @@ const png = Buffer.from(
 );
 
 test.describe('@TASK-075 file upload (CMP-021) through the built web app', () => {
-  test('picker: an image goes uploading to ready, a PDF is rejected with its reason, remove works', async ({ page }) => {
+  test('picker: an image goes uploading to ready, a PDF is rejected with its reason, remove works', async ({
+    page,
+  }) => {
     await page.goto('/gallery');
     const cell = page.locator('[data-cell=upload-live]');
     await expect(cell.getByRole('button', { name: /Upload an image/ })).toBeVisible();
@@ -26,7 +28,9 @@ test.describe('@TASK-075 file upload (CMP-021) through the built web app', () =>
 
   test('zone is reachable and activatable by keyboard', async ({ page }) => {
     await page.goto('/gallery');
-    const zone = page.locator('[data-cell=upload-idle]').getByRole('button', { name: /Upload an image/ });
+    const zone = page
+      .locator('[data-cell=upload-idle]')
+      .getByRole('button', { name: /Upload an image/ });
     await zone.focus();
     await expect(zone).toBeFocused();
     // Enter only opens the picker once React has hydrated the click handler, so press until it does.
@@ -43,11 +47,16 @@ test.describe('@TASK-075 file upload (CMP-021) through the built web app', () =>
   });
 
   for (const { name, width, height } of VIEWPORTS.filter((v) => v.name !== '768')) {
-    test(`gallery matches its baseline and has no axe violations at ${name} px`, async ({ page }, info) => {
+    test(`gallery matches its baseline and has no axe violations at ${name} px`, async ({
+      page,
+    }, info) => {
       await page.setViewportSize({ width, height });
       await page.goto('/gallery');
       const section = page.locator('[data-testid=comp-upload]');
-      await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-comp-upload-${name}.json`);
+      await expectNoAxeViolations(
+        page,
+        `${evidence}/axe/${info.project.name}-comp-upload-${name}.json`,
+      );
       await page.evaluate(() => document.fonts.ready);
       await expect(section).toHaveScreenshot(`comp-upload-${name}.png`);
       mkdirSync(`${evidence}/screenshots`, { recursive: true });

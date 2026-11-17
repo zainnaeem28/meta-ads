@@ -65,16 +65,30 @@ export async function keysDisableAll(database: Pick<Database, 'uow'>): Promise<O
       .update(providerKeys)
       .set({ status: 'disabled', disabledAt: sql`now()`, updatedAt: sql`now()` })
       .where(ne(providerKeys.status, 'disabled'))
-      .returning({ id: providerKeys.id, ownerId: providerKeys.ownerId, provider: providerKeys.provider });
+      .returning({
+        id: providerKeys.id,
+        ownerId: providerKeys.ownerId,
+        provider: providerKeys.provider,
+      });
     for (const row of disabled) {
-      await tx
-        .insert(keyEvents)
-        .values({ id: newId(), ownerId: row.ownerId, keyId: row.id, provider: row.provider, kind: 'disabled_by_operator' });
+      await tx.insert(keyEvents).values({
+        id: newId(),
+        ownerId: row.ownerId,
+        keyId: row.id,
+        provider: row.provider,
+        kind: 'disabled_by_operator',
+      });
     }
     await auditOperator(tx, 'key.disabled_all', 'provider_key', null, 'allowed');
     const raised = await tx
       .insert(adminAlerts)
-      .values({ id: newId(), kind: 'keys_disabled_all', subjectUserId: null, counts: { keys: disabled.length }, dedupeKey: 'keys_disabled_all:-' })
+      .values({
+        id: newId(),
+        kind: 'keys_disabled_all',
+        subjectUserId: null,
+        counts: { keys: disabled.length },
+        dedupeKey: 'keys_disabled_all:-',
+      })
       .onConflictDoNothing()
       .returning({ id: adminAlerts.id });
     return { counts: { disabled: disabled.length, alerts_raised: raised.length }, ok: true };
@@ -106,7 +120,10 @@ const sealedColumns = {
  * killed run, or a second one, simply continues with what is left; a row that cannot be rewrapped (no private key for
  * its version, or it does not open) is counted, left untouched and makes the command fail.
  */
-export async function kekRewrap(database: Pick<Database, 'uow'>, keys: RewrapKeys): Promise<OpsResult> {
+export async function kekRewrap(
+  database: Pick<Database, 'uow'>,
+  keys: RewrapKeys,
+): Promise<OpsResult> {
   const counts = { rewrapped: 0, failed: 0, already_current: 0 };
   let after = '00000000-0000-0000-0000-000000000000';
   for (;;) {
@@ -121,7 +138,11 @@ export async function kekRewrap(database: Pick<Database, 'uow'>, keys: RewrapKey
     if (batch.length === 0) break;
     for (const { id } of batch) {
       const outcome = await database.uow.run(async (tx) => {
-        const [row] = await tx.select(sealedColumns).from(providerKeys).where(eq(providerKeys.id, id)).for('update');
+        const [row] = await tx
+          .select(sealedColumns)
+          .from(providerKeys)
+          .where(eq(providerKeys.id, id))
+          .for('update');
         if (row === undefined || row.kekVersion === keys.active) return 'already_current' as const;
         const result = rewrapRow(row, keys.privateKeys, keys.publicKeys, keys.active);
         if (!result.ok) return 'failed' as const;
@@ -131,9 +152,13 @@ export async function kekRewrap(database: Pick<Database, 'uow'>, keys: RewrapKey
           .where(and(eq(providerKeys.id, id), eq(providerKeys.kekVersion, row.kekVersion)))
           .returning({ id: providerKeys.id });
         if (written.length !== 1) return 'already_current' as const;
-        await tx
-          .insert(keyEvents)
-          .values({ id: newId(), ownerId: row.ownerId, keyId: row.id, provider: row.provider, kind: 'rewrapped' });
+        await tx.insert(keyEvents).values({
+          id: newId(),
+          ownerId: row.ownerId,
+          keyId: row.id,
+          provider: row.provider,
+          kind: 'rewrapped',
+        });
         return 'rewrapped' as const;
       });
       counts[outcome] += 1;
@@ -141,11 +166,16 @@ export async function kekRewrap(database: Pick<Database, 'uow'>, keys: RewrapKey
     after = batch[batch.length - 1]?.id ?? after;
   }
   const ok = counts.failed === 0;
-  await database.uow.run((tx) => auditOperator(tx, 'kek.rewrapped', 'provider_key', null, ok ? 'allowed' : 'failed'));
+  await database.uow.run((tx) =>
+    auditOperator(tx, 'kek.rewrapped', 'provider_key', null, ok ? 'allowed' : 'failed'),
+  );
   return { counts, ok };
 }
 
-const RUN_QUEUE = { account: 'lifecycle.account-erasure', campaign: 'lifecycle.campaign-deletion' } as const;
+const RUN_QUEUE = {
+  account: 'lifecycle.account-erasure',
+  campaign: 'lifecycle.campaign-deletion',
+} as const;
 type RunKind = keyof typeof RUN_QUEUE;
 
 /** `erasure:resume <runId>`: a `stuck` run goes back to `running` with a clean attempt count and is queued again. */
@@ -156,7 +186,11 @@ export async function erasureResume(
 ): Promise<OpsResult> {
   return database.uow.run(async (tx) => {
     const [run] = await tx
-      .select({ kind: deletionRuns.kind, subjectId: deletionRuns.subjectId, state: deletionRuns.state })
+      .select({
+        kind: deletionRuns.kind,
+        subjectId: deletionRuns.subjectId,
+        state: deletionRuns.state,
+      })
       .from(deletionRuns)
       .where(eq(deletionRuns.id, runId))
       .for('update');

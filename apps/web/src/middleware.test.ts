@@ -6,7 +6,10 @@ import middleware, { config } from './middleware';
 
 const call = (path: string, cookie?: string) =>
   middleware(
-    new NextRequest(`http://web.test${path}`, cookie ? { headers: { cookie: `${LOCAL_SESSION_COOKIE}=${cookie}` } } : {}),
+    new NextRequest(
+      `http://web.test${path}`,
+      cookie ? { headers: { cookie: `${LOCAL_SESSION_COOKIE}=${cookie}` } } : {},
+    ),
     {} as never,
   ) as Promise<Response>;
 
@@ -16,19 +19,25 @@ describe('middleware in local mode', () => {
   it('redirects an anonymous visitor and carries the security headers', async () => {
     const res = await call('/campaigns/7?x=1');
     expect(res.status).toBe(307);
-    expect(new URL(res.headers.get('location')!).pathname + new URL(res.headers.get('location')!).search).toBe(
-      '/sign-in?return=%2Fcampaigns%2F7%3Fx%3D1',
-    );
+    expect(
+      new URL(res.headers.get('location')!).pathname + new URL(res.headers.get('location')!).search,
+    ).toBe('/sign-in?return=%2Fcampaigns%2F7%3Fx%3D1');
     expect(res.headers.get('referrer-policy')).toBe('same-origin');
     expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow');
   });
   it('treats an expired cookie as an ended session', async () => {
     const cookie = await signLocalSession({ sub: 's', email: 'a@b.co', exp: 1 });
     const res = await call('/campaigns', cookie);
-    expect(res.headers.get('location')).toContain('/sign-in?reason=session-expired&return=%2Fcampaigns');
+    expect(res.headers.get('location')).toContain(
+      '/sign-in?reason=session-expired&return=%2Fcampaigns',
+    );
   });
   it('passes a signed-in request and sends home to the campaign list', async () => {
-    const cookie = await signLocalSession({ sub: 's', email: 'a@b.co', exp: Math.floor(Date.now() / 1000) + 60 });
+    const cookie = await signLocalSession({
+      sub: 's',
+      email: 'a@b.co',
+      exp: Math.floor(Date.now() / 1000) + 60,
+    });
     const pass = await call('/campaigns', cookie);
     expect(pass.headers.get('x-middleware-next')).toBe('1');
     expect(pass.headers.get('referrer-policy')).toBe('same-origin');

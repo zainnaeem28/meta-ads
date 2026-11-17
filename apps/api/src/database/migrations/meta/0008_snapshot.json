@@ -583,12 +583,8 @@
           "name": "brief_jobs_campaign_id_campaigns_id_fk",
           "tableFrom": "brief_jobs",
           "tableTo": "campaigns",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -596,12 +592,8 @@
           "name": "brief_jobs_media_id_media_objects_id_fk",
           "tableFrom": "brief_jobs",
           "tableTo": "media_objects",
-          "columnsFrom": [
-            "media_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["media_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -741,12 +733,8 @@
           "name": "brief_segments_brief_id_briefs_id_fk",
           "tableFrom": "brief_segments",
           "tableTo": "briefs",
-          "columnsFrom": [
-            "brief_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["brief_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -860,12 +848,8 @@
           "name": "briefs_campaign_id_campaigns_id_fk",
           "tableFrom": "briefs",
           "tableTo": "campaigns",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1109,12 +1093,8 @@
           "name": "claim_issues_brief_id_briefs_id_fk",
           "tableFrom": "claim_issues",
           "tableTo": "briefs",
-          "columnsFrom": [
-            "brief_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["brief_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1122,12 +1102,8 @@
           "name": "claim_issues_segment_id_brief_segments_id_fk",
           "tableFrom": "claim_issues",
           "tableTo": "brief_segments",
-          "columnsFrom": [
-            "segment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["segment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1302,12 +1278,8 @@
           "name": "campaigns_owner_id_users_id_fk",
           "tableFrom": "campaigns",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1315,12 +1287,8 @@
           "name": "campaigns_product_media_id_media_objects_id_fk",
           "tableFrom": "campaigns",
           "tableTo": "media_objects",
-          "columnsFrom": [
-            "product_media_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_media_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1548,12 +1516,8 @@
           "name": "drafts_owner_id_users_id_fk",
           "tableFrom": "drafts",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1561,12 +1525,8 @@
           "name": "drafts_product_media_id_media_objects_id_fk",
           "tableFrom": "drafts",
           "tableTo": "media_objects",
-          "columnsFrom": [
-            "product_media_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_media_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1574,12 +1534,8 @@
           "name": "drafts_campaign_id_campaigns_id_fk",
           "tableFrom": "drafts",
           "tableTo": "campaigns",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1927,12 +1883,8 @@
           "name": "invitations_invited_by_users_id_fk",
           "tableFrom": "invitations",
           "tableTo": "users",
-          "columnsFrom": [
-            "invited_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invited_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1940,12 +1892,8 @@
           "name": "invitations_accepted_user_id_users_id_fk",
           "tableFrom": "invitations",
           "tableTo": "users",
-          "columnsFrom": [
-            "accepted_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["accepted_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2372,12 +2320,8 @@
           "name": "media_objects_owner_id_users_id_fk",
           "tableFrom": "media_objects",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2445,12 +2389,8 @@
           "name": "storage_usage_owner_id_users_id_fk",
           "tableFrom": "storage_usage",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2540,11 +2480,7 @@
       "compositePrimaryKeys": {
         "idempotency_records_owner_id_operation_id_key_pk": {
           "name": "idempotency_records_owner_id_operation_id_key_pk",
-          "columns": [
-            "owner_id",
-            "operation_id",
-            "key"
-          ]
+          "columns": ["owner_id", "operation_id", "key"]
         }
       },
       "uniqueConstraints": {},
@@ -2591,11 +2527,7 @@
       "compositePrimaryKeys": {
         "rate_limit_buckets_scope_subject_window_start_pk": {
           "name": "rate_limit_buckets_scope_subject_window_start_pk",
-          "columns": [
-            "scope",
-            "subject",
-            "window_start"
-          ]
+          "columns": ["scope", "subject", "window_start"]
         }
       },
       "uniqueConstraints": {},
@@ -2810,12 +2742,8 @@
           "name": "qc_runs_video_job_id_video_jobs_id_fk",
           "tableFrom": "qc_runs",
           "tableTo": "video_jobs",
-          "columnsFrom": [
-            "video_job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["video_job_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3146,12 +3074,8 @@
           "name": "video_jobs_campaign_id_campaigns_id_fk",
           "tableFrom": "video_jobs",
           "tableTo": "campaigns",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3159,12 +3083,8 @@
           "name": "video_jobs_segment_id_brief_segments_id_fk",
           "tableFrom": "video_jobs",
           "tableTo": "brief_segments",
-          "columnsFrom": [
-            "segment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["segment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -3172,12 +3092,8 @@
           "name": "video_jobs_reference_media_id_media_objects_id_fk",
           "tableFrom": "video_jobs",
           "tableTo": "media_objects",
-          "columnsFrom": [
-            "reference_media_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reference_media_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3185,12 +3101,8 @@
           "name": "video_jobs_output_media_id_media_objects_id_fk",
           "tableFrom": "video_jobs",
           "tableTo": "media_objects",
-          "columnsFrom": [
-            "output_media_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["output_media_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3467,12 +3379,8 @@
           "name": "provider_keys_owner_id_users_id_fk",
           "tableFrom": "provider_keys",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3570,11 +3478,7 @@
       "compositePrimaryKeys": {
         "price_table_provider_operation_effective_from_pk": {
           "name": "price_table_provider_operation_effective_from_pk",
-          "columns": [
-            "provider",
-            "operation",
-            "effective_from"
-          ]
+          "columns": ["provider", "operation", "effective_from"]
         }
       },
       "uniqueConstraints": {},
@@ -3665,12 +3569,8 @@
           "name": "spend_reservations_owner_id_users_id_fk",
           "tableFrom": "spend_reservations",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3680,10 +3580,7 @@
         "spend_reservations_job_uq": {
           "name": "spend_reservations_job_uq",
           "nullsNotDistinct": false,
-          "columns": [
-            "job_type",
-            "job_id"
-          ]
+          "columns": ["job_type", "job_id"]
         }
       },
       "policies": {},
@@ -3825,11 +3722,7 @@
         "usage_events_call_uq": {
           "name": "usage_events_call_uq",
           "nullsNotDistinct": false,
-          "columns": [
-            "job_type",
-            "job_id",
-            "call_seq"
-          ]
+          "columns": ["job_type", "job_id", "call_seq"]
         }
       },
       "policies": {},

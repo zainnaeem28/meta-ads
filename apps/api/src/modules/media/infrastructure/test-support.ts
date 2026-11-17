@@ -21,7 +21,9 @@ const REPO_ROOT = join(import.meta.dirname, '..', '..', '..', '..', '..', '..');
 
 export async function startTestBucket(bucket = 'app'): Promise<TestBucket> {
   const url = pathToFileURL(join(REPO_ROOT, 'tools', 'foundation-tests', 'media', 'minio.ts')).href;
-  const { startMinio } = (await import(/* @vite-ignore */ url)) as { startMinio(): Promise<MinioHandle> };
+  const { startMinio } = (await import(/* @vite-ignore */ url)) as {
+    startMinio(): Promise<MinioHandle>;
+  };
   const minio = await startMinio();
   const admin = new S3Client({
     region: 'us-east-1',

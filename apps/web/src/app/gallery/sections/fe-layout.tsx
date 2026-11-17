@@ -15,13 +15,19 @@ export const meta: SectionMeta = {
 
 function Block({ children }: { children: string }) {
   return (
-    <div className="rounded-md border border-border bg-muted p-3 text-ui text-muted-foreground">{children}</div>
+    <div className="rounded-md border border-border bg-muted p-3 text-ui text-muted-foreground">
+      {children}
+    </div>
   );
 }
 
 /** One auth shell inside a fixed-size frame (the shell is full viewport height on its own). */
 function ShellFrame({ children }: { children: ReactNode }) {
-  return <div className="overflow-hidden rounded-md border border-border [&>div]:min-h-0">{children}</div>;
+  return (
+    <div className="overflow-hidden rounded-md border border-border [&>div]:min-h-0">
+      {children}
+    </div>
+  );
 }
 
 export default function FeLayoutSection() {
@@ -38,25 +44,44 @@ export default function FeLayoutSection() {
         <Cell id="header-campaign" label="CMP-033 campaign: breadcrumb and stage tabs">
           <PageHeader
             title="Morning Focus Blend"
-            breadcrumb={[{ label: 'Campaigns', href: '#header-campaign' }, { label: 'Morning Focus Blend' }]}
+            breadcrumb={[
+              { label: 'Campaigns', href: '#header-campaign' },
+              { label: 'Morning Focus Blend' },
+            ]}
             tabs={<StageTabsDemo />}
           />
         </Cell>
       </div>
       <Cell id="grid" label="CMP-034 12 columns: 3 + 3 + 6, 4 + 8, 12; one column under 768 px">
         <PageGrid>
-          <GridCol span={3}><Block>col-3</Block></GridCol>
-          <GridCol span={3}><Block>col-3</Block></GridCol>
-          <GridCol span={6}><Block>col-6</Block></GridCol>
-          <GridCol span={4}><Block>col-4</Block></GridCol>
-          <GridCol span={8}><Block>col-8</Block></GridCol>
-          <GridCol span={12}><Block>col-12</Block></GridCol>
+          <GridCol span={3}>
+            <Block>col-3</Block>
+          </GridCol>
+          <GridCol span={3}>
+            <Block>col-3</Block>
+          </GridCol>
+          <GridCol span={6}>
+            <Block>col-6</Block>
+          </GridCol>
+          <GridCol span={4}>
+            <Block>col-4</Block>
+          </GridCol>
+          <GridCol span={8}>
+            <Block>col-8</Block>
+          </GridCol>
+          <GridCol span={12}>
+            <Block>col-12</Block>
+          </GridCol>
         </PageGrid>
       </Cell>
       <div className="grid grid-cols-1 gap-4">
         <Cell id="auth-signin" label="CMP-032 sign-in, provider slot">
           <ShellFrame>
-            <AuthShell landmark={false} title="AI UGC Ad Director" description="Sign in to continue.">
+            <AuthShell
+              landmark={false}
+              title="AI UGC Ad Director"
+              description="Sign in to continue."
+            >
               <Block>Provider sign-in component</Block>
             </AuthShell>
           </ShellFrame>
@@ -68,19 +93,36 @@ export default function FeLayoutSection() {
         </Cell>
         <Cell id="auth-error" label="CMP-032 sign-in, provider error">
           <ShellFrame>
-            <AuthShell landmark={false} title="AI UGC Ad Director" providerState="error" providerAction={<Button variant="secondary">Try again</Button>} />
+            <AuthShell
+              landmark={false}
+              title="AI UGC Ad Director"
+              providerState="error"
+              providerAction={<Button variant="secondary">Try again</Button>}
+            />
           </ShellFrame>
         </Cell>
         <Cell id="auth-message" label="CMP-032 message">
           <ShellFrame>
-            <AuthShell landmark={false} variant="message" title="Page not found" description="This page is not available.">
-              <a href="#auth-message" className="text-ui underline">Go home</a>
+            <AuthShell
+              landmark={false}
+              variant="message"
+              title="Page not found"
+              description="This page is not available."
+            >
+              <a href="#auth-message" className="text-ui underline">
+                Go home
+              </a>
             </AuthShell>
           </ShellFrame>
         </Cell>
         <Cell id="auth-mfa" label="CMP-032 MFA">
           <ShellFrame>
-            <AuthShell landmark={false} variant="mfa" title="Two-step verification" description="Enter your second factor.">
+            <AuthShell
+              landmark={false}
+              variant="mfa"
+              title="Two-step verification"
+              description="Enter your second factor."
+            >
               <Block>Provider MFA component</Block>
             </AuthShell>
           </ShellFrame>

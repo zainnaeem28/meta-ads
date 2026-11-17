@@ -27,9 +27,15 @@ export const NO_JOBS: ProgressSnapshot = {
  * production (L6). A campaign the reader does not know has no jobs and reads as {@link NO_JOBS}.
  */
 export interface CampaignProgressReader {
-  progressFor(ownerId: string, campaignIds: readonly string[]): Promise<ReadonlyMap<string, ProgressSnapshot>>;
+  progressFor(
+    ownerId: string,
+    campaignIds: readonly string[],
+  ): Promise<ReadonlyMap<string, ProgressSnapshot>>;
   /** The owner's campaigns in the given derived progress (the `filter` of API-040). */
-  idsWithProgress(ownerId: string, progress: Exclude<CampaignProgress, 'in_progress'>): Promise<ReadonlySet<string>>;
+  idsWithProgress(
+    ownerId: string,
+    progress: Exclude<CampaignProgress, 'in_progress'>,
+  ): Promise<ReadonlySet<string>>;
 }
 
 export const CAMPAIGN_PROGRESS_READER = Symbol('CAMPAIGN_PROGRESS_READER');

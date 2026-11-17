@@ -17,9 +17,15 @@ export const SCREEN_015_COPY = {
   loading: 'Loading the usage report',
   emptyTitle: 'No usage in this window',
   errorTitle: 'The report could not be built',
-  errorBody: 'A data source did not answer, so no figures are shown rather than showing zeros. Try again.',
+  errorBody:
+    'A data source did not answer, so no figures are shown rather than showing zeros. Try again.',
   retry: 'Try again',
-  metrics: { calls: 'Provider calls', failed: 'Failed calls', cost: 'Estimated cost', flags: 'Claim flags raised' },
+  metrics: {
+    calls: 'Provider calls',
+    failed: 'Failed calls',
+    cost: 'Estimated cost',
+    flags: 'Claim flags raised',
+  },
   accountsTitle: 'By account and provider',
   accountsNote: 'Estimated cost from the price table',
   providersTitle: 'By provider',
@@ -62,7 +68,9 @@ export function windowParams(window: ReportWindow): { from: string; to: string }
 export function windowDays(window: ReportWindow): number {
   const from = dayStart(window.from);
   const to = dayStart(window.to);
-  return Number.isNaN(from) || Number.isNaN(to) || to < from ? 0 : Math.round((to - from) / DAY_MS) + 1;
+  return Number.isNaN(from) || Number.isNaN(to) || to < from
+    ? 0
+    : Math.round((to - from) / DAY_MS) + 1;
 }
 
 /** `null` when the dates are a valid window; else the message to show on the end date. */
@@ -82,7 +90,9 @@ export function presetWindow(days: number, now: Date = new Date()): ReportWindow
 /** Which selector choice a window is: a preset when it ends today and has a preset's length, else custom. */
 export function choiceOf(window: ReportWindow | null, now: Date = new Date()): WindowChoice {
   if (!window) return '30';
-  const match = PRESETS.find((n) => window.to === isoDate(now.getTime()) && windowDays(window) === n);
+  const match = PRESETS.find(
+    (n) => window.to === isoDate(now.getTime()) && windowDays(window) === n,
+  );
   return match ? (String(match) as WindowChoice) : 'custom';
 }
 
@@ -130,8 +140,18 @@ export function formatLatency(ms: number | null): string {
 export function formatAsOf(instant: string): string {
   const at = new Date(instant);
   if (Number.isNaN(at.getTime())) return '';
-  const date = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(at);
-  const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).format(at);
+  const date = new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(at);
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'UTC',
+  }).format(at);
   return `${date}, ${time} UTC`;
 }
 
@@ -164,7 +184,9 @@ export interface AccountRow {
 }
 
 export const accountRows = (report: UsageReport): AccountRow[] =>
-  report.accounts.flatMap((a) => a.providers.map((usage) => ({ key: `${a.userId}:${usage.provider}`, userId: a.userId, usage })));
+  report.accounts.flatMap((a) =>
+    a.providers.map((usage) => ({ key: `${a.userId}:${usage.provider}`, userId: a.userId, usage })),
+  );
 
 /** Whole percent of `part` in `whole`, 0 when `whole` is 0. */
 export function share(part: bigint, whole: bigint): number {

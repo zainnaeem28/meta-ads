@@ -50,11 +50,26 @@ const PATH = '/admin/usage';
 const EMPTY_WINDOW: ReportWindow = { from: '', to: '' };
 
 const num = 'text-right tabular-nums';
-const Num = ({ children }: { children: ReactNode }) => <span className={`block ${num} max-md:inline`}>{children}</span>;
+const Num = ({ children }: { children: ReactNode }) => (
+  <span className={`block ${num} max-md:inline`}>{children}</span>
+);
 
-function Section({ id, title, note, children }: { id: string; title: string; note: string; children: ReactNode }) {
+function Section({
+  id,
+  title,
+  note,
+  children,
+}: {
+  id: string;
+  title: string;
+  note: string;
+  children: ReactNode;
+}) {
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 text-card-foreground">
+    <section
+      aria-labelledby={id}
+      className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 text-card-foreground"
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id={id} className="text-body font-semibold">
           {title}
@@ -69,7 +84,10 @@ function Section({ id, title, note, children }: { id: string; title: string; not
 function CostShare({ percent }: { percent: number }) {
   return (
     <span className="flex items-center gap-2">
-      <span aria-hidden="true" className="h-2 w-24 overflow-hidden rounded-full border border-border-strong bg-muted">
+      <span
+        aria-hidden="true"
+        className="h-2 w-24 overflow-hidden rounded-full border border-border-strong bg-muted"
+      >
         <span className="block h-full bg-chart-1" style={{ width: `${percent}%` }} />
       </span>
       <span className="tabular-nums">{percent}%</span>
@@ -83,16 +101,32 @@ const usageColumns = (cost: bigint): TableColumn<ProviderUsage>[] => [
   { id: 'succeeded', header: 'Succeeded', cell: (u) => <Num>{formatCount(u.succeeded)}</Num> },
   { id: 'failed', header: 'Failed', cell: (u) => <Num>{formatCount(u.failed)}</Num> },
   { id: 'rejected', header: 'Rejected', cell: (u) => <Num>{formatCount(u.rejected)}</Num> },
-  { id: 'unconfirmed', header: 'Unconfirmed', cell: (u) => <Num>{formatCount(u.unconfirmed)}</Num> },
-  { id: 'cost', header: 'Estimated cost', cell: (u) => <Num>{formatUsd(microUsd(u.estimatedCostUsd))}</Num> },
-  { id: 'share', header: 'Share of cost', cell: (u) => <CostShare percent={share(microUsd(u.estimatedCostUsd), cost)} /> },
+  {
+    id: 'unconfirmed',
+    header: 'Unconfirmed',
+    cell: (u) => <Num>{formatCount(u.unconfirmed)}</Num>,
+  },
+  {
+    id: 'cost',
+    header: 'Estimated cost',
+    cell: (u) => <Num>{formatUsd(microUsd(u.estimatedCostUsd))}</Num>,
+  },
+  {
+    id: 'share',
+    header: 'Share of cost',
+    cell: (u) => <CostShare percent={share(microUsd(u.estimatedCostUsd), cost)} />,
+  },
   { id: 'p95', header: 'p95 latency', cell: (u) => <Num>{formatLatency(u.latencyP95Ms)}</Num> },
 ];
 
 const accountColumns = (cost: bigint): TableColumn<AccountRow>[] => {
   const [, ...rest] = usageColumns(cost);
   return [
-    { id: 'user', header: 'User ID', cell: (r) => <span className="font-mono">{shortUserId(r.userId)}</span> },
+    {
+      id: 'user',
+      header: 'User ID',
+      cell: (r) => <span className="font-mono">{shortUserId(r.userId)}</span>,
+    },
     { id: 'provider', header: 'Provider', cell: (r) => providerName(r.usage.provider) },
     ...rest.map((c) => ({ ...c, cell: (r: AccountRow) => c.cell(r.usage) })),
   ];
@@ -101,14 +135,20 @@ const accountColumns = (cost: bigint): TableColumn<AccountRow>[] => {
 const claimColumns: TableColumn<UsageReportClaimChecksItem>[] = [
   { id: 'class', header: 'Class', cell: (c) => CLAIM_CLASS[c.class] ?? c.class },
   { id: 'raised', header: 'Raised', cell: (c) => <Num>{formatCount(c.raised)}</Num> },
-  { id: 'closed', header: 'Closed by editing', cell: (c) => <Num>{formatCount(c.closedByEdit)}</Num> },
+  {
+    id: 'closed',
+    header: 'Closed by editing',
+    cell: (c) => <Num>{formatCount(c.closedByEdit)}</Num>,
+  },
   {
     id: 'cleared',
     header: 'Cleared with a reason',
     cell: (c) => (
       <Num>
         {formatCount(c.clearedWithReason)}
-        {c.class === 'high_risk' && c.clearedWithReason === 0 ? <span className="text-muted-foreground"> {COPY.notAllowed}</span> : null}
+        {c.class === 'high_risk' && c.clearedWithReason === 0 ? (
+          <span className="text-muted-foreground"> {COPY.notAllowed}</span>
+        ) : null}
       </Num>
     ),
   },
@@ -123,10 +163,27 @@ function Metrics({ report, loading }: { report?: UsageReport; loading?: boolean 
   const t = report ? totalsOf(report) : null;
   return (
     <MetricGrid>
-      <MetricTile label={COPY.metrics.calls} loading={loading} value={t ? formatCount(t.calls) : null} />
-      <MetricTile label={COPY.metrics.failed} loading={loading} value={t ? formatCount(t.failed) : null} />
-      <MetricTile variant="cost" label={COPY.metrics.cost} loading={loading} value={t ? formatUsd(t.cost) : null} />
-      <MetricTile label={COPY.metrics.flags} loading={loading} value={t ? formatCount(t.flags) : null} />
+      <MetricTile
+        label={COPY.metrics.calls}
+        loading={loading}
+        value={t ? formatCount(t.calls) : null}
+      />
+      <MetricTile
+        label={COPY.metrics.failed}
+        loading={loading}
+        value={t ? formatCount(t.failed) : null}
+      />
+      <MetricTile
+        variant="cost"
+        label={COPY.metrics.cost}
+        loading={loading}
+        value={t ? formatUsd(t.cost) : null}
+      />
+      <MetricTile
+        label={COPY.metrics.flags}
+        loading={loading}
+        value={t ? formatCount(t.flags) : null}
+      />
     </MetricGrid>
   );
 }
@@ -138,10 +195,20 @@ function Tables({ report }: { report: UsageReport }) {
   return (
     <>
       <Section id="by-account" title={COPY.accountsTitle} note={COPY.accountsNote}>
-        <Table label={COPY.accountsTitle} columns={accountColumns(t.cost)} rows={rows} rowKey={(r) => r.key} />
+        <Table
+          label={COPY.accountsTitle}
+          columns={accountColumns(t.cost)}
+          rows={rows}
+          rowKey={(r) => r.key}
+        />
       </Section>
       <Section id="by-provider" title={COPY.providersTitle} note={COPY.accountsNote}>
-        <Table label={COPY.providersTitle} columns={usageColumns(t.cost)} rows={report.providers} rowKey={(u) => u.provider} />
+        <Table
+          label={COPY.providersTitle}
+          columns={usageColumns(t.cost)}
+          rows={report.providers}
+          rowKey={(u) => u.provider}
+        />
       </Section>
       {jobs.length > 0 ? (
         <Section id="job-states" title={COPY.jobsTitle} note={COPY.jobsNote}>
@@ -149,14 +216,24 @@ function Tables({ report }: { report: UsageReport }) {
         </Section>
       ) : null}
       <Section id="claim-checks" title={COPY.claimsTitle} note={COPY.claimsNote}>
-        <Table label={COPY.claimsTitle} columns={claimColumns} rows={report.claimChecks} rowKey={(c) => c.class} />
+        <Table
+          label={COPY.claimsTitle}
+          columns={claimColumns}
+          rows={report.claimChecks}
+          rowKey={(c) => c.class}
+        />
       </Section>
     </>
   );
 }
 
 const longDate = (instant: string) =>
-  new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(instant));
+  new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(instant));
 
 function writeUrl(window: ReportWindow | null) {
   const url = window ? `${PATH}?from=${window.from}&to=${window.to}` : PATH;
@@ -178,7 +255,8 @@ export function UsageScreen({ initialWindow = null }: { initialWindow?: ReportWi
   const params = applied ? windowParams(applied) : null;
   const query = useQuery<UsageReportResponse>({
     queryKey: getAdminUsageReportQueryKey(params ?? undefined),
-    queryFn: async ({ signal }) => (await adminUsageReport(params ?? undefined, { signal })).data as UsageReportResponse,
+    queryFn: async ({ signal }) =>
+      (await adminUsageReport(params ?? undefined, { signal })).data as UsageReportResponse,
   });
 
   const error = query.error;
@@ -215,7 +293,13 @@ export function UsageScreen({ initialWindow = null }: { initialWindow?: ReportWi
       <div aria-busy="true" className="flex flex-col gap-4">
         <Metrics loading />
         <Section id="loading" title={COPY.accountsTitle} note={COPY.loading}>
-          <Table label={COPY.accountsTitle} columns={accountColumns(0n)} rows={[]} rowKey={(r) => r.key} state="loading" />
+          <Table
+            label={COPY.accountsTitle}
+            columns={accountColumns(0n)}
+            rows={[]}
+            rowKey={(r) => r.key}
+            state="loading"
+          />
         </Section>
       </div>
     );
@@ -223,13 +307,21 @@ export function UsageScreen({ initialWindow = null }: { initialWindow?: ReportWi
     body = null;
   } else if (query.isError && !forbidden) {
     body = unreachable ? (
-      <EmptyState variant="error" title={COPY.errorTitle} description={COPY.errorBody} headingLevel={2} onRetry={retry} />
+      <EmptyState
+        variant="error"
+        title={COPY.errorTitle}
+        description={COPY.errorBody}
+        headingLevel={2}
+        onRetry={retry}
+      />
     ) : (
       <ErrorNotice
         error={error}
         returnTo={PATH}
         retrying={query.isRefetching}
-        onAction={(action) => (action === 'confirm' ? window.location.assign(signInUrl(PATH)) : retry())}
+        onAction={(action) =>
+          action === 'confirm' ? window.location.assign(signInUrl(PATH)) : retry()
+        }
       />
     );
   } else if (report?.empty) {
@@ -252,8 +344,17 @@ export function UsageScreen({ initialWindow = null }: { initialWindow?: ReportWi
   const windowError = draftError ?? (tooLarge ? COPY.windowFieldError : undefined);
 
   return (
-    <AdminShell path={PATH} pageName={COPY.title} unavailable={forbidden} workspaceHref={ROUTES.campaigns}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4" data-screen="SCREEN-015" aria-busy={query.isPending || undefined}>
+    <AdminShell
+      path={PATH}
+      pageName={COPY.title}
+      unavailable={forbidden}
+      workspaceHref={ROUTES.campaigns}
+    >
+      <div
+        className="mx-auto flex max-w-6xl flex-col gap-4"
+        data-screen="SCREEN-015"
+        aria-busy={query.isPending || undefined}
+      >
         {forbidden ? null : (
           <>
             <header className="flex flex-col gap-1">
@@ -261,7 +362,11 @@ export function UsageScreen({ initialWindow = null }: { initialWindow?: ReportWi
               <p className="text-ui text-muted-foreground">{COPY.description}</p>
             </header>
             <div className="flex flex-wrap items-end gap-4">
-              <FormField label={COPY.windowLabel} className="w-56 max-md:w-full" error={choice === 'custom' ? undefined : windowError}>
+              <FormField
+                label={COPY.windowLabel}
+                className="w-56 max-md:w-full"
+                error={choice === 'custom' ? undefined : windowError}
+              >
                 {(control) => (
                   <Select
                     id={control.id}
@@ -292,7 +397,11 @@ export function UsageScreen({ initialWindow = null }: { initialWindow?: ReportWi
                       />
                     )}
                   </FormField>
-                  <FormField label={COPY.customTo} className="w-44 max-md:w-full" error={windowError}>
+                  <FormField
+                    label={COPY.customTo}
+                    className="w-44 max-md:w-full"
+                    error={windowError}
+                  >
                     {(control) => (
                       <Input
                         id={control.id}

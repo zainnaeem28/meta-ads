@@ -68,7 +68,9 @@ export function hostAllowed(host: string, patterns: readonly string[]): boolean 
   const name = host.toLowerCase();
   return patterns.some((raw) => {
     const pattern = raw.toLowerCase();
-    return pattern.startsWith('*.') ? name.endsWith(pattern.slice(1)) && name.length > pattern.length - 1 : name === pattern;
+    return pattern.startsWith('*.')
+      ? name.endsWith(pattern.slice(1)) && name.length > pattern.length - 1
+      : name === pattern;
   });
 }
 
@@ -78,9 +80,12 @@ export function validateAllowList(allowed: AllowedHosts): string[] {
   for (const [provider, hosts] of Object.entries(allowed)) {
     for (const host of hosts) {
       const bare = host.startsWith('*.') ? host.slice(2) : host;
-      if (isIP(bare) !== 0 || /^\d+(\.\d+)*$/.test(bare)) problems.push(`${provider}: ${host} is an IP address`);
-      else if (bare.toLowerCase() === 'localhost' || bare.endsWith('.localhost')) problems.push(`${provider}: ${host} is local`);
-      else if (host.startsWith('*.') && bare.split('.').length < 2) problems.push(`${provider}: ${host} is too broad`);
+      if (isIP(bare) !== 0 || /^\d+(\.\d+)*$/.test(bare))
+        problems.push(`${provider}: ${host} is an IP address`);
+      else if (bare.toLowerCase() === 'localhost' || bare.endsWith('.localhost'))
+        problems.push(`${provider}: ${host} is local`);
+      else if (host.startsWith('*.') && bare.split('.').length < 2)
+        problems.push(`${provider}: ${host} is too broad`);
     }
   }
   return problems;
@@ -112,7 +117,12 @@ export class Egress {
   /** Fetch with a body that is read as it arrives; the bounds stay enforced while it is consumed. */
   async fetchStream(provider: string, req: EgressRequest): Promise<EgressStreamResponse> {
     const hosts = this.allowed[provider];
-    if (hosts === undefined) throw new EgressError('provider_unknown', 'before_send', `no egress allow-list for provider ${provider}`);
+    if (hosts === undefined)
+      throw new EgressError(
+        'provider_unknown',
+        'before_send',
+        `no egress allow-list for provider ${provider}`,
+      );
     const maxBytes = Math.min(req.maxBytes ?? this.options.maxBytes, this.options.maxBytes);
     const timeoutMs = Math.min(req.timeoutMs ?? this.options.timeoutMs, this.options.timeoutMs);
     const deadline = AbortSignal.timeout(timeoutMs);
@@ -128,15 +138,29 @@ export class Egress {
           const location = response.headers['location'];
           response.body.destroy();
           await agent.close();
-          const next = typeof location === 'string' ? this.redirectTarget(url, location) : undefined;
+          const next =
+            typeof location === 'string' ? this.redirectTarget(url, location) : undefined;
           if (next === undefined || hop >= MAX_REDIRECTS) {
-            throw new EgressError('redirect_refused', 'after_send', `redirect refused (host ${url.hostname})`, url.hostname);
+            throw new EgressError(
+              'redirect_refused',
+              'after_send',
+              `redirect refused (host ${url.hostname})`,
+              url.hostname,
+            );
           }
           url = next;
-          if (response.statusCode === 303) { method = 'GET'; body = undefined; }
+          if (response.statusCode === 303) {
+            method = 'GET';
+            body = undefined;
+          }
           continue;
         }
-        return this.bounded(response, agent, state, { maxBytes, deadline, contentTypes: req.contentTypes, host: url.hostname });
+        return this.bounded(response, agent, state, {
+          maxBytes,
+          deadline,
+          contentTypes: req.contentTypes,
+          host: url.hostname,
+        });
       } catch (error) {
         response.body.destroy();
         await agent.close().catch(() => undefined);
@@ -152,15 +176,31 @@ export class Egress {
     } catch {
       throw new EgressError('invalid_url', 'before_send', 'the request URL is not valid');
     }
-    if (url.protocol !== 'https:') throw new EgressError('not_https', 'before_send', 'only https is fetched', url.hostname);
+    if (url.protocol !== 'https:')
+      throw new EgressError('not_https', 'before_send', 'only https is fetched', url.hostname);
     if (url.username !== '' || url.password !== '') {
-      throw new EgressError('invalid_url', 'before_send', 'a URL with credentials is refused', url.hostname);
+      throw new EgressError(
+        'invalid_url',
+        'before_send',
+        'a URL with credentials is refused',
+        url.hostname,
+      );
     }
     if (isIP(url.hostname.replace(/^\[|\]$/g, '')) !== 0 || !hostAllowed(url.hostname, hosts)) {
-      throw new EgressError('host_not_allowed', 'before_send', `host ${url.hostname} is not on the provider allow-list`, url.hostname);
+      throw new EgressError(
+        'host_not_allowed',
+        'before_send',
+        `host ${url.hostname} is not on the provider allow-list`,
+        url.hostname,
+      );
     }
     if (this.options.testing?.port === undefined && url.port !== '' && url.port !== '443') {
-      throw new EgressError('host_not_allowed', 'before_send', `port ${url.port} is not allowed`, url.hostname);
+      throw new EgressError(
+        'host_not_allowed',
+        'before_send',
+        `port ${url.port} is not allowed`,
+        url.hostname,
+      );
     }
     return url;
   }
@@ -173,8 +213,11 @@ export class Egress {
     } catch {
       return undefined;
     }
-    return next.protocol === 'https:' && next.hostname.toLowerCase() === from.hostname.toLowerCase() &&
-      next.port === from.port && next.username === '' && next.password === ''
+    return next.protocol === 'https:' &&
+      next.hostname.toLowerCase() === from.hostname.toLowerCase() &&
+      next.port === from.port &&
+      next.username === '' &&
+      next.password === ''
       ? next
       : undefined;
   }
@@ -185,16 +228,46 @@ export class Egress {
     try {
       addresses = await Promise.race([
         this.resolver(host),
-        new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(new EgressError('timeout', 'before_send', 'the time limit passed while resolving the host', host)), { once: true })),
+        new Promise<never>((_, reject) =>
+          signal.addEventListener(
+            'abort',
+            () =>
+              reject(
+                new EgressError(
+                  'timeout',
+                  'before_send',
+                  'the time limit passed while resolving the host',
+                  host,
+                ),
+              ),
+            { once: true },
+          ),
+        ),
       ]);
     } catch (error) {
       if (error instanceof EgressError) throw error;
-      throw new EgressError('dns_failure', 'before_send', `host ${host} could not be resolved`, host);
+      throw new EgressError(
+        'dns_failure',
+        'before_send',
+        `host ${host} could not be resolved`,
+        host,
+      );
     }
     const first = addresses[0];
-    if (first === undefined) throw new EgressError('dns_failure', 'before_send', `host ${host} could not be resolved`, host);
+    if (first === undefined)
+      throw new EgressError(
+        'dns_failure',
+        'before_send',
+        `host ${host} could not be resolved`,
+        host,
+      );
     if (addresses.some((address) => this.blocked(address))) {
-      throw new EgressError('blocked_address', 'before_send', `host ${host} resolves to a private or reserved address`, host);
+      throw new EgressError(
+        'blocked_address',
+        'before_send',
+        `host ${host} resolves to a private or reserved address`,
+        host,
+      );
     }
     return first;
   }
@@ -212,7 +285,8 @@ export class Egress {
     const connector = buildConnector({
       lookup: (_hostname, opts, callback) => {
         const family = isIP(address);
-        if (typeof opts === 'object' && opts.all === true) callback(null, [{ address, family }] as never, undefined as never);
+        if (typeof opts === 'object' && opts.all === true)
+          callback(null, [{ address, family }] as never, undefined as never);
         else callback(null, address, family);
       },
       ...(this.options.testing?.tls === undefined ? {} : { ca: this.options.testing.tls.ca }),
@@ -242,23 +316,50 @@ export class Egress {
     }
   }
 
-  private translate(error: unknown, host: string, connected: boolean, deadline: AbortSignal): EgressError {
+  private translate(
+    error: unknown,
+    host: string,
+    connected: boolean,
+    deadline: AbortSignal,
+  ): EgressError {
     if (error instanceof EgressError) return error;
     if (deadline.aborted) {
-      return new EgressError('timeout', connected ? 'after_send' : 'before_send', `the time limit passed (host ${host})`, host);
+      return new EgressError(
+        'timeout',
+        connected ? 'after_send' : 'before_send',
+        `the time limit passed (host ${host})`,
+        host,
+      );
     }
-    const code = (error as { code?: string; cause?: { code?: string } }).code ?? (error as { cause?: { code?: string } }).cause?.code;
+    const code =
+      (error as { code?: string; cause?: { code?: string } }).code ??
+      (error as { cause?: { code?: string } }).cause?.code;
     if (!connected || (code !== undefined && CONNECT_ERRORS.has(code))) {
-      return new EgressError('connection_failed', 'before_send', `could not connect to ${host}`, host);
+      return new EgressError(
+        'connection_failed',
+        'before_send',
+        `could not connect to ${host}`,
+        host,
+      );
     }
-    return new EgressError('network_error', 'after_send', `the connection to ${host} failed after sending`, host);
+    return new EgressError(
+      'network_error',
+      'after_send',
+      `the connection to ${host} failed after sending`,
+      host,
+    );
   }
 
   private bounded(
     response: Dispatcher.ResponseData,
     agent: Agent,
     state: { connected: boolean },
-    limits: { maxBytes: number; deadline: AbortSignal; contentTypes: readonly string[] | undefined; host: string },
+    limits: {
+      maxBytes: number;
+      deadline: AbortSignal;
+      contentTypes: readonly string[] | undefined;
+      host: string;
+    },
   ): EgressStreamResponse {
     const { maxBytes, deadline, contentTypes, host } = limits;
     const headers = response.headers as EgressStreamResponse['headers'];
@@ -269,12 +370,30 @@ export class Egress {
     };
     const length = Number(headers['content-length']);
     if (Number.isFinite(length) && length > maxBytes) {
-      refuse(new EgressError('too_large', 'after_send', `the response is larger than ${maxBytes} bytes`, host));
+      refuse(
+        new EgressError(
+          'too_large',
+          'after_send',
+          `the response is larger than ${maxBytes} bytes`,
+          host,
+        ),
+      );
     }
     if (contentTypes !== undefined && response.statusCode < 300) {
-      const type = String(headers['content-type'] ?? '').split(';')[0]?.trim().toLowerCase() ?? '';
+      const type =
+        String(headers['content-type'] ?? '')
+          .split(';')[0]
+          ?.trim()
+          .toLowerCase() ?? '';
       if (!contentTypes.some((allowed) => allowed.toLowerCase() === type)) {
-        refuse(new EgressError('wrong_type', 'after_send', `the response type ${type === '' ? '(none)' : type} is not accepted`, host));
+        refuse(
+          new EgressError(
+            'wrong_type',
+            'after_send',
+            `the response type ${type === '' ? '(none)' : type} is not accepted`,
+            host,
+          ),
+        );
       }
     }
     let seen = 0;
@@ -284,10 +403,25 @@ export class Egress {
       out.destroy(error);
       void agent.close().catch(() => undefined);
     };
-    deadline.addEventListener('abort', () => fail(new EgressError('timeout', 'after_send', `the time limit passed (host ${host})`, host)), { once: true });
+    deadline.addEventListener(
+      'abort',
+      () =>
+        fail(
+          new EgressError('timeout', 'after_send', `the time limit passed (host ${host})`, host),
+        ),
+      { once: true },
+    );
     response.body.on('data', (chunk: Buffer) => {
       seen += chunk.length;
-      if (seen > maxBytes) fail(new EgressError('too_large', 'after_send', `the response is larger than ${maxBytes} bytes`, host));
+      if (seen > maxBytes)
+        fail(
+          new EgressError(
+            'too_large',
+            'after_send',
+            `the response is larger than ${maxBytes} bytes`,
+            host,
+          ),
+        );
       else out.push(chunk);
     });
     response.body.on('end', () => {
@@ -295,7 +429,11 @@ export class Egress {
       void agent.close().catch(() => undefined);
     });
     response.body.on('error', (error) => {
-      fail(deadline.aborted ? new EgressError('timeout', 'after_send', `the time limit passed (host ${host})`, host) : this.translate(error, host, state.connected, deadline));
+      fail(
+        deadline.aborted
+          ? new EgressError('timeout', 'after_send', `the time limit passed (host ${host})`, host)
+          : this.translate(error, host, state.connected, deadline),
+      );
     });
     return { status: response.statusCode, headers, body: out };
   }

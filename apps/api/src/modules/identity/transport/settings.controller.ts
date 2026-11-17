@@ -31,7 +31,8 @@ export class SettingsController {
     @Req() request: FastifyRequest,
     @Body() body: unknown,
   ): Promise<SettingsView> {
-    if (actor === undefined) throw new DomainError('not_linked', 'This account is not linked to ShrooMap yet.');
+    if (actor === undefined)
+      throw new DomainError('not_linked', 'This account is not linked to ShrooMap yet.');
     return this.settings.setSignupMode(
       { userId: actor.userId, requestId: request.id },
       parseWith(setModeBody, body).mode,

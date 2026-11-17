@@ -21,7 +21,11 @@ export const SETTINGS_COPY = {
   },
   save: 'Save sign-up mode',
   saving: 'Saving',
-  security: { title: 'Security and access', sub: 'Set at deployment. Read-only here.', badge: 'Read-only' },
+  security: {
+    title: 'Security and access',
+    sub: 'Set at deployment. Read-only here.',
+    badge: 'Read-only',
+  },
   mfa: {
     label: 'Two-step verification required for',
     all: 'Everyone',

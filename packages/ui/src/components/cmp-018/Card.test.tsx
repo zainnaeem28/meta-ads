@@ -7,17 +7,20 @@ import { CARD_VARIANTS, Card } from './index';
 afterEach(cleanup);
 
 describe('CMP-018 Card', () => {
-  it.each(CARD_VARIANTS)('%s content has heading, body, footer and no axe violations', async (variant) => {
-    const { container } = render(
-      <Card variant={variant} title="Billing" footer="Updated today">
-        Body text
-      </Card>,
-    );
-    expect(screen.getByRole('heading', { level: 3, name: 'Billing' })).toBeInTheDocument();
-    expect(screen.getByText('Body text')).toBeInTheDocument();
-    expect(screen.getByText('Updated today')).toBeInTheDocument();
-    expect((await axe.run(container)).violations).toEqual([]);
-  });
+  it.each(CARD_VARIANTS)(
+    '%s content has heading, body, footer and no axe violations',
+    async (variant) => {
+      const { container } = render(
+        <Card variant={variant} title="Billing" footer="Updated today">
+          Body text
+        </Card>,
+      );
+      expect(screen.getByRole('heading', { level: 3, name: 'Billing' })).toBeInTheDocument();
+      expect(screen.getByText('Body text')).toBeInTheDocument();
+      expect(screen.getByText('Updated today')).toBeInTheDocument();
+      expect((await axe.run(container)).violations).toEqual([]);
+    },
+  );
 
   it('heading level is configurable', () => {
     render(<Card title="T" headingLevel={2} />);
@@ -37,7 +40,9 @@ describe('CMP-018 Card', () => {
   });
 
   it('empty uses the empty state one level below; unavailable says so', async () => {
-    const { container, rerender } = render(<Card title="T" state="empty" emptyTitle="No activity" />);
+    const { container, rerender } = render(
+      <Card title="T" state="empty" emptyTitle="No activity" />,
+    );
     expect(screen.getByRole('heading', { level: 4, name: 'No activity' })).toBeInTheDocument();
     expect((await axe.run(container)).violations).toEqual([]);
     rerender(<Card title="T" state="unavailable" />);
@@ -52,7 +57,9 @@ describe('CMP-018 Card', () => {
       </Card>,
     );
     expect(screen.getAllByRole('link')).toHaveLength(1);
-    expect(screen.getByRole('heading', { name: 'Open me' })).toContainElement(screen.getByRole('link'));
+    expect(screen.getByRole('heading', { name: 'Open me' })).toContainElement(
+      screen.getByRole('link'),
+    );
     expect(container.querySelectorAll('button, a')).toHaveLength(1);
     expect((await axe.run(container)).violations).toEqual([]);
   });

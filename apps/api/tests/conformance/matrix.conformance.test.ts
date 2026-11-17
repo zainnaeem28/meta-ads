@@ -19,13 +19,13 @@ afterAll(async () => {
   await w?.close();
 });
 
-
 for (const op of operations()) {
   describe(`${op.id} ${op.method} ${op.path}`, () => {
     for (const status of op.statuses) {
       const waiver = WAIVED[cellName(op, status)];
       const unread = status === 400 && !readsInput(op);
-      const tag = waiver !== undefined ? ` [waived ${waiver.finding}]` : unread ? ' [waived CONF065-F4]' : '';
+      const tag =
+        waiver !== undefined ? ` [waived ${waiver.finding}]` : unread ? ' [waived CONF065-F4]' : '';
       it(`${cellName(op, status)}${tag}`, async () => {
         const probe = waiver?.probe ?? SPECIFIC[cellName(op, status)] ?? genericProbe(op, status);
         expect(probe, `no probe for ${cellName(op, status)}`).toBeDefined();
@@ -33,8 +33,13 @@ for (const op of operations()) {
         expect(replies.length).toBeGreaterThan(0);
         for (const seen of replies) {
           const expected = waiver?.instead ?? (unread ? 200 : status);
-          expect(seen.status, `${cellName(op, status)} answered ${String(seen.status)} ${seen.text.slice(0, 200)}`).toBe(expected);
-          expect(conformance(op, seen.status, seen), `${cellName(op, status)} envelope`).toEqual([]);
+          expect(
+            seen.status,
+            `${cellName(op, status)} answered ${String(seen.status)} ${seen.text.slice(0, 200)}`,
+          ).toBe(expected);
+          expect(conformance(op, seen.status, seen), `${cellName(op, status)} envelope`).toEqual(
+            [],
+          );
           if (status >= 400 && expected === status) {
             expect(seen.body.success).toBe(false);
             expect(allowedCodes(op, status), `code ${String(seen.code)}`).toContain(seen.code);

@@ -100,7 +100,11 @@ export class MediaModule {
         { provide: MEDIA_CONFIG, useValue: config },
         { provide: STORAGE_PORT, useValue: storage },
         { provide: MEDIA_REPOSITORY, useClass: DrizzleMediaRepository },
-        { provide: RateLimiter, useFactory: (database: Database) => new RateLimiter(database.db), inject: [DATABASE] },
+        {
+          provide: RateLimiter,
+          useFactory: (database: Database) => new RateLimiter(database.db),
+          inject: [DATABASE],
+        },
         MediaUploadService,
         MultipartSupport,
       ],
@@ -123,7 +127,10 @@ export class MediaModule {
         { provide: STORAGE_PORT, useValue: createStorage(storageConfigFrom(env)) },
         { provide: MEDIA_REPOSITORY, useClass: DrizzleMediaRepository },
         { provide: MEDIA_MAINTENANCE_REPOSITORY, useClass: DrizzleMediaMaintenance },
-        { provide: IMAGE_SANITIZE_PORT, useValue: new SharpImageSanitizer({ maxDimension, maxPixels }) },
+        {
+          provide: IMAGE_SANITIZE_PORT,
+          useValue: new SharpImageSanitizer({ maxDimension, maxPixels }),
+        },
         { provide: WORKER_MEDIA_CONFIG, useValue: workerConfig },
         MediaDeletion,
         SanitizeJob,
@@ -149,7 +156,8 @@ export function mediaJobHandlers(resolve: {
         { module: 'media', outcome: outcome.failed === 0 ? 'ok' : 'error' },
         `unattached-sweep: ${String(outcome.deleted)} deleted, ${String(outcome.failed)} failed`,
       );
-      if (outcome.failed > 0) throw new Error(`unattached sweep left ${String(outcome.failed)} uploads for the next run`);
+      if (outcome.failed > 0)
+        throw new Error(`unattached sweep left ${String(outcome.failed)} uploads for the next run`);
     },
   };
 }

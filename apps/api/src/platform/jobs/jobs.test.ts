@@ -14,12 +14,7 @@ import {
   expectedSchemaVersion,
   startRuntimeBoss,
 } from './boss.js';
-import {
-  RetryOnSubmitQueueError,
-  UnknownQueueError,
-  enqueue,
-  onTransaction,
-} from './enqueue.js';
+import { RetryOnSubmitQueueError, UnknownQueueError, enqueue, onTransaction } from './enqueue.js';
 import { QUEUES, QUEUE_NAMES, queueNamed, queueOptions } from './queues.js';
 
 // Queues the design names in ARCHITECTURE §2 and §5 (flows, sweeps and ADR-003), verbatim.
@@ -95,7 +90,9 @@ describe('queue DDL (SB-D24 lint)', () => {
     const root = join(import.meta.dirname, '..', '..');
     const offenders = sourceFiles(root)
       .filter((path) => path.endsWith('.ts') && !path.endsWith('.test.ts'))
-      .filter((path) => /\b(createQueue|updateQueue|deleteQueue)\s*\(/.test(readFileSync(path, 'utf8')))
+      .filter((path) =>
+        /\b(createQueue|updateQueue|deleteQueue)\s*\(/.test(readFileSync(path, 'utf8')),
+      )
       .map((path) => relative(root, path));
     expect(offenders).toEqual(['database/jobs-migrate.ts']);
   });
@@ -126,11 +123,21 @@ describe('enqueue', () => {
   it('sends through the transaction handle and returns the job id', async () => {
     const { tx } = fakeTx();
     const send = vi.fn(() => Promise.resolve('job-1'));
-    const id = await enqueue({ send } as unknown as PgBoss, tx, 'platform.cleanup', { a: 1 }, {
-      singletonKey: 'k',
-    });
+    const id = await enqueue(
+      { send } as unknown as PgBoss,
+      tx,
+      'platform.cleanup',
+      { a: 1 },
+      {
+        singletonKey: 'k',
+      },
+    );
     expect(id).toBe('job-1');
-    const call = send.mock.calls[0] as unknown as [string, object, { db: object; singletonKey: string }];
+    const call = send.mock.calls[0] as unknown as [
+      string,
+      object,
+      { db: object; singletonKey: string },
+    ];
     expect(call[0]).toBe('platform.cleanup');
     expect(call[2].singletonKey).toBe('k');
     expect(typeof call[2].db).toBe('object');
@@ -141,9 +148,9 @@ describe('enqueue', () => {
     const send = vi.fn();
     const boss = { send } as unknown as PgBoss;
     await expect(enqueue(boss, tx, 'ghost', {})).rejects.toBeInstanceOf(UnknownQueueError);
-    await expect(
-      enqueue(boss, tx, 'brief.generate', {}, { retryLimit: 2 }),
-    ).rejects.toBeInstanceOf(RetryOnSubmitQueueError);
+    await expect(enqueue(boss, tx, 'brief.generate', {}, { retryLimit: 2 })).rejects.toBeInstanceOf(
+      RetryOnSubmitQueueError,
+    );
     await enqueue(boss, tx, 'brief.generate', {}, { retryLimit: 0 });
     await enqueue(boss, tx, 'video.copy-output', {}, { retryLimit: 5 });
     expect(send).toHaveBeenCalledTimes(2);
@@ -219,7 +226,10 @@ describe('runtime wiring', () => {
   });
 
   it('the module provides the instance and its lifecycle', () => {
-    const module = JobsModule.forRoot({ DATABASE_URL: 'postgres://x@localhost:1/app', role: 'api' });
+    const module = JobsModule.forRoot({
+      DATABASE_URL: 'postgres://x@localhost:1/app',
+      role: 'api',
+    });
     expect(module.global).toBe(true);
     expect(module.exports).toHaveLength(1);
     expect(module.providers).toHaveLength(3);

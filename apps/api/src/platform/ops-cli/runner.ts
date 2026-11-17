@@ -35,7 +35,8 @@ export async function runOps(argv: readonly string[], runtime: OpsRuntime): Prom
     assertEnvironmentMatch(invocation.env, config.APP_ENV);
     const result = await runtime.execute(invocation, config);
     runtime.write(`ops ${command}: ${result.ok ? 'done' : 'incomplete'}`);
-    for (const [name, value] of Object.entries(result.counts)) runtime.write(`${name}=${String(value)}`);
+    for (const [name, value] of Object.entries(result.counts))
+      runtime.write(`${name}=${String(value)}`);
     return result.ok ? EXIT_OK : EXIT_INCOMPLETE;
   } catch (error) {
     if (error instanceof OpsRefusedError) {

@@ -3,7 +3,13 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FileUpload, UPLOAD_MAX_BYTES, formatBytes, validateImageFile, type UploadItem } from './index';
+import {
+  FileUpload,
+  UPLOAD_MAX_BYTES,
+  formatBytes,
+  validateImageFile,
+  type UploadItem,
+} from './index';
 import { UploadLiveDemo, UploadStatesDemo } from './gallery-demos';
 
 afterEach(() => {
@@ -18,9 +24,15 @@ describe('CMP-021 rules', () => {
     for (const type of ['image/jpeg', 'image/png', 'image/webp', 'image/gif']) {
       expect(validateImageFile({ name: 'a', type, size: 10 })).toBeNull();
     }
-    expect(validateImageFile({ name: 'a.pdf', type: 'application/pdf', size: 10 })).toMatch(/Not supported/);
-    expect(validateImageFile({ name: 'a.png', type: 'image/png', size: UPLOAD_MAX_BYTES + 1 })).toMatch(/Too large/);
-    expect(validateImageFile({ name: 'a.png', type: 'image/png', size: UPLOAD_MAX_BYTES })).toBeNull();
+    expect(validateImageFile({ name: 'a.pdf', type: 'application/pdf', size: 10 })).toMatch(
+      /Not supported/,
+    );
+    expect(
+      validateImageFile({ name: 'a.png', type: 'image/png', size: UPLOAD_MAX_BYTES + 1 }),
+    ).toMatch(/Too large/);
+    expect(
+      validateImageFile({ name: 'a.png', type: 'image/png', size: UPLOAD_MAX_BYTES }),
+    ).toBeNull();
     expect(validateImageFile({ name: 'a.png', type: 'image/png', size: 0 })).toMatch(/empty/);
   });
   it('formats sizes', () => {
@@ -53,7 +65,9 @@ describe('CMP-021 FileUpload', () => {
     const bad = img('label.pdf', 'application/pdf');
     fireEvent.change(screen.getByTestId('file-upload-input'), { target: { files: [good, bad] } });
     expect(onFiles).toHaveBeenCalledWith([good]);
-    expect(onRejected).toHaveBeenCalledWith([{ file: bad, reason: expect.stringMatching(/Not supported/) }]);
+    expect(onRejected).toHaveBeenCalledWith([
+      { file: bad, reason: expect.stringMatching(/Not supported/) },
+    ]);
   });
 
   it('drag-over changes state; drop hands files over; disabled ignores drops', () => {
@@ -70,7 +84,9 @@ describe('CMP-021 FileUpload', () => {
     onFiles.mockClear();
     rerender(<FileUpload items={[]} onFiles={onFiles} onRemove={vi.fn()} disabled />);
     fireEvent.dragOver(screen.getByRole('button', { name: /Upload an image/ }));
-    fireEvent.drop(screen.getByRole('button', { name: /Upload an image/ }), { dataTransfer: { files: [file] } });
+    fireEvent.drop(screen.getByRole('button', { name: /Upload an image/ }), {
+      dataTransfer: { files: [file] },
+    });
     expect(onFiles).not.toHaveBeenCalled();
   });
 
@@ -83,21 +99,33 @@ describe('CMP-021 FileUpload', () => {
       { id: '4', name: 'd.png', size: 4000, status: 'rejected', reason: 'Server says no.' },
       { id: '5', name: 'e.png', size: 4000, status: 'rejected' },
     ];
-    const { container } = render(<FileUpload items={items} onFiles={vi.fn()} onRemove={onRemove} />);
+    const { container } = render(
+      <FileUpload items={items} onFiles={vi.fn()} onRemove={onRemove} />,
+    );
     expect(screen.getByText('Uploading, 40%')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Uploading a.jpg' })).toHaveAttribute('aria-valuenow', '40');
+    expect(screen.getByRole('progressbar', { name: 'Uploading a.jpg' })).toHaveAttribute(
+      'aria-valuenow',
+      '40',
+    );
     expect(screen.getByText('Processing', { selector: '.sr-only' })).toBeInTheDocument();
     expect(screen.getByText('Ready', { selector: '.sr-only' })).toBeInTheDocument();
     expect(screen.getByText('Rejected. Server says no.')).toBeInTheDocument();
-    expect(screen.getByText('The file could not be used.', { selector: 'span.text-destructive' })).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Uploaded files' })).toHaveAttribute('aria-live', 'polite');
+    expect(
+      screen.getByText('The file could not be used.', { selector: 'span.text-destructive' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Uploaded files' })).toHaveAttribute(
+      'aria-live',
+      'polite',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Remove d.png' }));
     expect(onRemove).toHaveBeenCalledWith('4');
     expect((await axe.run(container)).violations).toEqual([]);
   });
 
   it('idle and drag-over pass axe', async () => {
-    const { container } = render(<FileUpload items={[]} onFiles={vi.fn()} onRemove={vi.fn()} dragOver />);
+    const { container } = render(
+      <FileUpload items={[]} onFiles={vi.fn()} onRemove={vi.fn()} dragOver />,
+    );
     expect((await axe.run(container)).violations).toEqual([]);
   });
 });
@@ -115,7 +143,9 @@ describe('CMP-021 gallery demos', () => {
     vi.useFakeTimers();
     render(<UploadLiveDemo />);
     const input = screen.getByTestId('file-upload-input');
-    fireEvent.change(input, { target: { files: [img('ok.png'), img('x.pdf', 'application/pdf')] } });
+    fireEvent.change(input, {
+      target: { files: [img('ok.png'), img('x.pdf', 'application/pdf')] },
+    });
     expect(document.querySelector('li[data-status=uploading]')).not.toBeNull();
     expect(document.querySelector('li[data-status=rejected]')).not.toBeNull();
     act(() => {

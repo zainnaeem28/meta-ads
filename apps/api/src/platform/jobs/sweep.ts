@@ -22,7 +22,11 @@ export interface SweepDeps {
 export type SweepRun =
   /** Another worker holds the lock: this tick does nothing. */
   | { readonly kind: 'skipped' }
-  | { readonly kind: 'ran'; readonly results: readonly SweepHookResult[]; readonly durationMs: number };
+  | {
+      readonly kind: 'ran';
+      readonly results: readonly SweepHookResult[];
+      readonly durationMs: number;
+    };
 
 export function sweepLockOf(pool: pg.Pool): SweepDeps['acquire'] {
   return () => tryRecoverySweepLock(pool);
@@ -36,7 +40,10 @@ export function sweepLockOf(pool: pg.Pool): SweepDeps['acquire'] {
 export async function runRecoverySweep(deps: SweepDeps): Promise<SweepRun> {
   const lock = await deps.acquire();
   if (lock === null) {
-    deps.log.info({ module: 'worker', outcome: 'skipped' }, 'recovery sweep skipped: another worker holds the lock');
+    deps.log.info(
+      { module: 'worker', outcome: 'skipped' },
+      'recovery sweep skipped: another worker holds the lock',
+    );
     return { kind: 'skipped' };
   }
   const started = Date.now();

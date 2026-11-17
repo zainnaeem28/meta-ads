@@ -9,7 +9,8 @@ export type CauseClass =
   | 'reference_unreachable';
 
 /** What the usage event of the call becomes: no call, rejected with zero usage, unconfirmed, or the submit event stands. */
-export type UsageEffect = 'none' | 'rejected_zero' | 'unconfirmed' | 'submit_stands' | 'not_applicable';
+export type UsageEffect =
+  'none' | 'rejected_zero' | 'unconfirmed' | 'submit_stands' | 'not_applicable';
 
 export type ProviderFailure =
   | { kind: 'http'; status: number; errorCode?: string | undefined }
@@ -36,7 +37,8 @@ export interface Classification {
   final: boolean;
 }
 
-const CREDIT_CODES = /^(insufficient_quota|project_spend_limit_exceeded|insufficient[_ ]?(balance|credit|credits|funds))$/i;
+const CREDIT_CODES =
+  /^(insufficient_quota|project_spend_limit_exceeded|insufficient[_ ]?(balance|credit|credits|funds))$/i;
 
 function make(
   causeClass: CauseClass,
@@ -53,7 +55,10 @@ function make(
   };
 }
 
-export function classifyProviderFailure(provider: string, failure: ProviderFailure): Classification {
+export function classifyProviderFailure(
+  provider: string,
+  failure: ProviderFailure,
+): Classification {
   switch (failure.kind) {
     case 'http': {
       const { status, errorCode } = failure;
@@ -64,10 +69,18 @@ export function classifyProviderFailure(provider: string, failure: ProviderFailu
         });
       }
       if (status === 403) {
-        return make('configuration', 'rejected_zero', { message: `your ${provider} key lacks permission` });
+        return make('configuration', 'rejected_zero', {
+          message: `your ${provider} key lacks permission`,
+        });
       }
-      if (status === 402 || (status === 429 && errorCode !== undefined && CREDIT_CODES.test(errorCode)) ||
-        (errorCode !== undefined && /^insufficient[_ ]?balance$/i.test(errorCode) && status >= 400 && status < 500)) {
+      if (
+        status === 402 ||
+        (status === 429 && errorCode !== undefined && CREDIT_CODES.test(errorCode)) ||
+        (errorCode !== undefined &&
+          /^insufficient[_ ]?balance$/i.test(errorCode) &&
+          status >= 400 &&
+          status < 500)
+      ) {
         return make('credit', 'rejected_zero', {
           message: `your ${provider} account is out of credit or at its spend limit`,
         });
@@ -93,7 +106,9 @@ export function classifyProviderFailure(provider: string, failure: ProviderFailu
     }
     case 'transport':
       return failure.phase === 'after_send'
-        ? make('outcome_unknown', 'unconfirmed', { message: 'check your provider account before retrying' })
+        ? make('outcome_unknown', 'unconfirmed', {
+            message: 'check your provider account before retrying',
+          })
         : make('temporary', 'none');
     case 'poll_failed':
       return make(failure.authError === true ? 'configuration' : 'temporary', 'submit_stands');

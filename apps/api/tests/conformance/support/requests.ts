@@ -5,7 +5,10 @@ import { urlFor } from './spec.js';
 // A well-formed request for an operation: ids are fresh UUIDs unless the caller names them, bodies and headers satisfy the
 // contract's schema. A cell changes exactly the part it is about (the token, one id, one field).
 
-const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c63f8cfc0f01f0005000201a52e5ad90000000049454e44ae426082', 'hex');
+const PNG = Buffer.from(
+  '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c63f8cfc0f01f0005000201a52e5ad90000000049454e44ae426082',
+  'hex',
+);
 
 /** A key shape both provider formats accept (the stack's probe stand-in answers 200). */
 export const FAKE_KEY = ['sk', 'conformance', 'a1B2c3D4e5F6g7H8i9J0k1L2'].join('-');
@@ -29,22 +32,44 @@ const BODIES: Readonly<Record<string, () => unknown>> = {
   'API-121': () => ({ mode: 'invited_only' }),
 };
 
-export const multipart = (file: Buffer, name = 'file'): { payload: Buffer; headers: Record<string, string> } => {
+export const multipart = (
+  file: Buffer,
+  name = 'file',
+): { payload: Buffer; headers: Record<string, string> } => {
   const boundary = `----conf${randomBytes(6).toString('hex')}`;
-  const pre = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"; filename="a.bin"\r\nContent-Type: application/octet-stream\r\n\r\n`);
-  return { payload: Buffer.concat([pre, file, Buffer.from(`\r\n--${boundary}--\r\n`)]), headers: { 'content-type': `multipart/form-data; boundary=${boundary}` } };
+  const pre = Buffer.from(
+    `--${boundary}\r\nContent-Disposition: form-data; name="${name}"; filename="a.bin"\r\nContent-Type: application/octet-stream\r\n\r\n`,
+  );
+  return {
+    payload: Buffer.concat([pre, file, Buffer.from(`\r\n--${boundary}--\r\n`)]),
+    headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+  };
 };
 
 export const PNG_BYTES = PNG;
 
-export function validRequest(op: Operation, params: Params = {}, version = 1): RequestSpec & { raw?: Buffer } {
+export function validRequest(
+  op: Operation,
+  params: Params = {},
+  version = 1,
+): RequestSpec & { raw?: Buffer } {
   const headers: Record<string, string> = {};
   if (op.jobCreating) headers['idempotency-key'] = `conf-${randomBytes(8).toString('hex')}`;
   if (op.ifMatch) headers['if-match'] = `"${String(version)}"`;
   if (op.id === 'API-030') {
     const form = multipart(PNG);
-    return { method: op.method, url: urlFor(op, params), headers: { ...headers, ...form.headers }, raw: form.payload };
+    return {
+      method: op.method,
+      url: urlFor(op, params),
+      headers: { ...headers, ...form.headers },
+      raw: form.payload,
+    };
   }
   const body = BODIES[op.id];
-  return { method: op.method, url: urlFor(op, params), headers, ...(body === undefined ? {} : { payload: body() }) };
+  return {
+    method: op.method,
+    url: urlFor(op, params),
+    headers,
+    ...(body === undefined ? {} : { payload: body() }),
+  };
 }

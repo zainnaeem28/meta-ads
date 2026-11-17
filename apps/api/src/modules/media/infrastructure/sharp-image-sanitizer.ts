@@ -74,7 +74,8 @@ export class SharpImageSanitizer implements ImageSanitizePort {
     const format = formatOf(meta.format);
     const width = meta.width;
     const height = meta.pageHeight ?? meta.height;
-    if (width === undefined || height === undefined || width < 1 || height < 1) throw new ImageRejected('decode_failed');
+    if (width === undefined || height === undefined || width < 1 || height < 1)
+      throw new ImageRejected('decode_failed');
     if (
       width > this.config.maxDimension ||
       height > this.config.maxDimension ||
@@ -106,7 +107,9 @@ export class SharpImageSanitizer implements ImageSanitizePort {
     } catch (error) {
       if (error instanceof ImageRejected || isTransient(error)) throw error;
       const message = error instanceof Error ? error.message : '';
-      throw new ImageRejected(/pixel limit/i.test(message) ? 'decompression_bomb' : 'decode_failed');
+      throw new ImageRejected(
+        /pixel limit/i.test(message) ? 'decompression_bomb' : 'decode_failed',
+      );
     }
   }
 }

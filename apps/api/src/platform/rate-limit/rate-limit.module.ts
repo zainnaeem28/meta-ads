@@ -17,7 +17,8 @@ export interface RateLimitConfig {
 export const JOB_CREATE_ROUTE = 'job-create';
 
 export function rateLimitOptionsFrom(config: RateLimitConfig): RateLimitOptions {
-  if (config.RATE_LIMIT_IP_KEY === undefined) throw new Error('RATE_LIMIT_IP_KEY is required for the rate limiter');
+  if (config.RATE_LIMIT_IP_KEY === undefined)
+    throw new Error('RATE_LIMIT_IP_KEY is required for the rate limiter');
   return {
     ipKey: config.RATE_LIMIT_IP_KEY,
     trustProxyHops: config.TRUST_PROXY_HOPS ?? 1,
@@ -39,7 +40,11 @@ export class RateLimitModule {
       module: RateLimitModule,
       providers: [
         { provide: RATE_LIMIT_OPTIONS, useValue: options },
-        { provide: RateLimiter, useFactory: (database: Database) => new RateLimiter(database.db), inject: [DATABASE] },
+        {
+          provide: RateLimiter,
+          useFactory: (database: Database) => new RateLimiter(database.db),
+          inject: [DATABASE],
+        },
         { provide: APP_GUARD, useClass: RateLimitGuard },
       ],
       exports: [RateLimiter],
