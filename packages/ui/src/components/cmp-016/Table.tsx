@@ -169,7 +169,7 @@ export function Table<T>({
                   key={i}
                   role="row"
                   data-skeleton
-                  className="min-h-control-touch border-t border-border max-md:block max-md:p-4"
+                  className="min-h-control-touch border-t border-border max-md:block max-md:p-4 max-md:first:border-t-0"
                 >
                   {Array.from({ length: span }, (_, j) => (
                     <td key={j} role="cell" className={CELL}>
@@ -193,7 +193,7 @@ export function Table<T>({
                     role="row"
                     data-selected={selected || undefined}
                     aria-busy={pending || undefined}
-                    className={`min-h-control-touch border-t border-border max-md:block max-md:p-4 ${selected ? 'bg-accent' : ''}`}
+                    className={`min-h-control-touch border-t border-border max-md:block max-md:p-4 max-md:first:border-t-0 ${selected ? 'bg-accent' : ''}`}
                   >
                     {columns.map((c, i) => (
                       <td
