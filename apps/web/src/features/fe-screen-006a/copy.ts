@@ -59,6 +59,7 @@ export const SCREEN_006_COPY = {
       'Direct and practical',
     ],
     segments: 'Segments',
+    segmentsRequired: 'Choose how many segments the ad has.',
   },
   step4: {
     title: 'Concept',
