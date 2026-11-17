@@ -30,10 +30,13 @@ function declared(): Map<string, { root: boolean; methods: Set<string> }> {
   return out;
 }
 
+/** Mounted only for IDENTITY_MODE=local in development/test and deliberately not in OpenAPI; its absence under any other identity mode is proven by the AIU-251 dev-token test. */
+const LOCAL_ONLY_ROUTE = 'POST /api/v1/dev/token';
+
 describe('the routes of the running app and the file agree (TC-OPS-08)', () => {
   it('every route of the app is an operation of the file, and every operation is a route', () => {
     const fromFile = new Set(operations().flatMap((op) => [`${op.method} ${prefixed(op.path, op.root).replace(/\{([^}]+)\}/g, ':$1')}`, ...(op.method === 'GET' ? [`HEAD ${prefixed(op.path, op.root).replace(/\{([^}]+)\}/g, ':$1')}`] : [])]));
-    const fromApp = new Set(w.index.entries().map((entry) => entry.replace(/^(\w+) \/?/, '$1 /')).filter((entry) => !entry.includes('/probe/boom')));
+    const fromApp = new Set(w.index.entries().map((entry) => entry.replace(/^(\w+) \/?/, '$1 /')).filter((entry) => !entry.includes('/probe/boom') && entry !== LOCAL_ONLY_ROUTE));
     expect([...fromApp].filter((entry) => !fromFile.has(entry)), 'routes the file does not declare').toEqual([]);
     expect([...fromFile].filter((entry) => !fromApp.has(entry)), 'operations without a route').toEqual([]);
     expect(operations().length).toBeGreaterThanOrEqual(57);
