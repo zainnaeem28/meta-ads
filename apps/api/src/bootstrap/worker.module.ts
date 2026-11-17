@@ -14,6 +14,7 @@ import { SWEEP_QUEUE, runRecoverySweep, sweepLockOf } from '../platform/jobs/swe
 import { sweepRegistry } from '../platform/jobs/sweep-registry.js';
 import type { SweepRegistry } from '../platform/jobs/sweep-registry.js';
 import { EXIT_WATCHDOG, Watchdog } from '../platform/jobs/watchdog.js';
+import { parseProviderOrigin } from '../platform/config/schema.js';
 import { EgressModule } from '../platform/egress/index.js';
 import type { EgressModuleConfig } from '../platform/egress/index.js';
 import { AuditModule } from '../modules/audit/index.js';
@@ -57,10 +58,33 @@ export interface WorkerJob {
   readonly data: unknown;
 }
 
+/**
+ * The provider origin the worker calls instead of the real APIs, from `WORKER_PROVIDER_ORIGIN_OVERRIDE` (the test seam
+ * the built worker reads) or the programmatic `wavespeedBaseUrl` option. The setting is honoured only when APP_ENV is
+ * development or test and its host is named exactly under both the openai and wavespeed allow-lists; otherwise the
+ * start-up stops. The egress layer checks the host again on every call, so the override can never reach beyond the list.
+ */
+export function providerOriginOf(config: WorkerConfig, option?: string): string | undefined {
+  const setting = config.WORKER_PROVIDER_ORIGIN_OVERRIDE;
+  if (setting === undefined) return option;
+  if (config.APP_ENV !== 'development' && config.APP_ENV !== 'test') {
+    throw new Error('WORKER_PROVIDER_ORIGIN_OVERRIDE is refused unless APP_ENV is development or test');
+  }
+  const origin = parseProviderOrigin(setting);
+  if (origin === undefined) throw new Error('WORKER_PROVIDER_ORIGIN_OVERRIDE must be a bare https origin on a host name');
+  const hosts = config.EGRESS_ALLOWED_HOSTS ?? {};
+  for (const vendor of ['openai', 'wavespeed']) {
+    if (!(hosts[vendor] ?? []).some((h) => h.toLowerCase() === origin.hostname)) {
+      throw new Error(`WORKER_PROVIDER_ORIGIN_OVERRIDE host is not named in EGRESS_ALLOWED_HOSTS.${vendor}`);
+    }
+  }
+  return origin.origin;
+}
+
 /** A queue's handler, registered by the module that owns the queue. It throws to fail the job. */
 export type JobHandler = (job: WorkerJob, log: Logger) => Promise<void>;
 
-export type WorkerConfig = Partial<Pick<ProcessConfig, keyof EgressModuleConfig>> &
+export type WorkerConfig = Partial<Pick<ProcessConfig, keyof EgressModuleConfig | 'APP_ENV' | 'WORKER_PROVIDER_ORIGIN_OVERRIDE'>> &
   Pick<
   ProcessConfig,
   | 'DATABASE_URL'
@@ -242,6 +266,7 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
         }),
       ]
     : [];
+  const providerOrigin = providerOriginOf(config, options.wavespeedBaseUrl);
   const production =
     productionEnabled
       ? [
@@ -253,7 +278,7 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
             storage: () => context.get<StoragePort>(STORAGE_PORT, { strict: false }),
             media: () => mediaService(),
             registry: options.registry ?? sweepRegistry,
-            ...(options.wavespeedBaseUrl === undefined ? {} : { baseUrl: options.wavespeedBaseUrl }),
+            ...(providerOrigin === undefined ? {} : { baseUrl: providerOrigin }),
           }),
         ]
       : [];

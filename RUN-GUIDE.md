@@ -143,6 +143,20 @@ curl -s -o /dev/null -w 'web sign-in %{http_code}\n' http://localhost:3000/sign-
 
 Expected: `live 200`, `ready 200`, `401`, `200`. `/health/ready` answers 200 only when PostgreSQL answers, pg-boss is installed, the applied migration count is within `MIN_SCHEMA_HEAD`..`MAX_SCHEMA_HEAD` and the configuration is valid. Open `http://localhost:3000/sign-in`: in local mode the page shows the local password and the local second-step code. The first administrator is the account whose email equals `OWNER_EMAIL` (set it in `.env.local.d/api.env` before the first sign-in; `ops first-admin:reopen` re-arms the link).
 
+### Pointing the worker at the provider stubs (test seam)
+
+The built worker (`node dist/main.worker.js`) calls `https://api.wavespeed.ai` and `https://api.openai.com` (the QC transcription and the thumbnail image). To run it against `tools/provider-stubs` set, in the worker's environment:
+
+```bash
+APP_ENV=test                                   # or development; the setting is refused (start-up stops) in staging and production
+WORKER_PROVIDER_ORIGIN_OVERRIDE=https://provider-stubs.internal
+EGRESS_ALLOWED_HOSTS='{"openai":["api.openai.com","provider-stubs.internal"],"wavespeed":["api.wavespeed.ai","provider-stubs.internal"]}'
+```
+
+The override is not an open redirect. It must be a bare `https` origin (a DNS name, port 443, no path, query or credentials), and its host must be named exactly, with no wildcard, under both `openai` and `wavespeed` in `EGRESS_ALLOWED_HOSTS`; otherwise the worker refuses to start. Every call still goes through the egress layer, which checks the host, the resolved address and the redirects as for the real providers. The stub must therefore be reachable as that name over TLS on port 443 (put a TLS front in front of the stub and trust its CA with `NODE_EXTRA_CA_CERTS`). Names that resolve to loopback or private addresses are refused by the egress layer's address check outside the in-process tests.
+
+The S3 endpoint override already exists: `R2_ENDPOINT` (and `STORAGE_PUBLIC_ORIGIN` for the api) takes any URL, including MinIO's `http://localhost:9000`, in development and test; staging and production require https.
+
 `next start` prints a warning that `output: standalone` prefers `node .next/standalone/server.js`; the container image does that, `next start` is the local shortcut.
 
 ## 8. Operator commands (one-off tasks of the release image)
