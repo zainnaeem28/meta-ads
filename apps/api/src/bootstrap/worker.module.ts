@@ -24,7 +24,7 @@ import { MEDIA_REPOSITORY } from '../modules/media/application/ports.js';
 import type { MediaRepository } from '../modules/media/application/ports.js';
 import { mediaConfigFrom } from '../modules/media/media.module.js';
 import { ProductionWorkerModule, ProviderCopyCleanup, VideoCopyJob, VideoPollJob, VideoSubmitJob, productionJobHandlers } from '../modules/production/production.module.js';
-import { LifecycleModule, lifecycleJobHandlers, CampaignDeletionJob } from '../modules/lifecycle/lifecycle.module.js';
+import { LifecycleModule, lifecycleJobHandlers, AccountErasureJob, CampaignDeletionJob } from '../modules/lifecycle/lifecycle.module.js';
 import { MediaDeletion } from '../modules/media/worker/media-deletion.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
 import { IdentityModule, InvitationJobs, identityJobHandlers } from '../modules/identity/index.js';
@@ -307,7 +307,10 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
           })),
       ...(lifecycle.length === 0
         ? {}
-        : lifecycleJobHandlers({ campaignDeletion: () => context.get(CampaignDeletionJob, { strict: false }) })),
+        : lifecycleJobHandlers({
+            campaignDeletion: () => context.get(CampaignDeletionJob, { strict: false }),
+            accountErasure: () => context.get(AccountErasureJob, { strict: false }),
+          })),
       ...options.handlers,
     },
   };
