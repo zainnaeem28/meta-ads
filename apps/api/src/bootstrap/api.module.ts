@@ -29,6 +29,7 @@ import { LifecycleModule } from '../modules/lifecycle/lifecycle.module.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { JobsModule } from '../platform/jobs/boss.js';
 import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
+import { VendorGateModule } from '../platform/vendor-gate/index.js';
 import { MetricsModule } from '../platform/metrics/index.js';
 import type { MetricsConfig } from '../platform/metrics/index.js';
 
@@ -94,6 +95,7 @@ function apiModule(
   @Module({
     imports: [
       logging.module(),
+      VendorGateModule.register(process.env),
       egress,
       audit,
       IdentityModule.register(
