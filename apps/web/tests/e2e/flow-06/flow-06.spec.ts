@@ -285,7 +285,13 @@ async function api(p: Page, w: World) {
 }
 
 /** The step's screenshot at both design widths plus axe, taken on the page as it stands. */
-async function capture(p: Page, step: string, project: string) {
+async function capture(
+  p: Page,
+  step: string,
+  project: string,
+  // `viewport`: a viewport-sized picture with the fixed shell (bottom navigation, dialog and scrim) left visible.
+  opts: { viewport?: boolean } = {},
+) {
   const original = p.viewportSize();
   for (const { name, width, height } of SIZES) {
     await p.setViewportSize({ width, height });
@@ -299,6 +305,10 @@ async function capture(p: Page, step: string, project: string) {
     await expectNoAxeViolations(p, `${evidence}/axe/${project}-${step}-${name}.json`);
     mkdirSync(`${evidence}/screenshots`, { recursive: true });
     // The fixed bottom navigation of the phone layout would hide content in a full-page capture; hidden for the picture only.
+    if (opts.viewport) {
+      await p.screenshot({ path: `${evidence}/screenshots/${step}-${name}.png` });
+      continue;
+    }
     const hide = await p.addStyleTag({ content: '.fixed { visibility: hidden !important; }' });
     await p.screenshot({ path: `${evidence}/screenshots/${step}-${name}.png`, fullPage: true });
     await hide.evaluate((el) => el.remove());
@@ -323,6 +333,7 @@ test.describe('@TASK-109 @TC-FLW-06 @FLOW-06 history, drafts and search end to e
     await expect(p.getByRole('heading', { level: 1, name: 'Campaigns' })).toBeVisible();
     await expect(listed(p)).toHaveCount(10);
     await capture(p, '1-history-list', info.project.name);
+    await capture(p, '1b-history-shell', info.project.name, { viewport: true });
 
     // Paging: page 2 is in the URL and shows the next ten, none repeated from page 1.
     await p.getByRole('button', { name: 'Next' }).click();
@@ -454,6 +465,7 @@ test.describe('@TASK-109 @TC-FLW-06 @FLOW-06 history, drafts and search end to e
     await expect(p.getByText('Step 3 of 4: Audience and direction')).toBeVisible();
     await expect(p.getByText('Untitled draft')).toHaveCount(0);
     await capture(p, '7-drafts-list', info.project.name);
+    await capture(p, '7b-drafts-shell', info.project.name, { viewport: true });
 
     await p
       .getByRole('searchbox', { name: 'Search by product name or description' })
@@ -527,7 +539,7 @@ test.describe('@TASK-109 @TC-FLW-06 @FLOW-06 history, drafts and search end to e
     await p.goto('/campaigns?tab=drafts');
     await p.getByRole('button', { name: 'Delete draft Morning Focus Blend' }).click();
     await expect(p.getByRole('dialog')).toBeVisible();
-    await capture(p, '13-delete-confirm', info.project.name);
+    await capture(p, '13-delete-confirm', info.project.name, { viewport: true });
     await p.getByRole('button', { name: 'Cancel' }).click();
     await expect(p.getByRole('dialog')).toHaveCount(0);
     expect(w.calls.some((c) => c.startsWith('DELETE'))).toBe(false);
