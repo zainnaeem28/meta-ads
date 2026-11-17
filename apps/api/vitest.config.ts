@@ -32,6 +32,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/prod-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-worker/junit.xml' }],
       ['junit', { outputFile: 'reports/lifecycle-del/junit.xml' }],
+      ['junit', { outputFile: 'reports/erasure/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -142,6 +143,14 @@ export default defineConfig({
         'src/modules/lifecycle/infrastructure/campaign-deletion.queueing.ts',
         'src/modules/lifecycle/infrastructure/campaign-erasure-ledger.ts',
         'src/modules/lifecycle/transport/campaign-deletion.controller.ts',
+        // Account lifecycle (TASK-059): the SQL repository, the queue adapter, the identity adapters, the controller and the
+        // port file are proven on real PostgreSQL through the api and worker composition roots by
+        // account-lifecycle.integration.test.ts; the service and the erasure job are unit tested here.
+        'src/modules/lifecycle/application/account-lifecycle-ports.ts',
+        'src/modules/lifecycle/infrastructure/account-lifecycle.repository.ts',
+        'src/modules/lifecycle/infrastructure/account-erasure.queueing.ts',
+        'src/modules/lifecycle/infrastructure/account-identity.adapters.ts',
+        'src/modules/lifecycle/transport/account-lifecycle.controller.ts',
         // The Drizzle repository of the brief jobs and the key-auth reporter are proven on real PostgreSQL through the worker
         // composition root by brief-ai.integration.test.ts; the handlers and the adapter are unit tested here.
         'src/modules/brief/infrastructure/brief-jobs.repository.ts',
