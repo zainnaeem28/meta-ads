@@ -33,7 +33,7 @@ import { FinalPreview } from '@shroomap/ui/cmp-026';
 import { OperatorShell, deriveKeyState } from '@shroomap/ui/cmp-030';
 import { PageHeader } from '@shroomap/ui/cmp-033';
 import { Icon } from '@shroomap/ui/icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ErrorNotice } from '../../components/errors';
 import { IdempotencyKeys, idempotencyHeaders } from '../../lib/api/idempotency';
 import { resolveError } from '../../lib/errors';
@@ -103,7 +103,23 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2,
  * SCREEN-009 at `/campaigns/[id]/final` (Operator): choose and order the completed clips, confirm failed or skipped
  * checks, assemble and follow the assembly (API-061, API-070, API-071). The finished file is played from the media link.
  */
-export function FinalScreen({ campaignId }: { campaignId: string }) {
+export interface DoneContext {
+  campaignId: string;
+  assembled: Assembly;
+  /** The finished file's media link, once it has been read. */
+  src: string | undefined;
+  /** Goes back to choosing clips for a new assembly. */
+  onReassemble: () => void;
+}
+
+export function FinalScreen({
+  campaignId,
+  renderDone,
+}: {
+  campaignId: string;
+  /** SCREEN-009 `default` / `out-of-date` body (TASK-097); the player alone when absent. */
+  renderDone?: (ctx: DoneContext) => ReactNode;
+}) {
   const client = useQueryClient();
   const path = `/campaigns/${campaignId}/final`;
   const listKey = getListCampaignVideoJobsQueryKey(campaignId);
@@ -576,7 +592,10 @@ export function FinalScreen({ campaignId }: { campaignId: string }) {
               </>
             ) : null}
 
-            {mode === 'done' && assembled ? (
+            {mode === 'done' && assembled && renderDone
+              ? renderDone({ campaignId, assembled, src, onReassemble: startOver })
+              : null}
+            {mode === 'done' && assembled && !renderDone ? (
               <FinalPreview
                 state={assembled.outOfDate ? 'out-of-date' : 'done'}
                 title={COPY.doneLabel}
