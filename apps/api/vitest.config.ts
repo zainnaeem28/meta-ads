@@ -210,6 +210,11 @@ export default defineConfig({
         'src/modules/production/infrastructure/openai-transcribe/qc.repository.ts',
         'src/modules/production/infrastructure/openai-transcribe/key-auth.reporter.ts',
         'src/modules/production/transport/qc.controller.ts',
+        // The assembly render handler (claim, lease, fetch, render, save) and its recovery hooks are SQL proven on real PostgreSQL
+        // through the worker composition root with the real FFmpeg binary by assembly-worker.integration.test.ts; the ports file
+        // has no statements to speak of. The FFmpeg adapter itself is unit tested.
+        'src/modules/production/application/worker/assembly-render.job.ts',
+        'src/modules/production/application/worker/assembly-recovery.ts',
         // The ops-cli SQL of the four commands, their production binding and the barrel are proven on real PostgreSQL through
         // `runOps` with the production `executeCommand`, the real worker composition root and the compiled `dist/bin/ops.js` by
         // ops-cli.integration.test.ts; the argument rules, the runner and the key cryptography are unit tested here.
