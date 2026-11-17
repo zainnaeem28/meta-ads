@@ -4,7 +4,7 @@ export const DATASETS = ['reference', 'development', 'staging'] as const;
 export type Dataset = (typeof DATASETS)[number];
 
 /**
- * One seed-owned set of rows. Owner modules append their step here (one import line and one push); a step
+ * One seed-owned set of rows. Owner modules provide their step and `seeds/index.ts` lists it; a step
  * upserts by natural key so a rerun changes nothing, and returns the number of rows it wrote or kept.
  */
 export interface SeedStep {
@@ -12,8 +12,6 @@ export interface SeedStep {
   readonly datasets: readonly Dataset[];
   run(tx: DbTx): Promise<number>;
 }
-
-export const seedSteps: SeedStep[] = [];
 
 /**
  * `jobs:migrate` wiring point: the platform/jobs ticket provides `database/jobs-migrate.ts`
