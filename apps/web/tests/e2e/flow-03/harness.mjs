@@ -268,7 +268,7 @@ const pool = new pg.Pool({ connectionString: DATABASE_URL, max: 4 });
 // ---- seeding: an account (as the api's local identity names it), its keys, and a campaign with an accepted brief -------------
 const subjectOf = (email) => `user_local_${createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 24)}`;
 
-async function seed({ email, keys = {}, reservedUsd, segments = 4 }) {
+async function seed({ email, keys = {}, reservedUsd, segments = 4, briefState = 'accepted' }) {
   const owner = randomUUID();
   await pool.query(`insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`, [
     owner,
@@ -296,7 +296,10 @@ async function seed({ email, keys = {}, reservedUsd, segments = 4 }) {
     `insert into drafts (id, owner_id, step, product_name, product_description, segment_count, campaign_id) values ($1, $2, 5, 'Calm Morning Drink', 'A slow morning drink that makes the start of the day calmer', $3, $4)`,
     [randomUUID(), owner, segments, campaign],
   );
-  await pool.query(`insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, 'accepted', now())`, [brief, campaign, owner]);
+  await pool.query(
+    `insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, $4, case when $4 = 'accepted' then now() end)`,
+    [brief, campaign, owner, briefState],
+  );
   for (let position = 1; position <= segments; position += 1) {
     await pool.query(
       `insert into brief_segments (id, brief_id, position, dialogue, prompt, word_count) values ($1, $2, $3, $4, $5, $6)`,
