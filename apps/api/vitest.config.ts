@@ -38,6 +38,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
+      ['junit', { outputFile: 'reports/reporting/junit.xml' }],
     ],
     coverage: {
       provider: 'v8',
@@ -56,6 +57,7 @@ export default defineConfig({
         'src/modules/campaigns/**/*.ts',
         'src/modules/brief/**/*.ts',
         'src/modules/production/**/*.ts',
+        'src/modules/reporting/**/*.ts',
         'src/modules/lifecycle/**/*.ts',
         'src/platform/jobs/**/*.ts',
         'src/platform/rate-limit/**/*.ts',
@@ -176,6 +178,13 @@ export default defineConfig({
         'src/modules/production/application/video-jobs.service.ts',
         'src/modules/production/infrastructure/video-progress.reader.ts',
         'src/modules/production/transport/video.controller.ts',
+        // The report SQL, the controller and the module wiring are proven on real PostgreSQL through the api composition root
+        // by reporting.integration.test.ts (API-130, API-131); the window, the CSV and the composition are unit tested.
+        'src/modules/reporting/index.ts',
+        'src/modules/reporting/reporting.module.ts',
+        'src/modules/reporting/application/ports.ts',
+        'src/modules/reporting/infrastructure/usage-report.reader.ts',
+        'src/modules/reporting/transport/reporting.controller.ts',
         // The worker's handlers (submit, poll, copy, cleanup), the sweep hooks, the SQL repository, the key-auth reporter and the
         // port file are proven on real PostgreSQL through the worker composition root by production-worker.integration.test.ts
         // (TC-CLP-06, TC-PCA-01 to 08 and 10, TC-EGR); the WaveSpeed adapter, the MP4 check and the key gate are unit tested.
