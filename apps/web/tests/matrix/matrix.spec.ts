@@ -1,7 +1,15 @@
 import { copyFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { relay, settle, signedIn } from '../a11y/support';
-import { EVIDENCE, JOURNEYS, MIN_TOUCH, ensureDir, recordRun, recordVersion } from './support';
+import {
+  EVIDENCE,
+  JOURNEYS,
+  MIN_TOUCH,
+  ensureDir,
+  recordRun,
+  recordVersion,
+  unavailable,
+} from './support';
 
 /**
  * TC-NFR-06 (NFR-06): sign-in and FLOW-01 to FLOW-04 smoke paths on chromium, the Edge channel, firefox, webkit and the
@@ -51,6 +59,12 @@ const sideways = (page: Page) =>
 
 test.describe('@matrix @TASK-117 browser and device matrix', () => {
   test.use({ timezoneId: 'UTC' });
+
+  // A browser that cannot start here skips with its launch error; a browser that starts is never skipped.
+  test.beforeEach(({}, info) => {
+    const reason = unavailable()[info.project.name];
+    test.skip(reason !== undefined, `NOT EXECUTED, browser cannot launch here: ${reason}`);
+  });
 
   test('records the browser version of the project', async ({ browser, page }, info) => {
     const userAgent = await page.evaluate(() => navigator.userAgent);
