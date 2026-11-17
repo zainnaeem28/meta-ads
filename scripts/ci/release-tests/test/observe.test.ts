@@ -69,7 +69,10 @@ describe('observe.sh', () => {
   });
 
   it('aborts after three failed readiness probes in a row, not after two', async () => {
-    const aborted = await observe({ health: [503], metrics: quiet }, { OBSERVE_WINDOW_SECONDS: '60' });
+    const aborted = await observe(
+      { health: [503], metrics: quiet },
+      { OBSERVE_WINDOW_SECONDS: '60' },
+    );
     expect(aborted.result.code).toBe(1);
     expect(aborted.result.stderr).toContain('/health/ready failed 3 probes in a row');
     const recovered = await observe(

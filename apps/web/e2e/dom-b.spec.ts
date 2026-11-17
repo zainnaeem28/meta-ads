@@ -7,7 +7,9 @@ const evidence = process.env.EVIDENCE_DIR ?? '../../docs/evidence/TASK-077';
 
 const CELLS = [
   ...['openai', 'wavespeed'].flatMap((p) =>
-    ['active', 'untested', 'disabled', 'none', 'testing', 'delete-confirm'].map((s) => `key-${p}-${s}`),
+    ['active', 'untested', 'disabled', 'none', 'testing', 'delete-confirm'].map(
+      (s) => `key-${p}-${s}`,
+    ),
   ),
   'preview-assembling',
   'preview-done',
@@ -40,7 +42,9 @@ test.describe('@TASK-077 provider key card, final preview, campaign row, metric 
   }) => {
     await page.goto('/gallery');
     for (const state of ['assembling', 'done', 'failed', 'out-of-date']) {
-      await expect(page.locator(`[data-cell=preview-${state}] [data-state=${state}]`)).toBeVisible();
+      await expect(
+        page.locator(`[data-cell=preview-${state}] [data-state=${state}]`),
+      ).toBeVisible();
     }
     const done = page.locator('[data-cell=preview-done]');
     await expect(done.locator('video')).toHaveAttribute('controls', '');
@@ -83,7 +87,9 @@ test.describe('@TASK-077 provider key card, final preview, campaign row, metric 
     await expect(tiles.nth(4)).toHaveAttribute('data-state', 'loading');
     await expect(tiles.nth(5)).toHaveAttribute('data-state', 'no-data');
     await expect(page.getByRole('group', { name: 'Cost (estimated)' })).toHaveCount(3);
-    const ids = await page.locator('[data-testid=dom-b] [id]').evaluateAll((els) => els.map((e) => e.id));
+    const ids = await page
+      .locator('[data-testid=dom-b] [id]')
+      .evaluateAll((els) => els.map((e) => e.id));
     expect(new Set(ids).size).toBe(ids.length);
     await expect(page.getByRole('meter', { name: 'Budget used' })).toHaveAttribute(
       'aria-valuetext',
@@ -131,11 +137,15 @@ test.describe('@TASK-077 provider key card, final preview, campaign row, metric 
       const row = page.getByTestId('campaign-rows').getByRole('listitem').first();
       await row.hover();
       await expect(row).toHaveScreenshot(`dom-b-campaign-row-hover-${name}.png`);
-      await row.screenshot({ path: `${evidence}/screenshots/dom-b-campaign-row-hover-${name}.png` });
+      await row.screenshot({
+        path: `${evidence}/screenshots/dom-b-campaign-row-hover-${name}.png`,
+      });
       await row.getByRole('link').focus();
       await page.mouse.move(0, 0);
       await expect(row).toHaveScreenshot(`dom-b-campaign-row-focus-${name}.png`);
-      await row.screenshot({ path: `${evidence}/screenshots/dom-b-campaign-row-focus-${name}.png` });
+      await row.screenshot({
+        path: `${evidence}/screenshots/dom-b-campaign-row-focus-${name}.png`,
+      });
       for (const id of ['campaign-rows', 'metric-tiles', 'inline-bar']) {
         const part = page.getByTestId(id);
         await expect(part).toHaveScreenshot(`dom-b-${id}-${name}.png`);

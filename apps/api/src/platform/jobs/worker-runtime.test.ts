@@ -88,7 +88,9 @@ describe('Heartbeat', () => {
     });
     for (let i = 0; i < PING_EVERY_BEATS; i += 1) await beat.beat();
     expect(out.warn).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify([...out.info.mock.calls, ...out.warn.mock.calls])).not.toContain('secret-token');
+    expect(JSON.stringify([...out.info.mock.calls, ...out.warn.mock.calls])).not.toContain(
+      'secret-token',
+    );
   });
 
   it('does not ping without a URL, and the default ping rejects a non-2xx answer', async () => {

@@ -52,7 +52,11 @@ interface Settled {
  *   may have been sent keeps its estimate counted (unconfirmed), and it is never repeated.
  * Each settled job releases its reservation. The two hooks that touch the ledger settle one owner per run.
  */
-export function thumbRecoveryHooks(deps: { readonly boss: Boss; readonly usage: Usage; readonly config: ThumbConfig }): SweepHook[] {
+export function thumbRecoveryHooks(deps: {
+  readonly boss: Boss;
+  readonly usage: Usage;
+  readonly config: ThumbConfig;
+}): SweepHook[] {
   const { boss, usage, config } = deps;
   const requeue: SweepHook = {
     name: 'production.thumbstopper-requeue',
@@ -66,7 +70,11 @@ export function thumbRecoveryHooks(deps: { readonly boss: Boss; readonly usage: 
       );
       let enqueued = 0;
       for (const { id } of waiting.rows as { id: string }[]) {
-        if ((await enqueue(boss, tx, THUMB_SUBMIT_QUEUE, { jobId: id }, { singletonKey: id })) !== null) enqueued += 1;
+        if (
+          (await enqueue(boss, tx, THUMB_SUBMIT_QUEUE, { jobId: id }, { singletonKey: id })) !==
+          null
+        )
+          enqueued += 1;
       }
       return { swept: enqueued };
     },
@@ -74,7 +82,13 @@ export function thumbRecoveryHooks(deps: { readonly boss: Boss; readonly usage: 
   const finish = async (tx: DbTx, ownerId: string, settled: readonly Settled[]): Promise<void> => {
     for (const job of settled) {
       if (job.call_count > 0) {
-        await usage.convertUnconfirmed(tx, { ownerId, call: { provider: 'openai', operation: job.provider_model }, jobType: 'thumbstopper', jobId: job.id, callSeq: 1 });
+        await usage.convertUnconfirmed(tx, {
+          ownerId,
+          call: { provider: 'openai', operation: job.provider_model },
+          jobType: 'thumbstopper',
+          jobId: job.id,
+          callSeq: 1,
+        });
       }
       await usage.release(tx, { ownerId, jobType: 'thumbstopper', jobId: job.id });
     }
@@ -82,7 +96,11 @@ export function thumbRecoveryHooks(deps: { readonly boss: Boss; readonly usage: 
   const orphaned = sql`state = 'submitting' and submitting_at <= now() - make_interval(secs => ${config.orphanAfterSec})`;
   const orphans = perOwner(
     'production.thumbstopper-orphans',
-    (tx) => ownerOf(tx, sql`select owner_id::text as owner_id from thumbstopper_jobs where ${orphaned} order by submitting_at limit 1`),
+    (tx) =>
+      ownerOf(
+        tx,
+        sql`select owner_id::text as owner_id from thumbstopper_jobs where ${orphaned} order by submitting_at limit 1`,
+      ),
     async (tx, ownerId) => {
       const settled = await tx.execute(
         sql`update thumbstopper_jobs set state = 'failed', cause_class = 'outcome_unknown', cause_message = ${INTERRUPTED}, last_error_code = 'outcome_unknown', updated_at = now()
@@ -95,7 +113,11 @@ export function thumbRecoveryHooks(deps: { readonly boss: Boss; readonly usage: 
   const late = sql`state = 'pending' and deadline_at <= now()`;
   const expired = perOwner(
     'production.thumbstopper-expired',
-    (tx) => ownerOf(tx, sql`select owner_id::text as owner_id from thumbstopper_jobs where ${late} order by deadline_at limit 1`),
+    (tx) =>
+      ownerOf(
+        tx,
+        sql`select owner_id::text as owner_id from thumbstopper_jobs where ${late} order by deadline_at limit 1`,
+      ),
     async (tx, ownerId) => {
       const settled = await tx.execute(
         sql`update thumbstopper_jobs set state = 'failed', cause_class = 'provider_timeout', cause_message = ${NOT_STARTED}, last_error_code = 'provider_timeout', updated_at = now()
@@ -120,7 +142,11 @@ export class ThumbRecovery implements OnModuleInit {
 
   onModuleInit(): void {
     const known = new Set(this.registry.names());
-    for (const hook of thumbRecoveryHooks({ boss: this.boss, usage: this.usage, config: this.config })) {
+    for (const hook of thumbRecoveryHooks({
+      boss: this.boss,
+      usage: this.usage,
+      config: this.config,
+    })) {
       if (!known.has(hook.name)) this.registry.register(hook);
     }
   }

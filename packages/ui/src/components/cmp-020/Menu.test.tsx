@@ -13,7 +13,9 @@ function setup(onSelect = vi.fn()) {
     { id: 'archive', label: 'Archive', disabled: true, onSelect },
     { id: 'delete', label: 'Delete', destructive: true },
   ];
-  return render(<Menu label="Actions for Spring" trigger="Actions" items={items} header={<p>Maya</p>} />);
+  return render(
+    <Menu label="Actions for Spring" trigger="Actions" items={items} header={<p>Maya</p>} />,
+  );
 }
 
 describe('CMP-020 Menu', () => {
@@ -94,7 +96,9 @@ describe('CMP-020 Menu', () => {
   });
 
   it('defaultOpen with initialFocus focuses the first item', () => {
-    render(<Menu label="A" trigger="A" items={[{ id: 'x', label: 'X' }]} defaultOpen initialFocus />);
+    render(
+      <Menu label="A" trigger="A" items={[{ id: 'x', label: 'X' }]} defaultOpen initialFocus />,
+    );
     expect(screen.getByRole('menuitem', { name: 'X' })).toHaveFocus();
   });
 });
@@ -119,7 +123,14 @@ describe('CMP-020 Menu placement and hover look', () => {
   });
 
   it('previewHover renders the hover look', () => {
-    render(<Menu label="A" trigger="A" items={[{ id: 'x', label: 'X', previewHover: true }]} defaultOpen />);
+    render(
+      <Menu
+        label="A"
+        trigger="A"
+        items={[{ id: 'x', label: 'X', previewHover: true }]}
+        defaultOpen
+      />,
+    );
     expect(screen.getByRole('menuitem', { name: 'X' })).toHaveAttribute('data-state', 'hover');
   });
 });

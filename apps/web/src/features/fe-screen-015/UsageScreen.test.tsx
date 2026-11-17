@@ -26,16 +26,43 @@ const URL_ = `${ORIGIN}/api/v1/admin/usage-report`;
 const U1 = '8f3a0000-0000-4000-8000-00000000c21d';
 const meta = { requestId: 'req-1', timestamp: '2026-11-14T22:40:00Z' };
 const usage = (provider: string, over: Record<string, unknown> = {}) => ({
-  provider, calls: 402, succeeded: 388, failed: 14, rejected: 0, unconfirmed: 0,
-  estimatedCostUsd: '201.4000', latencyP50Ms: 40000, latencyP95Ms: 94000, ...over,
+  provider,
+  calls: 402,
+  succeeded: 388,
+  failed: 14,
+  rejected: 0,
+  unconfirmed: 0,
+  estimatedCostUsd: '201.4000',
+  latencyP50Ms: 40000,
+  latencyP95Ms: 94000,
+  ...over,
 });
 const report = (over: Record<string, unknown> = {}) => ({
   success: true,
   data: {
-    from: '2026-10-15T00:00:00.000Z', to: '2026-11-14T22:40:00.000Z', asOf: '2026-11-14T22:40:00.000Z', empty: false,
+    from: '2026-10-15T00:00:00.000Z',
+    to: '2026-11-14T22:40:00.000Z',
+    asOf: '2026-11-14T22:40:00.000Z',
+    empty: false,
     costBasis: 'estimate_from_configured_price_table',
-    accounts: [{ userId: U1, providers: [usage('wavespeed'), usage('openai', { calls: 318, failed: 4, estimatedCostUsd: '38.2000', latencyP95Ms: 6100 })] }],
-    providers: [usage('wavespeed'), usage('openai', { calls: 318, failed: 4, estimatedCostUsd: '38.2000', latencyP95Ms: 6100 })],
+    accounts: [
+      {
+        userId: U1,
+        providers: [
+          usage('wavespeed'),
+          usage('openai', {
+            calls: 318,
+            failed: 4,
+            estimatedCostUsd: '38.2000',
+            latencyP95Ms: 6100,
+          }),
+        ],
+      },
+    ],
+    providers: [
+      usage('wavespeed'),
+      usage('openai', { calls: 318, failed: 4, estimatedCostUsd: '38.2000', latencyP95Ms: 6100 }),
+    ],
     jobStates: { succeeded: 90, failed: 3 },
     claimChecks: [
       { class: 'high_risk', raised: 21, closedByEdit: 21, clearedWithReason: 0 },
@@ -46,7 +73,10 @@ const report = (over: Record<string, unknown> = {}) => ({
   metaData: meta,
 });
 const failure = (status: number, code: string) =>
-  HttpResponse.json({ success: false, error: { code, message: 'x', details: [] }, metaData: meta }, { status });
+  HttpResponse.json(
+    { success: false, error: { code, message: 'x', details: [] }, metaData: meta },
+    { status },
+  );
 
 let uninstall: () => void;
 beforeEach(() => {
@@ -74,7 +104,12 @@ describe('SCREEN-015 usage report', () => {
 
   it('default: tiles, estimated cost, per-account and per-provider tables, claim checks, user IDs only', async () => {
     let seen = '';
-    server.use(http.get(URL_, ({ request }) => ((seen = new URL(request.url).search), HttpResponse.json(report()))));
+    server.use(
+      http.get(
+        URL_,
+        ({ request }) => ((seen = new URL(request.url).search), HttpResponse.json(report())),
+      ),
+    );
     show();
     expect(await screen.findByText('US$239.60')).toBeInTheDocument();
     expect(seen).toBe('');
@@ -94,18 +129,36 @@ describe('SCREEN-015 usage report', () => {
   });
 
   it('empty: names the window and says it is not an error', async () => {
-    server.use(http.get(URL_, () => HttpResponse.json(report({ empty: true, accounts: [], providers: [], jobStates: {}, claimChecks: [] }))));
+    server.use(
+      http.get(URL_, () =>
+        HttpResponse.json(
+          report({ empty: true, accounts: [], providers: [], jobStates: {}, claimChecks: [] }),
+        ),
+      ),
+    );
     show();
-    expect(await screen.findByRole('heading', { name: 'No usage in this window' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'No usage in this window' }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/This is not an error/)).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
   });
 
   it('error: service_unavailable shows the report-could-not-be-built copy and Try again re-asks', async () => {
     let down = true;
-    server.use(http.get(URL_, () => (down ? failure(503, 'service_unavailable') : HttpResponse.json(report()))));
+    server.use(
+      http.get(URL_, () =>
+        down ? failure(503, 'service_unavailable') : HttpResponse.json(report()),
+      ),
+    );
     show();
-    expect(await screen.findByRole('heading', { name: 'The report could not be built' }, { timeout: 15_000 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole(
+        'heading',
+        { name: 'The report could not be built' },
+        { timeout: 15_000 },
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByText('0')).toBeNull();
     down = false;
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -121,10 +174,14 @@ describe('SCREEN-015 usage report', () => {
 
   it('window-too-large: the pre-check names the 366-day limit and sends nothing; the api 422 is handled the same', async () => {
     let calls = 0;
-    server.use(http.get(URL_, ({ request }) => {
-      calls += 1;
-      return new URL(request.url).searchParams.has('from') ? failure(422, 'report_window_too_large') : HttpResponse.json(report());
-    }));
+    server.use(
+      http.get(URL_, ({ request }) => {
+        calls += 1;
+        return new URL(request.url).searchParams.has('from')
+          ? failure(422, 'report_window_too_large')
+          : HttpResponse.json(report());
+      }),
+    );
     show();
     await screen.findByText('US$239.60');
     fireEvent.change(screen.getByLabelText('Time window'), { target: { value: 'custom' } });
@@ -136,13 +193,20 @@ describe('SCREEN-015 usage report', () => {
     // a window the pre-check allows but the api refuses (clock skew at the edge) still ends in the same state
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } });
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-    expect(await screen.findByText('The longest window is 366 days. Choose a shorter one.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('The longest window is 366 days. Choose a shorter one.'),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('To')).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('window selector: a preset asks with from and to and updates the address', async () => {
     const seen: string[] = [];
-    server.use(http.get(URL_, ({ request }) => (seen.push(new URL(request.url).search), HttpResponse.json(report()))));
+    server.use(
+      http.get(
+        URL_,
+        ({ request }) => (seen.push(new URL(request.url).search), HttpResponse.json(report())),
+      ),
+    );
     show();
     await screen.findByText('US$239.60');
     fireEvent.change(screen.getByLabelText('Time window'), { target: { value: '90' } });
@@ -155,7 +219,10 @@ describe('SCREEN-015 usage report', () => {
 
 describe('SCREEN-015 helpers', () => {
   it('windows: inclusive dates become [from, to) instants, 366 days is the limit', () => {
-    expect(windowParams({ from: '2026-11-01', to: '2026-11-02' })).toEqual({ from: '2026-11-01T00:00:00.000Z', to: '2026-11-03T00:00:00.000Z' });
+    expect(windowParams({ from: '2026-11-01', to: '2026-11-02' })).toEqual({
+      from: '2026-11-01T00:00:00.000Z',
+      to: '2026-11-03T00:00:00.000Z',
+    });
     expect(windowParams({ from: '2026-11-02', to: '2026-11-01' })).toBeNull();
     expect(windowDays({ from: '2025-11-14', to: '2026-11-14' })).toBe(366);
     expect(checkWindow({ from: '2025-11-14', to: '2026-11-14' })).toBeNull();

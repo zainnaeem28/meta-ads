@@ -15,8 +15,18 @@ import { campaignKey } from '../../../media/index.js';
 import type { StoragePort } from '../../../media/index.js';
 import { PRODUCTION_STORAGE } from './ports.js';
 import type { JobLog } from './ports.js';
-import { ASSEMBLY_MEDIA, ASSEMBLY_PORT, ASSEMBLY_WORKER_CONFIG, AssemblyRenderError } from './assembly-ports.js';
-import type { AssemblyCause, AssemblyMedia, AssemblyPort, AssemblyWorkerConfig } from './assembly-ports.js';
+import {
+  ASSEMBLY_MEDIA,
+  ASSEMBLY_PORT,
+  ASSEMBLY_WORKER_CONFIG,
+  AssemblyRenderError,
+} from './assembly-ports.js';
+import type {
+  AssemblyCause,
+  AssemblyMedia,
+  AssemblyPort,
+  AssemblyWorkerConfig,
+} from './assembly-ports.js';
 
 export type AssemblyRenderOutcome = 'done' | 'failed' | 'ignored';
 
@@ -40,7 +50,8 @@ class Slots {
   constructor(private readonly limit: number) {}
 
   async hold<T>(work: () => Promise<T>): Promise<T> {
-    if (this.running >= this.limit) await new Promise<void>((resolve) => this.waiting.push(resolve));
+    if (this.running >= this.limit)
+      await new Promise<void>((resolve) => this.waiting.push(resolve));
     else this.running += 1;
     try {
       return await work();
@@ -89,9 +100,13 @@ export class AssemblyRenderJob {
 
   async handle(job: { id: string; data: unknown }, log: JobLog): Promise<AssemblyRenderOutcome> {
     const jobId = (job.data as { jobId?: unknown } | null)?.jobId;
-    if (typeof jobId !== 'string') throw new TypeError('production.assembly-render job has no jobId');
+    if (typeof jobId !== 'string')
+      throw new TypeError('production.assembly-render job has no jobId');
     const outcome = await this.slots.hold(() => this.run(jobId, log));
-    log.info({ module: 'production', outcome: outcome === 'failed' ? 'error' : 'ok', jobId }, `assembly render: ${outcome}`);
+    log.info(
+      { module: 'production', outcome: outcome === 'failed' ? 'error' : 'ok', jobId },
+      `assembly render: ${outcome}`,
+    );
     return outcome;
   }
 
@@ -119,9 +134,12 @@ export class AssemblyRenderJob {
       return await this.work(jobId, claim, directory, lost.signal, log);
     } catch (error) {
       if (lost.signal.aborted) return 'ignored';
-      if (error instanceof AssemblyRenderError) return this.fail(jobId, claim, error.causeClass, ASSEMBLY_MESSAGES[error.causeClass], log);
+      if (error instanceof AssemblyRenderError)
+        return this.fail(jobId, claim, error.causeClass, ASSEMBLY_MESSAGES[error.causeClass], log);
       // Not the job's fault (storage, database, the binary): free the lease so the queue's retry can take over at once.
-      await this.database.uow.run((tx) => this.release(tx, jobId, claim.attempt)).catch(() => undefined);
+      await this.database.uow
+        .run((tx) => this.release(tx, jobId, claim.attempt))
+        .catch(() => undefined);
       throw error;
     } finally {
       clearInterval(heartbeat);
@@ -129,7 +147,13 @@ export class AssemblyRenderJob {
     }
   }
 
-  private async work(jobId: string, claim: Claim, directory: string, signal: AbortSignal, log: JobLog): Promise<AssemblyRenderOutcome> {
+  private async work(
+    jobId: string,
+    claim: Claim,
+    directory: string,
+    signal: AbortSignal,
+    log: JobLog,
+  ): Promise<AssemblyRenderOutcome> {
     const clips = await this.database.uow.run((tx) => this.clipsOf(tx, jobId));
     if (clips.length === 0 || clips.some((clip) => clip.storageKey === null)) {
       return this.fail(jobId, claim, 'input_unavailable', ASSEMBLY_MESSAGES.input_unavailable, log);
@@ -140,22 +164,43 @@ export class AssemblyRenderJob {
       await this.fetch(clip.storageKey as string, file);
       files.push(file);
     }
-    if (!(await this.database.uow.run((tx) => this.advance(tx, jobId, claim.attempt, 'fetching', 'rendering')))) return 'ignored';
+    if (
+      !(await this.database.uow.run((tx) =>
+        this.advance(tx, jobId, claim.attempt, 'fetching', 'rendering'),
+      ))
+    )
+      return 'ignored';
 
     const output = join(directory, 'final.mp4');
     let reported = 0;
     await this.renderer.render({ clips: files, openingFrame: null, output, signal }, (progress) => {
       if (progress.fraction - reported >= 0.25 || progress.fraction === 1) {
         reported = progress.fraction;
-        log.info({ module: 'production', outcome: 'ok', jobId, progress: Math.round(progress.fraction * 100) }, 'assembly render progress');
+        log.info(
+          {
+            module: 'production',
+            outcome: 'ok',
+            jobId,
+            progress: Math.round(progress.fraction * 100),
+          },
+          'assembly render progress',
+        );
       }
     });
-    if (!(await this.database.uow.run((tx) => this.advance(tx, jobId, claim.attempt, 'rendering', 'saving')))) return 'ignored';
+    if (
+      !(await this.database.uow.run((tx) =>
+        this.advance(tx, jobId, claim.attempt, 'rendering', 'saving'),
+      ))
+    )
+      return 'ignored';
 
     const storageKey = campaignKey(claim.ownerId, claim.campaignId, 'final', jobId, 'mp4');
     const bytes = await this.put(storageKey, output);
-    if (bytes === 'too_large') return this.fail(jobId, claim, 'render_failed', ASSEMBLY_MESSAGES.size, log);
-    const done = await this.database.uow.run((tx) => this.complete(tx, jobId, claim, storageKey, bytes));
+    if (bytes === 'too_large')
+      return this.fail(jobId, claim, 'render_failed', ASSEMBLY_MESSAGES.size, log);
+    const done = await this.database.uow.run((tx) =>
+      this.complete(tx, jobId, claim, storageKey, bytes),
+    );
     if (done === 'refused') {
       await this.discard(storageKey, jobId, log);
       return 'ignored';
@@ -169,7 +214,8 @@ export class AssemblyRenderJob {
     try {
       body = await this.storage.get(storageKey);
     } catch (error) {
-      if ((error as { name?: string }).name === 'StorageNotFound') throw new AssemblyRenderError('input_unavailable', 'a clip is missing from storage');
+      if ((error as { name?: string }).name === 'StorageNotFound')
+        throw new AssemblyRenderError('input_unavailable', 'a clip is missing from storage');
       throw error;
     }
     try {
@@ -183,7 +229,8 @@ export class AssemblyRenderJob {
   private async put(storageKey: string, file: string): Promise<number | 'too_large'> {
     const body = createReadStream(file);
     try {
-      return (await this.storage.put(storageKey, body, 'video/mp4', this.config.outputMaxBytes)).bytes;
+      return (await this.storage.put(storageKey, body, 'video/mp4', this.config.outputMaxBytes))
+        .bytes;
     } catch (error) {
       const name = (error as { name?: string }).name;
       if (name === 'StorageTooLarge') return 'too_large';
@@ -200,18 +247,27 @@ export class AssemblyRenderJob {
   private async discard(storageKey: string, jobId: string, log: JobLog): Promise<void> {
     // Only an output nobody registered is removed; the key is the job's own, so a run that won it keeps its object.
     const registered = await this.database.uow.run(async (tx) => {
-      const [row] = await tx.select({ id: mediaObjects.id }).from(mediaObjects).where(eq(mediaObjects.storageKey, storageKey));
+      const [row] = await tx
+        .select({ id: mediaObjects.id })
+        .from(mediaObjects)
+        .where(eq(mediaObjects.storageKey, storageKey));
       return row !== undefined;
     });
     if (registered) return;
     const open = await this.database.uow.run(async (tx) => {
-      const [row] = await tx.select({ state: assemblyJobs.state }).from(assemblyJobs).where(eq(assemblyJobs.id, jobId));
+      const [row] = await tx
+        .select({ state: assemblyJobs.state })
+        .from(assemblyJobs)
+        .where(eq(assemblyJobs.id, jobId));
       return row !== undefined && ['fetching', 'rendering', 'saving'].includes(row.state);
     });
     if (open) return;
     await this.storage.delete(storageKey).catch(() => {
       // The campaign deletion run removes whatever is left under the campaign's prefix.
-      log.warn({ module: 'production', outcome: 'error', jobId }, 'discarded assembly output could not be deleted');
+      log.warn(
+        { module: 'production', outcome: 'error', jobId },
+        'discarded assembly output could not be deleted',
+      );
     });
   }
 
@@ -227,7 +283,8 @@ export class AssemblyRenderJob {
             and (state in ('pending', 'queued') or (state in ${ACTIVE} and coalesce(lease_until, '-infinity') < now()))
           returning owner_id::text as owner_id, campaign_id::text as campaign_id, attempts`,
     );
-    const row = taken.rows[0] as { owner_id: string; campaign_id: string; attempts: number } | undefined;
+    const row = taken.rows[0] as
+      { owner_id: string; campaign_id: string; attempts: number } | undefined;
     if (row === undefined) {
       const spent = await tx.execute(
         sql`update assembly_jobs set state = 'failed', cause_class = 'render_failed', cause_message = ${ASSEMBLY_MESSAGES.interrupted},
@@ -238,10 +295,23 @@ export class AssemblyRenderJob {
       );
       return spent.rows.length === 1 ? 'failed' : 'ignored';
     }
-    const claim: Claim = { ownerId: row.owner_id, campaignId: row.campaign_id, attempt: row.attempts };
-    const [campaign] = await tx.select({ id: campaigns.id }).from(campaigns).where(and(eq(campaigns.id, claim.campaignId), eq(campaigns.state, 'active')));
+    const claim: Claim = {
+      ownerId: row.owner_id,
+      campaignId: row.campaign_id,
+      attempt: row.attempts,
+    };
+    const [campaign] = await tx
+      .select({ id: campaigns.id })
+      .from(campaigns)
+      .where(and(eq(campaigns.id, claim.campaignId), eq(campaigns.state, 'active')));
     if (campaign === undefined) {
-      await this.finish(tx, jobId, claim.attempt, 'cancelled_campaign_deleted', ASSEMBLY_MESSAGES.cancelled);
+      await this.finish(
+        tx,
+        jobId,
+        claim.attempt,
+        'cancelled_campaign_deleted',
+        ASSEMBLY_MESSAGES.cancelled,
+      );
       return 'failed';
     }
     return claim;
@@ -253,7 +323,10 @@ export class AssemblyRenderJob {
       .select({ position: assemblyClips.position, storageKey: mediaObjects.storageKey })
       .from(assemblyClips)
       .innerJoin(videoJobs, eq(videoJobs.id, assemblyClips.videoJobId))
-      .leftJoin(mediaObjects, and(eq(mediaObjects.id, videoJobs.outputMediaId), eq(mediaObjects.state, 'ready')))
+      .leftJoin(
+        mediaObjects,
+        and(eq(mediaObjects.id, videoJobs.outputMediaId), eq(mediaObjects.state, 'ready')),
+      )
       .where(eq(assemblyClips.assemblyJobId, jobId))
       .orderBy(asc(assemblyClips.position));
     return rows;
@@ -274,7 +347,13 @@ export class AssemblyRenderJob {
     );
   }
 
-  private async advance(tx: DbTx, jobId: string, attempt: number, from: string, to: string): Promise<boolean> {
+  private async advance(
+    tx: DbTx,
+    jobId: string,
+    attempt: number,
+    from: string,
+    to: string,
+  ): Promise<boolean> {
     const moved = await tx.execute(
       sql`update assembly_jobs set state = ${to}, lease_until = now() + make_interval(secs => ${this.config.leaseSec}), updated_at = now()
           where id = ${jobId} and attempts = ${attempt} and state = ${from} returning id`,
@@ -286,13 +365,25 @@ export class AssemblyRenderJob {
    * Guard after the put: this claim still holds the job in `saving` and the campaign is active; then the output is
    * registered (quota and row) and the job is `done` with it, in this one transaction.
    */
-  private async complete(tx: DbTx, jobId: string, claim: Claim, storageKey: string, bytes: number): Promise<'done' | 'refused'> {
+  private async complete(
+    tx: DbTx,
+    jobId: string,
+    claim: Claim,
+    storageKey: string,
+    bytes: number,
+  ): Promise<'done' | 'refused'> {
     const held = await tx.execute(
       sql`select j.id from assembly_jobs j join campaigns c on c.id = j.campaign_id
           where j.id = ${jobId} and j.attempts = ${claim.attempt} and j.state = 'saving' and c.state = 'active' for update of j`,
     );
     if (held.rows.length === 0) return 'refused';
-    await this.media.registerFinal(tx, { id: jobId, ownerId: claim.ownerId, campaignId: claim.campaignId, storageKey, bytes });
+    await this.media.registerFinal(tx, {
+      id: jobId,
+      ownerId: claim.ownerId,
+      campaignId: claim.campaignId,
+      storageKey,
+      bytes,
+    });
     await tx.execute(
       sql`update assembly_jobs set state = 'done', output_media_id = ${jobId}, cause_class = null, cause_message = null, lease_until = null, updated_at = now()
           where id = ${jobId}`,
@@ -300,7 +391,13 @@ export class AssemblyRenderJob {
     return 'done';
   }
 
-  private async finish(tx: DbTx, jobId: string, attempt: number, cause: Cause, message: string): Promise<boolean> {
+  private async finish(
+    tx: DbTx,
+    jobId: string,
+    attempt: number,
+    cause: Cause,
+    message: string,
+  ): Promise<boolean> {
     const moved = await tx.execute(
       sql`update assembly_jobs set state = 'failed', cause_class = ${cause}, cause_message = ${message}, lease_until = null, updated_at = now()
           where id = ${jobId} and attempts = ${attempt} and state in ${ACTIVE} returning id`,
@@ -308,9 +405,21 @@ export class AssemblyRenderJob {
     return moved.rows.length === 1;
   }
 
-  private async fail(jobId: string, claim: Claim, cause: Cause, message: string, log: JobLog): Promise<AssemblyRenderOutcome> {
-    const failed = await this.database.uow.run((tx) => this.finish(tx, jobId, claim.attempt, cause, message));
-    if (failed) log.warn({ module: 'production', outcome: 'error', jobId, causeClass: cause }, 'assembly render failed');
+  private async fail(
+    jobId: string,
+    claim: Claim,
+    cause: Cause,
+    message: string,
+    log: JobLog,
+  ): Promise<AssemblyRenderOutcome> {
+    const failed = await this.database.uow.run((tx) =>
+      this.finish(tx, jobId, claim.attempt, cause, message),
+    );
+    if (failed)
+      log.warn(
+        { module: 'production', outcome: 'error', jobId, causeClass: cause },
+        'assembly render failed',
+      );
     return failed ? 'failed' : 'ignored';
   }
 }

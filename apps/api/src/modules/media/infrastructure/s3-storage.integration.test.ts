@@ -1,10 +1,6 @@
 import { Readable } from 'node:stream';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  StorageKeyExists,
-  StorageNotFound,
-  StorageTooLarge,
-} from '../domain/storage.js';
+import { StorageKeyExists, StorageNotFound, StorageTooLarge } from '../domain/storage.js';
 import type { StoragePort } from '../domain/storage.js';
 import { MinioStorage, R2Storage } from './s3-storage.js';
 import { startTestBucket } from './test-support.js';
@@ -43,14 +39,20 @@ afterAll(async () => {
 describe('MinIO adapter contract', () => {
   it('puts conditionally: a second put to a taken key fails and the first bytes stay', async () => {
     const key = `q/${run}/cond`;
-    await expect(storage.put(key, Buffer.from('first'), 'image/png', 100)).resolves.toEqual({ bytes: 5 });
-    await expect(storage.put(key, Readable.from(['second']), 'image/png', 100)).rejects.toBeInstanceOf(StorageKeyExists);
+    await expect(storage.put(key, Buffer.from('first'), 'image/png', 100)).resolves.toEqual({
+      bytes: 5,
+    });
+    await expect(
+      storage.put(key, Readable.from(['second']), 'image/png', 100),
+    ).rejects.toBeInstanceOf(StorageKeyExists);
     expect(await body(await storage.get(key))).toBe('first');
   });
 
   it('stores nothing when the body is over maxBytes', async () => {
     const key = `q/${run}/big`;
-    await expect(storage.put(key, Readable.from([Buffer.alloc(30)]), 'image/png', 20)).rejects.toBeInstanceOf(StorageTooLarge);
+    await expect(
+      storage.put(key, Readable.from([Buffer.alloc(30)]), 'image/png', 20),
+    ).rejects.toBeInstanceOf(StorageTooLarge);
     await expect(storage.get(key)).rejects.toBeInstanceOf(StorageNotFound);
   });
 
@@ -63,16 +65,20 @@ describe('MinIO adapter contract', () => {
   });
 
   it('deletes a prefix in batches and leaves a sibling prefix alone', async () => {
-    for (let i = 0; i < 25; i++) await storage.put(`u/${run}-a/media/${String(i)}`, Buffer.from('x'), 'image/png', 10);
+    for (let i = 0; i < 25; i++)
+      await storage.put(`u/${run}-a/media/${String(i)}`, Buffer.from('x'), 'image/png', 10);
     await storage.put(`u/${run}-b/media/keep`, Buffer.from('y'), 'image/png', 10);
     await expect(storage.deletePrefix(`u/${run}-a/`, 10)).resolves.toBe(25);
     expect((await storage.list(`u/${run}-a/`)).objects).toEqual([]);
-    expect((await storage.list(`u/${run}-b/`)).objects.map((o) => o.key)).toEqual([`u/${run}-b/media/keep`]);
+    expect((await storage.list(`u/${run}-b/`)).objects.map((o) => o.key)).toEqual([
+      `u/${run}-b/media/keep`,
+    ]);
     await expect(storage.deletePrefix(`u/${run}-a/`, 10)).resolves.toBe(0);
   });
 
   it('lists a prefix page by page with sizes', async () => {
-    for (const n of ['1', '2', '3']) await storage.put(`smoke/${run}/${n}`, Buffer.alloc(Number(n), 1), 'image/png', 10);
+    for (const n of ['1', '2', '3'])
+      await storage.put(`smoke/${run}/${n}`, Buffer.alloc(Number(n), 1), 'image/png', 10);
     const first = await storage.list(`smoke/${run}/`);
     expect(first.objects.map((o) => [o.key, o.bytes])).toEqual([
       [`smoke/${run}/1`, 1],
@@ -89,7 +95,9 @@ describe('MinIO adapter contract', () => {
     const url = await storage.presignGet(key, 60, { type: 'attachment', filename: 'photo.png' });
     const ok = await fetch(url);
     expect(ok.status).toBe(200);
-    expect(ok.headers.get('content-disposition')).toBe(`attachment; filename="photo.png"; filename*=UTF-8''photo.png`);
+    expect(ok.headers.get('content-disposition')).toBe(
+      `attachment; filename="photo.png"; filename*=UTF-8''photo.png`,
+    );
     expect(await ok.text()).toBe('payload');
     // The signature covers this key only: the sibling, the prefix and a bucket listing are refused.
     const sibling = new URL(url);
@@ -119,7 +127,10 @@ describe('MinIO adapter contract', () => {
     expect((await fetch(`${anonymous}/${key}`)).status).toBe(403);
     expect((await fetch(`${anonymous}?list-type=2&prefix=u/`)).status).toBe(403);
     // MinIO may close the connection on an unsigned upload before answering; a refused write is either way.
-    const write = await fetch(`${anonymous}/${key}`, { method: 'PUT', body: 'x' }).then((r) => r.status, () => 403);
+    const write = await fetch(`${anonymous}/${key}`, { method: 'PUT', body: 'x' }).then(
+      (r) => r.status,
+      () => 403,
+    );
     expect(write).toBe(403);
     expect(await body(await storage.get(key))).toBe('private');
   });
@@ -136,7 +147,9 @@ describe.skipIf(r2 === undefined)('R2 adapter contract (TC-MED-30)', () => {
     });
     const key = `smoke/${run}`;
     await real.put(key, Buffer.from('r2'), 'image/png', 10);
-    await expect(real.put(key, Buffer.from('r2'), 'image/png', 10)).rejects.toBeInstanceOf(StorageKeyExists);
+    await expect(real.put(key, Buffer.from('r2'), 'image/png', 10)).rejects.toBeInstanceOf(
+      StorageKeyExists,
+    );
     const url = await real.presignGet(key, 60, { type: 'inline' });
     expect(await (await fetch(url)).text()).toBe('r2');
     await real.delete(key);

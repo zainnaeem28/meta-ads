@@ -6,12 +6,7 @@ import { Button } from '../cmp-003';
 import { Badge } from '../cmp-007';
 import type { BadgeVariant } from '../cmp-007';
 import { Progress } from '../cmp-008';
-import {
-  UPLOAD_ACCEPT,
-  formatBytes,
-  validateImageFile,
-  type UploadStatus,
-} from './rules';
+import { UPLOAD_ACCEPT, formatBytes, validateImageFile, type UploadStatus } from './rules';
 
 export interface UploadItem {
   id: string;
@@ -130,7 +125,11 @@ export function FileUpload({
           e.target.value = '';
         }}
       />
-      <ul aria-live="polite" aria-label="Uploaded files" className="m-0 flex list-none flex-col gap-2 p-0">
+      <ul
+        aria-live="polite"
+        aria-label="Uploaded files"
+        className="m-0 flex list-none flex-col gap-2 p-0"
+      >
         {items.map((item) => {
           const badge = BADGE[item.status];
           const statusText =
@@ -150,7 +149,13 @@ export function FileUpload({
             >
               <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-muted text-muted-foreground">
                 {item.previewUrl && item.status !== 'rejected' ? (
-                  <img src={item.previewUrl} alt="" width={56} height={56} className="size-full object-cover" />
+                  <img
+                    src={item.previewUrl}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className="size-full object-cover"
+                  />
                 ) : (
                   <Icon name={item.status === 'rejected' ? 'file-warning' : 'image'} size={24} />
                 )}
@@ -162,7 +167,9 @@ export function FileUpload({
                   <Progress label={`Uploading ${item.name}`} value={item.progress ?? 0} />
                 ) : null}
                 {item.status === 'rejected' ? (
-                  <span className="text-ui text-destructive">{item.reason ?? 'The file could not be used.'}</span>
+                  <span className="text-ui text-destructive">
+                    {item.reason ?? 'The file could not be used.'}
+                  </span>
                 ) : null}
                 <span className="sr-only">{statusText}</span>
               </div>

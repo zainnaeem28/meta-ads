@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import { OperatorShell, type OperatorShellProps } from './OperatorShell';
 
-const SAMPLE_TOASTS = [
-  { id: 't1', variant: 'success' as const, message: 'Brief saved.' },
-];
+const SAMPLE_TOASTS = [{ id: 't1', variant: 'success' as const, message: 'Brief saved.' }];
 
 /** Gallery-only: one shell in a fixed frame with sample page content and a dismissible toast. */
 export function ShellDemo(props: Partial<OperatorShellProps>) {

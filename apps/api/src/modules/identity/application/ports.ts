@@ -26,7 +26,13 @@ export interface UserStore {
   findBySubject(db: Db, idpSubject: string): Promise<UserRecord | undefined>;
   insertIfAbsent(
     db: Db,
-    user: { id: string; idpSubject: string; email: string; role?: 'user' | 'admin'; linkedVia: string },
+    user: {
+      id: string;
+      idpSubject: string;
+      email: string;
+      role?: 'user' | 'admin';
+      linkedVia: string;
+    },
   ): Promise<UserRecord | undefined>;
   countActiveAdmins(db: Db): Promise<number>;
 }

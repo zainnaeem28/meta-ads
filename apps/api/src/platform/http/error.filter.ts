@@ -51,7 +51,11 @@ const FASTIFY_CODE: Readonly<Record<string, ErrorCodeValue>> = {
 const TIMEOUT_SQLSTATES = new Set(['57014', '55P03']);
 
 function isDatabaseTimeout(error: unknown): boolean {
-  for (let depth = 0, current: unknown = error; depth < 5 && typeof current === 'object' && current !== null; depth++) {
+  for (
+    let depth = 0, current: unknown = error;
+    depth < 5 && typeof current === 'object' && current !== null;
+    depth++
+  ) {
     const { code, cause } = current as { code?: unknown; cause?: unknown };
     if (typeof code === 'string' && TIMEOUT_SQLSTATES.has(code)) return true;
     current = cause;
@@ -68,8 +72,13 @@ interface Outcome {
 }
 
 function fromStatus(status: number, log: unknown): Outcome {
-  const code: ErrorCodeValue = STATUS_CODE[status] ?? (status >= 500 ? 'internal_error' : 'validation_failed');
-  return { code, message: GENERIC_MESSAGE[code] ?? GENERIC_MESSAGE['internal_error'] ?? '', ...(ERROR_STATUS[code] >= 500 ? { log } : {}) };
+  const code: ErrorCodeValue =
+    STATUS_CODE[status] ?? (status >= 500 ? 'internal_error' : 'validation_failed');
+  return {
+    code,
+    message: GENERIC_MESSAGE[code] ?? GENERIC_MESSAGE['internal_error'] ?? '',
+    ...(ERROR_STATUS[code] >= 500 ? { log } : {}),
+  };
 }
 
 export function classify(exception: unknown): Outcome {
@@ -81,7 +90,11 @@ export function classify(exception: unknown): Outcome {
     };
   }
   if (isDatabaseTimeout(exception)) {
-    return { code: 'service_unavailable', message: GENERIC_MESSAGE['service_unavailable'] ?? '', log: exception };
+    return {
+      code: 'service_unavailable',
+      message: GENERIC_MESSAGE['service_unavailable'] ?? '',
+      log: exception,
+    };
   }
   if (exception instanceof HttpException) return fromStatus(exception.getStatus(), exception);
   if (typeof exception === 'object' && exception !== null) {
@@ -89,11 +102,21 @@ export function classify(exception: unknown): Outcome {
     if (typeof code === 'string' && FASTIFY_CODE[code] !== undefined) {
       return fromStatus(ERROR_STATUS[FASTIFY_CODE[code]], exception);
     }
-    if (typeof statusCode === 'number' && statusCode >= 400 && statusCode <= 599 && typeof code === 'string' && code.startsWith('FST_')) {
+    if (
+      typeof statusCode === 'number' &&
+      statusCode >= 400 &&
+      statusCode <= 599 &&
+      typeof code === 'string' &&
+      code.startsWith('FST_')
+    ) {
       return fromStatus(statusCode, exception);
     }
   }
-  return { code: 'internal_error', message: GENERIC_MESSAGE['internal_error'] ?? '', log: exception };
+  return {
+    code: 'internal_error',
+    message: GENERIC_MESSAGE['internal_error'] ?? '',
+    log: exception,
+  };
 }
 
 /** The one place an error becomes a response: registry status, error envelope, 5xx logged once. */
@@ -111,7 +134,12 @@ export class ErrorFilter implements ExceptionFilter {
       const name = outcome.log instanceof Error ? outcome.log.name : typeof outcome.log;
       const message = outcome.log instanceof Error ? `: ${outcome.log.message.slice(0, 300)}` : '';
       this.logger.error(
-        { requestId: request.id, route: request.routeOptions?.url ?? 'unmatched', status, code: outcome.code },
+        {
+          requestId: request.id,
+          route: request.routeOptions?.url ?? 'unmatched',
+          status,
+          code: outcome.code,
+        },
         `unhandled error ${name}${message}`,
       );
     }

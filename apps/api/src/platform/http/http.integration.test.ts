@@ -63,8 +63,15 @@ class DbController {
 
   @Get('items')
   async items(
-    @Query(new ZodValidationPipe(z.object({ limit: z.coerce.number().int().min(1).max(50), cursor: z.string().optional() })))
-    q: { limit: number; cursor?: string },
+    @Query(
+      new ZodValidationPipe(
+        z.object({ limit: z.coerce.number().int().min(1).max(50), cursor: z.string().optional() }),
+      ),
+    )
+    q: {
+      limit: number;
+      cursor?: string;
+    },
   ): Promise<unknown> {
     const scope = { owner: OWNER, filters: { sort: 'seq' } };
     const after = q.cursor === undefined ? -1 : Number(decodeCursor(KEY, q.cursor, scope));
@@ -128,7 +135,9 @@ const base = `http://127.0.0.1:${PORT}`;
 
 describe('main.api.js (real entry point)', () => {
   it('answers an unknown route with the 404 envelope and the request ID of the header', async () => {
-    const res = await fetch(`${base}/nowhere`, { headers: { 'X-Request-ID': 'req-integration-1' } });
+    const res = await fetch(`${base}/nowhere`, {
+      headers: { 'X-Request-ID': 'req-integration-1' },
+    });
     const body = (await res.json()) as Json;
     expect(res.status).toBe(404);
     expect(body['success']).toBe(false);
@@ -138,17 +147,28 @@ describe('main.api.js (real entry point)', () => {
   });
 
   it('answers a method with no route 405 with Allow, before the body is read (TASK-023)', async () => {
-    const bad = await fetch(`${base}/health/live`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{nope' });
+    const bad = await fetch(`${base}/health/live`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{nope',
+    });
     expect(bad.status).toBe(405);
     expect(bad.headers.get('allow')).toBe('GET, HEAD');
     expect(((await bad.json()) as Json)['error']['code']).toBe('method_not_allowed');
-    const unknown = await fetch(`${base}/nope`, { method: 'POST', headers: { 'content-type': 'application/xml' }, body: '<a/>' });
+    const unknown = await fetch(`${base}/nope`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/xml' },
+      body: '<a/>',
+    });
     expect(unknown.status).toBe(404);
     expect(((await unknown.json()) as Json)['error']['code']).toBe('not_found');
   });
 
   it('leaves the liveness probe raw', async () => {
-    expect(await (await fetch(`${base}/health/live`)).json()).toMatchObject({ success: true, data: { status: 'ok' } });
+    expect(await (await fetch(`${base}/health/live`)).json()).toMatchObject({
+      success: true,
+      data: { status: 'ok' },
+    });
   });
 });
 
@@ -172,11 +192,19 @@ describe('real PostgreSQL through the filter and pipe', () => {
     expect(first.data.map((r: { seq: number }) => r.seq)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(first.metaData.pagination).toMatchObject({ hasNextPage: true, returnedCount: 10 });
     const cursor = encodeURIComponent(first.metaData.pagination.nextCursor);
-    const second = JSON.parse((await app.inject({ method: 'GET', url: `/db/items?limit=10&cursor=${cursor}` })).body);
+    const second = JSON.parse(
+      (await app.inject({ method: 'GET', url: `/db/items?limit=10&cursor=${cursor}` })).body,
+    );
     expect(second.data).toEqual([{ seq: 11 }]);
     expect(second.metaData.pagination).toMatchObject({ hasNextPage: false, nextCursor: null });
-    const bad = await app.inject({ method: 'GET', url: '/db/items?limit=10&cursor=tampered.value' });
+    const bad = await app.inject({
+      method: 'GET',
+      url: '/db/items?limit=10&cursor=tampered.value',
+    });
     expect(bad.statusCode).toBe(400);
-    expect(JSON.parse(bad.body).error.details[0]).toMatchObject({ field: 'cursor', code: 'cursor_invalid' });
+    expect(JSON.parse(bad.body).error.details[0]).toMatchObject({
+      field: 'cursor',
+      code: 'cursor_invalid',
+    });
   });
 });

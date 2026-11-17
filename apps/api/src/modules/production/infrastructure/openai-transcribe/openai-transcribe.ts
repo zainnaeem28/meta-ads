@@ -1,7 +1,12 @@
 import { randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { assertNoEgress } from '../../../../platform/db/index.js';
-import { EGRESS, EgressError, classifyEgressFailure, classifyProviderFailure } from '../../../../platform/egress/index.js';
+import {
+  EGRESS,
+  EgressError,
+  classifyEgressFailure,
+  classifyProviderFailure,
+} from '../../../../platform/egress/index.js';
 import type { Egress } from '../../../../platform/egress/index.js';
 import { QC_CONFIG } from '../../application/qc-ports.js';
 import type { QcConfig, Transcript, TranscribePort } from '../../application/qc-ports.js';
@@ -20,7 +25,9 @@ const MODEL = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
 
 function errorCodeOf(body: Buffer): string | undefined {
   try {
-    const code = ((JSON.parse(body.toString('utf8')) as unknown) as { error?: { code?: unknown } } | null)?.error?.code;
+    const code = (
+      JSON.parse(body.toString('utf8')) as unknown as { error?: { code?: unknown } } | null
+    )?.error?.code;
     return typeof code === 'string' ? code : undefined;
   } catch {
     return undefined;
@@ -28,12 +35,24 @@ function errorCodeOf(body: Buffer): string | undefined {
 }
 
 /** A `multipart/form-data` body: plain fields, then the audio as the `file` part. */
-export function multipart(boundary: string, fields: Readonly<Record<string, string>>, file: { name: string; type: string; bytes: Buffer }): Buffer {
+export function multipart(
+  boundary: string,
+  fields: Readonly<Record<string, string>>,
+  file: { name: string; type: string; bytes: Buffer },
+): Buffer {
   const parts: Buffer[] = [];
   for (const [name, value] of Object.entries(fields)) {
-    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`));
+    parts.push(
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`,
+      ),
+    );
   }
-  parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${file.name}"\r\nContent-Type: ${file.type}\r\n\r\n`));
+  parts.push(
+    Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${file.name}"\r\nContent-Type: ${file.type}\r\n\r\n`,
+    ),
+  );
   parts.push(file.bytes, Buffer.from(`\r\n--${boundary}--\r\n`));
   return Buffer.concat(parts);
 }
@@ -51,11 +70,20 @@ export class OpenAiTranscribe implements TranscribePort {
     @Inject(QC_CONFIG) private readonly config: Pick<QcConfig, 'transcribeModel' | 'transcribeUrl'>,
   ) {}
 
-  async transcribe(credential: ProviderCredential, audio: Buffer, language: 'en'): Promise<Transcript> {
+  async transcribe(
+    credential: ProviderCredential,
+    audio: Buffer,
+    language: 'en',
+  ): Promise<Transcript> {
     assertNoEgress('openai transcription');
-    if (!MODEL.test(this.config.transcribeModel)) throw new RangeError('the transcription model name is not acceptable');
+    if (!MODEL.test(this.config.transcribeModel))
+      throw new RangeError('the transcription model name is not acceptable');
     const boundary = `----qc${randomBytes(12).toString('hex')}`;
-    const body = multipart(boundary, { model: this.config.transcribeModel, language, response_format: 'json' }, { name: 'clip.wav', type: 'audio/wav', bytes: audio });
+    const body = multipart(
+      boundary,
+      { model: this.config.transcribeModel, language, response_format: 'json' },
+      { name: 'clip.wav', type: 'audio/wav', bytes: audio },
+    );
     let response: Awaited<ReturnType<Egress['fetch']>>;
     try {
       response = await this.egress.fetch(PROVIDER, {
@@ -77,7 +105,11 @@ export class OpenAiTranscribe implements TranscribePort {
     }
     if (response.status < 200 || response.status >= 300) {
       throw new ProviderCallFailed(
-        classifyProviderFailure(PROVIDER_NAME, { kind: 'http', status: response.status, errorCode: errorCodeOf(response.body) }),
+        classifyProviderFailure(PROVIDER_NAME, {
+          kind: 'http',
+          status: response.status,
+          errorCode: errorCodeOf(response.body),
+        }),
         response.status,
       );
     }

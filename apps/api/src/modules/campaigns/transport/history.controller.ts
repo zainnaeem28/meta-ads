@@ -2,7 +2,13 @@ import { Controller, Get, Inject, Param, Query } from '@nestjs/common';
 import { z } from 'zod';
 import { CurrentActor } from '../../../platform/http/auth.guard.js';
 import type { ActorContext } from '../../../platform/http/index.js';
-import { DomainError, PageResult, buildPage, decodeCursor, parseWith } from '../../../platform/http/index.js';
+import {
+  DomainError,
+  PageResult,
+  buildPage,
+  decodeCursor,
+  parseWith,
+} from '../../../platform/http/index.js';
 import { Scope } from '../../../platform/http/scope-registry.js';
 import type { HistoryPosition } from '../application/history-ports.js';
 import { HistoryService } from '../application/history.service.js';
@@ -82,7 +88,8 @@ function parsePosition(key: string): HistoryPosition {
   }
   if (!Array.isArray(parsed) || parsed.length !== 2) throw bad();
   const [updatedAt, id] = parsed as unknown[];
-  if (typeof updatedAt !== 'string' || typeof id !== 'string' || !Id.safeParse(id).success) throw bad();
+  if (typeof updatedAt !== 'string' || typeof id !== 'string' || !Id.safeParse(id).success)
+    throw bad();
   if (Number.isNaN(Date.parse(updatedAt))) throw bad();
   return { updatedAt, id };
 }
@@ -109,9 +116,14 @@ export class HistoryController {
     const ownerId = owner(actor);
     const query = parseWith(ListQuery, rawQuery);
     // A cursor holds for one search and one filter only: changing either needs a new first page.
-    const scope = { owner: ownerId, filters: { list: 'campaigns', q: query.q ?? null, filter: query.filter } };
+    const scope = {
+      owner: ownerId,
+      filters: { list: 'campaigns', q: query.q ?? null, filter: query.filter },
+    };
     const after =
-      query.cursor === undefined ? undefined : parsePosition(decodeCursor(this.cursorKey, query.cursor, scope));
+      query.cursor === undefined
+        ? undefined
+        : parsePosition(decodeCursor(this.cursorKey, query.cursor, scope));
     const rows = await this.history.list(ownerId, query.filter, query.q, query.limit + 1, after);
     const page = buildPage(
       rows,
@@ -124,7 +136,10 @@ export class HistoryController {
   }
 
   @Get(':campaignId')
-  async get(@CurrentActor() actor: ActorContext | undefined, @Param() rawParams: unknown): Promise<CampaignView> {
+  async get(
+    @CurrentActor() actor: ActorContext | undefined,
+    @Param() rawParams: unknown,
+  ): Promise<CampaignView> {
     const { campaignId } = parseWith(Params, rawParams);
     return detail(await this.history.get(owner(actor), campaignId));
   }

@@ -7,7 +7,11 @@ export const UPLOAD_STATUSES = ['uploading', 'processing', 'ready', 'rejected'] 
 export type UploadStatus = (typeof UPLOAD_STATUSES)[number];
 
 /** Returns the reason a file cannot be uploaded, or null when it can. */
-export function validateImageFile(file: { name: string; type: string; size: number }): string | null {
+export function validateImageFile(file: {
+  name: string;
+  type: string;
+  size: number;
+}): string | null {
   if (!(UPLOAD_ACCEPT_TYPES as readonly string[]).includes(file.type)) {
     return 'Not supported. Use a JPEG, PNG, WebP or GIF image.';
   }

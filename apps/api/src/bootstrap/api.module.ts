@@ -89,9 +89,14 @@ function apiModule(
   const brief =
     config.DATABASE_URL === undefined
       ? undefined
-      : BriefModule.register(process.env, media === undefined || usage === undefined ? undefined : { media, usage });
+      : BriefModule.register(
+          process.env,
+          media === undefined || usage === undefined ? undefined : { media, usage },
+        );
   const production =
-    usage === undefined ? undefined : ProductionModule.register(process.env, { usage }, progress.bind);
+    usage === undefined
+      ? undefined
+      : ProductionModule.register(process.env, { usage }, progress.bind);
   @Module({
     imports: [
       logging.module(),
@@ -118,7 +123,9 @@ function apiModule(
       // Object storage and quota (REQ-020); needs the database and the bucket settings.
       ...(media === undefined ? [] : [media]),
       // Drafts CRUD (API-020 to API-023, API-025); needs the database and media (the product image).
-      ...(media === undefined ? [] : [CampaignsModule.register(process.env, { audit, media, progress: progress.reader })]),
+      ...(media === undefined
+        ? []
+        : [CampaignsModule.register(process.env, { audit, media, progress: progress.reader })]),
       // Spend caps, reservations, usage events and the start-up price check (REQ-019, TD-D39); needs the database.
       ...(usage === undefined ? [] : [usage]),
       // The claim-check rules (REQ-007, REQ-008): the rules file is checked at start-up; the rules are read from the database.
@@ -127,9 +134,13 @@ function apiModule(
       // Segment clips (API-060 to API-063) and the campaign progress reader; need the database, the job queue and usage.
       ...(production === undefined ? [] : [production]),
       // The usage report and its CSV (API-130, API-131); read-only over usage events, job counters and claim counts.
-      ...(brief === undefined || production === undefined ? [] : [ReportingModule.register(process.env, { audit, brief, production })]),
+      ...(brief === undefined || production === undefined
+        ? []
+        : [ReportingModule.register(process.env, { audit, brief, production })]),
       // Campaign deletion (API-042) and its worker run; needs the database, the job queue, usage and production.
-      ...(usage === undefined || production === undefined ? [] : [LifecycleModule.register(process.env, { audit, usage, production })]),
+      ...(usage === undefined || production === undefined
+        ? []
+        : [LifecycleModule.register(process.env, { audit, usage, production })]),
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),
     ],

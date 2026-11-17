@@ -43,7 +43,11 @@ export interface CampaignDeletionRepository {
   insertRun(tx: DbTx, run: { id: string; ownerId: string; campaignId: string }): Promise<void>;
   findRun(tx: DbTx, runId: string): Promise<DeletionRun | null>;
   /** The step is done: `step` becomes the next one (or the run is completed by `complete`), with the optional wait. */
-  advance(tx: DbTx, runId: string, patch: { step: number; remainingObjects?: number | null; notBeforeInMs?: number }): Promise<void>;
+  advance(
+    tx: DbTx,
+    runId: string,
+    patch: { step: number; remainingObjects?: number | null; notBeforeInMs?: number },
+  ): Promise<void>;
   /** A step failed: one more attempt and the class of the failure. */
   recordFailure(tx: DbTx, runId: string, errorClass: string): Promise<number>;
   markStuck(tx: DbTx, runId: string): Promise<void>;

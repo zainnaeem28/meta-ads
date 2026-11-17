@@ -134,7 +134,8 @@ export class S3Storage implements StoragePort {
         }),
       );
     } catch (error) {
-      if (statusOf(error) === 412 || nameOf(error) === 'PreconditionFailed') throw new StorageKeyExists();
+      if (statusOf(error) === 412 || nameOf(error) === 'PreconditionFailed')
+        throw new StorageKeyExists();
       throw new StorageUnavailable('put', { cause: error });
     }
     return { bytes: data.length };
@@ -142,7 +143,9 @@ export class S3Storage implements StoragePort {
 
   async get(key: string): Promise<Readable> {
     try {
-      const out = await this.client.send(new GetObjectCommand({ Bucket: this.config.bucket, Key: key }));
+      const out = await this.client.send(
+        new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
+      );
       if (out.Body === undefined) throw new StorageNotFound();
       return out.Body as Readable;
     } catch (error) {

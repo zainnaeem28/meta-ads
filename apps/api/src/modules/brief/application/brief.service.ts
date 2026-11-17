@@ -67,14 +67,22 @@ export class BriefService {
    * sends an accepted brief back to `draft`, raises each changed segment's revision and re-runs the claim rules on
    * those segments alone: issues whose rule stopped firing close, new findings are raised.
    */
-  async edit(ownerId: string, campaignId: string, expectedVersion: number, edits: readonly SegmentEdit[]): Promise<BriefView> {
+  async edit(
+    ownerId: string,
+    campaignId: string,
+    expectedVersion: number,
+    edits: readonly SegmentEdit[],
+  ): Promise<BriefView> {
     const rules = await this.rules.activeRules();
     return this.database.uow.run(async (tx) => {
       const brief = await this.repository.findBrief(tx, ownerId, campaignId, true);
       if (brief === null) throw notFound();
       if (brief.version !== expectedVersion) throw versionConflict();
       if (brief.state !== 'draft' && brief.state !== 'accepted') {
-        throw new DomainError('state_conflict', `The brief is ${brief.state} and cannot be edited now.`);
+        throw new DomainError(
+          'state_conflict',
+          `The brief is ${brief.state} and cannot be edited now.`,
+        );
       }
       const segments = await this.repository.segments(tx, brief.id);
       const writes = this.changes(segments, edits);
@@ -117,7 +125,11 @@ export class BriefService {
           class: closedClass.get(issueId) ?? 'other',
           outcome: 'closed_by_edit' as const,
         })),
-        ...raised.map((issue) => ({ issueId: issue.id, class: issue.class, outcome: 'raised' as const })),
+        ...raised.map((issue) => ({
+          issueId: issue.id,
+          class: issue.class,
+          outcome: 'raised' as const,
+        })),
       ];
       await this.repository.recordEvents(tx, ownerId, brief.id, events);
       return this.view(tx, await this.repository.saveBrief(tx, brief.id, 'draft'));
@@ -136,37 +148,62 @@ export class BriefService {
       if (brief.version !== expectedVersion) throw versionConflict();
       if (brief.state === 'accepted') return this.view(tx, brief);
       if (brief.state !== 'draft') {
-        throw new DomainError('state_conflict', `The brief is ${brief.state} and cannot be accepted now.`);
+        throw new DomainError(
+          'state_conflict',
+          `The brief is ${brief.state} and cannot be accepted now.`,
+        );
       }
       const open = await this.repository.openIssueCount(tx, brief.id);
       if (open > 0) {
         throw new DomainError(
           'open_claim_issues',
           'Resolve the open claim issues before accepting the brief.',
-          [{ field: 'issues', code: 'open_claim_issues', message: `${String(open)} open claim issue(s) remain.` }],
+          [
+            {
+              field: 'issues',
+              code: 'open_claim_issues',
+              message: `${String(open)} open claim issue(s) remain.`,
+            },
+          ],
         );
       }
       return this.view(tx, await this.repository.saveBrief(tx, brief.id, 'accepted'));
     });
   }
 
-  private changes(segments: readonly SegmentRecord[], edits: readonly SegmentEdit[]): Map<string, SegmentWrite> {
+  private changes(
+    segments: readonly SegmentRecord[],
+    edits: readonly SegmentEdit[],
+  ): Map<string, SegmentWrite> {
     const writes = new Map<string, SegmentWrite>();
     const seen = new Set<number>();
     for (const edit of edits) {
-      if (seen.has(edit.position)) throw invalid('segments', 'duplicate_position', 'Each position may appear once.');
+      if (seen.has(edit.position))
+        throw invalid('segments', 'duplicate_position', 'Each position may appear once.');
       seen.add(edit.position);
       const segment = segments.find((candidate) => candidate.position === edit.position);
-      if (segment === undefined) throw invalid('segments', 'unknown_position', `Segment ${String(edit.position)} does not exist.`);
+      if (segment === undefined)
+        throw invalid(
+          'segments',
+          'unknown_position',
+          `Segment ${String(edit.position)} does not exist.`,
+        );
       if (segment.state !== 'active') {
-        throw new DomainError('state_conflict', `Segment ${String(edit.position)} is retired and cannot be edited.`);
+        throw new DomainError(
+          'state_conflict',
+          `Segment ${String(edit.position)} is retired and cannot be edited.`,
+        );
       }
       const dialogue = edit.dialogue ?? segment.dialogue;
       const prompt = edit.prompt ?? segment.prompt;
       if (dialogue === segment.dialogue && prompt === segment.prompt) continue;
       const wordCount = countWords(dialogue);
       if (wordCount > MAX_WORDS) {
-        throw invalid('dialogue', 'too_long', `The dialogue is limited to ${String(MAX_WORDS)} words.`);
+        throw invalid(
+          'dialogue',
+          'too_long',
+          `The dialogue is limited to ${String(MAX_WORDS)} words.`,
+        );
       }
       writes.set(segment.id, { id: segment.id, dialogue, prompt, wordCount });
     }
@@ -192,5 +229,7 @@ const existingOf = (issue: IssueRecord): ExistingIssue => ({
 });
 
 function invalid(field: string, code: string, message: string): DomainError {
-  return new DomainError('validation_failed', 'The request is not valid.', [{ field, code, message }]);
+  return new DomainError('validation_failed', 'The request is not valid.', [
+    { field, code, message },
+  ]);
 }

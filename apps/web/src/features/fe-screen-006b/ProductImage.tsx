@@ -53,13 +53,21 @@ const sleep = (ms: number, signal: AbortSignal) =>
 
 /** The reason text of a rejected image (API-031 `rejectReason`). */
 export const rejectText = (reason: string | null): string =>
-  (reason && (COPY.step2.rejected as Record<string, string>)[reason]) || COPY.step2.rejectedFallback;
+  (reason && (COPY.step2.rejected as Record<string, string>)[reason]) ||
+  COPY.step2.rejectedFallback;
 
 /**
  * Step 2 image part of SCREEN-006: CMP-021 drop zone with the upload (API-030), the processing state polled with
  * API-031, and the product-only analysis (API-035, API-036) the person can copy into the description.
  */
-export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescription, onUnauthenticated, disabled }: ProductImageProps) {
+export function ProductImage({
+  mediaId,
+  onMediaChange,
+  onBusyChange,
+  onUseDescription,
+  onUnauthenticated,
+  disabled,
+}: ProductImageProps) {
   const [item, setItem] = useState<UploadItem | null>(null);
   const [problem, setProblem] = useState<unknown>(null);
   const [analysis, setAnalysis] = useState<Analysis>({ phase: 'none' });
@@ -86,26 +94,36 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
   };
 
   /** Polls API-036 until the analysis job finishes. */
-  const watchAnalysis = useCallback(async (id: string, signal: AbortSignal) => {
-    for (let n = 0; n < MAX_POLLS && !signal.aborted; n += 1) {
-      try {
-        const { job, productDescription } = analysisIn(await getImageAnalysis(id, { signal }));
-        if (job === null) return setAnalysis({ phase: 'none' });
-        if (job.state === 'completed') {
-          return setAnalysis(productDescription ? { phase: 'done', text: productDescription } : { phase: 'failed', message: COPY.step2.analysisFailed });
+  const watchAnalysis = useCallback(
+    async (id: string, signal: AbortSignal) => {
+      for (let n = 0; n < MAX_POLLS && !signal.aborted; n += 1) {
+        try {
+          const { job, productDescription } = analysisIn(await getImageAnalysis(id, { signal }));
+          if (job === null) return setAnalysis({ phase: 'none' });
+          if (job.state === 'completed') {
+            return setAnalysis(
+              productDescription
+                ? { phase: 'done', text: productDescription }
+                : { phase: 'failed', message: COPY.step2.analysisFailed },
+            );
+          }
+          if (job.state === 'failed' || job.state === 'cancelled') {
+            return setAnalysis({
+              phase: 'failed',
+              message: job.causeMessage ?? COPY.step2.analysisFailed,
+            });
+          }
+          setAnalysis({ phase: 'running' });
+        } catch (error) {
+          if (signal.aborted) return;
+          if (resolveError(error).code === 'unauthenticated') return onUnauthenticated();
+          return setAnalysisError(error);
         }
-        if (job.state === 'failed' || job.state === 'cancelled') {
-          return setAnalysis({ phase: 'failed', message: job.causeMessage ?? COPY.step2.analysisFailed });
-        }
-        setAnalysis({ phase: 'running' });
-      } catch (error) {
-        if (signal.aborted) return;
-        if (resolveError(error).code === 'unauthenticated') return onUnauthenticated();
-        return setAnalysisError(error);
+        await sleep(ANALYSIS_POLL_MS, signal);
       }
-      await sleep(ANALYSIS_POLL_MS, signal);
-    }
-  }, [onUnauthenticated]);
+    },
+    [onUnauthenticated],
+  );
 
   const becameReady = useCallback(
     (id: string, signal: AbortSignal) => {
@@ -127,10 +145,14 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
             return becameReady(id, signal);
           }
           if (media.state === 'rejected') {
-            setItem((it) => (it ? { ...it, status: 'rejected', reason: rejectText(media.rejectReason) } : it));
+            setItem((it) =>
+              it ? { ...it, status: 'rejected', reason: rejectText(media.rejectReason) } : it,
+            );
             return;
           }
-          setItem((it) => (it ? { ...it, status: 'processing', size: media.bytes ?? it.size } : it));
+          setItem((it) =>
+            it ? { ...it, status: 'processing', size: media.bytes ?? it.size } : it,
+          );
         } catch (error) {
           if (signal.aborted) return;
           if (resolveError(error).code === 'unauthenticated') return onUnauthenticated();
@@ -139,7 +161,12 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
         }
         await sleep(MEDIA_POLL_MS, signal);
       }
-      if (!signal.aborted) setItem((it) => (it && it.status === 'processing' ? { ...it, status: 'rejected', reason: COPY.step2.pollFailed } : it));
+      if (!signal.aborted)
+        setItem((it) =>
+          it && it.status === 'processing'
+            ? { ...it, status: 'rejected', reason: COPY.step2.pollFailed }
+            : it,
+        );
     },
     [becameReady, onUnauthenticated],
   );
@@ -155,7 +182,13 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
 
   const upload = async (file: File) => {
     const signal = reset();
-    setItem({ id: `local-${file.name}`, name: file.name, size: file.size, status: 'uploading', progress: 0 });
+    setItem({
+      id: `local-${file.name}`,
+      name: file.name,
+      size: file.size,
+      status: 'uploading',
+      progress: 0,
+    });
     try {
       const media = mediaIn(await uploadMedia({ file }, { signal }));
       setItem({ id: media.id, name: file.name, size: file.size, status: 'processing' });
@@ -168,7 +201,13 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
         return onUnauthenticated();
       }
       if (view.presentation === 'file-row') {
-        setItem({ id: `local-${file.name}`, name: file.name, size: file.size, status: 'rejected', reason: view.message });
+        setItem({
+          id: `local-${file.name}`,
+          name: file.name,
+          size: file.size,
+          status: 'rejected',
+          reason: view.message,
+        });
         if (view.code === 'storage_quota_reached') setProblem(error);
       } else {
         setItem(null);
@@ -189,12 +228,16 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
     setRequesting(true);
     setAnalysisError(null);
     try {
-      const res = await requestImageAnalysis(item.id, idempotencyHeaders(keys.current.keyFor({ mediaId: item.id })));
+      const res = await requestImageAnalysis(
+        item.id,
+        idempotencyHeaders(keys.current.keyFor({ mediaId: item.id })),
+      );
       keys.current.succeeded();
       setAnalysis({ phase: 'running' });
       work.current ??= new AbortController();
       const { job, productDescription } = analysisIn(res);
-      if (job?.state === 'completed' && productDescription) setAnalysis({ phase: 'done', text: productDescription });
+      if (job?.state === 'completed' && productDescription)
+        setAnalysis({ phase: 'done', text: productDescription });
       else void watchAnalysis(item.id, work.current.signal);
     } catch (error) {
       if (resolveError(error).code === 'unauthenticated') onUnauthenticated();
@@ -215,26 +258,50 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
         onFiles={(files) => void upload(files[0]!)}
         onRejected={(rejections) => {
           const first = rejections[0]!;
-          setItem({ id: `local-${first.file.name}`, name: first.file.name, size: first.file.size, status: 'rejected', reason: first.reason });
+          setItem({
+            id: `local-${first.file.name}`,
+            name: first.file.name,
+            size: first.file.size,
+            status: 'rejected',
+            reason: first.reason,
+          });
         }}
         onRemove={remove}
       />
       <p className="text-caption text-muted-foreground" data-testid="likeness-consent">
         {COPY.step2.likeness}
       </p>
-      {problem ? <ErrorNotice error={problem} surface="context" call="write" returnTo={ROUTES.campaigns} onAction={() => setProblem(null)} /> : null}
+      {problem ? (
+        <ErrorNotice
+          error={problem}
+          surface="context"
+          call="write"
+          returnTo={ROUTES.campaigns}
+          onAction={() => setProblem(null)}
+        />
+      ) : null}
       {ready ? (
         <div className="flex flex-col gap-3">
           {analysis.phase === 'none' || analysis.phase === 'failed' ? (
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => void describe()} pending={requesting} pendingLabel={COPY.step2.analysing}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void describe()}
+                pending={requesting}
+                pendingLabel={COPY.step2.analysing}
+              >
                 {COPY.step2.analyse}
               </Button>
             </div>
           ) : null}
           {analysis.phase === 'running' ? (
             <p className="flex items-center gap-2 text-ui text-muted-foreground" role="status">
-              <Icon name="loader-circle" size={16} className="animate-spin motion-reduce:animate-none" />
+              <Icon
+                name="loader-circle"
+                size={16}
+                className="animate-spin motion-reduce:animate-none"
+              />
               {COPY.step2.analysisWaiting}
             </p>
           ) : null}
@@ -244,7 +311,11 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
             </Alert>
           ) : null}
           {analysis.phase === 'done' ? (
-            <section aria-label={COPY.step2.analysisTitle} className="flex flex-col gap-2 rounded-md border border-border bg-card p-3" data-testid="analysis-result">
+            <section
+              aria-label={COPY.step2.analysisTitle}
+              className="flex flex-col gap-2 rounded-md border border-border bg-card p-3"
+              data-testid="analysis-result"
+            >
               <h3 className="text-ui font-semibold">{COPY.step2.analysisTitle}</h3>
               <p className="text-ui">{analysis.text}</p>
               <p className="text-caption text-muted-foreground">{COPY.step2.analysisNote}</p>
@@ -260,7 +331,10 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
                   {COPY.step2.analysisUse}
                 </Button>
                 {used ? (
-                  <span role="status" className="flex items-center gap-1 text-ui text-muted-foreground">
+                  <span
+                    role="status"
+                    className="flex items-center gap-1 text-ui text-muted-foreground"
+                  >
                     <Icon name="circle-check" size={16} />
                     {COPY.step2.analysisUsed}
                   </span>
@@ -268,7 +342,16 @@ export function ProductImage({ mediaId, onMediaChange, onBusyChange, onUseDescri
               </div>
             </section>
           ) : null}
-          {analysisError ? <ErrorNotice error={analysisError} surface="context" call="job" returnTo={ROUTES.campaigns} onAction={() => void describe()} retrying={requesting} /> : null}
+          {analysisError ? (
+            <ErrorNotice
+              error={analysisError}
+              surface="context"
+              call="job"
+              returnTo={ROUTES.campaigns}
+              onAction={() => void describe()}
+              retrying={requesting}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>

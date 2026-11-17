@@ -31,7 +31,8 @@ export interface DevToken {
 export class DevTokenController {
   constructor(@Inject(IDENTITY_PORT) identity: IdentityPort) {
     // Startup check: a non-local identity adapter cannot sign these tokens, so the route refuses to exist.
-    if (!(identity instanceof LocalIdentity)) throw new Error('the local token route needs the local identity provider');
+    if (!(identity instanceof LocalIdentity))
+      throw new Error('the local token route needs the local identity provider');
     this.local = identity;
   }
 

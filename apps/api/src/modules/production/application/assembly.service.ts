@@ -37,7 +37,12 @@ export interface AssemblyRecord {
   readonly outputMediaId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
-  readonly clips: readonly { position: number; videoJobId: string; outOfDate: boolean; qcOverrideConfirmed: boolean }[];
+  readonly clips: readonly {
+    position: number;
+    videoJobId: string;
+    outOfDate: boolean;
+    qcOverrideConfirmed: boolean;
+  }[];
   /** Any clip is out of date (SB-D11), derived at read. */
   readonly outOfDate: boolean;
 }
@@ -48,14 +53,20 @@ export interface AssemblyOutcome {
 }
 
 /** SHA-256 hex of what makes two assemblies the same work: the clips in order and the opening frame (SB-D11). */
-export function assemblyReuseHash(clips: readonly string[], thumbstopperJobId: string | null): string {
-  return createHash('sha256').update(JSON.stringify(['assembly', clips, thumbstopperJobId ?? ''])).digest('hex');
+export function assemblyReuseHash(
+  clips: readonly string[],
+  thumbstopperJobId: string | null,
+): string {
+  return createHash('sha256')
+    .update(JSON.stringify(['assembly', clips, thumbstopperJobId ?? '']))
+    .digest('hex');
 }
 
 /** A latest QC result that needs the user's explicit confirmation before the clip is assembled (REQ-010, TD-D36). */
 const NEEDS_CONFIRMATION = ['failed', 'skipped'];
 
-const notFound = (what: string): DomainError => new DomainError('not_found', `This ${what} does not exist.`);
+const notFound = (what: string): DomainError =>
+  new DomainError('not_found', `This ${what} does not exist.`);
 
 /**
  * Production's assembly (REQ-011, NFR-11, ARCHITECTURE §2.6 and §5.7): create one from up to four completed clips (API-070)
@@ -79,7 +90,9 @@ export class AssemblyService {
     requestHash: Buffer,
   ): Promise<AssemblyOutcome> {
     const run = (): Promise<AssemblyOutcome> =>
-      this.database.uow.run((tx) => this.createIn(tx, ownerId, campaignId, input, key, requestHash));
+      this.database.uow.run((tx) =>
+        this.createIn(tx, ownerId, campaignId, input, key, requestHash),
+      );
     try {
       return await run();
     } catch (error) {
@@ -96,7 +109,13 @@ export class AssemblyService {
         .select({ id: assemblyJobs.id })
         .from(assemblyJobs)
         .innerJoin(campaigns, eq(campaigns.id, assemblyJobs.campaignId))
-        .where(and(eq(assemblyJobs.id, assemblyId), eq(assemblyJobs.ownerId, ownerId), eq(campaigns.state, 'active')));
+        .where(
+          and(
+            eq(assemblyJobs.id, assemblyId),
+            eq(assemblyJobs.ownerId, ownerId),
+            eq(campaigns.state, 'active'),
+          ),
+        );
       if (row === undefined) throw notFound('assembly');
       return this.record(tx, ownerId, assemblyId);
     });
@@ -113,14 +132,23 @@ export class AssemblyService {
     const [campaign] = await tx
       .select({ id: campaigns.id })
       .from(campaigns)
-      .where(and(eq(campaigns.id, campaignId), eq(campaigns.ownerId, ownerId), eq(campaigns.state, 'active')))
+      .where(
+        and(
+          eq(campaigns.id, campaignId),
+          eq(campaigns.ownerId, ownerId),
+          eq(campaigns.state, 'active'),
+        ),
+      )
       .for('share');
     if (campaign === undefined) throw notFound('campaign');
     const scope = { ownerId, operationId: 'API-070', key, requestHash };
     const recorded = await lookupRecord(tx, scope);
     if (recorded !== undefined) {
       if (!recorded.requestHash.equals(requestHash)) {
-        throw new DomainError('idempotency_key_reused', 'This request key was already used for a different request.');
+        throw new DomainError(
+          'idempotency_key_reused',
+          'This request key was already used for a different request.',
+        );
       }
       return { assembly: await this.record(tx, ownerId, recorded.resourceId), reused: true };
     }
@@ -132,12 +160,23 @@ export class AssemblyService {
     const [reusable] = await tx
       .select({ id: assemblyJobs.id })
       .from(assemblyJobs)
-      .where(and(eq(assemblyJobs.campaignId, campaignId), eq(assemblyJobs.reuseHash, reuseHash), ne(assemblyJobs.state, 'failed')));
+      .where(
+        and(
+          eq(assemblyJobs.campaignId, campaignId),
+          eq(assemblyJobs.reuseHash, reuseHash),
+          ne(assemblyJobs.state, 'failed'),
+        ),
+      );
     if (reusable === undefined) await this.assertUnderDailyLimit(tx, ownerId);
     const outcome = await withIdempotency(
       tx,
       scope,
-      { resourceType: 'assembly_job', responseStatus: 202, ttlHours: this.config.idempotencyTtlHours, resourceId: reusable?.id },
+      {
+        resourceType: 'assembly_job',
+        responseStatus: 202,
+        ttlHours: this.config.idempotencyTtlHours,
+        resourceId: reusable?.id,
+      },
       async (id) => {
         if (reusable !== undefined) return { id: reusable.id, reused: true };
         await tx.insert(assemblyJobs).values({
@@ -170,7 +209,12 @@ export class AssemblyService {
    * it), and a clip whose latest QC, read in this transaction, is `failed` or `skipped` is in `qcOverride`. Returns the
    * clips whose confirmation is recorded: only those that need it (TD-D35); `pending` and `passed` need none (TD-D36).
    */
-  private async checkClips(tx: DbTx, ownerId: string, campaignId: string, input: AssemblyCreateInput): Promise<ReadonlySet<string>> {
+  private async checkClips(
+    tx: DbTx,
+    ownerId: string,
+    campaignId: string,
+    input: AssemblyCreateInput,
+  ): Promise<ReadonlySet<string>> {
     const done = await tx
       .select({ id: videoJobs.id })
       .from(videoJobs)
@@ -189,22 +233,37 @@ export class AssemblyService {
       throw new DomainError(
         'clip_not_completed',
         'Every clip must be a finished clip of this campaign before it is assembled.',
-        missing.map(({ index }) => ({ field: `clips[${String(index)}]`, code: 'clip_not_completed', message: 'This clip is not a completed clip of this campaign.' })),
+        missing.map(({ index }) => ({
+          field: `clips[${String(index)}]`,
+          code: 'clip_not_completed',
+          message: 'This clip is not a completed clip of this campaign.',
+        })),
       );
     }
     const latest = await tx
-      .selectDistinctOn([qcRuns.videoJobId], { videoJobId: qcRuns.videoJobId, qcState: qcRuns.qcState })
+      .selectDistinctOn([qcRuns.videoJobId], {
+        videoJobId: qcRuns.videoJobId,
+        qcState: qcRuns.qcState,
+      })
       .from(qcRuns)
       .where(inArray(qcRuns.videoJobId, [...input.clips]))
       .orderBy(qcRuns.videoJobId, desc(qcRuns.createdAt), desc(qcRuns.id));
-    const flagged = new Set(latest.filter((run) => NEEDS_CONFIRMATION.includes(run.qcState)).map((run) => run.videoJobId));
+    const flagged = new Set(
+      latest.filter((run) => NEEDS_CONFIRMATION.includes(run.qcState)).map((run) => run.videoJobId),
+    );
     const override = new Set(input.qcOverride);
-    const unconfirmed = input.clips.flatMap((id, index) => (flagged.has(id) && !override.has(id) ? [{ id, index }] : []));
+    const unconfirmed = input.clips.flatMap((id, index) =>
+      flagged.has(id) && !override.has(id) ? [{ id, index }] : [],
+    );
     if (unconfirmed.length > 0) {
       throw new DomainError(
         'qc_confirmation_required',
         'Confirm the clips whose audio check failed or was skipped before they are assembled.',
-        unconfirmed.map(({ index }) => ({ field: `clips[${String(index)}]`, code: 'qc_confirmation_required', message: 'The latest audio check of this clip failed or was skipped.' })),
+        unconfirmed.map(({ index }) => ({
+          field: `clips[${String(index)}]`,
+          code: 'qc_confirmation_required',
+          message: 'The latest audio check of this clip failed or was skipped.',
+        })),
       );
     }
     return new Set(input.clips.filter((id) => flagged.has(id) && override.has(id)));
@@ -215,9 +274,17 @@ export class AssemblyService {
     const [row] = await tx
       .select({ count: sql<number>`count(*)::int` })
       .from(assemblyJobs)
-      .where(and(eq(assemblyJobs.ownerId, ownerId), sql`${assemblyJobs.renderDay} = (now() at time zone 'utc')::date`));
+      .where(
+        and(
+          eq(assemblyJobs.ownerId, ownerId),
+          sql`${assemblyJobs.renderDay} = (now() at time zone 'utc')::date`,
+        ),
+      );
     if ((row?.count ?? 0) >= this.config.rendersPerDay) {
-      throw new DomainError('assembly_daily_limit', `You've reached today's limit of ${String(this.config.rendersPerDay)} renders. It resets at 00:00 UTC.`);
+      throw new DomainError(
+        'assembly_daily_limit',
+        `You've reached today's limit of ${String(this.config.rendersPerDay)} renders. It resets at 00:00 UTC.`,
+      );
     }
   }
 
@@ -227,7 +294,8 @@ export class AssemblyService {
       .select()
       .from(assemblyJobs)
       .where(and(eq(assemblyJobs.id, id), eq(assemblyJobs.ownerId, ownerId)));
-    if (job === undefined) throw new DomainError('not_found', 'This request no longer has a result.');
+    if (job === undefined)
+      throw new DomainError('not_found', 'This request no longer has a result.');
     const clips = await tx
       .select({
         position: assemblyClips.position,

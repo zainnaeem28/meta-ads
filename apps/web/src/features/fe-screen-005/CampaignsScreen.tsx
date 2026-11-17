@@ -79,10 +79,16 @@ interface Toast {
 
 const historyKey = (filter: Filter | '', q: string | undefined, page: number) =>
   ['campaigns-page', filter, q ?? '', page] as const;
-const countKey = (filter: Filter | '', q: string | undefined) => ['campaigns-count', filter, q ?? ''] as const;
+const countKey = (filter: Filter | '', q: string | undefined) =>
+  ['campaigns-count', filter, q ?? ''] as const;
 const DRAFTS_KEY = ['drafts-all'] as const;
 
-const params = (filter: Filter | '', q: string | undefined, limit: number, cursor?: string | null) => ({
+const params = (
+  filter: Filter | '',
+  q: string | undefined,
+  limit: number,
+  cursor?: string | null,
+) => ({
   limit,
   ...(cursor ? { cursor } : {}),
   ...(q ? { q } : {}),
@@ -139,7 +145,8 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
   });
   const keys = useQuery({
     queryKey: getListMyProviderKeysQueryKey(),
-    queryFn: async ({ signal }) => (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
+    queryFn: async ({ signal }) =>
+      (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
     retry: false,
   });
 
@@ -155,9 +162,11 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
         });
         cursor = previous.nextCursor;
         before = previous.seen;
-        if (!previous.hasNext || !cursor) return { rows: [], hasNext: false, nextCursor: null, seen: before };
+        if (!previous.hasNext || !cursor)
+          return { rows: [], hasNext: false, nextCursor: null, seen: before };
       }
-      const body = (await listCampaigns(params(url.status, q, PAGE_SIZE, cursor), { signal })).data as CampaignPage;
+      const body = (await listCampaigns(params(url.status, q, PAGE_SIZE, cursor), { signal }))
+        .data as CampaignPage;
       const seen = new Set(before);
       const rows = body.data.filter((c) => !seen.has(c.id));
       rows.forEach((c) => seen.add(c.id));
@@ -177,8 +186,12 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
   const count = (filter: Filter | '', search: string | undefined) => ({
     queryKey: countKey(filter, search),
     queryFn: async ({ signal }: { signal: AbortSignal }) => {
-      const body = (await listCampaigns(params(filter, search, COUNT_LIMIT), { signal })).data as CampaignPage;
-      return { count: body.metaData.pagination.returnedCount, more: body.metaData.pagination.hasNextPage };
+      const body = (await listCampaigns(params(filter, search, COUNT_LIMIT), { signal }))
+        .data as CampaignPage;
+      return {
+        count: body.metaData.pagination.returnedCount,
+        more: body.metaData.pagination.hasNextPage,
+      };
     },
     staleTime: STALE_MS,
     retry: false,
@@ -195,7 +208,9 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
       const all: Draft[] = [];
       let cursor: string | null = null;
       for (let i = 0; i < DRAFT_PAGES_MAX; i += 1) {
-        const body = (await listDrafts({ limit: COUNT_LIMIT, ...(cursor ? { cursor } : {}) }, { signal })).data as DraftPage;
+        const body = (
+          await listDrafts({ limit: COUNT_LIMIT, ...(cursor ? { cursor } : {}) }, { signal })
+        ).data as DraftPage;
         all.push(...body.data);
         const { hasNextPage, nextCursor } = body.metaData.pagination;
         if (!hasNextPage || !nextCursor) break;
@@ -253,9 +268,19 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
 
   // A page past the end (a stale link, or the last row of the last page deleted) returns to the last page that exists.
   useEffect(() => {
-    if (url.page > 1 && !drafts && history.isSuccess && visibleRows.length === 0) go({ ...url, page: 1 }, 'replace');
-    if (url.page > 1 && drafts && draftList.isSuccess && draftPage.length === 0) go({ ...url, page: 1 }, 'replace');
-  }, [url, drafts, history.isSuccess, visibleRows.length, draftList.isSuccess, draftPage.length, go]);
+    if (url.page > 1 && !drafts && history.isSuccess && visibleRows.length === 0)
+      go({ ...url, page: 1 }, 'replace');
+    if (url.page > 1 && drafts && draftList.isSuccess && draftPage.length === 0)
+      go({ ...url, page: 1 }, 'replace');
+  }, [
+    url,
+    drafts,
+    history.isSuccess,
+    visibleRows.length,
+    draftList.isSuccess,
+    draftPage.length,
+    go,
+  ]);
 
   const filtering = url.q !== '' || url.status !== '';
   const clearAll = () => {
@@ -274,18 +299,35 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
   ];
   const tabs = [
     { id: 'history', label: COPY.historyTab, count: num(total) },
-    { id: 'drafts', label: COPY.draftsTab, count: draftList.data ? draftList.data.filter((d) => !gone.has(d.id)).length : undefined },
+    {
+      id: 'drafts',
+      label: COPY.draftsTab,
+      count: draftList.data ? draftList.data.filter((d) => !gone.has(d.id)).length : undefined,
+    },
   ];
 
   const pager = (hasPrev: boolean, hasNext: boolean) => (
-    <nav aria-label={COPY.pagination} className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-ui text-muted-foreground">
+    <nav
+      aria-label={COPY.pagination}
+      className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-ui text-muted-foreground"
+    >
       <span role="status">{COPY.perPage(PAGE_SIZE)}</span>
       <div className="inline-flex items-center gap-2">
-        <Button variant="outline" size="sm" disabled={!hasPrev} onClick={() => go({ ...url, page: url.page - 1 })}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!hasPrev}
+          onClick={() => go({ ...url, page: url.page - 1 })}
+        >
           <Icon name="chevron-left" size={16} />
           {COPY.previous}
         </Button>
-        <Button variant="outline" size="sm" disabled={!hasNext} onClick={() => go({ ...url, page: url.page + 1 })}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!hasNext}
+          onClick={() => go({ ...url, page: url.page + 1 })}
+        >
           {COPY.next}
           <Icon name="chevron-right" size={16} />
         </Button>
@@ -297,7 +339,10 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
     <SkeletonRegion status={COPY.loading} data-state="loading">
       <ul className="flex list-none flex-col gap-3 p-0">
         {[0, 1, 2, 3].map((i) => (
-          <li key={i} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+          <li
+            key={i}
+            className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
+          >
             <Skeleton className="h-14 w-11 md:w-14" />
             <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-5 w-1/2" />
@@ -350,7 +395,12 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
       body = filtering ? (
         noResults
       ) : (
-        <EmptyState headingLevel={2} title={COPY.empty.title} description={COPY.empty.body} action={newBrief} />
+        <EmptyState
+          headingLevel={2}
+          title={COPY.empty.title}
+          description={COPY.empty.body}
+          action={newBrief}
+        />
       );
     } else {
       body = (
@@ -398,7 +448,12 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
     body = url.q ? (
       noResults
     ) : (
-      <EmptyState headingLevel={2} title={COPY.draftsEmpty.title} description={COPY.draftsEmpty.body} action={newBrief} />
+      <EmptyState
+        headingLevel={2}
+        title={COPY.draftsEmpty.title}
+        description={COPY.draftsEmpty.body}
+        action={newBrief}
+      />
     );
   } else {
     body = (
@@ -428,14 +483,18 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
             );
           })}
         </ul>
-        {draftRows.length > PAGE_SIZE ? pager(url.page > 1, url.page * PAGE_SIZE < draftRows.length) : null}
+        {draftRows.length > PAGE_SIZE
+          ? pager(url.page > 1, url.page * PAGE_SIZE < draftRows.length)
+          : null}
       </>
     );
   }
 
   const role = me.data && me.data.data.linkState === 'linked' ? me.data.data.role : 'user';
   const keyState = deriveKeyState(keys.data?.data);
-  const deleteError = remove.error ? resolveError(remove.error, { surface: 'context' }).message : undefined;
+  const deleteError = remove.error
+    ? resolveError(remove.error, { surface: 'context' }).message
+    : undefined;
   const busy = drafts ? draftList.isPending : history.isPending;
 
   return (
@@ -448,7 +507,11 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
       onDismissToast={() => setToasts([])}
       onSignOut={() => window.location.assign(ROUTES.signIn)}
     >
-      <div className="mx-auto flex max-w-wide flex-col gap-4" data-screen="SCREEN-005" aria-busy={busy || undefined}>
+      <div
+        className="mx-auto flex max-w-wide flex-col gap-4"
+        data-screen="SCREEN-005"
+        aria-busy={busy || undefined}
+      >
         <PageHeader title={COPY.title} description={COPY.description} actions={newBrief} />
 
         {keyState === 'missing' ? (
@@ -490,7 +553,9 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
                 onQueryChange={setInput}
                 chips={chips}
                 status={url.status}
-                onStatusChange={(status) => go({ ...url, q: input, status: status as Filter | '', page: 1 })}
+                onStatusChange={(status) =>
+                  go({ ...url, q: input, status: status as Filter | '', page: 1 })
+                }
                 onClearAll={clearAll}
               />
             )}
@@ -503,14 +568,26 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
         <Dialog
           open
           onClose={closeDialog}
-          title={target.kind === 'campaign' ? COPY.deleteDialog.campaignTitle(target.name) : COPY.deleteDialog.draftTitle(target.name)}
-          confirmLabel={target.kind === 'campaign' ? COPY.deleteDialog.campaignConfirm : COPY.deleteDialog.draftConfirm}
+          title={
+            target.kind === 'campaign'
+              ? COPY.deleteDialog.campaignTitle(target.name)
+              : COPY.deleteDialog.draftTitle(target.name)
+          }
+          confirmLabel={
+            target.kind === 'campaign'
+              ? COPY.deleteDialog.campaignConfirm
+              : COPY.deleteDialog.draftConfirm
+          }
           destructive
           pending={remove.isPending}
           error={deleteError}
           onConfirm={() => remove.mutate(target)}
         >
-          <p className="text-ui">{target.kind === 'campaign' ? COPY.deleteDialog.campaignBody : COPY.deleteDialog.draftBody}</p>
+          <p className="text-ui">
+            {target.kind === 'campaign'
+              ? COPY.deleteDialog.campaignBody
+              : COPY.deleteDialog.draftBody}
+          </p>
           {target.kind === 'campaign' ? (
             <Alert variant="warning" role="status">
               {COPY.deleteDialog.warning}

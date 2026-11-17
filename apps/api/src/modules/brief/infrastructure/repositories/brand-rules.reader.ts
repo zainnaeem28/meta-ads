@@ -33,7 +33,9 @@ export class BrandRulesReader {
     const active = rows.filter((row) => row.active);
     if (active.length === 0) throw new BrandRulesNotSeededError('no active rule');
     if (active.some((row) => row.rulesVersion < this.file.rulesVersion)) {
-      throw new BrandRulesNotSeededError(`the table is older than rules version ${String(this.file.rulesVersion)}`);
+      throw new BrandRulesNotSeededError(
+        `the table is older than rules version ${String(this.file.rulesVersion)}`,
+      );
     }
     return compileRules(active);
   }

@@ -31,7 +31,12 @@ export class AnalysisController {
     const ownerId = owner(actor);
     const { mediaId } = parseWith(Params, rawParams);
     const key = parseIdempotencyKey(header);
-    const result = await this.analyses.request(ownerId, mediaId, key, requestHash('POST', request.url, null));
+    const result = await this.analyses.request(
+      ownerId,
+      mediaId,
+      key,
+      requestHash('POST', request.url, null),
+    );
     const view = await this.analyses.latest(ownerId, mediaId);
     return { job: outcomeSummary(result), productDescription: view.productDescription };
   }
@@ -40,6 +45,9 @@ export class AnalysisController {
   async get(@CurrentActor() actor: ActorContext | undefined, @Param() rawParams: unknown) {
     const { mediaId } = parseWith(Params, rawParams);
     const view = await this.analyses.latest(owner(actor), mediaId);
-    return { job: view.job === null ? null : jobSummary(view.job, false), productDescription: view.productDescription };
+    return {
+      job: view.job === null ? null : jobSummary(view.job, false),
+      productDescription: view.productDescription,
+    };
   }
 }

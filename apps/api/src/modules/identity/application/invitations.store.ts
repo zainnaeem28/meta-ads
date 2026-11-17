@@ -80,7 +80,12 @@ export class InvitationAdminStore {
     const rows = await db
       .update(invitations)
       .set({ state: 'revoked', updatedAt: sql`now()` })
-      .where(and(sql`lower(${invitations.email}) = ${normalizeEmail(email)}`, eq(invitations.state, 'invited')))
+      .where(
+        and(
+          sql`lower(${invitations.email}) = ${normalizeEmail(email)}`,
+          eq(invitations.state, 'invited'),
+        ),
+      )
       .returning(COLUMNS);
     return rows[0] as InvitationRow | undefined;
   }
@@ -107,7 +112,13 @@ export class InvitationAdminStore {
     const rows = await db
       .update(invitations)
       .set({ state: 'expired', updatedAt: sql`now()` })
-      .where(and(eq(invitations.id, id), eq(invitations.state, 'invited'), lt(invitations.expiresAt, sql`now()`)))
+      .where(
+        and(
+          eq(invitations.id, id),
+          eq(invitations.state, 'invited'),
+          lt(invitations.expiresAt, sql`now()`),
+        ),
+      )
       .returning({ id: invitations.id });
     return rows.length === 1;
   }
@@ -127,7 +138,13 @@ export class InvitationAdminStore {
     const rows = await db
       .update(invitations)
       .set({ sendState: 'sent', idpInvitationId, updatedAt: sql`now()` })
-      .where(and(eq(invitations.id, id), eq(invitations.sendState, 'pending'), eq(invitations.state, 'invited')))
+      .where(
+        and(
+          eq(invitations.id, id),
+          eq(invitations.sendState, 'pending'),
+          eq(invitations.state, 'invited'),
+        ),
+      )
       .returning({ id: invitations.id });
     return rows.length === 1;
   }
@@ -141,7 +158,13 @@ export class InvitationAdminStore {
         ...(clearHandle ? { idpInvitationId: null } : {}),
         updatedAt: sql`now()`,
       })
-      .where(and(eq(invitations.id, id), eq(invitations.sendState, 'pending'), eq(invitations.state, 'invited')))
+      .where(
+        and(
+          eq(invitations.id, id),
+          eq(invitations.sendState, 'pending'),
+          eq(invitations.state, 'invited'),
+        ),
+      )
       .returning({ id: invitations.id });
     return rows.length === 1;
   }
@@ -216,7 +239,12 @@ export class InvitationAdminStore {
     const rows = await db
       .select({ id: invitations.id, handle: invitations.idpInvitationId })
       .from(invitations)
-      .where(and(inArray(invitations.state, ['revoked', 'expired']), isNotNull(invitations.idpInvitationId)))
+      .where(
+        and(
+          inArray(invitations.state, ['revoked', 'expired']),
+          isNotNull(invitations.idpInvitationId),
+        ),
+      )
       .orderBy(invitations.updatedAt)
       .limit(limit);
     return rows.map((row) => ({ id: row.id, handle: row.handle as string }));
@@ -224,4 +252,6 @@ export class InvitationAdminStore {
 }
 
 /** The operations the invitation service and job use; a unit test substitutes an in-memory implementation. */
-export type InvitationAdminStorePort = { [K in keyof InvitationAdminStore]: InvitationAdminStore[K] };
+export type InvitationAdminStorePort = {
+  [K in keyof InvitationAdminStore]: InvitationAdminStore[K];
+};

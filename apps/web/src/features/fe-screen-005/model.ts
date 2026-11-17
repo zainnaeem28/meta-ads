@@ -18,7 +18,8 @@ export interface UrlState {
   page: number;
 }
 
-export const isFilter = (value: string): value is Filter => (FILTERS as readonly string[]).includes(value);
+export const isFilter = (value: string): value is Filter =>
+  (FILTERS as readonly string[]).includes(value);
 
 /** `?tab=history|drafts&q=&status=&page=`: anything unknown falls back to the default. */
 export function parseUrl(search: string): UrlState {
@@ -70,17 +71,25 @@ export interface RowStatus {
 }
 
 /** Badge of a campaign: what the user does next, from the derived progress and the brief state. */
-export function campaignStatus(c: Pick<CampaignSummary, 'progress' | 'briefState' | 'finalAvailable'>): RowStatus {
-  if (c.briefState === 'failed' || c.progress === 'failed') return { label: 'Needs attention', variant: 'destructive', icon: 'circle-x' };
-  if (c.briefState === 'generating') return { label: 'Brief generating', variant: 'info', icon: 'loader-circle' };
-  if (c.briefState === 'draft') return { label: 'Brief ready to review', variant: 'warning', icon: 'clock' };
+export function campaignStatus(
+  c: Pick<CampaignSummary, 'progress' | 'briefState' | 'finalAvailable'>,
+): RowStatus {
+  if (c.briefState === 'failed' || c.progress === 'failed')
+    return { label: 'Needs attention', variant: 'destructive', icon: 'circle-x' };
+  if (c.briefState === 'generating')
+    return { label: 'Brief generating', variant: 'info', icon: 'loader-circle' };
+  if (c.briefState === 'draft')
+    return { label: 'Brief ready to review', variant: 'warning', icon: 'clock' };
   if (c.finalAvailable) return { label: 'Final ready', variant: 'success', icon: 'circle-check' };
-  if (c.progress === 'completed') return { label: 'Clips ready', variant: 'success', icon: 'circle-check' };
+  if (c.progress === 'completed')
+    return { label: 'Clips ready', variant: 'success', icon: 'circle-check' };
   return { label: 'Clips generating', variant: 'info', icon: 'loader-circle' };
 }
 
 /** The stage a campaign opens at: SCREEN-007, 008 or 009. */
-export function campaignHref(c: Pick<CampaignSummary, 'id' | 'briefState' | 'finalAvailable' | 'progress'>): string {
+export function campaignHref(
+  c: Pick<CampaignSummary, 'id' | 'briefState' | 'finalAvailable' | 'progress'>,
+): string {
   const base = `/campaigns/${c.id}`;
   if (c.briefState !== 'accepted') return `${base}/brief`;
   return c.finalAvailable ? `${base}/final` : `${base}/clips`;
@@ -98,7 +107,10 @@ export const draftStepLabel = (step: number): string => {
 };
 
 /** A draft matches when the search is in its product name or description (the drafts api has no search). */
-export function draftMatches(d: Pick<Draft, 'productName' | 'productDescription'>, q: string): boolean {
+export function draftMatches(
+  d: Pick<Draft, 'productName' | 'productDescription'>,
+  q: string,
+): boolean {
   const text = q.trim().toLowerCase();
   if (!text) return true;
   return `${d.productName ?? ''}\n${d.productDescription ?? ''}`.toLowerCase().includes(text);

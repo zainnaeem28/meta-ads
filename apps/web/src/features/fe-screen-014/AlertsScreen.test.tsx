@@ -17,7 +17,16 @@ const meta = { requestId: 'req-1', timestamp: '2026-11-16T09:00:00Z' };
 const page = (data: unknown[], next: string | null = null) => ({
   success: true,
   data,
-  metaData: { ...meta, pagination: { type: 'cursor', limit: 50, returnedCount: data.length, hasNextPage: next !== null, nextCursor: next } },
+  metaData: {
+    ...meta,
+    pagination: {
+      type: 'cursor',
+      limit: 50,
+      returnedCount: data.length,
+      hasNextPage: next !== null,
+      nextCursor: next,
+    },
+  },
 });
 const alert = (over: Record<string, unknown> = {}) => ({
   id: '11111111-1111-4111-8111-111111111111',
@@ -30,7 +39,10 @@ const alert = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 const failure = (status: number, code: string) =>
-  HttpResponse.json({ success: false, error: { code, message: 'x', details: [] }, metaData: meta }, { status });
+  HttpResponse.json(
+    { success: false, error: { code, message: 'x', details: [] }, metaData: meta },
+    { status },
+  );
 
 let uninstall: () => void;
 beforeEach(() => {
@@ -65,8 +77,18 @@ describe('SCREEN-014 alerts', () => {
         return HttpResponse.json(
           page([
             alert(),
-            alert({ id: '22222222-2222-4222-8222-222222222222', kind: 'job_burst', counts: { jobs: 24, window_minutes: 10 } }),
-            alert({ id: '33333333-3333-4333-8333-333333333333', kind: 'admin_role_changed', counts: {}, acknowledgedAt: new Date().toISOString(), acknowledgedBy: USER }),
+            alert({
+              id: '22222222-2222-4222-8222-222222222222',
+              kind: 'job_burst',
+              counts: { jobs: 24, window_minutes: 10 },
+            }),
+            alert({
+              id: '33333333-3333-4333-8333-333333333333',
+              kind: 'admin_role_changed',
+              counts: {},
+              acknowledgedAt: new Date().toISOString(),
+              acknowledgedBy: USER,
+            }),
           ]),
         );
       }),
@@ -75,7 +97,9 @@ describe('SCREEN-014 alerts', () => {
     const list = await screen.findByRole('list', { name: 'Alerts' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(3);
     expect(screen.getByText('Account erasure is stuck')).toBeInTheDocument();
-    expect(screen.getByText(/u_c07e…9b30: 7 stored objects could not be removed after 6 attempts/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/u_c07e…9b30: 7 stored objects could not be removed after 6 attempts/),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^Acknowledge:/ })).toHaveLength(2);
     expect(within(list).getByText('Acknowledged')).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/@/);
@@ -97,11 +121,17 @@ describe('SCREEN-014 alerts', () => {
       http.get(LIST, () => HttpResponse.json(page([alert()]))),
       http.post(`${LIST}/:id/acknowledge`, ({ params }) => {
         posted.push(String(params['id']));
-        return HttpResponse.json({ success: true, data: alert({ acknowledgedAt: new Date().toISOString(), acknowledgedBy: USER }), metaData: meta });
+        return HttpResponse.json({
+          success: true,
+          data: alert({ acknowledgedAt: new Date().toISOString(), acknowledgedBy: USER }),
+          metaData: meta,
+        });
       }),
     );
     show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Acknowledge: Account erasure is stuck' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Acknowledge: Account erasure is stuck' }),
+    );
     expect(await screen.findByText(COPY.acknowledgedToast)).toBeInTheDocument();
     expect(posted).toEqual(['11111111-1111-4111-8111-111111111111']);
     expect(screen.queryByRole('button', { name: /^Acknowledge:/ })).toBeNull();
@@ -115,7 +145,17 @@ describe('SCREEN-014 alerts', () => {
       http.get(LIST, ({ request }) => {
         const cursor = new URL(request.url).searchParams.get('cursor');
         seen.push(cursor ?? '-');
-        return HttpResponse.json(cursor ? page([alert({ id: '44444444-4444-4444-8444-444444444444', kind: 'keys_disabled_all', counts: {} })]) : page([alert()], 'c1'));
+        return HttpResponse.json(
+          cursor
+            ? page([
+                alert({
+                  id: '44444444-4444-4444-8444-444444444444',
+                  kind: 'keys_disabled_all',
+                  counts: {},
+                }),
+              ])
+            : page([alert()], 'c1'),
+        );
       }),
     );
     show();
@@ -130,14 +170,19 @@ describe('SCREEN-014 alerts', () => {
     expect(await screen.findByText('Administration is not available')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Alerts' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Back to workspace' })).toHaveAttribute('href', '/campaigns');
+    expect(screen.getByRole('link', { name: 'Back to workspace' })).toHaveAttribute(
+      'href',
+      '/campaigns',
+    );
   });
 
   it('recent_auth_required on the list: step-up dialog with the §9.1 copy', async () => {
     server.use(http.get(LIST, () => failure(403, 'recent_auth_required')));
     show();
     expect(await screen.findByRole('dialog', { name: 'Confirm it is you' })).toBeInTheDocument();
-    expect(screen.getByText('For your security, confirm it is you again to continue.')).toBeInTheDocument();
+    expect(
+      screen.getByText('For your security, confirm it is you again to continue.'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirm sign-in' })).toBeInTheDocument();
   });
 
@@ -159,7 +204,17 @@ describe('SCREEN-014 copy', () => {
     expect(shortUserId(null)).toBe('An account');
   });
   it('every alert kind has a title and a body, an unknown kind still renders', () => {
-    for (const kind of ['campaign_deletion_stuck', 'account_erasure_stuck', 'job_burst', 'provider_auth_spike', 'admin_role_changed', 'reservation_inconsistency', 'key_unseal_failed', 'keys_disabled_all', 'future_kind']) {
+    for (const kind of [
+      'campaign_deletion_stuck',
+      'account_erasure_stuck',
+      'job_burst',
+      'provider_auth_spike',
+      'admin_role_changed',
+      'reservation_inconsistency',
+      'key_unseal_failed',
+      'keys_disabled_all',
+      'future_kind',
+    ]) {
       const view = presentAlert(alert({ kind, counts: {} }) as never);
       expect(view.title.length).toBeGreaterThan(0);
       expect(view.body).not.toContain('undefined');

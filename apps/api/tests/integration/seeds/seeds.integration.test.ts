@@ -4,7 +4,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { SeedRefusedError, main, runSeed } from '../../../src/database/seed.js';
 import { DEV_IDENTITY_USERS, DEV_STUB_KEYS } from '../../../src/database/seeds/index.js';
 import { isUuidV7 } from '../../../src/platform/shared-kernel/index.js';
-import { cleanup, drizzleMigrate, provision, renderMigrations, teardown } from '../migrations/support/harness.js';
+import {
+  cleanup,
+  drizzleMigrate,
+  provision,
+  renderMigrations,
+  teardown,
+} from '../migrations/support/harness.js';
 import type { Env } from '../migrations/support/harness.js';
 import type { DbTx } from '../../../src/platform/db/index.js';
 import { Factories, FixedClock, fixedUuidV7 } from '../../support/factories/index.js';
@@ -13,12 +19,21 @@ import { Factories, FixedClock, fixedUuidV7 } from '../../support/factories/inde
 
 const kek = generateKeyPairSync('rsa', { modulusLength: 3072 });
 const ENV = {
-  KEK_PUBLIC_KEYS: JSON.stringify({ 1: kek.publicKey.export({ type: 'spki', format: 'pem' }).toString() }),
+  KEK_PUBLIC_KEYS: JSON.stringify({
+    1: kek.publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+  }),
   KEK_ACTIVE_VERSION: '1',
   KEY_FINGERPRINT_PEPPERS: JSON.stringify({ 1: Buffer.alloc(32, 9).toString('base64') }),
   KEY_FINGERPRINT_PEPPER_ACTIVE: '1',
 };
-const TABLES = ['price_table', 'brand_rules', 'platform_settings', 'users', 'provider_keys', 'campaigns'];
+const TABLES = [
+  'price_table',
+  'brand_rules',
+  'platform_settings',
+  'users',
+  'provider_keys',
+  'campaigns',
+];
 
 let env: Env;
 let dir: string;
@@ -66,9 +81,17 @@ beforeEach(async () => {
 describe('db:seed', () => {
   it('reference: seeds the settings row invited_only and a rerun changes nothing', async () => {
     await withEnv(ENV, async () => {
-      const run = { dataset: 'reference' as const, appEnv: 'production' as const, databaseUrl: database.url };
+      const run = {
+        dataset: 'reference' as const,
+        appEnv: 'production' as const,
+        databaseUrl: database.url,
+      };
       const first = await runSeed(run);
-      expect(first.map((entry) => entry.step)).toEqual(['price_table', 'brand_rules', 'platform_settings']);
+      expect(first.map((entry) => entry.step)).toEqual([
+        'price_table',
+        'brand_rules',
+        'platform_settings',
+      ]);
       const before = await snapshot();
       expect(await runSeed(run)).toEqual(first);
       expect(await snapshot()).toEqual(before);
@@ -79,18 +102,24 @@ describe('db:seed', () => {
   });
 
   it('reference leaves an operator-changed settings row alone', async () => {
-    await client.query("insert into platform_settings (id, signup_mode, version) values (1, 'open', 4)");
+    await client.query(
+      "insert into platform_settings (id, signup_mode, version) values (1, 'open', 4)",
+    );
     await withEnv(ENV, async () => {
       await runSeed({ dataset: 'reference', appEnv: 'production', databaseUrl: database.url });
     });
-    expect((await client.query('select signup_mode, version from platform_settings')).rows).toEqual([
-      { signup_mode: 'open', version: 4 },
-    ]);
+    expect((await client.query('select signup_mode, version from platform_settings')).rows).toEqual(
+      [{ signup_mode: 'open', version: 4 }],
+    );
   });
 
   it('development: two users, one campaign per state, stub keys sealed under the KEK; rerun changes nothing', async () => {
     await withEnv(ENV, async () => {
-      const run = { dataset: 'development' as const, appEnv: 'development' as const, databaseUrl: database.url };
+      const run = {
+        dataset: 'development' as const,
+        appEnv: 'development' as const,
+        databaseUrl: database.url,
+      };
       const first = await runSeed(run);
       expect(first.filter((entry) => entry.step.startsWith('dev_'))).toEqual([
         { step: 'dev_users', count: 2 },
@@ -107,7 +136,9 @@ describe('db:seed', () => {
     ]);
     const users = await client.query('select idp_subject, email from users order by email');
     expect(users.rows).toEqual(
-      [...DEV_IDENTITY_USERS].sort((a, b) => a.email.localeCompare(b.email)).map((u) => ({ idp_subject: u.sub, email: u.email })),
+      [...DEV_IDENTITY_USERS]
+        .sort((a, b) => a.email.localeCompare(b.email))
+        .map((u) => ({ idp_subject: u.sub, email: u.email })),
     );
     for (const row of users.rows) expect(String(row.email)).toMatch(/@example\.invalid$/);
 
@@ -122,23 +153,28 @@ describe('db:seed', () => {
         row.wrapped_dek as Buffer,
       );
       const sealed = row.ciphertext as Buffer;
-      const decipher = createDecipheriv('aes-256-gcm', dek, row.nonce as Buffer, { authTagLength: 16 });
+      const decipher = createDecipheriv('aes-256-gcm', dek, row.nonce as Buffer, {
+        authTagLength: 16,
+      });
       decipher.setAAD(Buffer.from(`${row.owner_id}|${row.provider}|${row.id}|${row.version}`));
       decipher.setAuthTag(sealed.subarray(sealed.length - 16));
-      const plain = Buffer.concat([decipher.update(sealed.subarray(0, sealed.length - 16)), decipher.final()]).toString();
+      const plain = Buffer.concat([
+        decipher.update(sealed.subarray(0, sealed.length - 16)),
+        decipher.final(),
+      ]).toString();
       expect(plain).toBe(DEV_STUB_KEYS.find((stub) => stub.id === row.id)?.plaintext);
     }
   });
 
   it('refuses development outside APP_ENV=development and anything but reference in production', async () => {
     for (const appEnv of ['test', 'staging', 'production'] as const) {
-      await expect(runSeed({ dataset: 'development', appEnv, databaseUrl: database.url })).rejects.toThrow(
-        SeedRefusedError,
-      );
+      await expect(
+        runSeed({ dataset: 'development', appEnv, databaseUrl: database.url }),
+      ).rejects.toThrow(SeedRefusedError);
     }
-    await expect(runSeed({ dataset: 'staging', appEnv: 'production', databaseUrl: database.url })).rejects.toThrow(
-      'dataset staging runs only with APP_ENV=staging',
-    );
+    await expect(
+      runSeed({ dataset: 'staging', appEnv: 'production', databaseUrl: database.url }),
+    ).rejects.toThrow('dataset staging runs only with APP_ENV=staging');
     expect((await client.query('select count(*)::int as n from users')).rows[0]).toEqual({ n: 0 });
   });
 
@@ -152,12 +188,17 @@ describe('db:seed', () => {
   });
 
   it('--dry-run through main runs the steps and rolls everything back', async () => {
-    await withEnv({ ...ENV, APP_ENV: 'development', MIGRATION_DATABASE_URL: database.url }, async () => {
-      await main(['--dataset=development', '--dry-run']);
-    });
+    await withEnv(
+      { ...ENV, APP_ENV: 'development', MIGRATION_DATABASE_URL: database.url },
+      async () => {
+        await main(['--dataset=development', '--dry-run']);
+      },
+    );
     for (const table of TABLES) {
       if (table === 'price_table' || table === 'brand_rules') continue;
-      expect((await client.query(`select count(*)::int as n from ${table}`)).rows[0]).toEqual({ n: 0 });
+      expect((await client.query(`select count(*)::int as n from ${table}`)).rows[0]).toEqual({
+        n: 0,
+      });
     }
     await withEnv({ APP_ENV: 'production', MIGRATION_DATABASE_URL: database.url }, async () => {
       await expect(main(['--dataset=staging', '--dry-run'])).rejects.toThrow(SeedRefusedError);
@@ -191,10 +232,14 @@ describe('factories', () => {
       const campaign = await factories.insertCampaign(tx, user.id, { state: 'deleting' });
       return { user, campaign };
     });
-    const row = await client.query('select created_at, role from users where id = $1', [seeded.user.id]);
+    const row = await client.query('select created_at, role from users where id = $1', [
+      seeded.user.id,
+    ]);
     expect(row.rows[0].role).toBe('admin');
     expect((row.rows[0].created_at as Date).toISOString()).toBe('2026-06-01T00:00:00.000Z');
-    const campaign = await client.query('select state, created_at from campaigns where id = $1', [seeded.campaign.id]);
+    const campaign = await client.query('select state, created_at from campaigns where id = $1', [
+      seeded.campaign.id,
+    ]);
     expect(campaign.rows[0].state).toBe('deleting');
   });
 });

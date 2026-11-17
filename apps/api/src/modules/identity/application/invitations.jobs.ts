@@ -78,7 +78,8 @@ export class InvitationJobs {
     let revoked = 0;
     let owed = 0;
     for (const { id, handle } of await this.store.revokesOwed(this.database.db, BATCH)) {
-      if (await settleProviderRevoke(this.identity, this.store, this.database.db, id, handle)) revoked += 1;
+      if (await settleProviderRevoke(this.identity, this.store, this.database.db, id, handle))
+        revoked += 1;
       else owed += 1;
     }
     return { expired, staleSends, revoked, revokesOwed: owed };

@@ -1,5 +1,17 @@
 import { sql } from 'drizzle-orm';
-import { char, check, index, integer, pgTable, smallint, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  char,
+  check,
+  index,
+  integer,
+  pgTable,
+  smallint,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 import { campaigns } from './campaigns.js';
 import { mediaObjects } from './media.js';
 
@@ -8,7 +20,15 @@ import { mediaObjects } from './media.js';
 // service. The output media reference is SET NULL, like every output reference (SB-D17). Timestamps are read as text so
 // their microseconds survive.
 
-const JOB_STATES = ['pending', 'submitting', 'submitted', 'processing', 'completed', 'failed', 'cancelled'];
+const JOB_STATES = [
+  'pending',
+  'submitting',
+  'submitted',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled',
+];
 const CAUSE_CLASSES = [
   'temporary',
   'configuration',
@@ -36,7 +56,9 @@ export const thumbstopperJobs = pgTable(
       .references(() => campaigns.id, { onDelete: 'cascade' }),
     calloutText: varchar('callout_text', { length: 80 }).notNull(),
     providerModel: varchar('provider_model', { length: 120 }).notNull(),
-    outputMediaId: uuid('output_media_id').references(() => mediaObjects.id, { onDelete: 'set null' }),
+    outputMediaId: uuid('output_media_id').references(() => mediaObjects.id, {
+      onDelete: 'set null',
+    }),
     state: text('state').notNull().default('pending'),
     causeClass: text('cause_class'),
     causeMessage: varchar('cause_message', { length: 300 }),
@@ -47,18 +69,30 @@ export const thumbstopperJobs = pgTable(
     submittingAt: timestamp('submitting_at', { withTimezone: true, mode: 'string' }),
     deadlineAt: timestamp('deadline_at', { withTimezone: true, mode: 'string' }).notNull(),
     lastErrorCode: varchar('last_error_code', { length: 64 }),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     uniqueIndex('thumbstopper_jobs_reuse_uq')
       .on(table.ownerId, table.reuseHash)
       .where(sql`${table.state} not in ('failed', 'cancelled')`),
-    index('thumbstopper_jobs_campaign_created_idx').on(table.campaignId, sql`${table.createdAt} desc`),
+    index('thumbstopper_jobs_campaign_created_idx').on(
+      table.campaignId,
+      sql`${table.createdAt} desc`,
+    ),
     index('thumbstopper_jobs_owner_state_idx').on(table.ownerId, table.state),
-    index('thumbstopper_jobs_submitting_idx').on(table.submittingAt).where(sql`${table.state} = 'submitting'`),
+    index('thumbstopper_jobs_submitting_idx')
+      .on(table.submittingAt)
+      .where(sql`${table.state} = 'submitting'`),
     check('thumbstopper_jobs_state_ck', sql`${table.state} in (${list(JOB_STATES)})`),
-    check('thumbstopper_jobs_cause_ck', sql`${table.causeClass} is null or ${table.causeClass} in (${list(CAUSE_CLASSES)})`),
+    check(
+      'thumbstopper_jobs_cause_ck',
+      sql`${table.causeClass} is null or ${table.causeClass} in (${list(CAUSE_CLASSES)})`,
+    ),
     check('thumbstopper_jobs_call_count_ck', sql`${table.callCount} >= 0`),
     check('thumbstopper_jobs_callout_ck', sql`char_length(${table.calloutText}) between 1 and 80`),
   ],

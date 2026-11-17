@@ -41,7 +41,8 @@ const sessionCookie = (value: string, maxAge: number) =>
 export async function localSignIn(_: LocalFormState, data: FormData): Promise<LocalFormState> {
   if (!localOnly()) return { error: 'unavailable' };
   const email = text(data, 'email').trim();
-  if (!EMAIL.test(email) || text(data, 'password') !== LOCAL_DEV_PASSWORD) return { error: 'invalid' };
+  if (!EMAIL.test(email) || text(data, 'password') !== LOCAL_DEV_PASSWORD)
+    return { error: 'invalid' };
   const exp = Math.floor(Date.now() / 1000) + LOCAL_SESSION_TTL_SECONDS;
   const token = await signLocalSession({ sub: await localSubject(email), email, exp });
   (await cookies()).set(sessionCookie(token, LOCAL_SESSION_TTL_SECONDS));

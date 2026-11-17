@@ -28,7 +28,12 @@ describe('CMP-026 Final preview', () => {
 
   it('done: player has controls, a text alternative and the QC summary', () => {
     const { container } = render(
-      <FinalPreview state="done" title="Summer sale" durationSeconds={84} qc={{ passed: 4, total: 5 }} />,
+      <FinalPreview
+        state="done"
+        title="Summer sale"
+        durationSeconds={84}
+        qc={{ passed: 4, total: 5 }}
+      />,
     );
     const video = container.querySelector('video')!;
     expect(video).toHaveAttribute('controls');
@@ -78,15 +83,13 @@ describe('CMP-026 Final preview', () => {
 
   it('download asks for a fresh URL on every click', async () => {
     const user = userEvent.setup();
-    const request = vi.fn().mockResolvedValueOnce('https://x/1').mockResolvedValueOnce('https://x/2');
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce('https://x/1')
+      .mockResolvedValueOnce('https://x/2');
     const received = vi.fn();
     render(
-      <FinalPreview
-        state="done"
-        title="T"
-        requestDownloadUrl={request}
-        onDownloadUrl={received}
-      />,
+      <FinalPreview state="done" title="T" requestDownloadUrl={request} onDownloadUrl={received} />,
     );
     const button = screen.getByRole('button', { name: 'Download video' });
     await user.click(button);
@@ -106,13 +109,17 @@ describe('CMP-026 Final preview', () => {
       />,
     );
     await user.click(screen.getByRole('button', { name: 'Download video' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('download link could not be created');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'download link could not be created',
+    );
     expect(screen.getByRole('button', { name: 'Download video' })).toBeEnabled();
   });
 
   it('the default download starts a click on a temporary anchor', async () => {
     const user = userEvent.setup();
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
     render(<FinalPreview state="done" title="T" requestDownloadUrl={async () => 'https://x/f'} />);
     await user.click(screen.getByRole('button', { name: 'Download video' }));
     await waitFor(() => expect(click).toHaveBeenCalled());

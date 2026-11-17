@@ -13,12 +13,22 @@ let s: Stack;
 let ops: ReturnType<typeof openApiOperations>;
 
 /** The operations of the OpenAPI file that the running app routes (a slice that is not built yet has no route to test). */
-const routed = (op: { method: string; path: string }) => s.index.match(op.method, `/api/v1${urlOf(op.path)}`).kind === 'found';
-const guarded = () => ops.filter((op) => !op.scopes.includes('Pub') && !op.scopes.includes('M') && routed(op));
-const urlOf = (path: string) => path.replace(/\{position\}/g, '1').replace(/\{provider\}/g, 'openai').replace(/\{[^}]+\}/g, () => randomUUID());
+const routed = (op: { method: string; path: string }) =>
+  s.index.match(op.method, `/api/v1${urlOf(op.path)}`).kind === 'found';
+const guarded = () =>
+  ops.filter((op) => !op.scopes.includes('Pub') && !op.scopes.includes('M') && routed(op));
+const urlOf = (path: string) =>
+  path
+    .replace(/\{position\}/g, '1')
+    .replace(/\{provider\}/g, 'openai')
+    .replace(/\{[^}]+\}/g, () => randomUUID());
 const BODY: Record<string, unknown> = {};
 
-async function hit(op: { method: string; path: string }, token: string | undefined, extra: Record<string, string> = {}) {
+async function hit(
+  op: { method: string; path: string },
+  token: string | undefined,
+  extra: Record<string, string> = {},
+) {
   const payload = op.method === 'GET' || op.method === 'DELETE' ? undefined : BODY;
   return s.call(op.method as 'GET', urlOf(op.path), token, payload, extra);
 }
@@ -38,7 +48,11 @@ describe('identity is checked on every operation (SECT-AUTH-05, TC-ZT-01)', () =
     const user = await s.account('anon');
     for (const op of guarded()) {
       const none = await hit(op, undefined);
-      expect([op.id, none.status, none.body.error?.code], 'anonymous').toEqual([op.id, 401, 'unauthenticated']);
+      expect([op.id, none.status, none.body.error?.code], 'anonymous').toEqual([
+        op.id,
+        401,
+        'unauthenticated',
+      ]);
       for (const headers of [
         { cookie: `__session=${user.token}; session=${user.token}` },
         { authorization: `Basic ${Buffer.from(`${user.sub}:x`).toString('base64')}` },
@@ -46,10 +60,28 @@ describe('identity is checked on every operation (SECT-AUTH-05, TC-ZT-01)', () =
         { 'x-api-key': user.token },
         { 'x-service-token': 'internal', 'x-internal-jwt': user.token },
       ]) {
-        const res = await s.app.getHttpAdapter().getInstance().inject({ method: op.method as 'GET', url: `/api/v1${urlOf(op.path)}`, headers, ...(op.method === 'GET' || op.method === 'DELETE' ? {} : { payload: BODY }) });
-        expect([op.id, Object.keys(headers)[0], res.statusCode], 'no other credential is accepted').toEqual([op.id, Object.keys(headers)[0], 401]);
+        const res = await s.app
+          .getHttpAdapter()
+          .getInstance()
+          .inject({
+            method: op.method as 'GET',
+            url: `/api/v1${urlOf(op.path)}`,
+            headers,
+            ...(op.method === 'GET' || op.method === 'DELETE' ? {} : { payload: BODY }),
+          });
+        expect(
+          [op.id, Object.keys(headers)[0], res.statusCode],
+          'no other credential is accepted',
+        ).toEqual([op.id, Object.keys(headers)[0], 401]);
       }
-      const query = await s.app.getHttpAdapter().getInstance().inject({ method: op.method as 'GET', url: `/api/v1${urlOf(op.path)}?access_token=${user.token}&token=${user.token}`, ...(op.method === 'GET' || op.method === 'DELETE' ? {} : { payload: BODY }) });
+      const query = await s.app
+        .getHttpAdapter()
+        .getInstance()
+        .inject({
+          method: op.method as 'GET',
+          url: `/api/v1${urlOf(op.path)}?access_token=${user.token}&token=${user.token}`,
+          ...(op.method === 'GET' || op.method === 'DELETE' ? {} : { payload: BODY }),
+        });
       expect([op.id, query.statusCode], 'a token in the query string').toEqual([op.id, 401]);
     }
   });
@@ -58,16 +90,36 @@ describe('identity is checked on every operation (SECT-AUTH-05, TC-ZT-01)', () =
     const user = await s.account('expiry');
     const now = Math.floor(Date.now() / 1000);
     const bad = {
-      expired: s.local.issueToken({ sub: user.sub, azp: ORIGIN, fva: [1, 1], iat: now - 600, ttlSeconds: 60 }),
+      expired: s.local.issueToken({
+        sub: user.sub,
+        azp: ORIGIN,
+        fva: [1, 1],
+        iat: now - 600,
+        ttlSeconds: 60,
+      }),
       notYetValid: s.local.issueToken({ sub: user.sub, azp: ORIGIN, fva: [1, 1], iat: now + 3600 }),
-      wrongParty: s.local.issueToken({ sub: user.sub, azp: 'https://evil.example.com', fva: [1, 1] }),
-      wrongIssuer: s.local.issueToken({ sub: user.sub, azp: ORIGIN, fva: [1, 1], issuer: 'https://other-issuer.invalid' }),
+      wrongParty: s.local.issueToken({
+        sub: user.sub,
+        azp: 'https://evil.example.com',
+        fva: [1, 1],
+      }),
+      wrongIssuer: s.local.issueToken({
+        sub: user.sub,
+        azp: ORIGIN,
+        fva: [1, 1],
+        issuer: 'https://other-issuer.invalid',
+      }),
       unknownKey: s.local.issueToken({ sub: user.sub, azp: ORIGIN, fva: [1, 1], kid: 'not-a-key' }),
     };
     for (const [name, token] of Object.entries(bad)) {
       for (const op of guarded()) {
         const res = await hit(op, token);
-        expect([name, op.id, res.status, res.body.error?.code]).toEqual([name, op.id, 401, 'unauthenticated']);
+        expect([name, op.id, res.status, res.body.error?.code]).toEqual([
+          name,
+          op.id,
+          401,
+          'unauthenticated',
+        ]);
       }
     }
     // The same identity with a fresh token is fine: the refusals above are the token's, not the account's.
@@ -97,33 +149,68 @@ describe('role and status are read from the database on every request (SECT-AZ-1
     const victim = await s.account('suspended');
     const adminVictim = await s.admin('suspended-admin');
     expect((await s.call('GET', '/campaigns', victim.token)).status).toBe(200);
-    for (const target of [victim, adminVictim]) expect((await s.call('POST', `/admin/users/${target.id}/suspend`, boss.token)).status).toBe(200);
+    for (const target of [victim, adminVictim])
+      expect((await s.call('POST', `/admin/users/${target.id}/suspend`, boss.token)).status).toBe(
+        200,
+      );
     for (const target of [victim, adminVictim]) {
       for (const op of guarded()) {
         const res = await hit(op, target.token);
-        expect([op.id, res.status, res.body.error?.code]).toEqual([op.id, 403, 'account_suspended']);
+        expect([op.id, res.status, res.body.error?.code]).toEqual([
+          op.id,
+          403,
+          'account_suspended',
+        ]);
       }
     }
     // The session revocation is queued with the status change (never called from the API), and the audit trail says who did it.
-    expect(await s.count('pgboss.job', `name = 'identity.revoke-sessions' and data->>'userId' = $1`, [victim.id])).toBe(1);
-    expect(await s.count('audit_events', `action = 'account.suspended' and object_id = $1 and actor_id = $2`, [victim.id, boss.id])).toBe(1);
-    expect((await s.call('POST', `/admin/users/${victim.id}/reinstate`, boss.token)).status).toBe(200);
+    expect(
+      await s.count('pgboss.job', `name = 'identity.revoke-sessions' and data->>'userId' = $1`, [
+        victim.id,
+      ]),
+    ).toBe(1);
+    expect(
+      await s.count(
+        'audit_events',
+        `action = 'account.suspended' and object_id = $1 and actor_id = $2`,
+        [victim.id, boss.id],
+      ),
+    ).toBe(1);
+    expect((await s.call('POST', `/admin/users/${victim.id}/reinstate`, boss.token)).status).toBe(
+      200,
+    );
     expect((await s.call('GET', '/campaigns', victim.token)).status).toBe(200);
   });
 
-  openDefect('SEC116-F1', 'the worker handles identity.revoke-sessions: a suspended user\'s provider sessions are ended (SECT-ID-02, SECT-AUTH-06)', async () => {
-    const boss = await s.admin('zt-boss-rev');
-    const victim = await s.account('revoked');
-    expect((await s.call('POST', `/admin/users/${victim.id}/suspend`, boss.token)).status).toBe(200);
-    await s.until(async () => s.workerIdentity.sessionRevocations.includes(victim.sub), 'the provider session revocation', 8_000);
-  });
+  openDefect(
+    'SEC116-F1',
+    "the worker handles identity.revoke-sessions: a suspended user's provider sessions are ended (SECT-ID-02, SECT-AUTH-06)",
+    async () => {
+      const boss = await s.admin('zt-boss-rev');
+      const victim = await s.account('revoked');
+      expect((await s.call('POST', `/admin/users/${victim.id}/suspend`, boss.token)).status).toBe(
+        200,
+      );
+      await s.until(
+        async () => s.workerIdentity.sessionRevocations.includes(victim.sub),
+        'the provider session revocation',
+        8_000,
+      );
+    },
+  );
 
   it('a removed user is refused on the next request with account_removed on every guarded operation', async () => {
     const boss = await s.admin('zt-boss2');
     const victim = await s.account('removed');
     await seedSubject(s, victim, 'zt-rm-0001');
     expect((await s.call('GET', '/campaigns', victim.token)).status).toBe(200);
-    expect((await s.call('POST', `/admin/users/${victim.id}/remove`, boss.token, { confirmation: victim.email })).status).toBe(202);
+    expect(
+      (
+        await s.call('POST', `/admin/users/${victim.id}/remove`, boss.token, {
+          confirmation: victim.email,
+        })
+      ).status,
+    ).toBe(202);
     for (const op of guarded()) {
       const res = await hit(op, victim.token);
       expect([op.id, res.status, res.body.error?.code]).toEqual([op.id, 403, 'account_removed']);
@@ -139,13 +226,27 @@ describe('role and status are read from the database on every request (SECT-AZ-1
       for (const op of adminOps) codes[op.id] = (await hit(op, token)).body.error?.code;
       return codes;
     };
-    for (const [id, code] of Object.entries(await refusals(person.token))) expect([id, code]).toEqual([id, 'forbidden_role']);
+    for (const [id, code] of Object.entries(await refusals(person.token)))
+      expect([id, code]).toEqual([id, 'forbidden_role']);
     await s.pool.query(`update users set role = 'admin' where id = $1`, [person.id]);
-    for (const [id, code] of Object.entries(await refusals(person.token))) expect([id, code], 'promoted: the role check passes').not.toEqual([id, 'forbidden_role']);
+    for (const [id, code] of Object.entries(await refusals(person.token)))
+      expect([id, code], 'promoted: the role check passes').not.toEqual([id, 'forbidden_role']);
     await s.pool.query(`update users set role = 'user' where id = $1`, [person.id]);
-    for (const [id, code] of Object.entries(await refusals(person.token))) expect([id, code], 'demoted: refused again on the very next request').toEqual([id, 'forbidden_role']);
+    for (const [id, code] of Object.entries(await refusals(person.token)))
+      expect([id, code], 'demoted: refused again on the very next request').toEqual([
+        id,
+        'forbidden_role',
+      ]);
     // Forged identity fields and headers do not widen anything (SECT-ZT-01, SECT-AZ-10).
-    const forged = { 'x-role': 'admin', 'x-user-role': 'admin', 'x-user-id': randomUUID(), 'x-tenant-id': randomUUID(), 'x-forwarded-user': 'admin', 'x-internal-user': 'admin', 'x-owner-id': randomUUID() };
+    const forged = {
+      'x-role': 'admin',
+      'x-user-role': 'admin',
+      'x-user-id': randomUUID(),
+      'x-tenant-id': randomUUID(),
+      'x-forwarded-user': 'admin',
+      'x-internal-user': 'admin',
+      'x-owner-id': randomUUID(),
+    };
     for (const op of adminOps) {
       const res = await hit(op, person.token, forged);
       expect([op.id, res.body.error?.code]).toEqual([op.id, 'forbidden_role']);
@@ -158,7 +259,11 @@ describe('role and status are read from the database on every request (SECT-AZ-1
     const token = s.local.issueToken({ sub, azp: ORIGIN, fva: [1, 1] });
     for (const op of guarded()) {
       const res = await hit(op, token);
-      if (op.scopes.includes('T')) expect([op.id, res.status === 403 && res.body.error?.code === 'not_linked'], 'the token-only operations').toEqual([op.id, false]);
+      if (op.scopes.includes('T'))
+        expect(
+          [op.id, res.status === 403 && res.body.error?.code === 'not_linked'],
+          'the token-only operations',
+        ).toEqual([op.id, false]);
       else expect([op.id, res.status, res.body.error?.code]).toEqual([op.id, 403, 'not_linked']);
     }
     expect(await s.count('users', 'idp_subject = $1', [sub])).toBe(0);
@@ -166,50 +271,97 @@ describe('role and status are read from the database on every request (SECT-AZ-1
 });
 
 describe('forged identity in a body, a query or a path never widens access (SECT-AZ-10, TC-ZT-06)', () => {
-  it('ignores or rejects role, owner, status, userId and tenant fields, and never lists another user\'s rows', async () => {
+  it("ignores or rejects role, owner, status, userId and tenant fields, and never lists another user's rows", async () => {
     const a = await s.account('forge-a');
     const b = await s.account('forge-b');
     const seeded = await seedSubject(s, b, 'zt-forge-b');
     const attempts = [
-      { ownerId: b.id }, { owner_id: b.id }, { userId: b.id }, { role: 'admin' }, { status: 'active' }, { campaign_id: seeded.campaign }, { key_id: randomUUID() },
+      { ownerId: b.id },
+      { owner_id: b.id },
+      { userId: b.id },
+      { role: 'admin' },
+      { status: 'active' },
+      { campaign_id: seeded.campaign },
+      { key_id: randomUUID() },
     ];
     for (const extra of attempts) {
       const res = await s.call('POST', '/drafts', a.token, { productName: 'Mine', ...extra });
-      expect([JSON.stringify(extra), res.status], 'closed DTO').toEqual([JSON.stringify(extra), 400]);
+      expect([JSON.stringify(extra), res.status], 'closed DTO').toEqual([
+        JSON.stringify(extra),
+        400,
+      ]);
       expect(res.body.error?.code).toBe('validation_failed');
     }
     expect(await s.count('drafts', 'owner_id = $1', [a.id])).toBe(0);
-    for (const url of [`/campaigns?ownerId=${b.id}`, `/campaigns?userId=${b.id}&role=admin`, `/drafts?owner_id=${b.id}`, `/media/${seeded.upload}`, `/campaigns/${seeded.campaign}`]) {
-      const res = await s.call('GET', url, a.token, undefined, { 'x-user-id': b.id, 'x-owner-id': b.id });
+    for (const url of [
+      `/campaigns?ownerId=${b.id}`,
+      `/campaigns?userId=${b.id}&role=admin`,
+      `/drafts?owner_id=${b.id}`,
+      `/media/${seeded.upload}`,
+      `/campaigns/${seeded.campaign}`,
+    ]) {
+      const res = await s.call('GET', url, a.token, undefined, {
+        'x-user-id': b.id,
+        'x-owner-id': b.id,
+      });
       const text = JSON.stringify(res.body);
       expect(text, url).not.toContain(seeded.canaries.productName);
       expect(text, url).not.toContain(seeded.upload);
       expect(text, url).not.toContain(b.email);
     }
-    expect(await s.count('users', `id = $1 and role = 'user' and status = 'active'`, [a.id])).toBe(1);
-    expect((await s.call('PUT', `/admin/users/${a.id}/role`, a.token, { role: 'admin' })).body.error?.code).toBe('forbidden_role');
+    expect(await s.count('users', `id = $1 and role = 'user' and status = 'active'`, [a.id])).toBe(
+      1,
+    );
+    expect(
+      (await s.call('PUT', `/admin/users/${a.id}/role`, a.token, { role: 'admin' })).body.error
+        ?.code,
+    ).toBe('forbidden_role');
   });
 
   it('answers a foreign and a missing object identically: same status, same body shape, same headers, nothing leaks (SECT-AZ-04, TC-ZT-03)', async () => {
     const a = await s.account('own-a');
     const b = await s.account('own-b');
     const seeded = await seedSubject(s, b, 'zt-own-b');
-    const idOps = guarded().filter((op) => op.scopes.includes('U') && !op.scopes.includes('A') && /\{(mediaId|campaignId|draftId|videoJobId)\}/.test(op.path) && !op.path.includes('{position}'));
+    const idOps = guarded().filter(
+      (op) =>
+        op.scopes.includes('U') &&
+        !op.scopes.includes('A') &&
+        /\{(mediaId|campaignId|draftId|videoJobId)\}/.test(op.path) &&
+        !op.path.includes('{position}'),
+    );
     expect(idOps.length).toBeGreaterThan(10);
-    const real: Record<string, string> = { '{mediaId}': seeded.upload, '{campaignId}': seeded.campaign };
+    const real: Record<string, string> = {
+      '{mediaId}': seeded.upload,
+      '{campaignId}': seeded.campaign,
+    };
     let compared = 0;
     for (const op of idOps) {
       const placeholder = Object.keys(real).find((p) => op.path.includes(p));
       if (placeholder === undefined) continue;
       const foreignPath = op.path.replace(placeholder, real[placeholder] as string);
       const missingPath = op.path.replace(placeholder, randomUUID());
-      const call = (path: string) => s.call(op.method as 'GET', urlOf(path), a.token, op.method === 'GET' || op.method === 'DELETE' ? undefined : BODY);
+      const call = (path: string) =>
+        s.call(
+          op.method as 'GET',
+          urlOf(path),
+          a.token,
+          op.method === 'GET' || op.method === 'DELETE' ? undefined : BODY,
+        );
       const foreign = await call(foreignPath);
       const missing = await call(missingPath);
-      expect([op.id, foreign.status, foreign.body.error?.code]).toEqual([op.id, missing.status, missing.body.error?.code]);
+      expect([op.id, foreign.status, foreign.body.error?.code]).toEqual([
+        op.id,
+        missing.status,
+        missing.body.error?.code,
+      ]);
       expect(foreign.body.error?.message, op.id).toBe(missing.body.error?.message);
-      expect(Object.keys(foreign.headers).sort(), op.id).toEqual(Object.keys(missing.headers).sort());
-      expect(foreign.raw.includes(seeded.campaign) || foreign.raw.includes(seeded.upload), op.id).toBe(false);
+      expect(Object.keys(foreign.headers).sort(), op.id).toEqual(
+        Object.keys(missing.headers).sort(),
+      );
+      expect(
+        foreign.raw.includes(seeded.campaign) || foreign.raw.includes(seeded.upload),
+        op.id,
+      ).toBe(false);
       compared += 1;
     }
     expect(compared).toBeGreaterThan(5);
@@ -218,7 +370,12 @@ describe('forged identity in a body, a query or a path never widens access (SECT
     expect(await s.count('media_objects', 'owner_id = $1', [b.id])).toBe(3);
     // An administrator gets no role-based read of a user's content (SECT-AZ-02).
     const boss = await s.admin('zt-boss3');
-    for (const url of [`/campaigns/${seeded.campaign}`, `/media/${seeded.upload}`, `/media/${seeded.upload}/url`, `/campaigns/${seeded.campaign}/brief`]) {
+    for (const url of [
+      `/campaigns/${seeded.campaign}`,
+      `/media/${seeded.upload}`,
+      `/media/${seeded.upload}/url`,
+      `/campaigns/${seeded.campaign}/brief`,
+    ]) {
       const res = await s.call('GET', url, boss.token);
       expect([url, res.status, res.body.error?.code]).toEqual([url, 404, 'not_found']);
     }

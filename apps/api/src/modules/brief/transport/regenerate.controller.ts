@@ -31,7 +31,12 @@ export class RegenerateController {
     const ownerId = owner(actor);
     const { campaignId } = parseWith(Params, rawParams);
     const key = parseIdempotencyKey(header);
-    const result = await this.regenerates.regenerate(ownerId, campaignId, key, requestHash('POST', request.url, null));
+    const result = await this.regenerates.regenerate(
+      ownerId,
+      campaignId,
+      key,
+      requestHash('POST', request.url, null),
+    );
     return { briefState: 'generating', job: outcomeSummary(result) };
   }
 }

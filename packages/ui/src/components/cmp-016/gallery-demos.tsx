@@ -54,7 +54,8 @@ export function TableDemo({
         onSortChange={(columnId) =>
           setSort((s) => ({
             columnId,
-            direction: s.columnId === columnId && s.direction === 'ascending' ? 'descending' : 'ascending',
+            direction:
+              s.columnId === columnId && s.direction === 'ascending' ? 'descending' : 'ascending',
           }))
         }
         selectedKeys={new Set(selected ? [selected] : [])}
@@ -63,7 +64,9 @@ export function TableDemo({
         onRetry={() => setLast('retry')}
         emptyTitle={emptyVariant === 'no-matches' ? 'No campaigns match' : 'No campaigns yet'}
         emptyDescription={
-          emptyVariant === 'no-matches' ? 'Try a different filter.' : 'Create your first campaign to see it here.'
+          emptyVariant === 'no-matches'
+            ? 'Try a different filter.'
+            : 'Create your first campaign to see it here.'
         }
         emptyVariant={emptyVariant}
       />

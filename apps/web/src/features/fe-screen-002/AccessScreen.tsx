@@ -38,7 +38,13 @@ function stateFromMe(me: ReturnType<typeof useGetMe>): Screen002State | 'linked'
  * state needs no api call. Otherwise API-001 decides, and a linked account is sent on to the campaigns. A not-linked
  * token reaches only API-001 and API-002.
  */
-export function AccessScreen({ named, navigate = go }: { named: NamedState | null; navigate?: (href: string) => void }) {
+export function AccessScreen({
+  named,
+  navigate = go,
+}: {
+  named: NamedState | null;
+  navigate?: (href: string) => void;
+}) {
   const lookup = named === null || named === 'not-linked';
   const me = useGetMe({ query: { enabled: lookup, retry: false } });
   const [submitted, setSubmitted] = useState<AccessFormOutcome | null>(null);
@@ -52,21 +58,29 @@ export function AccessScreen({ named, navigate = go }: { named: NamedState | nul
   if (resolved === 'suspended' || resolved === 'removed') return <AccessMessage state={resolved} />;
   if (resolved === null || resolved === 'linked') {
     return (
-      <AuthShell variant="message" panel={AUTH_PANEL} title={AUTH_COPY.productName} providerState="loading" />
+      <AuthShell
+        variant="message"
+        panel={AUTH_PANEL}
+        title={AUTH_COPY.productName}
+        providerState="loading"
+      />
     );
   }
   if (resolved === 'error') {
     const view = resolveError(me.error);
     return (
       <AuthShell variant="message" panel={AUTH_PANEL} title={ACCESS_FORM_COPY.checkFailedTitle}>
-        <Alert variant={view.tone === 'destructive' ? 'destructive' : 'warning'}>{view.message}</Alert>
+        <Alert variant={view.tone === 'destructive' ? 'destructive' : 'warning'}>
+          {view.message}
+        </Alert>
         <Button variant="outline" onClick={() => void me.refetch()}>
           {ACCESS_FORM_COPY.tryAgain}
         </Button>
       </AuthShell>
     );
   }
-  if (resolved === 'request-pending' || submitted === 'received') return <AccessMessage state="request-pending" />;
+  if (resolved === 'request-pending' || submitted === 'received')
+    return <AccessMessage state="request-pending" />;
   const account = accountOf(me);
   const formEnabled = account?.linkState === 'not_linked' && account.accessRequest.formEnabled;
   return (

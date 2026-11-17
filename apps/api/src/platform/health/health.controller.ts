@@ -27,7 +27,10 @@ export class HealthController {
     if (failed !== null) {
       // The failed check is logged for the operator; the public answer carries no detail.
       this.logger.warn(`not ready: ${failed}`);
-      throw new DomainError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.');
+      throw new DomainError(
+        'service_unavailable',
+        'The service is temporarily unavailable. Try again shortly.',
+      );
     }
     return { status: 'ok' };
   }

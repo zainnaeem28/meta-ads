@@ -22,7 +22,14 @@ export interface PageHeaderProps {
 }
 
 /** CMP-033: the page's `h1`, optional description, actions, and (inside a campaign) breadcrumb and stage tabs. */
-export function PageHeader({ title, description, actions, breadcrumb, tabs, className }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  actions,
+  breadcrumb,
+  tabs,
+  className,
+}: PageHeaderProps) {
   const classes = ['page-header flex flex-col gap-3', className].filter(Boolean).join(' ');
   return (
     <header className={classes} data-variant={breadcrumb || tabs ? 'campaign' : 'default'}>
@@ -41,7 +48,10 @@ export function PageHeader({ title, description, actions, breadcrumb, tabs, clas
                       {item.label}
                     </a>
                   ) : (
-                    <span aria-current={last ? 'page' : undefined} className={last ? 'font-medium text-foreground' : undefined}>
+                    <span
+                      aria-current={last ? 'page' : undefined}
+                      className={last ? 'font-medium text-foreground' : undefined}
+                    >
                       {item.label}
                     </span>
                   )}
@@ -62,7 +72,9 @@ export function PageHeader({ title, description, actions, breadcrumb, tabs, clas
           {description ? <p className="text-ui text-muted-foreground">{description}</p> : null}
         </div>
         {actions ? (
-          <div className="flex shrink-0 flex-col gap-2 md:flex-row md:items-center [&>*]:max-md:w-full">{actions}</div>
+          <div className="flex shrink-0 flex-col gap-2 md:flex-row md:items-center [&>*]:max-md:w-full">
+            {actions}
+          </div>
         ) : null}
       </div>
       {tabs}

@@ -17,7 +17,11 @@ export function checkCallout(rules: CompiledRules, calloutText: string): Callout
   const seen = new Set<string>();
   const issues: CalloutIssue[] = [];
   // The text stands for both fields a rule may read, so a rule written for the prompt catches it too.
-  for (const finding of checkSegment(textRules, { dialogue: calloutText, prompt: calloutText, isLast: false })) {
+  for (const finding of checkSegment(textRules, {
+    dialogue: calloutText,
+    prompt: calloutText,
+    isLast: false,
+  })) {
     if (seen.has(finding.ruleId)) continue;
     seen.add(finding.ruleId);
     issues.push({ ruleId: finding.ruleId, class: finding.class, message: finding.message });
@@ -27,7 +31,9 @@ export function checkCallout(rules: CompiledRules, calloutText: string): Callout
 
 /** SHA-256 hex of what makes two thumbstoppers the same work: the campaign, the text and the model. */
 export function thumbReuseHash(campaignId: string, calloutText: string, model: string): string {
-  return createHash('sha256').update(JSON.stringify(['thumbstopper', campaignId, calloutText, model])).digest('hex');
+  return createHash('sha256')
+    .update(JSON.stringify(['thumbstopper', campaignId, calloutText, model]))
+    .digest('hex');
 }
 
 /** The image prompt: the call-out text is the only user words in it, quoted so it reads as text to draw, not as an instruction. */

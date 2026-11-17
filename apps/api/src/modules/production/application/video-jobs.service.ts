@@ -32,7 +32,8 @@ const QC_HISTORY_LIMIT = 20;
 const NOT_LIVE = ['failed', 'cancelled'];
 const NON_TERMINAL = ['pending', 'submitting', 'submitted', 'processing'];
 
-const notFound = (what: string): DomainError => new DomainError('not_found', `This ${what} does not exist.`);
+const notFound = (what: string): DomainError =>
+  new DomainError('not_found', `This ${what} does not exist.`);
 
 /** What the job-creating rule (SB-D14) needs to make, find or replay one clip. */
 interface Plan {
@@ -106,13 +107,20 @@ export class VideoJobsService {
       const replay = await this.replayIfRecorded(tx, base);
       if (replay !== undefined) return replay;
       this.assertProducible(segment);
-      const reference = useProductImage ? await this.readyReference(tx, ownerId, segment.productMediaId) : null;
+      const reference = useProductImage
+        ? await this.readyReference(tx, ownerId, segment.productMediaId)
+        : null;
       return this.createOrReuse(tx, this.plan(base, campaignId, segment, reference));
     });
   }
 
   /** API-063: a failed or cancelled clip is made again as a new row, from the segment's current text. */
-  async retry(ownerId: string, videoJobId: string, key: string, requestHash: Buffer): Promise<VideoJobOutcome> {
+  async retry(
+    ownerId: string,
+    videoJobId: string,
+    key: string,
+    requestHash: Buffer,
+  ): Promise<VideoJobOutcome> {
     return this.inTransaction(async (tx) => {
       const [original] = await tx
         .select({
@@ -125,14 +133,23 @@ export class VideoJobsService {
         .from(videoJobs)
         .innerJoin(briefSegments, eq(briefSegments.id, videoJobs.segmentId))
         .innerJoin(campaigns, eq(campaigns.id, videoJobs.campaignId))
-        .where(and(eq(videoJobs.id, videoJobId), eq(videoJobs.ownerId, ownerId), eq(campaigns.state, 'active')));
+        .where(
+          and(
+            eq(videoJobs.id, videoJobId),
+            eq(videoJobs.ownerId, ownerId),
+            eq(campaigns.state, 'active'),
+          ),
+        );
       if (original === undefined) throw notFound('video job');
       const segment = await this.lockedSegment(tx, ownerId, original.campaignId, original.position);
       const base = { ownerId, operationId: 'API-063', key, requestHash } as const;
       const replay = await this.replayIfRecorded(tx, base);
       if (replay !== undefined) return replay;
       if (!isRetryable(original.state)) {
-        throw new DomainError('state_conflict', 'Only a clip that failed or was cancelled can be tried again.');
+        throw new DomainError(
+          'state_conflict',
+          'Only a clip that failed or was cancelled can be tried again.',
+        );
       }
       this.assertProducible(segment);
       // The reference is kept when its image still exists and is ready; the deletion of an image clears the column.
@@ -149,7 +166,13 @@ export class VideoJobsService {
         .from(videoJobs)
         .innerJoin(briefSegments, eq(briefSegments.id, videoJobs.segmentId))
         .innerJoin(campaigns, eq(campaigns.id, videoJobs.campaignId))
-        .where(and(eq(videoJobs.id, videoJobId), eq(videoJobs.ownerId, ownerId), eq(campaigns.state, 'active')));
+        .where(
+          and(
+            eq(videoJobs.id, videoJobId),
+            eq(videoJobs.ownerId, ownerId),
+            eq(campaigns.state, 'active'),
+          ),
+        );
       const [job] = await this.withQc(tx, rows);
       if (job === undefined) throw notFound('video job');
       return job;
@@ -160,17 +183,34 @@ export class VideoJobsService {
   async listForCampaign(ownerId: string, campaignId: string): Promise<SegmentJobsEntry[]> {
     return this.database.uow.run(async (tx) => {
       const segments = await tx
-        .select({ id: briefSegments.id, position: briefSegments.position, state: briefSegments.state, revision: briefSegments.revision })
+        .select({
+          id: briefSegments.id,
+          position: briefSegments.position,
+          state: briefSegments.state,
+          revision: briefSegments.revision,
+        })
         .from(campaigns)
         .innerJoin(briefs, eq(briefs.campaignId, campaigns.id))
         .innerJoin(briefSegments, eq(briefSegments.briefId, briefs.id))
-        .where(and(eq(campaigns.id, campaignId), eq(campaigns.ownerId, ownerId), eq(campaigns.state, 'active')))
+        .where(
+          and(
+            eq(campaigns.id, campaignId),
+            eq(campaigns.ownerId, ownerId),
+            eq(campaigns.state, 'active'),
+          ),
+        )
         .orderBy(asc(briefSegments.position));
       if (segments.length === 0) {
         const [owned] = await tx
           .select({ id: campaigns.id })
           .from(campaigns)
-          .where(and(eq(campaigns.id, campaignId), eq(campaigns.ownerId, ownerId), eq(campaigns.state, 'active')));
+          .where(
+            and(
+              eq(campaigns.id, campaignId),
+              eq(campaigns.ownerId, ownerId),
+              eq(campaigns.state, 'active'),
+            ),
+          );
         if (owned === undefined) throw notFound('campaign');
         return [];
       }
@@ -204,11 +244,20 @@ export class VideoJobsService {
 
   /** Campaign deletion step 1 (SB-D17), in the caller's transaction: every unfinished clip and QC run becomes `cancelled`. */
   async cancelForCampaign(tx: DbTx, ownerId: string, campaignId: string): Promise<number> {
-    return this.cancel(tx, ownerId, 'cancelled_campaign_deleted', eq(videoJobs.campaignId, campaignId));
+    return this.cancel(
+      tx,
+      ownerId,
+      'cancelled_campaign_deleted',
+      eq(videoJobs.campaignId, campaignId),
+    );
   }
 
   /** Account suspension or removal (SB-D16), in the caller's transaction. */
-  async cancelForOwner(tx: DbTx, ownerId: string, cause: Exclude<CancelCause, 'cancelled_campaign_deleted'>): Promise<number> {
+  async cancelForOwner(
+    tx: DbTx,
+    ownerId: string,
+    cause: Exclude<CancelCause, 'cancelled_campaign_deleted'>,
+  ): Promise<number> {
     return this.cancel(tx, ownerId, cause, undefined);
   }
 
@@ -250,7 +299,8 @@ export class VideoJobsService {
     return this.database.uow.run(async (tx) => {
       const videoOwner = ownerId === undefined ? sql`true` : sql`${videoJobs.ownerId} = ${ownerId}`;
       const qcOwner = ownerId === undefined ? sql`true` : sql`${qcRuns.ownerId} = ${ownerId}`;
-      const inWindow = (column: unknown) => sql`${column} >= ${f}::timestamptz and ${column} < ${t}::timestamptz`;
+      const inWindow = (column: unknown) =>
+        sql`${column} >= ${f}::timestamptz and ${column} < ${t}::timestamptz`;
       const [video] = await tx
         .select({
           created: sql<number>`count(*) filter (where ${inWindow(videoJobs.createdAt)})::int`,
@@ -261,7 +311,9 @@ export class VideoJobsService {
         .from(videoJobs)
         .where(videoOwner);
       const [qc] = await tx
-        .select({ created: sql<number>`count(*) filter (where ${inWindow(qcRuns.createdAt)})::int` })
+        .select({
+          created: sql<number>`count(*) filter (where ${inWindow(qcRuns.createdAt)})::int`,
+        })
         .from(qcRuns)
         .where(qcOwner);
       return {
@@ -290,12 +342,23 @@ export class VideoJobsService {
    * The owner's active campaign, its brief row locked (so an edit cannot move the segment under this request) and the
    * segment at `position`. A foreign, deleting or missing campaign and a position with no segment are `not_found`.
    */
-  private async lockedSegment(tx: DbTx, ownerId: string, campaignId: string, position: number): Promise<SegmentRow> {
+  private async lockedSegment(
+    tx: DbTx,
+    ownerId: string,
+    campaignId: string,
+    position: number,
+  ): Promise<SegmentRow> {
     const [brief] = await tx
       .select({ id: briefs.id, state: briefs.state, productMediaId: campaigns.productMediaId })
       .from(briefs)
       .innerJoin(campaigns, eq(campaigns.id, briefs.campaignId))
-      .where(and(eq(briefs.campaignId, campaignId), eq(briefs.ownerId, ownerId), eq(campaigns.state, 'active')))
+      .where(
+        and(
+          eq(briefs.campaignId, campaignId),
+          eq(briefs.ownerId, ownerId),
+          eq(campaigns.state, 'active'),
+        ),
+      )
       .for('update', { of: briefs });
     if (brief === undefined) throw notFound('campaign');
     const [segment] = await tx
@@ -326,12 +389,22 @@ export class VideoJobsService {
   }
 
   /** The owner's product image when it is `ready`; a missing or unfinished one means a clip without a reference. */
-  private async readyReference(tx: DbTx, ownerId: string, mediaId: string | null): Promise<string | null> {
+  private async readyReference(
+    tx: DbTx,
+    ownerId: string,
+    mediaId: string | null,
+  ): Promise<string | null> {
     if (mediaId === null) return null;
     const [media] = await tx
       .select({ id: mediaObjects.id })
       .from(mediaObjects)
-      .where(and(eq(mediaObjects.id, mediaId), eq(mediaObjects.ownerId, ownerId), eq(mediaObjects.state, 'ready')));
+      .where(
+        and(
+          eq(mediaObjects.id, mediaId),
+          eq(mediaObjects.ownerId, ownerId),
+          eq(mediaObjects.state, 'ready'),
+        ),
+      );
     return media?.id ?? null;
   }
 
@@ -354,7 +427,13 @@ export class VideoJobsService {
       referenceMediaId,
       providerModel: referenceMediaId === null ? this.config.modelT2v : this.config.modelI2v,
       options,
-      reuseHash: videoReuseHash({ segmentId: segment.id, prompt: segment.prompt, dialogue: segment.dialogue, referenceMediaId, options }),
+      reuseHash: videoReuseHash({
+        segmentId: segment.id,
+        prompt: segment.prompt,
+        dialogue: segment.dialogue,
+        referenceMediaId,
+        options,
+      }),
     };
   }
 
@@ -366,7 +445,10 @@ export class VideoJobsService {
     const record = await lookupRecord(tx, scope);
     if (record === undefined) return undefined;
     if (!record.requestHash.equals(scope.requestHash)) {
-      throw new DomainError('idempotency_key_reused', 'This request key was already used for a different request.');
+      throw new DomainError(
+        'idempotency_key_reused',
+        'This request key was already used for a different request.',
+      );
     }
     return { job: await this.jobById(tx, scope.ownerId, record.resourceId), reused: true };
   }
@@ -376,11 +458,27 @@ export class VideoJobsService {
     const [reusable] = await tx
       .select({ id: videoJobs.id })
       .from(videoJobs)
-      .where(and(eq(videoJobs.ownerId, plan.ownerId), eq(videoJobs.reuseHash, plan.reuseHash), notInArray(videoJobs.state, NOT_LIVE)));
+      .where(
+        and(
+          eq(videoJobs.ownerId, plan.ownerId),
+          eq(videoJobs.reuseHash, plan.reuseHash),
+          notInArray(videoJobs.state, NOT_LIVE),
+        ),
+      );
     const outcome = await withIdempotency(
       tx,
-      { ownerId: plan.ownerId, operationId: plan.operationId, key: plan.key, requestHash: plan.requestHash },
-      { resourceType: 'video_job', responseStatus: 202, ttlHours: this.config.idempotencyTtlHours, resourceId: reusable?.id },
+      {
+        ownerId: plan.ownerId,
+        operationId: plan.operationId,
+        key: plan.key,
+        requestHash: plan.requestHash,
+      },
+      {
+        resourceType: 'video_job',
+        responseStatus: 202,
+        ttlHours: this.config.idempotencyTtlHours,
+        resourceId: reusable?.id,
+      },
       async (id) => {
         if (reusable !== undefined) return { id: reusable.id, reused: true };
         await this.create(tx, plan, id);
@@ -431,13 +529,25 @@ export class VideoJobsService {
       .where(and(eq(providerKeys.ownerId, ownerId), eq(providerKeys.provider, 'wavespeed')));
     if (key === undefined) {
       throw new DomainError('key_missing', 'Add your WaveSpeed key in Settings, then try again.', [
-        { field: 'wavespeedKey', code: 'missing', message: 'No WaveSpeed key is stored for your account.' },
+        {
+          field: 'wavespeedKey',
+          code: 'missing',
+          message: 'No WaveSpeed key is stored for your account.',
+        },
       ]);
     }
     if (key.status === 'disabled') {
-      throw new DomainError('key_disabled', 'Your WaveSpeed key is disabled. Enter it again in Settings, then try again.', [
-        { field: 'wavespeedKey', code: 'disabled', message: 'Your WaveSpeed key was disabled after repeated authentication failures.' },
-      ]);
+      throw new DomainError(
+        'key_disabled',
+        'Your WaveSpeed key is disabled. Enter it again in Settings, then try again.',
+        [
+          {
+            field: 'wavespeedKey',
+            code: 'disabled',
+            message: 'Your WaveSpeed key was disabled after repeated authentication failures.',
+          },
+        ],
+      );
     }
     return key;
   }
@@ -449,7 +559,8 @@ export class VideoJobsService {
       .innerJoin(briefSegments, eq(briefSegments.id, videoJobs.segmentId))
       .where(and(eq(videoJobs.id, id), eq(videoJobs.ownerId, ownerId)));
     const [job] = await this.withQc(tx, rows);
-    if (job === undefined) throw new DomainError('not_found', 'This request no longer has a result.');
+    if (job === undefined)
+      throw new DomainError('not_found', 'This request no longer has a result.');
     return job;
   }
 
@@ -480,15 +591,27 @@ export class VideoJobsService {
         deadlineAt: qcRuns.deadlineAt,
       })
       .from(qcRuns)
-      .where(inArray(qcRuns.videoJobId, rows.map((row) => row.id)))
+      .where(
+        inArray(
+          qcRuns.videoJobId,
+          rows.map((row) => row.id),
+        ),
+      )
       .orderBy(desc(qcRuns.createdAt), desc(qcRuns.id));
     return rows.map((row) => {
-      const history: QcRecord[] = runs.filter((run) => run.videoJobId === row.id).slice(0, QC_HISTORY_LIMIT);
+      const history: QcRecord[] = runs
+        .filter((run) => run.videoJobId === row.id)
+        .slice(0, QC_HISTORY_LIMIT);
       return { ...row, latestQc: history[0] ?? null, qcHistory: history };
     });
   }
 
-  private async cancel(tx: DbTx, ownerId: string, cause: CancelCause, scope: ReturnType<typeof eq> | undefined): Promise<number> {
+  private async cancel(
+    tx: DbTx,
+    ownerId: string,
+    cause: CancelCause,
+    scope: ReturnType<typeof eq> | undefined,
+  ): Promise<number> {
     await lockXact(tx, 'spend', ownerId);
     const live = await tx
       .select({ id: videoJobs.id, state: videoJobs.state, model: videoJobs.providerModel })
@@ -498,8 +621,18 @@ export class VideoJobsService {
     if (live.length > 0) {
       await tx
         .update(videoJobs)
-        .set({ state: 'cancelled', causeClass: cause, causeMessage: 'This clip was cancelled.', updatedAt: sql`now()` })
-        .where(inArray(videoJobs.id, live.map((job) => job.id)));
+        .set({
+          state: 'cancelled',
+          causeClass: cause,
+          causeMessage: 'This clip was cancelled.',
+          updatedAt: sql`now()`,
+        })
+        .where(
+          inArray(
+            videoJobs.id,
+            live.map((job) => job.id),
+          ),
+        );
     }
     for (const job of live) {
       // A call that may already have been sent has an unknown outcome and keeps its estimate counted (SB-D9); whatever
@@ -517,12 +650,22 @@ export class VideoJobsService {
     }
     const runs = await tx
       .update(qcRuns)
-      .set({ state: 'cancelled', causeClass: cause, causeMessage: 'This check was cancelled.', updatedAt: sql`now()` })
+      .set({
+        state: 'cancelled',
+        causeClass: cause,
+        causeMessage: 'This check was cancelled.',
+        updatedAt: sql`now()`,
+      })
       .where(
         and(
           eq(qcRuns.ownerId, ownerId),
           inArray(qcRuns.state, NON_TERMINAL),
-          scope === undefined ? undefined : inArray(qcRuns.videoJobId, tx.select({ id: videoJobs.id }).from(videoJobs).where(scope)),
+          scope === undefined
+            ? undefined
+            : inArray(
+                qcRuns.videoJobId,
+                tx.select({ id: videoJobs.id }).from(videoJobs).where(scope),
+              ),
         ),
       )
       .returning({ id: qcRuns.id });

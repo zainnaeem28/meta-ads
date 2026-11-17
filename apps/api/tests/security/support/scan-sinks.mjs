@@ -8,7 +8,10 @@ import { dirname, join, relative, resolve } from 'node:path';
 
 const RULES = [
   ['sink-canary-key', /canary-OPENAI|wavecanary_/],
-  ['sink-canary-content', /canary-(?:dialogue|description|transcript|prompt|product|500)-?|exif-owner-canary|inferred-(?:ethnicity|health)-canary/],
+  [
+    'sink-canary-content',
+    /canary-(?:dialogue|description|transcript|prompt|product|500)-?|exif-owner-canary|inferred-(?:ethnicity|health)-canary/,
+  ],
   ['sink-synthetic-email', /[A-Za-z0-9._%+-]+@example\.test/],
   ['sink-bearer-token', /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/],
   ['sink-jwt', /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*/],
@@ -20,7 +23,8 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage']);
 export function scanText(text) {
   const findings = [];
   text.split('\n').forEach((line, index) => {
-    for (const [rule, pattern] of RULES) if (pattern.test(line)) findings.push({ rule, line: index + 1 });
+    for (const [rule, pattern] of RULES)
+      if (pattern.test(line)) findings.push({ rule, line: index + 1 });
   });
   return findings;
 }
@@ -47,7 +51,8 @@ export function scanPaths(paths, root = process.cwd()) {
       continue; // a missing path has nothing to scan
     }
     for (const file of files) {
-      for (const finding of scanText(readFileSync(file, 'utf8'))) results.push({ ...finding, file: relative(root, file) });
+      for (const finding of scanText(readFileSync(file, 'utf8')))
+        results.push({ ...finding, file: relative(root, file) });
     }
   }
   return results;
@@ -57,19 +62,35 @@ export function toSarif(results) {
   return {
     $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
     version: '2.1.0',
-    runs: [{
-      tool: { driver: { name: 'shroomap-sink-scan', rules: RULES.map(([id]) => ({ id, shortDescription: { text: id } })) } },
-      results: results.map((r) => ({
-        ruleId: r.rule,
-        level: 'error',
-        message: { text: `${r.rule}: personal data or a canary in a sink (value not shown)` },
-        locations: [{ physicalLocation: { artifactLocation: { uri: r.file }, region: { startLine: r.line } } }],
-      })),
-    }],
+    runs: [
+      {
+        tool: {
+          driver: {
+            name: 'shroomap-sink-scan',
+            rules: RULES.map(([id]) => ({ id, shortDescription: { text: id } })),
+          },
+        },
+        results: results.map((r) => ({
+          ruleId: r.rule,
+          level: 'error',
+          message: { text: `${r.rule}: personal data or a canary in a sink (value not shown)` },
+          locations: [
+            {
+              physicalLocation: {
+                artifactLocation: { uri: r.file },
+                region: { startLine: r.line },
+              },
+            },
+          ],
+        })),
+      },
+    ],
   };
 }
 
-const isMain = process.argv[1] !== undefined && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname);
+const isMain =
+  process.argv[1] !== undefined &&
+  resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname);
 if (isMain) {
   const args = process.argv.slice(2);
   let out;

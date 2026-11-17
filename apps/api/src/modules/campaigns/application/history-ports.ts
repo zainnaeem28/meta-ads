@@ -30,7 +30,11 @@ export interface HistoryQuery {
 export interface HistoryRepository {
   list(tx: DbTx, ownerId: string, query: HistoryQuery): Promise<CampaignRecord[]>;
   /** The campaign and the draft it came from; null for a foreign, unknown or `deleting` campaign. */
-  find(tx: DbTx, ownerId: string, id: string): Promise<{ campaign: CampaignRecord; draftId: string } | null>;
+  find(
+    tx: DbTx,
+    ownerId: string,
+    id: string,
+  ): Promise<{ campaign: CampaignRecord; draftId: string } | null>;
   /** Whether the campaign exists in state `active` (any owner), for callers that already hold the ownership. */
   isActive(tx: DbTx, id: string): Promise<boolean>;
   /** Whether the campaign is the owner's and not `deleting`. */

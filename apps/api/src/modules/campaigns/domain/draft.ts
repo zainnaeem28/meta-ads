@@ -64,7 +64,11 @@ export function assertAudience(audience: Audience | null | undefined): void {
   const { ageMin, ageMax } = audience;
   if (ageMin !== undefined && ageMax !== undefined && ageMax < ageMin) {
     throw new DomainError('validation_failed', 'The request is not valid.', [
-      { field: 'audience.ageMax', code: 'out_of_range', message: 'Must be at least the minimum age.' },
+      {
+        field: 'audience.ageMax',
+        code: 'out_of_range',
+        message: 'Must be at least the minimum age.',
+      },
     ]);
   }
 }

@@ -14,14 +14,26 @@ import {
 
 describe('SCREEN-005 URL state', () => {
   it('parses tab, search, status and page, and ignores anything unknown', () => {
-    expect(parseUrl('?tab=drafts&q=reishi&status=failed&page=3')).toEqual({ tab: 'drafts', q: 'reishi', status: 'failed', page: 3 });
-    expect(parseUrl('?tab=x&status=bogus&page=0')).toEqual({ tab: 'history', q: '', status: '', page: 1 });
+    expect(parseUrl('?tab=drafts&q=reishi&status=failed&page=3')).toEqual({
+      tab: 'drafts',
+      q: 'reishi',
+      status: 'failed',
+      page: 3,
+    });
+    expect(parseUrl('?tab=x&status=bogus&page=0')).toEqual({
+      tab: 'history',
+      q: '',
+      status: '',
+      page: 1,
+    });
     expect(parseUrl('')).toEqual({ tab: 'history', q: '', status: '', page: 1 });
   });
 
   it('omits defaults and keeps the status only on the history tab', () => {
     expect(buildUrl({ tab: 'history', q: '', status: '', page: 1 })).toBe('');
-    expect(buildUrl({ tab: 'history', q: 'a b', status: 'failed', page: 2 })).toBe('?q=a+b&status=failed&page=2');
+    expect(buildUrl({ tab: 'history', q: 'a b', status: 'failed', page: 2 })).toBe(
+      '?q=a+b&status=failed&page=2',
+    );
     expect(buildUrl({ tab: 'drafts', q: '', status: 'failed', page: 1 })).toBe('?tab=drafts');
   });
 
@@ -44,8 +56,17 @@ describe('SCREEN-005 rows', () => {
   });
 
   it('maps a campaign to a badge and to the stage it opens', () => {
-    const c = { id: 'c1', progress: 'processing', briefState: 'accepted', finalAvailable: false } as const;
-    expect(campaignStatus(c)).toEqual({ label: 'Clips generating', variant: 'info', icon: 'loader-circle' });
+    const c = {
+      id: 'c1',
+      progress: 'processing',
+      briefState: 'accepted',
+      finalAvailable: false,
+    } as const;
+    expect(campaignStatus(c)).toEqual({
+      label: 'Clips generating',
+      variant: 'info',
+      icon: 'loader-circle',
+    });
     expect(campaignHref(c)).toBe('/campaigns/c1/clips');
     const done = { ...c, progress: 'completed', finalAvailable: true } as const;
     expect(campaignStatus(done).label).toBe('Final ready');
@@ -54,7 +75,11 @@ describe('SCREEN-005 rows', () => {
     expect(campaignStatus({ ...c, briefState: 'draft' }).label).toBe('Brief ready to review');
     expect(campaignStatus({ ...c, briefState: 'generating' }).label).toBe('Brief generating');
     expect(campaignHref({ ...c, briefState: 'draft' })).toBe('/campaigns/c1/brief');
-    expect(campaignStatus({ ...c, progress: 'failed' })).toEqual({ label: 'Needs attention', variant: 'destructive', icon: 'circle-x' });
+    expect(campaignStatus({ ...c, progress: 'failed' })).toEqual({
+      label: 'Needs attention',
+      variant: 'destructive',
+      icon: 'circle-x',
+    });
   });
 
   it('presents a draft: name, step and the search match', () => {
@@ -64,7 +89,9 @@ describe('SCREEN-005 rows', () => {
     expect(draftStepLabel(3)).toBe('Step 3 of 4: Audience and direction');
     expect(draftStepLabel(5)).toBe('Step 4 of 4: Concept and script');
     expect(draftMatches({ productName: 'Reishi', productDescription: null }, 'REI')).toBe(true);
-    expect(draftMatches({ productName: null, productDescription: 'night tincture' }, 'tinct')).toBe(true);
+    expect(draftMatches({ productName: null, productDescription: 'night tincture' }, 'tinct')).toBe(
+      true,
+    );
     expect(draftMatches({ productName: 'Chai', productDescription: null }, 'reishi')).toBe(false);
     expect(draftMatches({ productName: 'Chai', productDescription: null }, ' ')).toBe(true);
   });
