@@ -5,7 +5,7 @@
 import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
+import { cpus, loadavg, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { baselinePolicy } from '../lib/policy.mjs';
@@ -37,6 +37,7 @@ const result = {
   browser: null,
   concurrency,
   requested: samples,
+  host: { cpus: cpus().length, loadStart: loadavg()[0] },
   samples: [],
 };
 
@@ -130,5 +131,6 @@ const runAsync = (task, port, slot) =>
 
 await Promise.all(Array.from({ length: concurrency }, (_, slot) => worker(slot)));
 rmSync(work, { recursive: true, force: true });
+result.host.loadEnd = loadavg()[0];
 writeFileSync(arg('out'), JSON.stringify(result, null, 2));
 process.stdout.write(`lighthouse: ${result.samples.length} runs\n`);

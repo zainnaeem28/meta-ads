@@ -106,7 +106,7 @@ if (fe) {
   lines.push(
     '## Lighthouse CI and Playwright web-vitals (TC-NFR-02)',
     '',
-    `Tools: Lighthouse ${fe.lighthouseVersion} (${fe.lighthouseBrowser}); Playwright web-vitals on ${fe.playwrightBrowser}. Built production artifact (\`next start\`), ${fe.target.samplesPerRoute} cold samples per route and profile, medians compared. Budgets: LCP at most ${fe.target.lcpMs} ms, INP at most ${fe.target.inpMs} ms, CLS at most ${fe.target.cls}, TBT at most ${fe.target.tbtMs} ms. Mode: ${fe.mode}. Conditions: ${JSON.stringify(fe.conditions)}; Lighthouse simulated throttling of its own mobile and desktop presets; ${fe.concurrency.lighthouse} parallel workers.`,
+    `Tools: Lighthouse ${fe.lighthouseVersion} (${fe.lighthouseBrowser}); Playwright web-vitals on ${fe.playwrightBrowser}. Built production artifact (\`next start\`), ${fe.target.samplesPerRoute} cold samples per route and profile, medians compared. Budgets: LCP at most ${fe.target.lcpMs} ms, INP at most ${fe.target.inpMs} ms, CLS at most ${fe.target.cls}, TBT at most ${fe.target.tbtMs} ms. Mode: ${fe.mode}. Conditions: ${JSON.stringify(fe.conditions)}; Lighthouse simulated throttling of its own mobile and desktop presets; ${fe.concurrency.lighthouse} parallel workers; host ${fe.host ? `${fe.host.cpus} CPUs, 1-minute load ${fe.host.loadStart.toFixed(1)} at start and ${fe.host.loadEnd.toFixed(1)} at the end (a shared, busy host inflates TBT and LCP; the number is recorded, not corrected)` : 'load not recorded'}.`,
     '',
   );
   row('Route', 'Profile', 'LH LCP', 'LH CLS', 'LH TBT', 'PW LCP', 'PW CLS', 'PW INP', 'Result');

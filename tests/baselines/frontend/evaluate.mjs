@@ -117,6 +117,7 @@ const report = {
   playwrightBrowser: pw.browser,
   conditions: pw.conditions,
   concurrency: { lighthouse: lh.concurrency, playwright: pw.concurrency },
+  host: lh.host ?? null,
   target: fe,
   rows,
   mode,
