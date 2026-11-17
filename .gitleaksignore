@@ -30,3 +30,5 @@ ed6fe9b4ad2e92aae3bb557f1e197b2dac8b0f41:docs/evidence/TASK-102/submit-check.md:
 ade12b5563973cd09d6bdf5dc4d2db8cc4d20fb9:docs/evidence/TASK-098/submit-check-aiu232.md:openai-key-shaped:3
 f4ea4f1e66a893d8e3ef5fe5f318daa27650c5de:docs/evidence/TASK-092/submit-check.md:openai-key-shaped:3
 8771c30112efdfe8b2b4c381feb45b6db6c49367:docs/evidence/TASK-099/submit-check.md:openai-key-shaped:3
+# False positive: the ticket branch name in a report line (removed again in the next commit), not a credential
+8382f3ad3b850622709479a7da66fd6c001320ea:docs/evidence/TASK-095/submit-check.md:openai-key-shaped:3
