@@ -1,3 +1,4 @@
+/* global process */
 // Reads the pass conditions of the baselines from config/quality-policy.json (never hard-coded in the scripts).
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';

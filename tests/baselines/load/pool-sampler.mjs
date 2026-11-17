@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process, setTimeout */
 // Samples the api's database connections during the load run (DB pool saturation, TC-NFR-01). Runs until killed.
 // Usage: pool-sampler.mjs STATE_FILE OUT_FILE
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -12,16 +13,29 @@ const [stateFile, outFile] = process.argv.slice(2);
 const state = JSON.parse(readFileSync(stateFile, 'utf8'));
 const poolMax = Number(process.env.DATABASE_POOL_MAX ?? 10); // registry default of the api process
 const samples = [];
-const client = new pg.Client({ connectionString: state.dbAdminUrl.replace(/\/[^/]*$/, `/${state.database}`) });
+const client = new pg.Client({
+  connectionString: state.dbAdminUrl.replace(/\/[^/]*$/, `/${state.database}`),
+});
 await client.connect();
 const flush = () =>
-  writeFileSync(outFile, JSON.stringify({ poolMax, samples: samples.length, max: Math.max(0, ...samples), mean: samples.reduce((a, b) => a + b, 0) / (samples.length || 1) }));
+  writeFileSync(
+    outFile,
+    JSON.stringify({
+      poolMax,
+      samples: samples.length,
+      max: Math.max(0, ...samples),
+      mean: samples.reduce((a, b) => a + b, 0) / (samples.length || 1),
+    }),
+  );
 process.on('SIGTERM', () => {
   flush();
   process.exit(0);
 });
 for (;;) {
-  const r = await client.query('select count(*)::int as n from pg_stat_activity where usename = $1 and datname = $2', [state.roles.api, state.database]);
+  const r = await client.query(
+    'select count(*)::int as n from pg_stat_activity where usename = $1 and datname = $2',
+    [state.roles.api, state.database],
+  );
   samples.push(r.rows[0].n);
   flush();
   await new Promise((resolveSleep) => setTimeout(resolveSleep, 2000));

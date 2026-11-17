@@ -1,3 +1,4 @@
+/* global process, Response */
 // Preloaded into the api process of the baseline stack (`node --import`). The api verifies session tokens against the
 // identity provider's key set, fetched from the provider's backend API. The baseline stack has no provider account, so
 // this answers that one call (GET /v1/jwks) from the key set file the stack harness wrote; every other request goes

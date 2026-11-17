@@ -1,3 +1,4 @@
+/* global __ENV, __VU, __ITER, open, console */
 // k6 script of the scaled-down NFR-01 target (QUALITY-RELEASE-PLAN section 6, TC-NFR-01). Every number comes from the
 // environment that scripts/ci/load.sh fills from config/quality-policy.json (baselines.load); nothing is fixed here.
 //
@@ -55,33 +56,51 @@ export const options = {
 const own = {}; // per-VU cache: account index -> { campaigns: [ids] }
 
 function call(method, path, token, body, headers, expected) {
-  const params = { headers: { Authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(headers || {}) } };
-  const response = http.request(method, `${API}/api/v1${path}`, body === undefined ? null : JSON.stringify(body), params);
+  const params = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      ...(headers || {}),
+    },
+  };
+  const response = http.request(
+    method,
+    `${API}/api/v1${path}`,
+    body === undefined ? null : JSON.stringify(body),
+    params,
+  );
   requests.add(1);
   interactive.add(response.timings.duration);
   if (response.status === 401) unauthorized.add(1);
   if ([429, 502, 503, 504].includes(response.status)) capacity.add(1);
   if (response.status >= 500 || response.status === 0) serverError.add(1);
-  const ok = expected ? response.status === expected : response.status >= 200 && response.status < 300;
+  const ok = expected
+    ? response.status === expected
+    : response.status >= 200 && response.status < 300;
   if (!ok) {
     unexpected.add(1);
-    if (__ENV.LOG_UNEXPECTED) console.warn(`unexpected ${response.status} ${method} ${path} ${String(response.body).slice(0, 160)}`);
+    if (__ENV.LOG_UNEXPECTED)
+      console.warn(
+        `unexpected ${response.status} ${method} ${path} ${String(response.body).slice(0, 160)}`,
+      );
   }
   check(response, { [`${method} ${path.replace(/[0-9a-f-]{36}/g, ':id')} ok`]: () => ok });
   return response;
+}
+
+function jsonOr(response, selector, fallback) {
+  try {
+    return response.json(selector);
+  } catch {
+    return fallback;
+  }
 }
 
 function campaignsOf(account) {
   const key = account.sub;
   if (!own[key]) {
     const list = call('GET', '/campaigns?limit=20', account.token);
-    let ids = [];
-    try {
-      ids = list.json('data').map((c) => c.id);
-    } catch (e) {
-      ids = [];
-    }
-    own[key] = { campaigns: ids };
+    own[key] = { campaigns: jsonOr(list, 'data', []).map((c) => c.id) };
   }
   return own[key].campaigns;
 }
@@ -89,11 +108,17 @@ function campaignsOf(account) {
 export default function () {
   const { users, admin } = state[0];
   const isAdmin = __VU === VUS;
-  const account = isAdmin ? admin : users[((__VU - 1) + __ITER * VUS) % users.length];
+  const account = isAdmin ? admin : users[(__VU - 1 + __ITER * VUS) % users.length];
   const token = account.token;
 
   if (isAdmin) {
-    const paths = ['/admin/users', '/admin/usage-report', '/admin/settings', '/admin/alerts', '/admin/invitations'];
+    const paths = [
+      '/admin/users',
+      '/admin/usage-report',
+      '/admin/settings',
+      '/admin/alerts',
+      '/admin/invitations',
+    ];
     call('GET', paths[__ITER % paths.length], token);
     reads.add(1);
     sleep(THINK);
@@ -124,15 +149,16 @@ export default function () {
   } else {
     writes.add(1);
     const created = call('POST', '/drafts', token, {}, {}, 201);
-    let id = null;
-    try {
-      id = created.json('data.id');
-    } catch (e) {
-      id = null;
-    }
+    const id = jsonOr(created, 'data.id', null);
     if (id) {
       sleep(THINK);
-      call('PATCH', `/drafts/${id}`, token, { productName: 'Baseline draft' }, { 'If-Match': '"1"' });
+      call(
+        'PATCH',
+        `/drafts/${id}`,
+        token,
+        { productName: 'Baseline draft' },
+        { 'If-Match': '"1"' },
+      );
       sleep(THINK);
       call('DELETE', `/drafts/${id}`, token, undefined, {}, 204);
     }

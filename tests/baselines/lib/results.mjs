@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process */
 // The one place the baseline wrappers record test cases. Every case lands in reports/baselines/results.json, and
 // reports/baselines/junit.xml (the file `submit_check.py --junit` reads) is rebuilt from all suites after each change.
 //
@@ -11,7 +12,11 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const dir = join(process.env.CI_REPORTS_DIR ?? join(root, 'reports'), 'baselines');
 const file = join(dir, 'results.json');
-const esc = (text) => String(text).replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
+const esc = (text) =>
+  String(text).replace(
+    /[<>&"']/g,
+    (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c],
+  );
 
 const read = () => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {});
 
@@ -53,9 +58,16 @@ if (command === 'reset' && suite) {
   write(all);
 } else if (command === 'add' && suite && name && ['pass', 'fail', 'skip'].includes(status)) {
   const all = read();
-  (all[suite] ??= []).push({ name, status, message: message || undefined, seconds: Number(seconds ?? 0) });
+  (all[suite] ??= []).push({
+    name,
+    status,
+    message: message || undefined,
+    seconds: Number(seconds ?? 0),
+  });
   write(all);
 } else {
-  process.stderr.write('usage: results.mjs reset SUITE | add SUITE NAME pass|fail|skip [MESSAGE] [SECONDS]\n');
+  process.stderr.write(
+    'usage: results.mjs reset SUITE | add SUITE NAME pass|fail|skip [MESSAGE] [SECONDS]\n',
+  );
   process.exit(2);
 }

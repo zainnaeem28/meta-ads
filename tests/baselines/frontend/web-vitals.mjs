@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process, fetch, window */
 // Playwright web-vitals of the built web app (QUALITY-RELEASE-PLAN sections 6 and 7): LCP, CLS and INP per route and
 // profile, SAMPLES cold loads each, with the conditions fixed and recorded. INP is the longest interaction after load
 // (two key presses and a click on the page body). The Event Timing API reports only interactions of 16 ms or more, so a
@@ -24,8 +25,26 @@ const samples = Number(arg('samples') ?? fe.samplesPerRoute);
 
 const PROFILES = {
   // Same conditions as the Lighthouse presets, so the two tools measure the same thing.
-  mobile: { viewport: { width: 412, height: 823 }, deviceScaleFactor: 1.75, isMobile: true, hasTouch: true, cpu: 4, rttMs: 150, downKbps: 1638.4, upKbps: 750 },
-  desktop: { viewport: { width: 1350, height: 940 }, deviceScaleFactor: 1, isMobile: false, hasTouch: false, cpu: 1, rttMs: 40, downKbps: 10240, upKbps: 10240 },
+  mobile: {
+    viewport: { width: 412, height: 823 },
+    deviceScaleFactor: 1.75,
+    isMobile: true,
+    hasTouch: true,
+    cpu: 4,
+    rttMs: 150,
+    downKbps: 1638.4,
+    upKbps: 750,
+  },
+  desktop: {
+    viewport: { width: 1350, height: 940 },
+    deviceScaleFactor: 1,
+    isMobile: false,
+    hasTouch: false,
+    cpu: 1,
+    rttMs: 40,
+    downKbps: 10240,
+    upKbps: 10240,
+  },
 };
 
 const observer = `
@@ -54,17 +73,37 @@ const observer = `
 
 async function resolveRoutes() {
   const account = state.users[1];
-  const list = await fetch(`${state.apiUrl}/api/v1/campaigns?limit=1`, { headers: { Authorization: `Bearer ${account.token}` } });
+  const list = await fetch(`${state.apiUrl}/api/v1/campaigns?limit=1`, {
+    headers: { Authorization: `Bearer ${account.token}` },
+  });
   const campaign = (await list.json()).data?.[0]?.id;
   if (!campaign) throw new Error('the baseline dataset has no campaign for the signed-in routes');
-  return fe.routes.map((r) => ({ ...r, url: `${state.webUrl}${r.path.replace('{campaign}', campaign)}` }));
+  return fe.routes.map((r) => ({
+    ...r,
+    url: `${state.webUrl}${r.path.replace('{campaign}', campaign)}`,
+  }));
 }
 
-const sessionCookie = (kind) => (kind === 'admin' ? state.admin.cookie : kind === 'user' ? state.users[1].cookie : null);
+const sessionCookie = (kind) =>
+  kind === 'admin' ? state.admin.cookie : kind === 'user' ? state.users[1].cookie : null;
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
-const out = { tool: 'Playwright web-vitals', browser: `Chromium ${browser.version()}`, conditions: {}, samples: [] };
+const out = {
+  tool: 'Playwright web-vitals',
+  browser: `Chromium ${browser.version()}`,
+  conditions: {},
+  samples: [],
+};
 for (const [name, p] of Object.entries(PROFILES)) {
-  out.conditions[name] = { viewport: p.viewport, deviceScaleFactor: p.deviceScaleFactor, cpuSlowdown: p.cpu, rttMs: p.rttMs, downKbps: p.downKbps, upKbps: p.upKbps, cache: 'cold (fresh context per sample)', dataSet: 'baseline dataset (25 accounts, 125 stub jobs)' };
+  out.conditions[name] = {
+    viewport: p.viewport,
+    deviceScaleFactor: p.deviceScaleFactor,
+    cpuSlowdown: p.cpu,
+    rttMs: p.rttMs,
+    downKbps: p.downKbps,
+    upKbps: p.upKbps,
+    cache: 'cold (fresh context per sample)',
+    dataSet: 'baseline dataset (25 accounts, 125 stub jobs)',
+  };
 }
 const routes = await resolveRoutes();
 const concurrency = Number(process.env.BASELINE_CONCURRENCY ?? 2);
@@ -73,16 +112,38 @@ out.requested = samples;
 
 async function measure(route, profile, n) {
   const p = PROFILES[profile];
-  const context = await browser.newContext({ viewport: p.viewport, deviceScaleFactor: p.deviceScaleFactor, isMobile: p.isMobile, hasTouch: p.hasTouch, reducedMotion: 'no-preference' });
+  const context = await browser.newContext({
+    viewport: p.viewport,
+    deviceScaleFactor: p.deviceScaleFactor,
+    isMobile: p.isMobile,
+    hasTouch: p.hasTouch,
+    reducedMotion: 'no-preference',
+  });
   const cookie = sessionCookie(route.session);
-  if (cookie) await context.addCookies([{ name: 'shroomap_local_session', value: cookie, url: state.webUrl }]);
+  if (cookie)
+    await context.addCookies([
+      { name: 'shroomap_local_session', value: cookie, url: state.webUrl },
+    ]);
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
   await cdp.send('Network.enable');
-  await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: p.rttMs, downloadThroughput: (p.downKbps * 1024) / 8, uploadThroughput: (p.upKbps * 1024) / 8 });
+  await cdp.send('Network.emulateNetworkConditions', {
+    offline: false,
+    latency: p.rttMs,
+    downloadThroughput: (p.downKbps * 1024) / 8,
+    uploadThroughput: (p.upKbps * 1024) / 8,
+  });
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: p.cpu });
   await page.addInitScript(observer);
-  let record = { route: route.id, profile, sample: n, status: null, lcpMs: null, cls: null, inpMs: null };
+  let record = {
+    route: route.id,
+    profile,
+    sample: n,
+    status: null,
+    lcpMs: null,
+    cls: null,
+    inpMs: null,
+  };
   try {
     const response = await page.goto(route.url, { waitUntil: 'load', timeout: 60_000 });
     record.status = response?.status() ?? null;
@@ -102,7 +163,9 @@ async function measure(route, profile, n) {
 }
 
 const queue = [];
-for (const route of routes) for (const profile of fe.profiles) for (let n = 1; n <= samples; n += 1) queue.push([route, profile, n]);
+for (const route of routes)
+  for (const profile of fe.profiles)
+    for (let n = 1; n <= samples; n += 1) queue.push([route, profile, n]);
 await Promise.all(
   Array.from({ length: concurrency }, async () => {
     for (let job = queue.shift(); job; job = queue.shift()) out.samples.push(await measure(...job));
