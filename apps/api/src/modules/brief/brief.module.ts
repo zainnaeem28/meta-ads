@@ -19,6 +19,13 @@ import { BriefService } from './application/brief.service.js';
 import { IssuesService } from './application/issues.service.js';
 import { DrizzleBriefRepository } from './infrastructure/repositories/brief.repository.js';
 import { BriefController } from './transport/brief.controller.js';
+import { AnalysisController } from './transport/analysis.controller.js';
+import { AnalysisService } from './transport/analysis.service.js';
+import { RegenerateController } from './transport/regenerate.controller.js';
+import { RegenerateService } from './transport/regenerate.service.js';
+import { SubmitController } from './transport/submit.controller.js';
+import { SubmitService } from './transport/submit.service.js';
+import { BRIEF_JOB_MODELS, BriefJobCreator, JOB_IDEMPOTENCY_TTL } from './transport/submit-jobs.js';
 import { IssuesController } from './transport/issues.controller.js';
 import { DEFAULT_BRAND_RULES_FILE, loadBrandRulesFile } from './infrastructure/repositories/brand-rules-file.js';
 import { BRAND_RULE_FILE, BrandRulesReader } from './infrastructure/repositories/brand-rules.reader.js';
@@ -65,6 +72,29 @@ function authThreshold(env: Env): number {
 }
 
 /**
+ * What the api composition root passes in for the job-creating operations (API-024, 035, 036, 053): the media module
+ * (the product image is attached to the campaign) and the usage module (the cap check and the reservation). Without it the
+ * module serves the brief read, edit, accept and clear operations only.
+ */
+export interface BriefApiEdge {
+  readonly media: DynamicModule;
+  readonly usage: DynamicModule;
+}
+
+function optional(env: Env, name: string): string | undefined {
+  const value = env[name];
+  return value === undefined || value === '' ? undefined : value;
+}
+
+/** `IDEMPOTENCY_TTL_HOURS`, 24 by default (the same setting the platform cleanup reads). */
+function idempotencyTtl(env: Env): number {
+  const text = optional(env, 'IDEMPOTENCY_TTL_HOURS');
+  const value = text === undefined ? 24 : Number(text);
+  if (!Number.isInteger(value) || value < 1) throw new Error('IDEMPOTENCY_TTL_HOURS must be a positive integer');
+  return value;
+}
+
+/**
  * Brief: the M0009 tables, the claim-check engine and the brand rules (TASK-048), and the brief read, edit, accept and
  * claim-issue clear operations, API-050 to API-052 and API-054 (TASK-050), and the worker's two provider jobs `brief.generate` and `brief.analyze-image` over the OpenAI TextAIPort
  * (TASK-049). The rules file is read and
@@ -73,11 +103,14 @@ function authThreshold(env: Env): number {
  */
 @Module({})
 export class BriefModule {
-  static register(env: Env): DynamicModule {
+  static register(env: Env, edge?: BriefApiEdge): DynamicModule {
     const file = loadBrandRulesFile(env['BRAND_RULES_FILE'] ?? DEFAULT_BRAND_RULES_FILE);
+    const jobs = edge === undefined ? undefined : this.jobOperations(env, edge);
     return {
       module: BriefModule,
+      imports: jobs?.imports ?? [],
       providers: [
+        ...(jobs?.providers ?? []),
         { provide: BRAND_RULE_FILE, useValue: file },
         DrizzleBrandRulesRepository,
         BrandRulesReader,
@@ -86,8 +119,24 @@ export class BriefModule {
         BriefService,
         IssuesService,
       ],
-      controllers: [BriefController, IssuesController],
+      controllers: [BriefController, IssuesController, ...(jobs?.controllers ?? [])],
       exports: [BrandRulesReader],
+    };
+  }
+
+  /** API-024, 035, 036 and 053 (TASK-051): the job-creating rule SB-D14 and the operations that use it. */
+  private static jobOperations(env: Env, edge: BriefApiEdge): Required<Pick<DynamicModule, 'imports' | 'providers' | 'controllers'>> {
+    return {
+      imports: [edge.media, edge.usage],
+      providers: [
+        { provide: BRIEF_JOB_MODELS, useValue: { text: optional(env, 'OPENAI_TEXT_MODEL'), vision: optional(env, 'OPENAI_VISION_MODEL') } },
+        { provide: JOB_IDEMPOTENCY_TTL, useValue: idempotencyTtl(env) },
+        BriefJobCreator,
+        SubmitService,
+        AnalysisService,
+        RegenerateService,
+      ],
+      controllers: [SubmitController, AnalysisController, RegenerateController],
     };
   }
 
