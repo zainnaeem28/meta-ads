@@ -38,6 +38,7 @@ export const CONTROL_ID = {
   ageMin: 'draft-age-min',
   ageMax: 'draft-age-max',
   interests: 'draft-interests',
+  segments: 'draft-segments',
 } as const;
 
 export const clampStep = (step: number): StepNumber =>
@@ -129,6 +130,14 @@ export function validateStep(step: StepNumber, values: FormValues): FieldProblem
         message: COPY.step2.descriptionLong,
       });
     }
+  }
+  if (step === 3 || step === 4) {
+    if (values.segmentCount === '')
+      problems.push({
+        id: CONTROL_ID.segments,
+        label: COPY.step3.segments,
+        message: COPY.step3.segmentsRequired,
+      });
   }
   if (step === 3) {
     const min = toAge(values.ageMin);
