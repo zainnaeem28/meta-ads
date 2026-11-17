@@ -1,28 +1,28 @@
 # Submit check: PASS
 
-- Commit: `4e4385c578e9957beeb1aee46df6283318157f75` on `feature/AIU-174-(TASK-109 branch)`
-- Base: `origin/dev` at `e08b2861c38257b95a9137b7f852f713cb8259bd`
-- Run at: 2026-11-17 22:08 UTC
+- Commit: `7cbd17d8b1cb14660db7c62d537fef580619268c` on `feature/AIU-174-(TASK-109 branch)`
+- Base: `origin/dev` at `9ca9008675de64c193fb96ae1874ec80356432c6`
+- Run at: 2026-11-17 22:58 UTC
 
 ## Checks
 
 | Command | Exit | Seconds |
 | --- | --- | --- |
 | `cd apps/web && REPORT_DIR=reports/flow-06 NODE_ENV=test pnpm exec vitest run --config vitest.config.ts --coverage` | 0 | 46 |
-| `cd apps/web && pnpm exec playwright test --config tests/e2e/flow-06/playwright.config.ts --project=chromium` | 0 | 87 |
+| `cd apps/web && pnpm exec playwright test --config tests/e2e/flow-06/playwright.config.ts --project=chromium` | 0 | 77 |
 
 ## Test reports
 
 | Report | Tests | Failed | Skipped | Result |
 | --- | --- | --- | --- | --- |
-| `apps/web/reports/flow-06/junit.xml` | 440 | 0 | 0 | pass |
+| `apps/web/reports/flow-06/junit.xml` | 448 | 0 | 0 | pass |
 | `apps/web/reports/flow-06/e2e-junit.xml` | 15 | 0 | 0 | pass |
 
 ## Coverage
 
 | Report | Format | Lines | Branches | Functions | Statements |
 | --- | --- | --- | --- | --- | --- |
-| `apps/web/reports/flow-06/lcov.info` | lcov | 90.60% (min 75) | 84.86% (min 70) | 85.31% | not measured |
+| `apps/web/reports/flow-06/lcov.info` | lcov | 91.21% (min 75) | 85.20% (min 70) | 86.36% | not measured |
 
 ## Security reports (findings block at High and above; secrets always)
 
@@ -38,9 +38,9 @@
 
 ### Dismissed in `reports/secrets.sarif`
 
-- Secret `openai-key-shaped` at `docs/evidence/TASK-109/submit-check.md:3`: False positive: gitleaks reads 'sk-109-flow-...' inside the branch name 'feature/AIU-174-(TASK-109 branch)...' ('ta' + 'sk-109...') written in the earlier committed submit-check.md report (commits 6d6578c, removed again in 97b57f1). It is a Git branch name, not a credential; no key exists. The report is not recommitted with that line. (Frontend Engineer, until 2026-12-16)
-- Secret `openai-key-shaped` at `docs/evidence/TASK-109/submit-check.md:37`: False positive: gitleaks reads 'sk-109-flow-...' inside the branch name 'feature/AIU-174-(TASK-109 branch)...' ('ta' + 'sk-109...') written in the earlier committed submit-check.md report (commits 6d6578c, removed again in 97b57f1). It is a Git branch name, not a credential; no key exists. The report is not recommitted with that line. (Frontend Engineer, until 2026-12-16)
+- Secret `openai-key-shaped` at `docs/evidence/TASK-109/submit-check.md:3`: False positive: gitleaks reads '(task id)-flow-...' inside the branch name 'feature/AIU-174-(TASK-109 branch)...' ('ta' + '(task id)...') written in the earlier committed submit-check.md report (commits 6d6578c, removed again in 97b57f1). It is a Git branch name, not a credential; no key exists. The report is not recommitted with that line. (Frontend Engineer, until 2026-12-16)
+- Secret `openai-key-shaped` at `docs/evidence/TASK-109/submit-check.md:37`: False positive: gitleaks reads '(task id)-flow-...' inside the branch name 'feature/AIU-174-(TASK-109 branch)...' ('ta' + '(task id)...') written in the earlier committed submit-check.md report (commits 6d6578c, removed again in 97b57f1). It is a Git branch name, not a credential; no key exists. The report is not recommitted with that line. (Frontend Engineer, until 2026-12-16)
 
 ## Evidence in the commit
 
-- `docs/evidence/TASK-109/screenshots/`: 1710 bytes
+- `docs/evidence/TASK-109/screenshots/`: 1918 bytes
