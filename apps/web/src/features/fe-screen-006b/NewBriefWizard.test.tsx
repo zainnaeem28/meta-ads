@@ -39,9 +39,15 @@ const draft = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 const ok = (data: unknown, status = 200) =>
-  HttpResponse.json({ success: true, data, metaData: meta }, { status, headers: { ETag: `"${String((data as { version?: number }).version ?? 1)}"` } });
+  HttpResponse.json(
+    { success: true, data, metaData: meta },
+    { status, headers: { ETag: `"${String((data as { version?: number }).version ?? 1)}"` } },
+  );
 const failure = (status: number, code: string, message = 'Refused.') =>
-  HttpResponse.json({ success: false, error: { code, message, details: [] }, metaData: meta }, { status });
+  HttpResponse.json(
+    { success: false, error: { code, message, details: [] }, metaData: meta },
+    { status },
+  );
 const media = (over: Record<string, unknown> = {}) => ({
   id: MEDIA,
   kind: 'upload',
@@ -85,14 +91,20 @@ const show = (props: NewBriefWizardProps = {}) =>
       <NewBriefWizard {...props} />
     </QueryClientProvider>,
   );
-const resume = (over: Record<string, unknown> = {}) => server.use(http.get(`${BASE}/drafts/${ID}`, () => ok(draft(over))));
-const png = (name = 'blend.png', type = 'image/png', size = 2048) => new File([new Uint8Array(size)], name, { type });
-const choose = (file: File) => fireEvent.change(screen.getByTestId('file-upload-input'), { target: { files: [file] } });
+const resume = (over: Record<string, unknown> = {}) =>
+  server.use(http.get(`${BASE}/drafts/${ID}`, () => ok(draft(over))));
+const png = (name = 'blend.png', type = 'image/png', size = 2048) =>
+  new File([new Uint8Array(size)], name, { type });
+const choose = (file: File) =>
+  fireEvent.change(screen.getByTestId('file-upload-input'), { target: { files: [file] } });
 const patches: Record<string, unknown>[] = [];
-const saving = () => server.use(http.patch(`${BASE}/drafts/${ID}`, async ({ request }) => {
-  patches.push((await request.json()) as Record<string, unknown>);
-  return ok(draft({ version: patches.length + 1 }));
-}));
+const saving = () =>
+  server.use(
+    http.patch(`${BASE}/drafts/${ID}`, async ({ request }) => {
+      patches.push((await request.json()) as Record<string, unknown>);
+      return ok(draft({ version: patches.length + 1 }));
+    }),
+  );
 
 describe('SCREEN-006 step 2 product image', () => {
   beforeEach(() => {
@@ -103,7 +115,9 @@ describe('SCREEN-006 step 2 product image', () => {
   it('shows the likeness consent text and the file limits', async () => {
     resume();
     show({ draftId: ID });
-    expect(await screen.findByRole('heading', { level: 2, name: COPY.step2.title })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: COPY.step2.title }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId('likeness-consent')).toHaveTextContent('likeness');
     expect(screen.getByText(/up to 10 MB/)).toBeInTheDocument();
   });
@@ -117,23 +131,35 @@ describe('SCREEN-006 step 2 product image', () => {
         contentType = request.headers.get('content-type');
         return ok(media({ state: 'processing' }), 201);
       }),
-      http.get(`${BASE}/media/${MEDIA}`, () => ok(media({ state: (polls += 1) < 2 ? 'processing' : 'ready' }))),
-      http.get(`${BASE}/media/${MEDIA}/analysis`, () => ok({ job: null, productDescription: null })),
+      http.get(`${BASE}/media/${MEDIA}`, () =>
+        ok(media({ state: (polls += 1) < 2 ? 'processing' : 'ready' })),
+      ),
+      http.get(`${BASE}/media/${MEDIA}/analysis`, () =>
+        ok({ job: null, productDescription: null }),
+      ),
     );
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
     choose(png());
-    await waitFor(() => expect(document.querySelector('li[data-status="processing"]')).not.toBeNull());
-    await waitFor(() => expect(document.querySelector('li[data-status="ready"]')).not.toBeNull(), { timeout: 5000 });
+    await waitFor(() =>
+      expect(document.querySelector('li[data-status="processing"]')).not.toBeNull(),
+    );
+    await waitFor(() => expect(document.querySelector('li[data-status="ready"]')).not.toBeNull(), {
+      timeout: 5000,
+    });
     expect(contentType).toMatch(/^multipart\/form-data; boundary=/);
-    await waitFor(() => expect(patches.some((p) => p.productMediaId === MEDIA)).toBe(true), { timeout: 4000 });
+    await waitFor(() => expect(patches.some((p) => p.productMediaId === MEDIA)).toBe(true), {
+      timeout: 4000,
+    });
   });
 
   it('shows the worker reject reason (API-031 rejected)', async () => {
     resume();
     server.use(
       http.post(`${BASE}/media`, () => ok(media({ state: 'processing' }), 201)),
-      http.get(`${BASE}/media/${MEDIA}`, () => ok(media({ state: 'rejected', rejectReason: 'decode_failed' }))),
+      http.get(`${BASE}/media/${MEDIA}`, () =>
+        ok(media({ state: 'rejected', rejectReason: 'decode_failed' })),
+      ),
     );
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
@@ -152,7 +178,9 @@ describe('SCREEN-006 step 2 product image', () => {
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
     choose(png());
-    expect((await screen.findAllByText(new RegExp(text.replace('.', '\\.')))).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText(new RegExp(text.replace('.', '\\.')))).length,
+    ).toBeGreaterThan(0);
   });
 
   it('refuses a wrong type or an oversized file before any call', async () => {
@@ -177,7 +205,10 @@ describe('SCREEN-006 step 2 product image', () => {
       http.get(`${BASE}/media/${MEDIA}/analysis`, () =>
         reads++ === 0
           ? ok({ job: null, productDescription: null })
-          : ok({ job: job('completed'), productDescription: 'A bottle of 60 amber capsules with a green label.' }),
+          : ok({
+              job: job('completed'),
+              productDescription: 'A bottle of 60 amber capsules with a green label.',
+            }),
       ),
       http.post(`${BASE}/media/${MEDIA}/analysis`, ({ request }) => {
         keyHeader = request.headers.get('Idempotency-Key');
@@ -190,27 +221,41 @@ describe('SCREEN-006 step 2 product image', () => {
     expect(result).toHaveTextContent('A bottle of 60 amber capsules');
     expect(keyHeader).toMatch(/^[0-9a-f-]{36}$/);
     fireEvent.click(screen.getByRole('button', { name: COPY.step2.analysisUse }));
-    expect(screen.getByRole('textbox', { name: /Product description/ })).toHaveValue('A bottle of 60 amber capsules with a green label.');
+    expect(screen.getByRole('textbox', { name: /Product description/ })).toHaveValue(
+      'A bottle of 60 amber capsules with a green label.',
+    );
   });
 
   it('key_missing on the analysis explains it and offers the provider keys', async () => {
     resume({ productMediaId: MEDIA });
     server.use(
       http.get(`${BASE}/media/${MEDIA}`, () => ok(media())),
-      http.get(`${BASE}/media/${MEDIA}/analysis`, () => ok({ job: null, productDescription: null })),
+      http.get(`${BASE}/media/${MEDIA}/analysis`, () =>
+        ok({ job: null, productDescription: null }),
+      ),
       http.post(`${BASE}/media/${MEDIA}/analysis`, () => failure(422, 'key_missing')),
     );
     show({ draftId: ID });
     fireEvent.click(await screen.findByRole('button', { name: COPY.step2.analyse }));
-    expect(await screen.findByText('Add your provider key to continue. Your work is saved.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Add provider key' })).toHaveAttribute('href', '/settings/provider-keys');
+    expect(
+      await screen.findByText('Add your provider key to continue. Your work is saved.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Add provider key' })).toHaveAttribute(
+      'href',
+      '/settings/provider-keys',
+    );
   });
 
   it('a failed analysis job says so and leaves the description alone', async () => {
     resume({ productMediaId: MEDIA });
     server.use(
       http.get(`${BASE}/media/${MEDIA}`, () => ok(media())),
-      http.get(`${BASE}/media/${MEDIA}/analysis`, () => ok({ job: job('failed', { causeMessage: 'The provider could not read the image.' }), productDescription: null })),
+      http.get(`${BASE}/media/${MEDIA}/analysis`, () =>
+        ok({
+          job: job('failed', { causeMessage: 'The provider could not read the image.' }),
+          productDescription: null,
+        }),
+      ),
     );
     show({ draftId: ID });
     expect(await screen.findByText('The provider could not read the image.')).toBeInTheDocument();
@@ -220,7 +265,9 @@ describe('SCREEN-006 step 2 product image', () => {
     resume({ productMediaId: MEDIA });
     server.use(
       http.get(`${BASE}/media/${MEDIA}`, () => ok(media())),
-      http.get(`${BASE}/media/${MEDIA}/analysis`, () => ok({ job: null, productDescription: null })),
+      http.get(`${BASE}/media/${MEDIA}/analysis`, () =>
+        ok({ job: null, productDescription: null }),
+      ),
     );
     show({ draftId: ID });
     await waitFor(() => expect(document.querySelector('li[data-status="ready"]')).not.toBeNull());
@@ -232,11 +279,15 @@ describe('SCREEN-006 step 2 product image', () => {
     resume({ productMediaId: MEDIA });
     server.use(
       http.get(`${BASE}/media/${MEDIA}`, () => ok(media())),
-      http.get(`${BASE}/media/${MEDIA}/analysis`, () => ok({ job: null, productDescription: null })),
+      http.get(`${BASE}/media/${MEDIA}/analysis`, () =>
+        ok({ job: null, productDescription: null }),
+      ),
     );
     show({ draftId: ID });
     fireEvent.click(await screen.findByRole('button', { name: /Remove Product image/ }));
-    await waitFor(() => expect(patches.some((p) => p.productMediaId === null)).toBe(true), { timeout: 4000 });
+    await waitFor(() => expect(patches.some((p) => p.productMediaId === null)).toBe(true), {
+      timeout: 4000,
+    });
   });
 
   it('Next waits while the image is processing', async () => {
@@ -248,9 +299,13 @@ describe('SCREEN-006 step 2 product image', () => {
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
     choose(png());
-    await waitFor(() => expect(document.querySelector('li[data-status="processing"]')).not.toBeNull());
+    await waitFor(() =>
+      expect(document.querySelector('li[data-status="processing"]')).not.toBeNull(),
+    );
     fireEvent.click(screen.getByRole('button', { name: /Next: Audience/ }));
-    expect(await screen.findByRole('group', { name: 'Fix 1 thing to continue' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('group', { name: 'Fix 1 thing to continue' }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -259,17 +314,24 @@ describe('SCREEN-006 step 4 review and generate', () => {
     patches.length = 0;
     saving();
   });
-  const atStep4 = (over: Record<string, unknown> = {}) => resume({ step: 4, productMediaId: MEDIA, concept: 'A calm morning routine.', ...over });
+  const atStep4 = (over: Record<string, unknown> = {}) =>
+    resume({ step: 4, productMediaId: MEDIA, concept: 'A calm morning routine.', ...over });
   const generate = () => fireEvent.click(screen.getByRole('button', { name: COPY.step4.generate }));
 
   it('shows the summary and requires the concept before it submits', async () => {
     atStep4({ concept: null });
     const submitted = vi.fn();
-    server.use(http.post(`${BASE}/drafts/${ID}/submit`, () => (submitted(), failure(500, 'internal_error'))));
+    server.use(
+      http.post(`${BASE}/drafts/${ID}/submit`, () => (submitted(), failure(500, 'internal_error'))),
+    );
     show({ draftId: ID });
-    expect(await screen.findByRole('heading', { level: 2, name: COPY.step4.title })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: COPY.step4.title }),
+    ).toBeInTheDocument();
     generate();
-    expect(await screen.findByRole('group', { name: 'Fix 1 thing to continue' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('group', { name: 'Fix 1 thing to continue' }),
+    ).toBeInTheDocument();
     expect(submitted).not.toHaveBeenCalled();
   });
 
@@ -282,22 +344,39 @@ describe('SCREEN-006 step 4 review and generate', () => {
   it('saves step 4, submits with an Idempotency-Key (API-024), shows in progress and opens the brief', async () => {
     atStep4();
     const assign = vi.fn();
-    vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, assign } as unknown as Location);
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      assign,
+    } as unknown as Location);
     let key: string | null = null;
     server.use(
       http.post(`${BASE}/drafts/${ID}/submit`, ({ request }) => {
         key = request.headers.get('Idempotency-Key');
-        return HttpResponse.json({ success: true, data: { campaignId: CAMPAIGN, briefJob: job('pending', { label: 'brief_generation' }) }, metaData: meta }, { status: 202 });
+        return HttpResponse.json(
+          {
+            success: true,
+            data: { campaignId: CAMPAIGN, briefJob: job('pending', { label: 'brief_generation' }) },
+            metaData: meta,
+          },
+          { status: 202 },
+        );
       }),
     );
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step4.title });
     generate();
     expect(await screen.findByTestId('generating-status')).toHaveTextContent('in progress');
-    expect(screen.getByRole('button', { name: /Generating…/ })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: /Generating…/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     await waitFor(() => expect(assign).toHaveBeenCalledWith(`/campaigns/${CAMPAIGN}/brief`));
     expect(key).toMatch(/^[0-9a-f-]{36}$/);
-    expect(patches.at(-1)).toMatchObject({ step: 4, concept: 'A calm morning routine.', productMediaId: MEDIA });
+    expect(patches.at(-1)).toMatchObject({
+      step: 4,
+      concept: 'A calm morning routine.',
+      productMediaId: MEDIA,
+    });
   });
 
   it.each([
@@ -310,7 +389,9 @@ describe('SCREEN-006 step 4 review and generate', () => {
     await screen.findByRole('heading', { level: 2, name: COPY.step4.title });
     generate();
     expect(await screen.findByText(title)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('button', { name: COPY.step4.generate })).toBeDisabled());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: COPY.step4.generate })).toBeDisabled(),
+    );
   });
 
   it('media_not_ready offers Try again', async () => {
@@ -319,31 +400,50 @@ describe('SCREEN-006 step 4 review and generate', () => {
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step4.title });
     generate();
-    expect(await screen.findByText('The image is still being processed. Wait a moment and try again.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('The image is still being processed. Wait a moment and try again.'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
   it('previews the blocks in the test build', async () => {
     atStep4();
     show({ draftId: ID, initialBlock: 'key_missing' });
-    expect(await screen.findByText('Add your OpenAI key to generate the brief')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Add your OpenAI key to generate the brief'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: COPY.step4.generate })).toBeDisabled();
   });
 });
 
 describe('draft helpers', () => {
   it('carries the image, concept and script in the write body and back', () => {
-    const values = valuesFromDraft(draft({ productMediaId: MEDIA, concept: 'c', script: 's' }) as never);
+    const values = valuesFromDraft(
+      draft({ productMediaId: MEDIA, concept: 'c', script: 's' }) as never,
+    );
     expect(values).toMatchObject({ productMediaId: MEDIA, concept: 'c', script: 's' });
-    expect(toWrite(values, 4)).toMatchObject({ step: 4, productMediaId: MEDIA, concept: 'c', script: 's' });
-    expect(toWrite(EMPTY_VALUES, 2)).toMatchObject({ productMediaId: null, concept: null, script: null });
+    expect(toWrite(values, 4)).toMatchObject({
+      step: 4,
+      productMediaId: MEDIA,
+      concept: 'c',
+      script: 's',
+    });
+    expect(toWrite(EMPTY_VALUES, 2)).toMatchObject({
+      productMediaId: null,
+      concept: null,
+      script: null,
+    });
   });
   it('validates step 4 by intake mode and length', () => {
     expect(validateStep(4, EMPTY_VALUES)).toHaveLength(1);
     expect(validateStep(4, { ...EMPTY_VALUES, intakeMode: 'script' })[0]?.id).toBe('draft-script');
-    expect(validateStep(4, { ...EMPTY_VALUES, concept: 'x'.repeat(4001) })[0]?.message).toBe(COPY.step4.long);
+    expect(validateStep(4, { ...EMPTY_VALUES, concept: 'x'.repeat(4001) })[0]?.message).toBe(
+      COPY.step4.long,
+    );
     expect(validateStep(4, { ...EMPTY_VALUES, concept: 'ok' })).toHaveLength(0);
-    expect(validateStep(2, { ...EMPTY_VALUES, productName: 'a', productDescription: 'b' }, true)[0]?.id).toBe('draft-product-image');
+    expect(
+      validateStep(2, { ...EMPTY_VALUES, productName: 'a', productDescription: 'b' }, true)[0]?.id,
+    ).toBe('draft-product-image');
   });
   it('maps every reject reason and falls back', () => {
     expect(rejectText('type_not_allowed')).toBe(COPY.step2.rejected.type_not_allowed);

@@ -20,7 +20,9 @@ async function bootstrap(): Promise<void> {
       .then(() => context.close())
       .then(() => process.exit(0))
       .catch((error: unknown) => {
-        process.stderr.write(`worker drain failed: ${error instanceof Error ? error.message : String(error)}\n`);
+        process.stderr.write(
+          `worker drain failed: ${error instanceof Error ? error.message : String(error)}\n`,
+        );
         process.exit(1);
       });
   };
@@ -29,6 +31,8 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error: unknown) => {
-  process.stderr.write(`worker failed to start: ${error instanceof Error ? error.message : String(error)}\n`);
+  process.stderr.write(
+    `worker failed to start: ${error instanceof Error ? error.message : String(error)}\n`,
+  );
   process.exit(1);
 });

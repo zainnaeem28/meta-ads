@@ -22,7 +22,9 @@ export interface PageGridProps extends ElementProps {
 /** CMP-034: 12-column grid, one column under 768 px; gutter 16 px, 24 px from 1024 px. */
 export function PageGrid({ as = 'div', className, ...rest }: PageGridProps) {
   const Tag: ElementType = as;
-  const classes = ['grid grid-cols-1 gap-4 md:grid-cols-12 lg:gap-6', className].filter(Boolean).join(' ');
+  const classes = ['grid grid-cols-1 gap-4 md:grid-cols-12 lg:gap-6', className]
+    .filter(Boolean)
+    .join(' ');
   return <Tag className={classes} data-page-grid="" {...rest} />;
 }
 

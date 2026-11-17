@@ -13,7 +13,9 @@ const Params = z.object({ campaignId: z.uuid() });
 @Controller('campaigns')
 @Scope('U')
 export class CampaignDeletionController {
-  constructor(@Inject(CampaignDeletionService) private readonly deletion: CampaignDeletionService) {}
+  constructor(
+    @Inject(CampaignDeletionService) private readonly deletion: CampaignDeletionService,
+  ) {}
 
   @Delete(':campaignId')
   @HttpCode(202)

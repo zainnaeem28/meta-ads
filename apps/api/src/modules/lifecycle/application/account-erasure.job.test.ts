@@ -3,7 +3,11 @@ import type { DbTx } from '../../../platform/db/index.js';
 import { AccountErasureJob, ErasureVerificationFailed } from './account-erasure.job.js';
 import { accountPrefixes, holdMs, ledgerKeyAndBody } from './account-erasure-steps.js';
 import type { AccountLifecycleRepository, AccountRun } from './account-lifecycle-ports.js';
-import type { CampaignDeletionConfig, CampaignMediaPurge, JobLog } from './campaign-deletion-ports.js';
+import type {
+  CampaignDeletionConfig,
+  CampaignMediaPurge,
+  JobLog,
+} from './campaign-deletion-ports.js';
 
 const tx = {} as DbTx;
 const log: JobLog = { info: () => undefined, warn: () => undefined };
@@ -26,15 +30,31 @@ function run(over: Partial<Run> = {}): Run {
   };
 }
 
-function harness(initial: Run, over: { media?: Partial<CampaignMediaPurge>; subject?: boolean; invitations?: string[] } = {}) {
+function harness(
+  initial: Run,
+  over: { media?: Partial<CampaignMediaPurge>; subject?: boolean; invitations?: string[] } = {},
+) {
   let current = initial;
   const events: string[] = [];
   const sent: { runId: string; startAfterSec?: number }[] = [];
   const repository = {
     findRun: () => Promise.resolve(current),
-    findSubject: () => Promise.resolve(over.subject === false ? undefined : { email: 'a@example.test', idpSubject: 'idp-1' }),
-    advance: (_tx: DbTx, _id: string, patch: { step: number; remainingObjects?: number | null }) => {
-      current = { ...current, step: patch.step, attempts: 0, remainingObjects: patch.remainingObjects === undefined ? current.remainingObjects : patch.remainingObjects };
+    findSubject: () =>
+      Promise.resolve(
+        over.subject === false ? undefined : { email: 'a@example.test', idpSubject: 'idp-1' },
+      ),
+    advance: (
+      _tx: DbTx,
+      _id: string,
+      patch: { step: number; remainingObjects?: number | null },
+    ) => {
+      current = {
+        ...current,
+        step: patch.step,
+        attempts: 0,
+        remainingObjects:
+          patch.remainingObjects === undefined ? current.remainingObjects : patch.remainingObjects,
+      };
       events.push(`advance:${String(patch.step)}`);
       return Promise.resolve();
     },
@@ -89,7 +109,9 @@ function harness(initial: Run, over: { media?: Partial<CampaignMediaPurge>; subj
   };
   const audit = { record: vi.fn(() => Promise.resolve('a')) };
   const announce = vi.fn();
-  const alerts = { raiseAlert: vi.fn(() => Promise.resolve({ raised: true, alertId: 'x', announce })) };
+  const alerts = {
+    raiseAlert: vi.fn(() => Promise.resolve({ raised: true, alertId: 'x', announce })),
+  };
   const job = new AccountErasureJob(
     { uow: { run: (fn: (t: DbTx) => Promise<unknown>) => fn(tx) } } as never,
     repository,
@@ -102,7 +124,18 @@ function harness(initial: Run, over: { media?: Partial<CampaignMediaPurge>; subj
     audit as never,
     alerts as never,
   );
-  return { job, identity, ledger, providers, sent, events, audit, alerts, announce, state: () => current };
+  return {
+    job,
+    identity,
+    ledger,
+    providers,
+    sent,
+    events,
+    audit,
+    alerts,
+    announce,
+    state: () => current,
+  };
 }
 
 describe('account erasure run', () => {
@@ -110,8 +143,13 @@ describe('account erasure run', () => {
     const h = harness(run());
     expect(await h.job.run('run-1', log)).toBe('waiting');
     expect(h.ledger.record).toHaveBeenCalledOnce();
-    expect(h.ledger.record).toHaveBeenCalledWith('erasure/2026-11-17T10-00-00-000Z-run-1', JSON.stringify({ runId: 'run-1', kind: 'account', subjectId: 'user-1' }));
-    expect(h.ledger.record.mock.invocationCallOrder[0]).toBeLessThan(h.identity.revokeSessions.mock.invocationCallOrder[0] ?? 0);
+    expect(h.ledger.record).toHaveBeenCalledWith(
+      'erasure/2026-11-17T10-00-00-000Z-run-1',
+      JSON.stringify({ runId: 'run-1', kind: 'account', subjectId: 'user-1' }),
+    );
+    expect(h.ledger.record.mock.invocationCallOrder[0]).toBeLessThan(
+      h.identity.revokeSessions.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(h.identity.revokeSessions).toHaveBeenCalledWith('idp-1');
     expect(h.identity.deleteUser).toHaveBeenCalledWith('idp-1');
     expect(h.state().step).toBe(4);
@@ -135,7 +173,14 @@ describe('account erasure run', () => {
     expect(h.identity.revokeInvitation.mock.calls).toEqual([['inv-1'], ['inv-2']]);
     expect(h.events).toEqual(['advance:5', 'erase-records', 'delete-user']);
     expect(h.state()).toMatchObject({ state: 'completed', remainingObjects: 0 });
-    expect(h.audit.record).toHaveBeenCalledWith(tx, expect.objectContaining({ action: 'account.erasure_completed', objectId: 'user-1', actorType: 'system' }));
+    expect(h.audit.record).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        action: 'account.erasure_completed',
+        objectId: 'user-1',
+        actorType: 'system',
+      }),
+    );
   });
 
   it('an account row that is already gone still completes the run', async () => {
@@ -151,7 +196,14 @@ describe('account erasure run', () => {
 
   it('sweeps both owner prefixes and counts what is left', async () => {
     const swept: string[] = [];
-    const h = harness(run({ step: 3 }), { media: { sweepPrefix: (prefix) => { swept.push(prefix); return Promise.resolve(0); } } });
+    const h = harness(run({ step: 3 }), {
+      media: {
+        sweepPrefix: (prefix) => {
+          swept.push(prefix);
+          return Promise.resolve(0);
+        },
+      },
+    });
     expect(await h.job.run('run-1', log)).toBe('waiting');
     expect(swept).toEqual([...accountPrefixes('user-1')]);
   });
@@ -185,9 +237,15 @@ describe('account erasure run', () => {
     expect(h.state()).toMatchObject({ state: 'running', attempts: 1, step: 2 });
     expect(await h.job.run('run-1', log)).toBe('stuck');
     expect(h.alerts.raiseAlert).toHaveBeenCalledOnce();
-    expect(h.alerts.raiseAlert).toHaveBeenCalledWith(tx, 'account_erasure_stuck', 'user-1', { attempts: 2, step: 2 });
+    expect(h.alerts.raiseAlert).toHaveBeenCalledWith(tx, 'account_erasure_stuck', 'user-1', {
+      attempts: 2,
+      step: 2,
+    });
     expect(h.announce).toHaveBeenCalledOnce();
-    expect(h.audit.record).toHaveBeenCalledWith(tx, expect.objectContaining({ action: 'account.erasure_stuck', outcome: 'failed' }));
+    expect(h.audit.record).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ action: 'account.erasure_stuck', outcome: 'failed' }),
+    );
     expect(h.events).toContain('failure:TypeError');
     expect(await h.job.run('run-1', log)).toBe('skipped');
     expect(h.alerts.raiseAlert).toHaveBeenCalledOnce();
@@ -214,7 +272,11 @@ describe('account erasure run', () => {
 
 describe('account erasure steps', () => {
   it('names the ledger object by time and run, with IDs and the kind only', () => {
-    const entry = ledgerKeyAndBody({ createdAt: '2026-11-17 10:00:00.123456+00', id: 'r', subjectId: 's' });
+    const entry = ledgerKeyAndBody({
+      createdAt: '2026-11-17 10:00:00.123456+00',
+      id: 'r',
+      subjectId: 's',
+    });
     expect(entry.key).toBe('erasure/2026-11-17T10-00-00-123Z-r');
     expect(JSON.parse(entry.body)).toEqual({ runId: 'r', kind: 'account', subjectId: 's' });
   });

@@ -46,7 +46,11 @@ const NAV_LAYOUT: Record<ShellLayout, string> = {
   tabbar: 'order-last h-tabbar w-full flex-row border-t',
 };
 
-function itemClasses(layout: ShellLayout, state: 'current' | 'hover' | 'default' | 'disabled', focus: boolean): string {
+function itemClasses(
+  layout: ShellLayout,
+  state: 'current' | 'hover' | 'default' | 'disabled',
+  focus: boolean,
+): string {
   const shape =
     layout === 'tabbar'
       ? 'relative flex-1 flex-col justify-center gap-1 border-t-3 px-1 text-caption'
@@ -83,14 +87,35 @@ function AlertCount({ count, layout }: { count: number; layout: ShellLayout }) {
           : 'ml-auto min-w-5 px-1.5 text-caption';
   const hideText = layout === 'rail' ? 'sr-only' : layout === 'auto' ? 'md:max-lg:sr-only' : '';
   return (
-    <span data-alert-count={count} className={`grid place-items-center rounded-full bg-destructive font-semibold tabular-nums text-destructive-foreground ${badge}`}>
-      <span aria-hidden="true" className={hideText}>{formatAlertCount(count)}</span>
+    <span
+      data-alert-count={count}
+      className={`grid place-items-center rounded-full bg-destructive font-semibold tabular-nums text-destructive-foreground ${badge}`}
+    >
+      <span aria-hidden="true" className={hideText}>
+        {formatAlertCount(count)}
+      </span>
       <span className="sr-only">{text}</span>
     </span>
   );
 }
 
-function NavLink({ item, layout, current, hover, focus, disabled, alertCount }: { item: AdminNavItem; layout: ShellLayout; current: boolean; hover: boolean; focus: boolean; disabled: boolean; alertCount: number }) {
+function NavLink({
+  item,
+  layout,
+  current,
+  hover,
+  focus,
+  disabled,
+  alertCount,
+}: {
+  item: AdminNavItem;
+  layout: ShellLayout;
+  current: boolean;
+  hover: boolean;
+  focus: boolean;
+  disabled: boolean;
+  alertCount: number;
+}) {
   const collapsed = layout === 'rail';
   const short = item.short && (layout === 'tabbar' || layout === 'auto');
   const label =
@@ -107,7 +132,11 @@ function NavLink({ item, layout, current, hover, focus, disabled, alertCount }: 
   const showCount = item.id === 'alerts' && alertCount > 0;
   if (disabled) {
     return (
-      <span aria-disabled="true" data-state="disabled" className={itemClasses(layout, 'disabled', false)}>
+      <span
+        aria-disabled="true"
+        data-state="disabled"
+        className={itemClasses(layout, 'disabled', false)}
+      >
         <Icon name={item.icon} size={20} />
         {label}
       </span>
@@ -155,14 +184,23 @@ export function AdminShell({
 
   const items: MenuItem[] = [
     { id: 'workspace', label: 'Switch to workspace', onSelect: () => go(workspaceHref) },
-    { id: 'account', label: 'Account and security', onSelect: () => window.open(accountUrl, '_blank', 'noopener,noreferrer') },
+    {
+      id: 'account',
+      label: 'Account and security',
+      onSelect: () => window.open(accountUrl, '_blank', 'noopener,noreferrer'),
+    },
     { id: 'sign-out', label: 'Sign out', onSelect: () => onSignOut?.() },
   ];
 
   const frame = `@container ${embedded ? 'relative transform-gpu flex h-160 flex-col overflow-hidden' : 'flex min-h-screen flex-col'}`;
   const foot = `${itemClasses(layout, 'default', false)} mt-auto${layout === 'tabbar' ? ' hidden' : layout === 'auto' ? ' max-md:hidden' : ''}`;
   return (
-    <div data-shell="admin" data-portal="admin" data-layout={layout} className={`${frame} bg-background text-foreground`}>
+    <div
+      data-shell="admin"
+      data-portal="admin"
+      data-layout={layout}
+      className={`${frame} bg-background text-foreground`}
+    >
       <a
         href="#main-content"
         className={`absolute left-2 top-2 z-50 -translate-y-20 rounded-md bg-card px-4 py-2 text-ui font-semibold text-foreground shadow-md focus:translate-y-0 ${FOCUS}`}
@@ -172,8 +210,15 @@ export function AdminShell({
       <header className="sticky top-0 z-30 flex h-header shrink-0 items-center justify-between gap-3 border-b border-t-3 border-border border-t-primary bg-card px-4 md:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <LogoLink href="/admin/accounts" className="shrink-0 @max-xs:hidden" />
-          <LogoLink href="/admin/accounts" logo={{ form: 'mark', size: 32 }} className="shrink-0 @xs:hidden" />
-          <span data-portal-tag className="hidden rounded-sm border border-border-strong bg-primary-subtle px-2 py-0.5 text-caption font-semibold uppercase tracking-wide text-foreground md:inline">
+          <LogoLink
+            href="/admin/accounts"
+            logo={{ form: 'mark', size: 32 }}
+            className="shrink-0 @xs:hidden"
+          />
+          <span
+            data-portal-tag
+            className="hidden rounded-sm border border-border-strong bg-primary-subtle px-2 py-0.5 text-caption font-semibold uppercase tracking-wide text-foreground md:inline"
+          >
             Administration
           </span>
         </div>
@@ -183,7 +228,9 @@ export function AdminShell({
           defaultOpen={menuOpen}
           header={
             <>
-              <span className="block text-caption text-muted-foreground">Signed in as Administrator</span>
+              <span className="block text-caption text-muted-foreground">
+                Signed in as Administrator
+              </span>
               {userName ? <span className="block font-semibold">{userName}</span> : null}
             </>
           }
@@ -193,7 +240,10 @@ export function AdminShell({
       </header>
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         {unavailable ? null : (
-          <nav aria-label="Main" className={`z-20 flex shrink-0 gap-1 border-sidebar-border bg-sidebar p-0 md:gap-1 md:p-2 ${NAV_LAYOUT[layout]}`}>
+          <nav
+            aria-label="Main"
+            className={`z-20 flex shrink-0 gap-1 border-sidebar-border bg-sidebar p-0 md:gap-1 md:p-2 ${NAV_LAYOUT[layout]}`}
+          >
             {ADMIN_NAV.map((item) => (
               <NavLink
                 key={item.id}
@@ -206,18 +256,39 @@ export function AdminShell({
                 alertCount={alertCount}
               />
             ))}
-            <a href={workspaceHref} title={layout === 'rail' ? 'Back to workspace' : undefined} data-sidebar-foot className={foot}>
+            <a
+              href={workspaceHref}
+              title={layout === 'rail' ? 'Back to workspace' : undefined}
+              data-sidebar-foot
+              className={foot}
+            >
               <Icon name="arrow-left" size={20} />
               <span className={labelClasses(layout)}>Back to workspace</span>
             </a>
           </nav>
         )}
-        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 pb-24 outline-none md:px-6 md:pb-6 lg:px-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="min-w-0 flex-1 px-4 py-6 pb-24 outline-none md:px-6 md:pb-6 lg:px-8"
+        >
           {unavailable ? (
-            <section data-state="unavailable" aria-labelledby="admin-unavailable" className="mx-auto flex max-w-prose flex-col items-start gap-3 py-12">
-              <h1 id="admin-unavailable" className="text-h1 font-semibold">Administration is not available</h1>
-              <p className="text-ui text-muted-foreground">Your account does not have administrator access. Ask an administrator if you need it.</p>
-              <a href={workspaceHref} className={`rounded-md bg-primary px-4 py-2 text-ui font-semibold text-primary-foreground ${FOCUS}`}>
+            <section
+              data-state="unavailable"
+              aria-labelledby="admin-unavailable"
+              className="mx-auto flex max-w-prose flex-col items-start gap-3 py-12"
+            >
+              <h1 id="admin-unavailable" className="text-h1 font-semibold">
+                Administration is not available
+              </h1>
+              <p className="text-ui text-muted-foreground">
+                Your account does not have administrator access. Ask an administrator if you need
+                it.
+              </p>
+              <a
+                href={workspaceHref}
+                className={`rounded-md bg-primary px-4 py-2 text-ui font-semibold text-primary-foreground ${FOCUS}`}
+              >
                 Back to workspace
               </a>
             </section>

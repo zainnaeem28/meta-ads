@@ -6,7 +6,14 @@ const decide = (pathname: string, session: 'active' | 'expired' | 'none', search
 
 describe('route policy', () => {
   it('lets the sign-in and second-step pages and the test probes through', () => {
-    for (const path of ['/sign-in', '/sign-in/factor-two', '/mfa', '/gallery', '/api-probe', '/error-probe']) {
+    for (const path of [
+      '/sign-in',
+      '/sign-in/factor-two',
+      '/mfa',
+      '/gallery',
+      '/api-probe',
+      '/error-probe',
+    ]) {
       expect(isPublicPath(path)).toBe(true);
       expect(decide(path, 'none')).toEqual({ kind: 'next' });
     }
@@ -32,7 +39,10 @@ describe('route policy', () => {
   it('routes home: signed in to the campaign list, signed out to sign-in', () => {
     expect(decide('/', 'active')).toEqual({ kind: 'redirect', to: '/campaigns' });
     expect(decide('/', 'none')).toEqual({ kind: 'redirect', to: '/sign-in' });
-    expect(decide('/', 'expired')).toEqual({ kind: 'redirect', to: '/sign-in?reason=session-expired&return=%2F' });
+    expect(decide('/', 'expired')).toEqual({
+      kind: 'redirect',
+      to: '/sign-in?reason=session-expired&return=%2F',
+    });
   });
   it('never builds an off-site return path', () => {
     const decision = decide('//evil.example/x', 'none');

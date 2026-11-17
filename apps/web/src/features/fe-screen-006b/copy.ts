@@ -24,7 +24,8 @@ export const SCREEN_006B_COPY = {
       type_not_allowed: 'This file is not a supported image. Use a JPEG, PNG, WebP or GIF.',
       pixel_cap_exceeded: 'This image has too many pixels. Use a smaller image.',
       decompression_bomb: 'This file could not be processed safely. Choose another image.',
-      decode_failed: 'This image could not be read. Export it again as a JPEG or PNG and upload that.',
+      decode_failed:
+        'This image could not be read. Export it again as a JPEG or PNG and upload that.',
     },
     rejectedFallback: 'This image could not be used. Choose another image.',
     pollFailed: 'We could not check the image. Remove it and upload it again.',
@@ -40,7 +41,8 @@ export const SCREEN_006B_COPY = {
     direction: 'Direction',
     notSet: 'Not set yet',
     concept: 'Concept',
-    conceptHelp: 'Describe the idea in a few sentences. ShrooMap drafts the script and shots from it.',
+    conceptHelp:
+      'Describe the idea in a few sentences. ShrooMap drafts the script and shots from it.',
     conceptRequired: 'Write the concept for the ad.',
     script: 'Script',
     scriptHelp: 'Paste your dialogue. It is checked against the brand rules after you generate.',
@@ -49,6 +51,7 @@ export const SCREEN_006B_COPY = {
     generate: 'Generate brief',
     generating: 'Generating…',
     inProgress: 'Generating your brief. This is in progress and you can leave this page.',
-    reuseNote: 'Generating uses your own OpenAI account, with your daily and monthly limits applied.',
+    reuseNote:
+      'Generating uses your own OpenAI account, with your daily and monthly limits applied.',
   },
 } as const;

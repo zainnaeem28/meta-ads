@@ -14,7 +14,10 @@ export function accountPrefixes(userId: string): readonly string[] {
 }
 
 /** The write-once ledger entry of a run (IDs and kind only, no email): `erasure/{timestamp}-{runId}`. */
-export function ledgerKeyAndBody(run: { createdAt: string; id: string; subjectId: string }): { key: string; body: string } {
+export function ledgerKeyAndBody(run: { createdAt: string; id: string; subjectId: string }): {
+  key: string;
+  body: string;
+} {
   const stamp = new Date(run.createdAt).toISOString().replace(/[:.]/g, '-');
   return {
     key: `erasure/${stamp}-${run.id}`,

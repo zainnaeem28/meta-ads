@@ -21,7 +21,10 @@ export const bodySchema = z.strictObject({
   title: z.string().min(1).max(10),
   segment_count: z.number().int().min(1).max(5),
   contact: z.email().optional(),
-  items: z.array(z.strictObject({ dialogue: z.string().max(5) })).max(60).optional(),
+  items: z
+    .array(z.strictObject({ dialogue: z.string().max(5) }))
+    .max(60)
+    .optional(),
 });
 
 @Controller('t')
@@ -68,7 +71,9 @@ export class TestController {
   }
 
   @Get('query')
-  query(@Query(new ZodValidationPipe(z.object({ limit: z.coerce.number().int().max(50) }))) q: unknown): unknown {
+  query(
+    @Query(new ZodValidationPipe(z.object({ limit: z.coerce.number().int().max(50) }))) q: unknown,
+  ): unknown {
     return q;
   }
 

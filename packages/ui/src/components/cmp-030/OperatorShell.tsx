@@ -56,7 +56,13 @@ const NAV_LAYOUT: Record<ShellLayout, string> = {
   tabbar: 'order-last h-tabbar w-full flex-row border-t',
 };
 
-function itemClasses(layout: ShellLayout, current: boolean, hover: boolean, focus = false, disabled = false): string {
+function itemClasses(
+  layout: ShellLayout,
+  current: boolean,
+  hover: boolean,
+  focus = false,
+  disabled = false,
+): string {
   const shape =
     layout === 'tabbar'
       ? 'flex-1 flex-col justify-center gap-1 border-t-3 px-1 text-caption'
@@ -65,7 +71,11 @@ function itemClasses(layout: ShellLayout, current: boolean, hover: boolean, focu
         : layout === 'sidebar'
           ? 'gap-3 border-l-3 px-4 min-h-control text-ui'
           : 'flex-1 flex-col justify-center gap-1 border-t-3 px-1 text-caption md:flex-none md:flex-row md:justify-center md:gap-3 md:border-l-3 md:border-t-0 md:px-2 md:text-ui md:min-h-control lg:justify-start lg:px-4';
-  const marker = disabled ? 'border-transparent text-disabled-foreground cursor-not-allowed' : current ? 'border-primary bg-sidebar-accent font-semibold text-sidebar-accent-foreground' : `border-transparent text-sidebar-foreground hover:bg-accent${hover ? ' bg-accent' : ''}`;
+  const marker = disabled
+    ? 'border-transparent text-disabled-foreground cursor-not-allowed'
+    : current
+      ? 'border-primary bg-sidebar-accent font-semibold text-sidebar-accent-foreground'
+      : `border-transparent text-sidebar-foreground hover:bg-accent${hover ? ' bg-accent' : ''}`;
   return `flex items-center ${shape} ${marker} ${FOCUS}${focus ? ` ${FOCUS_SHOWN}` : ''}`;
 }
 
@@ -75,12 +85,30 @@ function labelClasses(layout: ShellLayout): string {
   return '';
 }
 
-function NavLink({ item, layout, current, hover, focus, disabled }: { item: NavItem; layout: ShellLayout; current: boolean; hover: boolean; focus: boolean; disabled: boolean }) {
+function NavLink({
+  item,
+  layout,
+  current,
+  hover,
+  focus,
+  disabled,
+}: {
+  item: NavItem;
+  layout: ShellLayout;
+  current: boolean;
+  hover: boolean;
+  focus: boolean;
+  disabled: boolean;
+}) {
   const collapsed = layout === 'rail';
   const label = <span className={labelClasses(layout)}>{item.label}</span>;
   if (disabled) {
     return (
-      <span aria-disabled="true" data-state="disabled" className={`${itemClasses(layout, false, false, false, true)}`}>
+      <span
+        aria-disabled="true"
+        data-state="disabled"
+        className={`${itemClasses(layout, false, false, false, true)}`}
+      >
         <Icon name={item.icon} size={20} />
         {label}
       </span>
@@ -129,14 +157,25 @@ export function OperatorShell({
 
   const items: MenuItem[] = [
     { id: 'keys', label: 'Provider keys', onSelect: () => go(PROVIDER_KEYS_HREF) },
-    ...(role === 'admin' ? [{ id: 'admin', label: 'Switch to administration', onSelect: () => go(adminHref) }] : []),
-    { id: 'account', label: 'Account and security', onSelect: () => window.open(accountUrl, '_blank', 'noopener,noreferrer') },
+    ...(role === 'admin'
+      ? [{ id: 'admin', label: 'Switch to administration', onSelect: () => go(adminHref) }]
+      : []),
+    {
+      id: 'account',
+      label: 'Account and security',
+      onSelect: () => window.open(accountUrl, '_blank', 'noopener,noreferrer'),
+    },
     { id: 'sign-out', label: 'Sign out', onSelect: () => onSignOut?.() },
   ];
 
   const frame = `@container ${embedded ? 'relative transform-gpu flex h-160 flex-col overflow-hidden' : 'flex min-h-screen flex-col'}`;
   return (
-    <div data-shell="operator" data-role={role} data-layout={layout} className={`${frame} bg-background text-foreground`}>
+    <div
+      data-shell="operator"
+      data-role={role}
+      data-layout={layout}
+      className={`${frame} bg-background text-foreground`}
+    >
       <a
         href="#main-content"
         className={`absolute left-2 top-2 z-50 -translate-y-20 rounded-md bg-card px-4 py-2 text-ui font-semibold text-foreground shadow-md focus:translate-y-0 ${FOCUS}`}
@@ -145,7 +184,11 @@ export function OperatorShell({
       </a>
       <header className="sticky top-0 z-30 flex h-header shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 md:px-6">
         <LogoLink href="/campaigns" className="shrink-0 @max-xs:hidden" />
-        <LogoLink href="/campaigns" logo={{ form: 'mark', size: 32 }} className="shrink-0 @xs:hidden" />
+        <LogoLink
+          href="/campaigns"
+          logo={{ form: 'mark', size: 32 }}
+          className="shrink-0 @xs:hidden"
+        />
         <div className="flex min-w-0 items-center gap-2 md:gap-3">
           {keyState !== 'ok' ? (
             <a
@@ -153,8 +196,13 @@ export function OperatorShell({
               data-key-badge={keyState}
               className={`inline-flex min-h-control-touch min-w-control-touch items-center justify-center rounded-full md:min-h-0 md:min-w-0 ${FOCUS}${previewFocus === 'key-badge' ? ` ${FOCUS_SHOWN}` : ''}`}
             >
-              <Badge variant={keyState === 'missing' ? 'warning' : 'destructive'} icon={keyState === 'missing' ? 'key-round' : 'triangle-alert'}>
-                <span className="max-md:sr-only">{keyState === 'missing' ? 'Add provider keys' : 'Key disabled'}</span>
+              <Badge
+                variant={keyState === 'missing' ? 'warning' : 'destructive'}
+                icon={keyState === 'missing' ? 'key-round' : 'triangle-alert'}
+              >
+                <span className="max-md:sr-only">
+                  {keyState === 'missing' ? 'Add provider keys' : 'Key disabled'}
+                </span>
               </Badge>
             </a>
           ) : null}
@@ -174,7 +222,9 @@ export function OperatorShell({
                 <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary-subtle text-primary">
                   <Icon name="circle-user" size={20} />
                 </span>
-                <span className="max-md:hidden" aria-hidden="true">{roleLabel}</span>
+                <span className="max-md:hidden" aria-hidden="true">
+                  {roleLabel}
+                </span>
                 <Icon name="chevron-down" size={16} />
               </>
             }
@@ -188,15 +238,29 @@ export function OperatorShell({
           className={`z-20 flex shrink-0 gap-1 border-sidebar-border bg-sidebar p-0 md:gap-1 md:p-2 ${NAV_LAYOUT[layout]}`}
         >
           {layout === 'auto' || layout === 'sidebar' ? (
-            <p className={`px-4 pb-1 pt-2 text-caption font-semibold uppercase tracking-wider text-muted-foreground ${layout === 'auto' ? 'hidden lg:block' : ''}`}>
+            <p
+              className={`px-4 pb-1 pt-2 text-caption font-semibold uppercase tracking-wider text-muted-foreground ${layout === 'auto' ? 'hidden lg:block' : ''}`}
+            >
               Workspace
             </p>
           ) : null}
           {OPERATOR_NAV.map((item) => (
-            <NavLink key={item.id} item={item} layout={layout} current={current?.id === item.id} hover={previewHover === item.id} focus={previewFocus === item.id} disabled={item.disabled === true || previewDisabled === item.id} />
+            <NavLink
+              key={item.id}
+              item={item}
+              layout={layout}
+              current={current?.id === item.id}
+              hover={previewHover === item.id}
+              focus={previewFocus === item.id}
+              disabled={item.disabled === true || previewDisabled === item.id}
+            />
           ))}
         </nav>
-        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 pb-24 outline-none md:px-6 md:pb-6 lg:px-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="min-w-0 flex-1 px-4 py-6 pb-24 outline-none md:px-6 md:pb-6 lg:px-8"
+        >
           {children}
         </main>
       </div>

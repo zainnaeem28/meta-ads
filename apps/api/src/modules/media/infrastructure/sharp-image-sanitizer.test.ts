@@ -14,7 +14,12 @@ async function gpsJpeg(): Promise<Buffer> {
   return blank(64, 48)
     .withExif({
       IFD0: { Copyright: 'secret-owner', Software: 'camera-app' },
-      IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '51/1 30/1 0/1', GPSLongitudeRef: 'W', GPSLongitude: '0/1 7/1 0/1' },
+      IFD3: {
+        GPSLatitudeRef: 'N',
+        GPSLatitude: '51/1 30/1 0/1',
+        GPSLongitudeRef: 'W',
+        GPSLongitude: '0/1 7/1 0/1',
+      },
     })
     .jpeg()
     .toBuffer();
@@ -47,7 +52,11 @@ function forgePng(png: Buffer, width: number, height: number): Buffer {
 describe('ImageSanitizePort on sharp', () => {
   it('inspects the header of a stream: format and size', async () => {
     const png = await blank(30, 20).png().toBuffer();
-    expect(await sanitizer.inspect(Readable.from([png]))).toEqual({ format: 'png', width: 30, height: 20 });
+    expect(await sanitizer.inspect(Readable.from([png]))).toEqual({
+      format: 'png',
+      width: 30,
+      height: 20,
+    });
   });
 
   it('strips EXIF and GPS from a JPEG and keeps the picture', async () => {
@@ -70,8 +79,16 @@ describe('ImageSanitizePort on sharp', () => {
   });
 
   it('keeps the first frame of an animated GIF only', async () => {
-    const frames = await Promise.all([30, 90, 160].map((v) => sharp({ create: { width: 16, height: 16, channels: 3, background: { r: v, g: v, b: v } } }).png().toBuffer()));
-    const animated = await sharp(frames, { join: { animated: true } }).gif({ delay: [100, 100, 100], loop: 0 }).toBuffer();
+    const frames = await Promise.all(
+      [30, 90, 160].map((v) =>
+        sharp({ create: { width: 16, height: 16, channels: 3, background: { r: v, g: v, b: v } } })
+          .png()
+          .toBuffer(),
+      ),
+    );
+    const animated = await sharp(frames, { join: { animated: true } })
+      .gif({ delay: [100, 100, 100], loop: 0 })
+      .toBuffer();
     expect((await sharp(animated, { pages: -1 }).metadata()).pages).toBe(3);
     const out = await sanitizer.reencode(animated, 'gif');
     const meta = await sharp(out, { pages: -1 }).metadata();
@@ -81,35 +98,62 @@ describe('ImageSanitizePort on sharp', () => {
   it('re-encodes PNG and WebP too', async () => {
     for (const format of ['png', 'webp'] as const) {
       const source = await blank(20, 20)[format]().toBuffer();
-      expect((await sharp(await sanitizer.reencode(source, format)).metadata()).format).toBe(format);
+      expect((await sharp(await sanitizer.reencode(source, format)).metadata()).format).toBe(
+        format,
+      );
     }
   });
 
   it('rejects a header over the dimension cap and one over the pixel cap before any decode', async () => {
     const tall = await blank(10, 10).png().toBuffer();
-    expect(await rejection(() => sanitizer.inspect(forgePng(tall, 201, 1)))).toBe('pixel_cap_exceeded');
-    expect(await rejection(() => sanitizer.inspect(forgePng(tall, 150, 150)))).toBe('pixel_cap_exceeded');
+    expect(await rejection(() => sanitizer.inspect(forgePng(tall, 201, 1)))).toBe(
+      'pixel_cap_exceeded',
+    );
+    expect(await rejection(() => sanitizer.inspect(forgePng(tall, 150, 150)))).toBe(
+      'pixel_cap_exceeded',
+    );
     // A decompression bomb claims a huge picture in a few bytes: refused on the header alone.
-    expect(await rejection(() => sanitizer.inspect(forgePng(tall, 60_000, 60_000)))).toBe('pixel_cap_exceeded');
-    expect(await rejection(async () => sanitizer.inspect(await blank(100, 101).png().toBuffer()))).toBe('pixel_cap_exceeded');
-    expect(await sanitizer.inspect(await blank(100, 100).png().toBuffer())).toMatchObject({ width: 100, height: 100 });
+    expect(await rejection(() => sanitizer.inspect(forgePng(tall, 60_000, 60_000)))).toBe(
+      'pixel_cap_exceeded',
+    );
+    expect(
+      await rejection(async () => sanitizer.inspect(await blank(100, 101).png().toBuffer())),
+    ).toBe('pixel_cap_exceeded');
+    expect(await sanitizer.inspect(await blank(100, 100).png().toBuffer())).toMatchObject({
+      width: 100,
+      height: 100,
+    });
   });
 
   it('the decoder limit is a second guard: re-encoding a picture over the pixel limit is refused', async () => {
     const guard = new SharpImageSanitizer({ maxDimension: 200, maxPixels: 100 });
-    expect(await rejection(async () => guard.reencode(await blank(20, 20).png().toBuffer(), 'png'))).toBe('decompression_bomb');
+    expect(
+      await rejection(async () => guard.reencode(await blank(20, 20).png().toBuffer(), 'png')),
+    ).toBe('decompression_bomb');
   });
 
   it('rejects a type that is not allowed and bytes that are not an image', async () => {
-    expect(await rejection(async () => sanitizer.inspect(await blank(8, 8).tiff().toBuffer()))).toBe('type_not_allowed');
-    expect(await rejection(() => sanitizer.inspect(Buffer.from('MZ not an image at all')))).toBe('decode_failed');
-    expect(await rejection(() => sanitizer.reencode(Buffer.from('GIF89a garbage'), 'gif'))).toBe('decode_failed');
+    expect(
+      await rejection(async () => sanitizer.inspect(await blank(8, 8).tiff().toBuffer())),
+    ).toBe('type_not_allowed');
+    expect(await rejection(() => sanitizer.inspect(Buffer.from('MZ not an image at all')))).toBe(
+      'decode_failed',
+    );
+    expect(await rejection(() => sanitizer.reencode(Buffer.from('GIF89a garbage'), 'gif'))).toBe(
+      'decode_failed',
+    );
     const png = await blank(20, 20).png().toBuffer();
-    expect(await rejection(() => sanitizer.reencode(png.subarray(0, 60), 'png'))).toBe('decode_failed');
+    expect(await rejection(() => sanitizer.reencode(png.subarray(0, 60), 'png'))).toBe(
+      'decode_failed',
+    );
   });
 
   it('refuses an input larger than the cap without reading the rest of the stream', async () => {
-    const small = new SharpImageSanitizer({ maxDimension: 200, maxPixels: 10_000, maxInputBytes: 100 });
+    const small = new SharpImageSanitizer({
+      maxDimension: 200,
+      maxPixels: 10_000,
+      maxInputBytes: 100,
+    });
     const stream = Readable.from([Buffer.alloc(80), Buffer.alloc(80), Buffer.alloc(80)]);
     expect(await rejection(() => small.inspect(stream))).toBe('decode_failed');
     expect(await rejection(() => small.inspect(Buffer.alloc(101)))).toBe('decode_failed');

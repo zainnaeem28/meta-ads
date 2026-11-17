@@ -9,8 +9,7 @@ export type Sheet = 'CMP-SHEET-01' | 'CMP-SHEET-02' | 'CMP-SHEET-03' | 'CMP-SHEE
 
 /** A state reached by interaction (hover, focus, pressed, a click sequence) rather than shown at rest. */
 export type Action =
-  | { kind: 'hover' | 'focus' | 'press'; on: string }
-  | { kind: 'click'; on: string[] };
+  { kind: 'hover' | 'focus' | 'press'; on: string } | { kind: 'click'; on: string[] };
 
 export interface StateEntry {
   state: string;
@@ -34,17 +33,31 @@ export interface InventoryEntry {
 }
 
 const cell = (id: string) => `[data-cell="${id}"]`;
-const s = (state: string, selector: string, extra: Partial<StateEntry> = {}): StateEntry => ({ state, selector, ...extra });
+const s = (state: string, selector: string, extra: Partial<StateEntry> = {}): StateEntry => ({
+  state,
+  selector,
+  ...extra,
+});
 const hover = (on: string) => ({ action: { kind: 'hover', on } as const });
 const focus = (on: string) => ({ action: { kind: 'focus', on } as const });
 const press = (on: string) => ({ action: { kind: 'press', on } as const });
 
-const BUTTON_VARIANTS = ['primary', 'secondary', 'outline', 'ghost', 'destructive', 'destructive-outline'] as const;
+const BUTTON_VARIANTS = [
+  'primary',
+  'secondary',
+  'outline',
+  'ghost',
+  'destructive',
+  'destructive-outline',
+] as const;
 const buttonStates = (variant: string): StateEntry[] =>
-  ['default', 'disabled', 'pending'].map((st) => s(`${variant} ${st}`, cell(`CMP-003/${variant}/${st}`)));
+  ['default', 'disabled', 'pending'].map((st) =>
+    s(`${variant} ${st}`, cell(`CMP-003/${variant}/${st}`)),
+  );
 
 const TEXT_STATES = ['empty', 'filled', 'invalid', 'disabled', 'read-only'] as const;
-const field = (kind: string, states: readonly string[]) => states.map((st) => s(`${kind} ${st}`, cell(`CMP-004/${kind}/${st}`)));
+const field = (kind: string, states: readonly string[]) =>
+  states.map((st) => s(`${kind} ${st}`, cell(`CMP-004/${kind}/${st}`)));
 
 const PROVIDERS = ['openai', 'wavespeed'] as const;
 const KEY_STATES = ['active', 'untested', 'disabled', 'none', 'testing', 'delete-confirm'] as const;
@@ -65,7 +78,10 @@ export const INVENTORY: InventoryEntry[] = [
     name: 'Icon set',
     sheet: 'CMP-SHEET-01',
     anchor: '[data-testid=icon-grid]',
-    states: [s('16 px', '[data-testid=icon-grid] [data-icon-cell]'), s('decorative, aria-hidden', '[data-testid=icon-grid] svg[aria-hidden=true]')],
+    states: [
+      s('16 px', '[data-testid=icon-grid] [data-icon-cell]'),
+      s('decorative, aria-hidden', '[data-testid=icon-grid] svg[aria-hidden=true]'),
+    ],
   },
   {
     id: 'CMP-003',
@@ -74,9 +90,21 @@ export const INVENTORY: InventoryEntry[] = [
     anchor: cell('CMP-003/primary/default'),
     states: [
       ...BUTTON_VARIANTS.flatMap(buttonStates),
-      s('hover', cell('CMP-003/primary/default'), hover(`${cell('CMP-003/primary/default')} button`)),
-      s('focus', cell('CMP-003/primary/default'), focus(`${cell('CMP-003/primary/default')} button`)),
-      s('active', cell('CMP-003/primary/default'), press(`${cell('CMP-003/primary/default')} button`)),
+      s(
+        'hover',
+        cell('CMP-003/primary/default'),
+        hover(`${cell('CMP-003/primary/default')} button`),
+      ),
+      s(
+        'focus',
+        cell('CMP-003/primary/default'),
+        focus(`${cell('CMP-003/primary/default')} button`),
+      ),
+      s(
+        'active',
+        cell('CMP-003/primary/default'),
+        press(`${cell('CMP-003/primary/default')} button`),
+      ),
       s('small', cell('CMP-003/small/default')),
       s('with icon', cell('CMP-003/with-icon/default')),
       s('icon-only default', cell('CMP-003/icon-only/default')),
@@ -103,7 +131,9 @@ export const INVENTORY: InventoryEntry[] = [
     sheet: 'CMP-SHEET-01',
     anchor: cell('CMP-005/single/empty'),
     states: [
-      ...['empty', 'filled', 'invalid', 'disabled'].map((st) => s(`single ${st}`, cell(`CMP-005/single/${st}`))),
+      ...['empty', 'filled', 'invalid', 'disabled'].map((st) =>
+        s(`single ${st}`, cell(`CMP-005/single/${st}`)),
+      ),
       s('focus', cell('CMP-005/single/empty'), focus(`${cell('CMP-005/single/empty')} select`)),
     ],
     notApplicable: { 'read-only': 'a native select has no read-only state' },
@@ -120,8 +150,16 @@ export const INVENTORY: InventoryEntry[] = [
       s('checkbox not in this release', cell('CMP-006/checkbox/unavailable')),
       s('switch not in this release', cell('CMP-006/switch/unavailable')),
       s('segmented control', cell('CMP-006/segmented/default')),
-      s('hover', cell('CMP-006/radio-card/default'), hover(`${cell('CMP-006/radio-card/default')} label > span`)),
-      s('focus', cell('CMP-006/checkbox/default'), focus(`${cell('CMP-006/checkbox/default')} input`)),
+      s(
+        'hover',
+        cell('CMP-006/radio-card/default'),
+        hover(`${cell('CMP-006/radio-card/default')} label > span`),
+      ),
+      s(
+        'focus',
+        cell('CMP-006/checkbox/default'),
+        focus(`${cell('CMP-006/checkbox/default')} input`),
+      ),
     ],
   },
   {
@@ -130,7 +168,9 @@ export const INVENTORY: InventoryEntry[] = [
     sheet: 'CMP-SHEET-01',
     anchor: '[data-testid=badge-variants]',
     states: [
-      ...['neutral', 'primary', 'success', 'info', 'warning', 'destructive'].map((v) => s(v, `[data-testid=badge-variants] [data-variant=${v}]`)),
+      ...['neutral', 'primary', 'success', 'info', 'warning', 'destructive'].map((v) =>
+        s(v, `[data-testid=badge-variants] [data-variant=${v}]`),
+      ),
       s('with icon', '[data-testid=badge-icons] [data-icon]'),
     ],
   },
@@ -141,8 +181,14 @@ export const INVENTORY: InventoryEntry[] = [
     anchor: '[data-testid=prim-b]',
     states: [
       s('spinner', '[data-testid=spinner] [data-spinner]'),
-      s('progress determinate', '[data-testid=progress] [role=progressbar][data-state=determinate]'),
-      s('progress indeterminate', '[data-testid=progress] [role=progressbar][data-state=indeterminate]'),
+      s(
+        'progress determinate',
+        '[data-testid=progress] [role=progressbar][data-state=determinate]',
+      ),
+      s(
+        'progress indeterminate',
+        '[data-testid=progress] [role=progressbar][data-state=indeterminate]',
+      ),
       s('skeleton region', '[data-testid=skeleton] [aria-busy=true]'),
     ],
   },
@@ -164,7 +210,9 @@ export const INVENTORY: InventoryEntry[] = [
     name: 'Alert',
     sheet: 'CMP-SHEET-02',
     anchor: '[data-testid=alerts]',
-    states: ['info', 'success', 'warning', 'destructive'].map((v) => s(v, `[data-testid=alerts] [data-variant=${v}]`)),
+    states: ['info', 'success', 'warning', 'destructive'].map((v) =>
+      s(v, `[data-testid=alerts] [data-variant=${v}]`),
+    ),
   },
   {
     id: 'CMP-012',
@@ -181,7 +229,10 @@ export const INVENTORY: InventoryEntry[] = [
         expect: 'hidden',
         action: {
           kind: 'click',
-          on: ['role=button[name="Show success toast"]', 'xpath=//p[text()="Live success toast."]/ancestor::*[.//button[@aria-label="Close notification"]][1]//button[@aria-label="Close notification"]'],
+          on: [
+            'role=button[name="Show success toast"]',
+            'xpath=//p[text()="Live success toast."]/ancestor::*[.//button[@aria-label="Close notification"]][1]//button[@aria-label="Close notification"]',
+          ],
         },
       }),
     ],
@@ -210,7 +261,11 @@ export const INVENTORY: InventoryEntry[] = [
       s('default', `${cell('tabs-selected')} [role=tab][data-state=default]`),
       s('disabled', `${cell('tabs-selected')} [role=tab][data-state=disabled]`),
       s('count badges', `${cell('tabs-selected')} [role=tab] span`),
-      s('hover', cell('tabs-first'), hover(`${cell('tabs-first')} [role=tab][data-state=default] >> nth=0`)),
+      s(
+        'hover',
+        cell('tabs-first'),
+        hover(`${cell('tabs-first')} [role=tab][data-state=default] >> nth=0`),
+      ),
       s('focus', cell('tabs-first'), focus(`${cell('tabs-first')} [role=tab] >> nth=0`)),
     ],
   },
@@ -271,7 +326,11 @@ export const INVENTORY: InventoryEntry[] = [
     name: 'Empty and error state',
     sheet: 'CMP-SHEET-02',
     anchor: cell('empty-empty'),
-    states: [s('empty', cell('empty-empty')), s('no matches', cell('empty-nomatches')), s('load error', `${cell('empty-error')} [role=alert]`)],
+    states: [
+      s('empty', cell('empty-empty')),
+      s('no matches', cell('empty-nomatches')),
+      s('load error', `${cell('empty-error')} [role=alert]`),
+    ],
   },
   {
     id: 'CMP-020',
@@ -298,7 +357,10 @@ export const INVENTORY: InventoryEntry[] = [
       s('uploading', `${cell('upload-rows')} [role=progressbar]`),
       s('processing', `${cell('upload-rows')} >> text=/processing/i`),
       s('ready', `${cell('upload-rows')} >> text=/ready/i`),
-      s('rejected with reason', `${cell('upload-rows')} >> text=/rejected|not accepted|too large|unsupported/i`),
+      s(
+        'rejected with reason',
+        `${cell('upload-rows')} >> text=/rejected|not accepted|too large|unsupported/i`,
+      ),
     ],
   },
   {
@@ -307,9 +369,15 @@ export const INVENTORY: InventoryEntry[] = [
     sheet: 'CMP-SHEET-03',
     anchor: '[data-testid=job-cards]',
     states: [
-      ...['pending', 'created', 'processing', 'completed', 'failed'].map((st) => s(st, `[data-testid=job-cards] [data-state=${st}]`)),
-      ...['temporary', 'configuration', 'unknown'].map((c) => s(`failed, ${c}`, `[data-testid=job-cards] [data-cause=${c}]`)),
-      ...['passed', 'failed', 'skipped'].map((q) => s(`QC ${q}`, `[data-testid=job-cards] [data-qc=${q}]`)),
+      ...['pending', 'created', 'processing', 'completed', 'failed'].map((st) =>
+        s(st, `[data-testid=job-cards] [data-state=${st}]`),
+      ),
+      ...['temporary', 'configuration', 'unknown'].map((c) =>
+        s(`failed, ${c}`, `[data-testid=job-cards] [data-cause=${c}]`),
+      ),
+      ...['passed', 'failed', 'skipped'].map((q) =>
+        s(`QC ${q}`, `[data-testid=job-cards] [data-qc=${q}]`),
+      ),
     ],
   },
   {
@@ -342,14 +410,18 @@ export const INVENTORY: InventoryEntry[] = [
     name: 'Provider key card',
     sheet: 'CMP-SHEET-03',
     anchor: '[data-testid=key-cards]',
-    states: PROVIDERS.flatMap((p) => KEY_STATES.map((st) => s(`${p} ${st}`, cell(`key-${p}-${st}`)))),
+    states: PROVIDERS.flatMap((p) =>
+      KEY_STATES.map((st) => s(`${p} ${st}`, cell(`key-${p}-${st}`))),
+    ),
   },
   {
     id: 'CMP-026',
     name: 'Final preview',
     sheet: 'CMP-SHEET-03',
     anchor: '[data-testid=final-previews]',
-    states: ['assembling', 'done', 'failed', 'out-of-date'].map((st) => s(st, cell(`preview-${st}`))),
+    states: ['assembling', 'done', 'failed', 'out-of-date'].map((st) =>
+      s(st, cell(`preview-${st}`)),
+    ),
   },
   {
     id: 'CMP-027',
@@ -361,8 +433,16 @@ export const INVENTORY: InventoryEntry[] = [
       s('draft', '[data-testid=campaign-rows] [data-variant=draft]'),
       s('default', '[data-testid=campaign-rows] [data-state=default]'),
       s('deleting', '[data-testid=campaign-rows] [data-state=deleting]'),
-      s('hover', '[data-testid=campaign-rows]', hover('[data-testid=campaign-rows] [data-state=default] >> nth=0')),
-      s('focus', '[data-testid=campaign-rows]', focus('[data-testid=campaign-rows] [data-state=default] a >> nth=0')),
+      s(
+        'hover',
+        '[data-testid=campaign-rows]',
+        hover('[data-testid=campaign-rows] [data-state=default] >> nth=0'),
+      ),
+      s(
+        'focus',
+        '[data-testid=campaign-rows]',
+        focus('[data-testid=campaign-rows] [data-state=default] a >> nth=0'),
+      ),
     ],
   },
   {
@@ -375,7 +455,10 @@ export const INVENTORY: InventoryEntry[] = [
       s('estimated cost value', '[data-testid=metric-tiles] [data-variant=cost][data-state=value]'),
       s('loading', '[data-testid=metric-tiles] [data-state=loading]'),
       s('no data', '[data-testid=metric-tiles] [data-state=no-data]'),
-      s('inline bar', '[data-testid=inline-bar] [role=meter], [data-testid=inline-bar] [role=progressbar]'),
+      s(
+        'inline bar',
+        '[data-testid=inline-bar] [role=meter], [data-testid=inline-bar] [role=progressbar]',
+      ),
     ],
   },
   {
@@ -384,8 +467,19 @@ export const INVENTORY: InventoryEntry[] = [
     sheet: 'SCREENS',
     anchor: cell('shell-user-sidebar'),
     states: [
-      'shell-user-sidebar', 'shell-nav-states', 'shell-rail', 'shell-tabbar', 'shell-menu-user', 'shell-admin',
-      'shell-key-missing', 'shell-key-disabled', 'shell-toast', 'shell-nav-disabled', 'shell-nav-focus', 'shell-key-focus', 'shell-auto',
+      'shell-user-sidebar',
+      'shell-nav-states',
+      'shell-rail',
+      'shell-tabbar',
+      'shell-menu-user',
+      'shell-admin',
+      'shell-key-missing',
+      'shell-key-disabled',
+      'shell-toast',
+      'shell-nav-disabled',
+      'shell-nav-focus',
+      'shell-key-focus',
+      'shell-auto',
     ].map((c) => s(c, cell(c))),
   },
   {
@@ -394,8 +488,18 @@ export const INVENTORY: InventoryEntry[] = [
     sheet: 'SCREENS',
     anchor: cell('admin-sidebar'),
     states: [
-      'admin-sidebar', 'admin-nav-states', 'admin-no-alerts', 'admin-many-alerts', 'admin-rail', 'admin-tabbar', 'admin-menu',
-      'admin-toast', 'admin-nav-disabled', 'admin-nav-focus', 'admin-unavailable', 'admin-auto',
+      'admin-sidebar',
+      'admin-nav-states',
+      'admin-no-alerts',
+      'admin-many-alerts',
+      'admin-rail',
+      'admin-tabbar',
+      'admin-menu',
+      'admin-toast',
+      'admin-nav-disabled',
+      'admin-nav-focus',
+      'admin-unavailable',
+      'admin-auto',
     ].map((c) => s(c, cell(c))),
   },
   {
@@ -403,14 +507,19 @@ export const INVENTORY: InventoryEntry[] = [
     name: 'Auth shell',
     sheet: 'SCREENS',
     anchor: cell('auth-signin'),
-    states: ['auth-signin', 'auth-message', 'auth-mfa', 'auth-loading', 'auth-error'].map((c) => s(c, cell(c))),
+    states: ['auth-signin', 'auth-message', 'auth-mfa', 'auth-loading', 'auth-error'].map((c) =>
+      s(c, cell(c)),
+    ),
   },
   {
     id: 'CMP-033',
     name: 'Page header',
     sheet: 'SCREENS',
     anchor: cell('header-default'),
-    states: [s('default', cell('header-default')), s('breadcrumb and stage tabs', cell('header-campaign'))],
+    states: [
+      s('default', cell('header-default')),
+      s('breadcrumb and stage tabs', cell('header-campaign')),
+    ],
   },
   {
     id: 'CMP-034',
@@ -428,4 +537,10 @@ export const LIVE_IDS: string[] = [
   ...Array.from({ length: 5 }, (_, i) => i + 30),
 ].map((n) => `CMP-${String(n).padStart(3, '0')}`);
 
-export const SHEETS: Sheet[] = ['CMP-SHEET-01', 'CMP-SHEET-02', 'CMP-SHEET-03', 'CMP-SHEET-04', 'SCREENS'];
+export const SHEETS: Sheet[] = [
+  'CMP-SHEET-01',
+  'CMP-SHEET-02',
+  'CMP-SHEET-03',
+  'CMP-SHEET-04',
+  'SCREENS',
+];

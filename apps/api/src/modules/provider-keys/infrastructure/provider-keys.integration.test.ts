@@ -7,7 +7,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApiApp } from '../../../bootstrap/api.module.js';
 import { createWorkerApp } from '../../../bootstrap/worker.module.js';
 import type { WorkerApp } from '../../../bootstrap/worker.module.js';
-import { REAL_MIGRATIONS, adminUrl, createTestDatabase } from '../../../platform/db/test-database.js';
+import {
+  REAL_MIGRATIONS,
+  adminUrl,
+  createTestDatabase,
+} from '../../../platform/db/test-database.js';
 import type { TestDatabase } from '../../../platform/db/test-database.js';
 import { installJobs } from '../../../platform/jobs/test-support.js';
 import { buildLogger, createHttpLogging } from '../../../platform/logging/index.js';
@@ -64,7 +68,16 @@ async function insertKey(
   const r = await tryQuery(
     url,
     `INSERT INTO provider_keys ${columns} VALUES ($1, $2, $3, 'active', 1, $4, $5, $6, $7, '3210', $8, 1)`,
-    [id, owner, provider, sealed.ciphertext, sealed.nonce, sealed.wrappedDek, sealed.kekVersion, FP],
+    [
+      id,
+      owner,
+      provider,
+      sealed.ciphertext,
+      sealed.nonce,
+      sealed.wrappedDek,
+      sealed.kekVersion,
+      FP,
+    ],
   );
   expect(r.ok, JSON.stringify(r)).toBe(true);
 }
@@ -77,7 +90,8 @@ const roleUrl = (role: 'api' | 'worker'): string => {
 };
 const api = () => roleUrl('api');
 const wrk = () => roleUrl('worker');
-type Attempt = { ok: true; rows: Record<string, unknown>[] } | { ok: false; code: string; message: string };
+type Attempt =
+  { ok: true; rows: Record<string, unknown>[] } | { ok: false; code: string; message: string };
 async function tryQuery(url: string, sql: string, params: unknown[] = []): Promise<Attempt> {
   const client = new pg.Client({ connectionString: url });
   try {
@@ -134,24 +148,32 @@ beforeAll(async () => {
     roleNames[role] = `app_${role}_t039_${suffix}`;
     rolePasswords[role] = randomBytes(12).toString('hex');
     await withClient(adminUrl(), (c) =>
-      c.query(`CREATE ROLE "${roleNames[role]}" LOGIN NOSUPERUSER PASSWORD '${rolePasswords[role]}'`),
+      c.query(
+        `CREATE ROLE "${roleNames[role]}" LOGIN NOSUPERUSER PASSWORD '${rolePasswords[role]}'`,
+      ),
     );
   }
   const platform = readFileSync(join(REAL_MIGRATIONS, '0001_task-025-platform.sql'), 'utf8');
   for (const statement of platform.split('-- Grants')[0]?.split('--> statement-breakpoint') ?? []) {
-    if (/^\s*CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(statement)) {
+    if (
+      /^\s*CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(
+        statement,
+      )
+    ) {
       await pool.query(statement);
     }
   }
-  for (const file of ['0010_task-032-audit.sql', '0020_task-033-identity.sql', '0030_task-039-provider-keys.sql']) {
+  for (const file of [
+    '0010_task-032-audit.sql',
+    '0020_task-033-identity.sql',
+    '0030_task-039-provider-keys.sql',
+  ]) {
     for (const statement of statementsOf(file, 'tables')) await pool.query(statement);
   }
   for (const file of ['0010_task-032-audit.sql', '0030_task-039-provider-keys.sql']) {
     for (const statement of statementsOf(file, 'grants')) await pool.query(statement);
   }
-  await pool.query(
-    `GRANT USAGE ON SCHEMA public TO "${roleNames.api}", "${roleNames.worker}"`,
-  );
+  await pool.query(`GRANT USAGE ON SCHEMA public TO "${roleNames.api}", "${roleNames.worker}"`);
   await installJobs(testDb.url);
   for (const [id, email] of [
     [U1, 'one@example.test'],
@@ -223,8 +245,21 @@ describe('M0004 migration', () => {
   it('enforces the column constraints (TC-KEY data integrity)', async () => {
     const s = (await tryQuery(api(), 'select 1')).ok;
     expect(s).toBe(true);
-    const sealed = apiApp.get<KeyWrapPort>(KEY_WRAP_PORT, { strict: false }).seal(Buffer.from(PLAINTEXT), aad(U1, K1));
-    const base = [K1, U1, 'openai', sealed.ciphertext, sealed.nonce, sealed.wrappedDek, 1, '3210', FP, 1];
+    const sealed = apiApp
+      .get<KeyWrapPort>(KEY_WRAP_PORT, { strict: false })
+      .seal(Buffer.from(PLAINTEXT), aad(U1, K1));
+    const base = [
+      K1,
+      U1,
+      'openai',
+      sealed.ciphertext,
+      sealed.nonce,
+      sealed.wrappedDek,
+      1,
+      '3210',
+      FP,
+      1,
+    ];
     const insert = (over: Record<number, unknown>, status = 'active') =>
       tryQuery(
         api(),
@@ -297,17 +332,28 @@ describe('column grants (TC-KEY grants, T-20)', () => {
     // The worker opens the new value only under the new version.
     const unsealer = worker.context.get(KeyUnsealer);
     const row = await withClient(wrk(), (c) =>
-      c.query('SELECT ciphertext, nonce, wrapped_dek, kek_version, version FROM provider_keys WHERE id = $1', [K1]),
+      c.query(
+        'SELECT ciphertext, nonce, wrapped_dek, kek_version, version FROM provider_keys WHERE id = $1',
+        [K1],
+      ),
     );
     const r = row.rows[0] as Record<string, Buffer & number>;
-    const sealed: Sealed = { ciphertext: r['ciphertext']!, nonce: r['nonce']!, wrappedDek: r['wrapped_dek']!, kekVersion: Number(r['kek_version']) };
+    const sealed: Sealed = {
+      ciphertext: r['ciphertext']!,
+      nonce: r['nonce']!,
+      wrappedDek: r['wrapped_dek']!,
+      kekVersion: Number(r['kek_version']),
+    };
     expect(Number(r['version'])).toBe(2);
     expect(unsealer.unseal(sealed, aad(U1, K1, 2)).toString()).toBe('replaced-key-000000');
     expect(() => unsealer.unseal(sealed, aad(U1, K1, 1))).toThrow(UnsealFailed);
   });
 
   it('app_api can delete by owner, app_worker reads every column and updates but cannot insert', async () => {
-    const worker = await tryQuery(wrk(), 'SELECT ciphertext, nonce, wrapped_dek FROM provider_keys');
+    const worker = await tryQuery(
+      wrk(),
+      'SELECT ciphertext, nonce, wrapped_dek FROM provider_keys',
+    );
     expect(worker.ok && worker.rows).toHaveLength(1);
     denied(
       await tryQuery(
@@ -316,7 +362,11 @@ describe('column grants (TC-KEY grants, T-20)', () => {
         [K2, U2, Buffer.alloc(20), Buffer.alloc(12), Buffer.alloc(384), FP],
       ),
     );
-    const upd = await tryQuery(wrk(), `UPDATE provider_keys SET consecutive_auth_failures = 1, status = 'untested' WHERE id = $1`, [K1]);
+    const upd = await tryQuery(
+      wrk(),
+      `UPDATE provider_keys SET consecutive_auth_failures = 1, status = 'untested' WHERE id = $1`,
+      [K1],
+    );
     expect(upd.ok).toBe(true);
     for (const role of ['api', 'worker'] as const) {
       denied(await tryQuery(roleUrl(role), 'TRUNCATE provider_keys'));
@@ -327,14 +377,22 @@ describe('column grants (TC-KEY grants, T-20)', () => {
   it('key_events is append-only for both runtime roles, and app_api cannot update audit_events', async () => {
     for (const role of ['api', 'worker'] as const) {
       const url = roleUrl(role);
-      const ins = await tryQuery(url, `INSERT INTO key_events (id, owner_id, key_id, provider, kind) VALUES (gen_random_uuid(), $1, $2, 'openai', 'added')`, [U1, K1]);
+      const ins = await tryQuery(
+        url,
+        `INSERT INTO key_events (id, owner_id, key_id, provider, kind) VALUES (gen_random_uuid(), $1, $2, 'openai', 'added')`,
+        [U1, K1],
+      );
       expect(ins.ok).toBe(true);
       denied(await tryQuery(url, `UPDATE key_events SET kind = 'deleted'`));
       denied(await tryQuery(url, 'DELETE FROM key_events'));
       denied(await tryQuery(url, 'TRUNCATE key_events'));
       denied(await tryQuery(url, `UPDATE audit_events SET outcome = 'allowed'`));
     }
-    const bad = await tryQuery(api(), `INSERT INTO key_events (id, owner_id, provider, kind) VALUES (gen_random_uuid(), $1, 'openai', 'changed_db')`, [U1]);
+    const bad = await tryQuery(
+      api(),
+      `INSERT INTO key_events (id, owner_id, provider, kind) VALUES (gen_random_uuid(), $1, 'openai', 'changed_db')`,
+      [U1],
+    );
     expect(bad.ok).toBe(false);
     if (!bad.ok) expect(bad.code).toBe('23514');
   });
@@ -342,8 +400,12 @@ describe('column grants (TC-KEY grants, T-20)', () => {
   it('removing the user cascades the key row but keeps the key_events history', async () => {
     await withClient(testDb.url, async (c) => {
       await c.query('DELETE FROM users WHERE id = $1', [U1]);
-      expect((await c.query('SELECT 1 FROM provider_keys WHERE owner_id = $1', [U1])).rowCount).toBe(0);
-      expect((await c.query('SELECT 1 FROM key_events WHERE owner_id = $1', [U1])).rowCount).toBe(2);
+      expect(
+        (await c.query('SELECT 1 FROM provider_keys WHERE owner_id = $1', [U1])).rowCount,
+      ).toBe(0);
+      expect((await c.query('SELECT 1 FROM key_events WHERE owner_id = $1', [U1])).rowCount).toBe(
+        2,
+      );
     });
   });
 });
@@ -353,10 +415,18 @@ describe('seal in the api, unseal in the worker, through the real composition ro
     const port = apiApp.get<KeyWrapPort>(KEY_WRAP_PORT, { strict: false });
     await insertKey(api(), K2, U2, port.seal(Buffer.from(PLAINTEXT), aad(U2, K2)));
     const row = await withClient(wrk(), (c) =>
-      c.query('SELECT ciphertext, nonce, wrapped_dek, kek_version FROM provider_keys WHERE id = $1', [K2]),
+      c.query(
+        'SELECT ciphertext, nonce, wrapped_dek, kek_version FROM provider_keys WHERE id = $1',
+        [K2],
+      ),
     );
     const r = row.rows[0] as Record<string, Buffer & number>;
-    const sealed: Sealed = { ciphertext: r['ciphertext']!, nonce: r['nonce']!, wrappedDek: r['wrapped_dek']!, kekVersion: Number(r['kek_version']) };
+    const sealed: Sealed = {
+      ciphertext: r['ciphertext']!,
+      nonce: r['nonce']!,
+      wrappedDek: r['wrapped_dek']!,
+      kekVersion: Number(r['kek_version']),
+    };
     const unsealer = worker.context.get(KeyUnsealer);
     expect(unsealer.unseal(sealed, aad(U2, K2)).toString()).toBe(PLAINTEXT);
     // AAD mismatch, and the ciphertext moved to another user's row.
@@ -393,15 +463,27 @@ describe('seal in the api, unseal in the worker, through the real composition ro
     const before = process.env['KEK_PRIVATE_KEYS'];
     process.env['KEK_PRIVATE_KEYS'] = keyEnv['KEK_PRIVATE_KEYS'] as string;
     try {
-      await expect(createApiApp(config, logging)).rejects.toThrow('KEK_PRIVATE_KEYS must be absent');
+      await expect(createApiApp(config, logging)).rejects.toThrow(
+        'KEK_PRIVATE_KEYS must be absent',
+      );
     } finally {
       if (before === undefined) delete process.env['KEK_PRIVATE_KEYS'];
       else process.env['KEK_PRIVATE_KEYS'] = before;
     }
     const { logger } = buildLogger({ level: 'silent' });
-    const workerConfig = { DATABASE_URL: testDb.url, DATABASE_POOL_MAX: 2, DATABASE_ACQUIRE_TIMEOUT_MS: 5000 };
+    const workerConfig = {
+      DATABASE_URL: testDb.url,
+      DATABASE_POOL_MAX: 2,
+      DATABASE_ACQUIRE_TIMEOUT_MS: 5000,
+    };
     await expect(
-      createWorkerApp(workerConfig, { logger, env: { ...keyEnv, KEK_PRIVATE_KEYS: '{"1":"-----BEGIN PRIVATE KEY-----\\nzzz\\n-----END PRIVATE KEY-----"}' } }),
+      createWorkerApp(workerConfig, {
+        logger,
+        env: {
+          ...keyEnv,
+          KEK_PRIVATE_KEYS: '{"1":"-----BEGIN PRIVATE KEY-----\\nzzz\\n-----END PRIVATE KEY-----"}',
+        },
+      }),
     ).rejects.toThrow(/KEK_PRIVATE_KEYS: holds an unreadable private key/);
     await expect(
       createWorkerApp(workerConfig, { logger, env: { ...keyEnv, KEK_ACTIVE_VERSION: '7' } }),

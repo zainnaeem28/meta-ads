@@ -17,11 +17,14 @@ export function LocalSignInForm({ returnTo }: { returnTo: string }) {
     <form action={action} className="flex flex-col gap-3" noValidate>
       <input type="hidden" name="return" value={returnTo} />
       {state.error === 'invalid' ? (
-        <Alert variant="destructive">That email and password do not match. Check them and try again.</Alert>
+        <Alert variant="destructive">
+          That email and password do not match. Check them and try again.
+        </Alert>
       ) : null}
       {state.error === 'unavailable' ? (
         <Alert variant="destructive" title="Sign-in is unavailable right now">
-          The sign-in service did not respond. Wait a moment and try again. If it keeps happening, tell your administrator.
+          The sign-in service did not respond. Wait a moment and try again. If it keeps happening,
+          tell your administrator.
         </Alert>
       ) : null}
       <FormField label="Email address">

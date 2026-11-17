@@ -1,8 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { assertNoEgress } from '../../../../platform/db/index.js';
-import { EGRESS, EgressError, classifyEgressFailure, classifyProviderFailure } from '../../../../platform/egress/index.js';
+import {
+  EGRESS,
+  EgressError,
+  classifyEgressFailure,
+  classifyProviderFailure,
+} from '../../../../platform/egress/index.js';
 import type { Egress } from '../../../../platform/egress/index.js';
-import { ProviderCallFailed, ProviderInvalidResponse, VIDEO_WORKER_CONFIG } from '../../application/worker/ports.js';
+import {
+  ProviderCallFailed,
+  ProviderInvalidResponse,
+  VIDEO_WORKER_CONFIG,
+} from '../../application/worker/ports.js';
 import type {
   ProviderCredential,
   VideoGenPort,
@@ -19,7 +28,8 @@ const PROVIDER_NAME = 'WaveSpeed';
 const MAX_RESPONSE_BYTES = 256 * 1024;
 const MODEL = /^[a-z0-9][a-z0-9._-]{0,63}(?:\/[a-z0-9][a-z0-9._-]{0,63}){0,3}$/;
 const TASK_ID = /^[A-Za-z0-9_-]{1,128}$/;
-const AUTH_ERROR = /(unauthori[sz]ed|invalid[\s_-]*(api[\s_-]*)?key|api[\s_-]*key|forbidden|permission)/i;
+const AUTH_ERROR =
+  /(unauthori[sz]ed|invalid[\s_-]*(api[\s_-]*)?key|api[\s_-]*key|forbidden|permission)/i;
 
 interface Answer {
   readonly status: number;
@@ -36,7 +46,9 @@ function parsed(body: Buffer): unknown {
 }
 
 function field(value: unknown, name: string): unknown {
-  return value !== null && typeof value === 'object' ? (value as Record<string, unknown>)[name] : undefined;
+  return value !== null && typeof value === 'object'
+    ? (value as Record<string, unknown>)[name]
+    : undefined;
 }
 
 /**
@@ -63,35 +75,56 @@ export class WaveSpeedVideoGen implements VideoGenPort {
       aspect_ratio: input.aspectRatio,
     };
     if (input.imageUrl !== null) body['image'] = input.imageUrl;
-    const answer = await this.call(credential, 'POST', `/api/v3/${input.model}`, JSON.stringify(body));
+    const answer = await this.call(
+      credential,
+      'POST',
+      `/api/v3/${input.model}`,
+      JSON.stringify(body),
+    );
     const id = field(field(answer.json, 'data'), 'id');
     // The request was accepted; an answer without a task id is billed and unusable, so the outcome is unknown.
     if (typeof id !== 'string' || !TASK_ID.test(id)) {
-      throw new ProviderCallFailed(classifyProviderFailure(PROVIDER_NAME, { kind: 'transport', phase: 'after_send' }), answer.status);
+      throw new ProviderCallFailed(
+        classifyProviderFailure(PROVIDER_NAME, { kind: 'transport', phase: 'after_send' }),
+        answer.status,
+      );
     }
     return id;
   }
 
   async status(credential: ProviderCredential, taskId: string): Promise<VideoStatus> {
-    const answer = await this.call(credential, 'GET', `/api/v3/predictions/${this.task(taskId)}/result`);
+    const answer = await this.call(
+      credential,
+      'GET',
+      `/api/v3/predictions/${this.task(taskId)}/result`,
+    );
     const data = field(answer.json, 'data');
     const state = field(data, 'status');
     if (state === 'completed') {
       const outputs = field(data, 'outputs');
       const url = Array.isArray(outputs) ? (outputs as unknown[])[0] : undefined;
-      if (typeof url !== 'string' || url === '') throw new ProviderInvalidResponse('a finished task has no output');
+      if (typeof url !== 'string' || url === '')
+        throw new ProviderInvalidResponse('a finished task has no output');
       return { state: 'completed', outputUrl: url };
     }
     if (state === 'failed') {
       const text = field(data, 'error');
-      return { state: 'failed', errorClass: typeof text === 'string' && AUTH_ERROR.test(text) ? 'auth' : 'other' };
+      return {
+        state: 'failed',
+        errorClass: typeof text === 'string' && AUTH_ERROR.test(text) ? 'auth' : 'other',
+      };
     }
     if (state === 'created' || state === 'processing') return { state };
     throw new ProviderInvalidResponse('unknown task state');
   }
 
   async deleteTask(credential: ProviderCredential, taskId: string): Promise<void> {
-    await this.call(credential, 'POST', '/api/v3/predictions/delete', JSON.stringify({ ids: [this.task(taskId)] }));
+    await this.call(
+      credential,
+      'POST',
+      '/api/v3/predictions/delete',
+      JSON.stringify({ ids: [this.task(taskId)] }),
+    );
   }
 
   private task(taskId: string): string {
@@ -99,7 +132,12 @@ export class WaveSpeedVideoGen implements VideoGenPort {
     return taskId;
   }
 
-  private async call(credential: ProviderCredential, method: 'GET' | 'POST', path: string, body?: string): Promise<Answer> {
+  private async call(
+    credential: ProviderCredential,
+    method: 'GET' | 'POST',
+    path: string,
+    body?: string,
+  ): Promise<Answer> {
     assertNoEgress('wavespeed call');
     let response: Awaited<ReturnType<Egress['fetch']>>;
     try {
@@ -115,7 +153,8 @@ export class WaveSpeedVideoGen implements VideoGenPort {
       });
     } catch (error) {
       // An egress refusal or failure: before the request left, nothing was sent; after, the outcome is unknown.
-      if (error instanceof EgressError) throw new ProviderCallFailed(classifyEgressFailure(PROVIDER_NAME, error.phase));
+      if (error instanceof EgressError)
+        throw new ProviderCallFailed(classifyEgressFailure(PROVIDER_NAME, error.phase));
       throw new ProviderCallFailed(classifyEgressFailure(PROVIDER_NAME, 'after_send'));
     }
     const json = parsed(response.body);
@@ -130,7 +169,8 @@ export class WaveSpeedVideoGen implements VideoGenPort {
 
   private refusal(status: number, json: unknown): ProviderCallFailed {
     const message = field(json, 'message');
-    const credit = typeof message === 'string' && /insufficient[\s_-]*(balance|credit|funds)/i.test(message);
+    const credit =
+      typeof message === 'string' && /insufficient[\s_-]*(balance|credit|funds)/i.test(message);
     const classification = classifyProviderFailure(PROVIDER_NAME, {
       kind: 'http',
       status,

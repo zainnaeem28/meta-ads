@@ -75,4 +75,3 @@ export function FilterDemo({ initial, rows }: { initial: ListState; rows: number
     </div>
   );
 }
-

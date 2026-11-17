@@ -31,7 +31,8 @@ export function campaignKey(
   extension: string,
 ): string {
   if (!GENERATED_KINDS.includes(kind)) throw new TypeError('kind is not a generated kind');
-  if (!EXTENSION.test(extension)) throw new TypeError('extension must be 1-5 lower-case letters or digits');
+  if (!EXTENSION.test(extension))
+    throw new TypeError('extension must be 1-5 lower-case letters or digits');
   return `u/${uuid('ownerId', ownerId)}/c/${uuid('campaignId', campaignId)}/${kind}/${uuid('mediaId', mediaId)}.${extension}`;
 }
 

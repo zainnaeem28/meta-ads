@@ -51,10 +51,7 @@ export const providerKeys = pgTable(
     check('provider_keys_provider_ck', sql`${table.provider} in ('openai', 'wavespeed')`),
     check('provider_keys_status_ck', sql`${table.status} in ('active', 'untested', 'disabled')`),
     check('provider_keys_version_ck', sql`${table.version} > 0`),
-    check(
-      'provider_keys_ciphertext_ck',
-      sql`octet_length(${table.ciphertext}) between 1 and 1024`,
-    ),
+    check('provider_keys_ciphertext_ck', sql`octet_length(${table.ciphertext}) between 1 and 1024`),
     check('provider_keys_nonce_ck', sql`octet_length(${table.nonce}) = 12`),
     check('provider_keys_wrapped_dek_ck', sql`octet_length(${table.wrappedDek}) = 384`),
     check('provider_keys_kek_version_ck', sql`${table.kekVersion} > 0`),
@@ -83,6 +80,10 @@ export const keyEvents = pgTable(
       'key_events_kind_ck',
       sql`${table.kind} in ('added', 'replaced', 'deleted', 'test_passed', 'test_failed', 'stored_untested', 'validated_by_job', 'auth_failed', 'disabled', 'disabled_by_operator', 'attempt_rate_limited', 'rewrapped')`,
     ),
-    index('key_events_owner_at_idx').on(table.ownerId, sql`${table.at} desc`, sql`${table.id} desc`),
+    index('key_events_owner_at_idx').on(
+      table.ownerId,
+      sql`${table.at} desc`,
+      sql`${table.id} desc`,
+    ),
   ],
 );

@@ -7,11 +7,23 @@ import { ROUTES } from '../../lib/errors/routes';
 import { AUTH_COPY, AUTH_PANEL } from './copy';
 
 /** SCREEN-001: the provider-hosted sign-in (or its local stand-in) in the auth shell's `idp-slot`, with the session-ended message above it. */
-export function SignInScreen({ clerk, expired, returnTo }: { clerk: boolean; expired: boolean; returnTo: string }) {
+export function SignInScreen({
+  clerk,
+  expired,
+  returnTo,
+}: {
+  clerk: boolean;
+  expired: boolean;
+  returnTo: string;
+}) {
   return (
     <AuthShell panel={AUTH_PANEL} title={AUTH_COPY.productName} description={AUTH_COPY.signInIntro}>
       {expired ? <Alert variant="info">{AUTH_COPY.sessionExpired}</Alert> : null}
-      {clerk ? <ClerkSlot base="/sign-in" returnTo={returnTo} /> : <LocalSignInForm returnTo={returnTo} />}
+      {clerk ? (
+        <ClerkSlot base="/sign-in" returnTo={returnTo} />
+      ) : (
+        <LocalSignInForm returnTo={returnTo} />
+      )}
       <p className="text-ui text-muted-foreground">
         No account? Accounts are created by invitation.{' '}
         <Link href={ROUTES.access} className="text-primary underline">

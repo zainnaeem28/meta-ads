@@ -11,14 +11,18 @@ afterEach(() => {
 const req = async (cookie = true) =>
   new NextRequest('http://web.test/local-token', {
     headers: cookie
-      ? { cookie: `${LOCAL_SESSION_COOKIE}=${await signLocalSession({ sub: 's', email: 'o@example.test', exp: Math.floor(Date.now() / 1000) + 600 })}` }
+      ? {
+          cookie: `${LOCAL_SESSION_COOKIE}=${await signLocalSession({ sub: 's', email: 'o@example.test', exp: Math.floor(Date.now() / 1000) + 600 })}`,
+        }
       : {},
   });
 
 describe('GET /local-token', () => {
   it('exchanges the local session for the api local-mode token', async () => {
     vi.stubEnv('AUTH_MODE', 'local');
-    const f = vi.fn(async () => new Response(JSON.stringify({ token: 'tok', expiresInSeconds: 3600 })));
+    const f = vi.fn(
+      async () => new Response(JSON.stringify({ token: 'tok', expiresInSeconds: 3600 })),
+    );
     vi.stubGlobal('fetch', f);
     const { GET } = await import('./route');
     const res = await GET(await req());
@@ -38,7 +42,11 @@ describe('GET /local-token', () => {
   it('is absent (404) with Clerk mode or in a hosted environment, and never calls the api', async () => {
     const f = vi.fn();
     vi.stubGlobal('fetch', f);
-    for (const env of [{ AUTH_MODE: 'clerk' }, { AUTH_MODE: 'local', APP_ENV: 'production' }, { NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'pk_test_x', AUTH_MODE: '' }]) {
+    for (const env of [
+      { AUTH_MODE: 'clerk' },
+      { AUTH_MODE: 'local', APP_ENV: 'production' },
+      { NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'pk_test_x', AUTH_MODE: '' },
+    ]) {
       vi.resetModules();
       for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v);
       const { GET } = await import('./route');

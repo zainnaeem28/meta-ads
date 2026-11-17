@@ -14,7 +14,10 @@ export function createLocalTokenGetter(
   let pending: Promise<string | null> | null = null;
   const load = async (): Promise<string | null> => {
     try {
-      const res = await fetchImpl('/local-token', { credentials: 'same-origin', cache: 'no-store' });
+      const res = await fetchImpl('/local-token', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
       if (!res.ok) return null;
       const body = (await res.json()) as { token?: unknown; expiresInSeconds?: unknown };
       if (typeof body.token !== 'string') return null;

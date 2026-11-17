@@ -13,7 +13,9 @@ describe('SCREEN-004 not found and unavailable record', () => {
     it(`${state}: one h1, the message and a Go Home link to the home route`, () => {
       render(<NotFoundScreen state={state} />);
       expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-      expect(screen.getByRole('heading', { level: 1, name: SCREEN_004_COPY[state].title })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { level: 1, name: SCREEN_004_COPY[state].title }),
+      ).toBeInTheDocument();
       expect(screen.getByText(SCREEN_004_COPY[state].body)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: GO_HOME_LABEL })).toHaveAttribute('href', '/');
     });
@@ -25,7 +27,11 @@ describe('SCREEN-004 not found and unavailable record', () => {
 
   it('the Go Home label is the one of the §9.1 rows for not_found and forbidden_role', () => {
     for (const code of ['not_found', 'forbidden_role'] as const) {
-      expect(ERROR_TABLE[code].action).toMatchObject({ kind: 'link', label: GO_HOME_LABEL, href: '/' });
+      expect(ERROR_TABLE[code].action).toMatchObject({
+        kind: 'link',
+        label: GO_HOME_LABEL,
+        href: '/',
+      });
     }
   });
 

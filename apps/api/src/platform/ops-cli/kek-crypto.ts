@@ -1,4 +1,11 @@
-import { constants, createDecipheriv, createPrivateKey, createPublicKey, privateDecrypt, publicEncrypt } from 'node:crypto';
+import {
+  constants,
+  createDecipheriv,
+  createPrivateKey,
+  createPublicKey,
+  privateDecrypt,
+  publicEncrypt,
+} from 'node:crypto';
 import type { KeyObject } from 'node:crypto';
 
 // The cryptography of `kek:rewrap` (ADR-004): the data key of a sealed value is opened with the private key of its
@@ -51,8 +58,14 @@ function parse(variable: string, map: unknown, make: (pem: string) => KeyObject)
     } catch {
       throw new KekMapError(variable, 'holds an unreadable key');
     }
-    if (key.asymmetricKeyType !== 'rsa' || key.asymmetricKeyDetails?.modulusLength !== MODULUS_BITS) {
-      throw new KekMapError(variable, `keys must be RSA with a ${String(MODULUS_BITS)}-bit modulus`);
+    if (
+      key.asymmetricKeyType !== 'rsa' ||
+      key.asymmetricKeyDetails?.modulusLength !== MODULUS_BITS
+    ) {
+      throw new KekMapError(
+        variable,
+        `keys must be RSA with a ${String(MODULUS_BITS)}-bit modulus`,
+      );
     }
     keys.set(versionOf(variable, name), key);
   }
@@ -60,8 +73,10 @@ function parse(variable: string, map: unknown, make: (pem: string) => KeyObject)
 }
 
 /** `KEK_PUBLIC_KEYS` and `KEK_PRIVATE_KEYS` as the validated configuration holds them (maps of version to PEM). */
-export const publicKeysOf = (map: unknown): Keys => parse('KEK_PUBLIC_KEYS', map, (pem) => createPublicKey(pem));
-export const privateKeysOf = (map: unknown): Keys => parse('KEK_PRIVATE_KEYS', map, (pem) => createPrivateKey(pem));
+export const publicKeysOf = (map: unknown): Keys =>
+  parse('KEK_PUBLIC_KEYS', map, (pem) => createPublicKey(pem));
+export const privateKeysOf = (map: unknown): Keys =>
+  parse('KEK_PRIVATE_KEYS', map, (pem) => createPrivateKey(pem));
 
 const OAEP = { padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256' } as const;
 
@@ -73,10 +88,15 @@ function opens(row: SealedRow, dek: Buffer): boolean {
   if (row.nonce.length !== NONCE_BYTES || row.ciphertext.length <= GCM_TAG_BYTES) return false;
   try {
     const split = row.ciphertext.length - GCM_TAG_BYTES;
-    const decipher = createDecipheriv('aes-256-gcm', dek, row.nonce, { authTagLength: GCM_TAG_BYTES });
+    const decipher = createDecipheriv('aes-256-gcm', dek, row.nonce, {
+      authTagLength: GCM_TAG_BYTES,
+    });
     decipher.setAAD(aadOf(row));
     decipher.setAuthTag(row.ciphertext.subarray(split));
-    const plain = Buffer.concat([decipher.update(row.ciphertext.subarray(0, split)), decipher.final()]);
+    const plain = Buffer.concat([
+      decipher.update(row.ciphertext.subarray(0, split)),
+      decipher.final(),
+    ]);
     plain.fill(0);
     return true;
   } catch {
@@ -93,7 +113,12 @@ export type RewrapResult =
  * wrapping must open to the same data key after, so a rewrapped row is never one nobody can read. The data key is
  * zeroed before returning.
  */
-export function rewrapRow(row: SealedRow, privateKeys: Keys, publicKeys: Keys, active: number): RewrapResult {
+export function rewrapRow(
+  row: SealedRow,
+  privateKeys: Keys,
+  publicKeys: Keys,
+  active: number,
+): RewrapResult {
   const oldKey = privateKeys.get(row.kekVersion);
   const activePrivate = privateKeys.get(active);
   const activePublic = publicKeys.get(active);

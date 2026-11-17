@@ -8,7 +8,11 @@ export const metadata: Metadata = {
 };
 
 /** `/campaigns` (SCREEN-005): `?tab=history|drafts&q=&status=&page=`. The session middleware sends an anonymous visitor to sign-in. */
-export default async function CampaignsRoute({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function CampaignsRoute({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const query = await searchParams;
   const params = new URLSearchParams();
   for (const key of ['tab', 'q', 'status', 'page']) {

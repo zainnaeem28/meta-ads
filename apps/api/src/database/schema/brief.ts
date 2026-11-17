@@ -22,7 +22,15 @@ import { mediaObjects } from './media.js';
 // because the rules are reseeded. `owner_id` columns are plain: the owner is checked by the service, and a campaign's
 // cascade removes every row below it. Timestamps are read as text so their microseconds survive.
 
-const JOB_STATES = ['pending', 'submitting', 'submitted', 'processing', 'completed', 'failed', 'cancelled'];
+const JOB_STATES = [
+  'pending',
+  'submitting',
+  'submitted',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled',
+];
 const CAUSE_CLASSES = [
   'temporary',
   'configuration',
@@ -63,8 +71,12 @@ export const briefJobs = pgTable(
     providerCompletedAt: timestamp('provider_completed_at', { withTimezone: true, mode: 'string' }),
     providerTaskId: varchar('provider_task_id', { length: 128 }),
     lastErrorCode: varchar('last_error_code', { length: 64 }),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     uniqueIndex('brief_jobs_reuse_uq')
@@ -114,15 +126,22 @@ export const briefs = pgTable(
     version: integer('version').notNull().default(1),
     generationSeq: integer('generation_seq').notNull().default(1),
     acceptedAt: timestamp('accepted_at', { withTimezone: true, mode: 'string' }),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     uniqueIndex('briefs_campaign_uq').on(table.campaignId),
     check('briefs_state_ck', sql`${table.state} in ('generating', 'draft', 'accepted', 'failed')`),
     check('briefs_version_ck', sql`${table.version} > 0`),
     check('briefs_generation_seq_ck', sql`${table.generationSeq} > 0`),
-    check('briefs_accepted_ck', sql`(${table.state} = 'accepted') = (${table.acceptedAt} is not null)`),
+    check(
+      'briefs_accepted_ck',
+      sql`(${table.state} = 'accepted') = (${table.acceptedAt} is not null)`,
+    ),
   ],
 );
 
@@ -140,8 +159,12 @@ export const briefSegments = pgTable(
     dialogue: varchar('dialogue', { length: 600 }).notNull().default(''),
     prompt: varchar('prompt', { length: 2000 }).notNull().default(''),
     wordCount: smallint('word_count').notNull().default(0),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     uniqueIndex('brief_segments_position_uq').on(table.briefId, table.position),
@@ -174,7 +197,9 @@ export const claimIssues = pgTable(
     clearedBy: uuid('cleared_by'),
     clearReason: varchar('clear_reason', { length: 500 }),
     resolvedAt: timestamp('resolved_at', { withTimezone: true, mode: 'string' }),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     index('claim_issues_open_idx')
@@ -213,7 +238,10 @@ export const claimEvents = pgTable(
   (table) => [
     index('claim_events_at_idx').on(table.at),
     check('claim_events_class_ck', sql`${table.class} in ('high_risk', 'other')`),
-    check('claim_events_outcome_ck', sql`${table.outcome} in ('raised', 'closed_by_edit', 'cleared_with_reason')`),
+    check(
+      'claim_events_outcome_ck',
+      sql`${table.outcome} in ('raised', 'closed_by_edit', 'cleared_with_reason')`,
+    ),
   ],
 );
 
@@ -232,7 +260,10 @@ export const brandRules = pgTable(
   },
   (table) => [
     check('brand_rules_class_ck', sql`${table.class} in ('high_risk', 'other')`),
-    check('brand_rules_clearable_ck', sql`${table.class} <> 'high_risk' or ${table.clearable} = false`),
+    check(
+      'brand_rules_clearable_ck',
+      sql`${table.class} <> 'high_risk' or ${table.clearable} = false`,
+    ),
     check(
       'brand_rules_kind_ck',
       sql`${table.kind} in ('phrase', 'regex', 'word_count_min', 'word_count_max_target', 'cta_exact', 'em_dash', 'age_framing')`,

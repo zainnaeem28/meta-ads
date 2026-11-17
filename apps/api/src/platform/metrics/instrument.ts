@@ -6,7 +6,12 @@ import type { AppMetrics } from './app-metrics.js';
 /** API-900..903 are not counted (not in the windows, not in the request histogram). */
 export function isProbePath(url: string): boolean {
   const path = url.split('?', 1)[0] ?? '';
-  return path === '/health' || path.startsWith('/health/') || path === '/internal/metrics' || path.startsWith('/internal/metrics/');
+  return (
+    path === '/health' ||
+    path.startsWith('/health/') ||
+    path === '/internal/metrics' ||
+    path.startsWith('/internal/metrics/')
+  );
 }
 
 /**
@@ -31,7 +36,9 @@ type PoolLike = Pick<pg.Pool, 'totalCount' | 'idleCount' | 'waitingCount' | 'opt
 export function instrumentPool(pool: PoolLike, metrics: AppMetrics): void {
   const original = pool.connect.bind(pool) as (...args: unknown[]) => unknown;
   (pool as { connect: unknown }).connect = (...args: unknown[]): unknown => {
-    const waited = pool.idleCount === 0 && (pool.waitingCount > 0 || pool.totalCount >= (pool.options.max ?? 10));
+    const waited =
+      pool.idleCount === 0 &&
+      (pool.waitingCount > 0 || pool.totalCount >= (pool.options.max ?? 10));
     const started = performance.now();
     const done = (): void => metrics.observePoolAcquire(performance.now() - started, waited);
     const last = args[args.length - 1];
@@ -57,7 +64,10 @@ export function instrumentPool(pool: PoolLike, metrics: AppMetrics): void {
 }
 
 /** Count rejected `send` calls of the pg-boss handle. */
-export function instrumentBossSend(boss: { send: (...args: never[]) => Promise<unknown> }, metrics: AppMetrics): void {
+export function instrumentBossSend(
+  boss: { send: (...args: never[]) => Promise<unknown> },
+  metrics: AppMetrics,
+): void {
   const original = boss.send.bind(boss) as (...args: unknown[]) => Promise<unknown>;
   (boss as { send: unknown }).send = async (...args: unknown[]): Promise<unknown> => {
     try {

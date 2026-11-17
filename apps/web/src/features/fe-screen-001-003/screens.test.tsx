@@ -41,7 +41,9 @@ describe('SCREEN-003 two-step verification', () => {
     expect(h1()[0]).toHaveTextContent(title);
     expect(screen.getByText(intro)).toBeInTheDocument();
     expect(screen.getByLabelText('6-digit code')).toHaveAttribute('autocomplete', 'one-time-code');
-    expect(screen.getByTestId('mfa-recovery')).toHaveTextContent('Recovery needs another second factor');
+    expect(screen.getByTestId('mfa-recovery')).toHaveTextContent(
+      'Recovery needs another second factor',
+    );
   });
 });
 

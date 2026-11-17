@@ -44,13 +44,20 @@ export function Card({
   const classes = [
     'relative flex w-full min-w-0 flex-col gap-3 rounded-md border border-border bg-card text-foreground',
     VARIANT_CLASS[variant],
-    href ? 'hover:bg-accent focus-within:outline focus-within:outline-2 focus-within:outline-ring' : '',
+    href
+      ? 'hover:bg-accent focus-within:outline focus-within:outline-2 focus-within:outline-ring'
+      : '',
     className,
   ]
     .filter(Boolean)
     .join(' ');
   return (
-    <section data-variant={variant} data-state={state} aria-busy={state === 'loading' || undefined} className={classes}>
+    <section
+      data-variant={variant}
+      data-state={state}
+      aria-busy={state === 'loading' || undefined}
+      className={classes}
+    >
       {title ? (
         <Heading className="text-body font-semibold">
           {href ? (
@@ -65,9 +72,18 @@ export function Card({
       {state === 'loading' ? (
         <div role="status" className="flex flex-col gap-2">
           <span className="sr-only">Loading</span>
-          <span aria-hidden="true" className="h-4 w-3/4 rounded-sm bg-muted motion-safe:animate-pulse" />
-          <span aria-hidden="true" className="h-4 w-full rounded-sm bg-muted motion-safe:animate-pulse" />
-          <span aria-hidden="true" className="h-4 w-1/2 rounded-sm bg-muted motion-safe:animate-pulse" />
+          <span
+            aria-hidden="true"
+            className="h-4 w-3/4 rounded-sm bg-muted motion-safe:animate-pulse"
+          />
+          <span
+            aria-hidden="true"
+            className="h-4 w-full rounded-sm bg-muted motion-safe:animate-pulse"
+          />
+          <span
+            aria-hidden="true"
+            className="h-4 w-1/2 rounded-sm bg-muted motion-safe:animate-pulse"
+          />
         </div>
       ) : null}
       {state === 'content' ? <div className="min-w-0 break-words text-ui">{children}</div> : null}
@@ -85,7 +101,9 @@ export function Card({
           This is not available right now.
         </p>
       ) : null}
-      {footer && state === 'content' ? <div className="border-t border-border pt-3 text-ui">{footer}</div> : null}
+      {footer && state === 'content' ? (
+        <div className="border-t border-border pt-3 text-ui">{footer}</div>
+      ) : null}
     </section>
   );
 }

@@ -59,7 +59,9 @@ afterAll(async () => {
 /** The release seed's price-table step, read straight from `config/price-table.json` (platform code does not import modules). */
 function priceTableStep(): SeedStep {
   const file = join(REAL_MIGRATIONS, '..', '..', '..', '..', '..', 'config', 'price-table.json');
-  const rows = (JSON.parse(readFileSync(file, 'utf8')) as { rows: Array<Record<string, string | number>> }).rows;
+  const rows = (
+    JSON.parse(readFileSync(file, 'utf8')) as { rows: Array<Record<string, string | number>> }
+  ).rows;
   return {
     name: 'price_table',
     datasets: ['reference'],
@@ -96,10 +98,17 @@ describe('worker composition root', () => {
 
 /** The environment that makes the worker root build the production, QC and thumbnail adapters (nothing is called). */
 function fullWorkerEnv(): Record<string, string | undefined> {
-  const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 3072, publicExponent: 0x10001 });
+  const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+    modulusLength: 3072,
+    publicExponent: 0x10001,
+  });
   return {
-    KEK_PUBLIC_KEYS: JSON.stringify({ 1: publicKey.export({ type: 'spki', format: 'pem' }).toString() }),
-    KEK_PRIVATE_KEYS: JSON.stringify({ 1: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString() }),
+    KEK_PUBLIC_KEYS: JSON.stringify({
+      1: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    }),
+    KEK_PRIVATE_KEYS: JSON.stringify({
+      1: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+    }),
     KEK_ACTIVE_VERSION: '1',
     R2_ENDPOINT: 'http://127.0.0.1:1',
     R2_BUCKET: 'task064',
@@ -142,9 +151,14 @@ describe('worker composition root: call-time refusal on real adapter instances',
         '0100_task-055-production-assembly.sql',
         '0110_task-057-production-thumbstopper.sql',
       ]) {
-        const tables = readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants')[0] ?? '';
+        const tables =
+          readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants')[0] ?? '';
         for (const statement of tables.split('--> statement-breakpoint')) {
-          const sql = statement.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim();
+          const sql = statement
+            .split('\n')
+            .filter((line) => !line.trim().startsWith('--'))
+            .join('\n')
+            .trim();
           if (sql !== '') await pool.query(sql);
         }
       }
@@ -152,7 +166,12 @@ describe('worker composition root: call-time refusal on real adapter instances',
       await pool.end();
     }
     await installJobs(fullDb.url);
-    await runSeed({ dataset: 'reference', appEnv: 'development', databaseUrl: fullDb.url, steps: [priceTableStep()] });
+    await runSeed({
+      dataset: 'reference',
+      appEnv: 'development',
+      databaseUrl: fullDb.url,
+      steps: [priceTableStep()],
+    });
   });
   afterAll(async () => {
     await fullDb.drop();
@@ -161,7 +180,10 @@ describe('worker composition root: call-time refusal on real adapter instances',
   for (const [key, [className]] of Object.entries(ADAPTERS)) {
     it(`${className} built by the root refuses a call once PROVIDER_DATA_MODE_${key} turns real`, async () => {
       const env: Record<string, string | undefined> = fullWorkerEnv();
-      const app = await createWorkerApp({ ...workerConfig(), DATABASE_URL: fullDb.url }, { logger, env, exit: () => undefined });
+      const app = await createWorkerApp(
+        { ...workerConfig(), DATABASE_URL: fullDb.url },
+        { logger, env, exit: () => undefined },
+      );
       apps.push(app);
       const found = app.context
         .get(DiscoveryService)
@@ -173,7 +195,9 @@ describe('worker composition root: call-time refusal on real adapter instances',
         (n) => n !== 'constructor' && typeof (found as Record<string, unknown>)[n] === 'function',
       )!;
       env[`PROVIDER_DATA_MODE_${key}`] = 'real';
-      expect(() => ((found as Record<string, (...a: unknown[]) => unknown>)[method]!)()).toThrow(VendorGateError);
+      expect(() => (found as Record<string, (...a: unknown[]) => unknown>)[method]!()).toThrow(
+        VendorGateError,
+      );
     });
   }
 });
@@ -181,7 +205,10 @@ describe('worker composition root: call-time refusal on real adapter instances',
 describe('a missing or malformed register fails closed at the root', () => {
   it('VendorGateModule with an empty register refuses to start, even with no mode set', async () => {
     await expect(
-      NestFactory.createApplicationContext(VendorGateModule.register({}, { vendors: [], absentAdapters: [] }), { logger: false }),
+      NestFactory.createApplicationContext(
+        VendorGateModule.register({}, { vendors: [], absentAdapters: [] }),
+        { logger: false },
+      ),
     ).rejects.toThrow(/vendor gate: .* refused \(register-incomplete\)/);
   });
 });
@@ -196,13 +223,17 @@ describe('api composition root', () => {
 
   it('refuses to start with real OpenAI and no record', async () => {
     vi.stubEnv('PROVIDER_DATA_MODE_OPENAI', 'real');
-    await expect(createApiApp(edge(), logging())).rejects.toThrow(/vendor gate: openai refused \(no-contract-record\)/);
+    await expect(createApiApp(edge(), logging())).rejects.toThrow(
+      /vendor gate: openai refused \(no-contract-record\)/,
+    );
   });
 
   for (const key of ['OPENAI', 'WAVESPEED', 'CLERK', 'R2']) {
     it(`refuses to start with PROVIDER_DATA_MODE_${key}=real (gate, not config, is the thrower)`, async () => {
       vi.stubEnv(`PROVIDER_DATA_MODE_${key}`, 'real');
-      await expect(createApiApp(edge(), logging())).rejects.toThrow(/vendor gate: .* refused|PROVIDER_DATA_MODE_/);
+      await expect(createApiApp(edge(), logging())).rejects.toThrow(
+        /vendor gate: .* refused|PROVIDER_DATA_MODE_/,
+      );
     });
   }
 

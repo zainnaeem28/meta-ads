@@ -50,7 +50,11 @@ class DryRunRollback extends Error {
 }
 
 /** The step names a dataset runs, in order (authorization is checked first). */
-export function planSeed(dataset: Dataset, appEnv: AppEnv, steps: readonly SeedStep[] = buildSeedSteps()): string[] {
+export function planSeed(
+  dataset: Dataset,
+  appEnv: AppEnv,
+  steps: readonly SeedStep[] = buildSeedSteps(),
+): string[] {
   authorizeDataset(dataset, appEnv);
   return steps.filter((step) => step.datasets.includes(dataset)).map((step) => step.name);
 }
@@ -77,7 +81,9 @@ export async function runSeed(run: SeedRun): Promise<SeedCount[]> {
     if (run.dataset !== 'reference' && /prod/i.test(expected)) {
       throw new SeedRefusedError('a production-named database accepts only the reference dataset');
     }
-    const steps = (run.steps ?? buildSeedSteps()).filter((step) => step.datasets.includes(run.dataset));
+    const steps = (run.steps ?? buildSeedSteps()).filter((step) =>
+      step.datasets.includes(run.dataset),
+    );
     try {
       return await database.uow.run(async (tx) => {
         const counts: SeedCount[] = [];
@@ -103,20 +109,25 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     const appEnv = APP_ENVS.find((env) => env === process.env['APP_ENV']) ?? 'test';
     const databaseUrl = process.env['MIGRATION_DATABASE_URL'];
     if (databaseUrl === undefined || databaseUrl === '') {
-      for (const name of planSeed(dataset, appEnv)) process.stdout.write(`seed ${dataset} ${name}: planned\n`);
+      for (const name of planSeed(dataset, appEnv))
+        process.stdout.write(`seed ${dataset} ${name}: planned\n`);
       process.stdout.write(`seed ${dataset} dry run done: plan only, no database configured\n`);
       return;
     }
     const counts = await runSeed({ dataset, appEnv, databaseUrl, dryRun });
-    for (const { step, count } of counts) process.stdout.write(`seed ${dataset} ${step}: ${String(count)}\n`);
-    process.stdout.write(`seed ${dataset} dry run done: ${String(counts.length)} steps, rolled back\n`);
+    for (const { step, count } of counts)
+      process.stdout.write(`seed ${dataset} ${step}: ${String(count)}\n`);
+    process.stdout.write(
+      `seed ${dataset} dry run done: ${String(counts.length)} steps, rolled back\n`,
+    );
     return;
   }
   const config = loadConfigOrExit('release');
   const databaseUrl = config.MIGRATION_DATABASE_URL;
   if (databaseUrl === undefined) throw new SeedRefusedError('MIGRATION_DATABASE_URL is required');
   const counts = await runSeed({ dataset, appEnv: config.APP_ENV, databaseUrl });
-  for (const { step, count } of counts) process.stdout.write(`seed ${dataset} ${step}: ${String(count)}\n`);
+  for (const { step, count } of counts)
+    process.stdout.write(`seed ${dataset} ${step}: ${String(count)}\n`);
   process.stdout.write(`seed ${dataset} done: ${String(counts.length)} steps\n`);
 }
 

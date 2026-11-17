@@ -5,7 +5,8 @@ import type { QcRepository, QcRunContext, QcSettlement } from '../../application
 import type { SealedKeyRow } from '../../application/worker/ports.js';
 
 const REASON_MAX = 300;
-const clip = (text: string): string => (text.length <= REASON_MAX ? text : text.slice(0, REASON_MAX));
+const clip = (text: string): string =>
+  text.length <= REASON_MAX ? text : text.slice(0, REASON_MAX);
 
 interface RunSqlRow {
   id: string;
@@ -31,7 +32,12 @@ function sealedOf(row: typeof providerKeys.$inferSelect): SealedKeyRow {
     provider: row.provider as SealedKeyRow['provider'],
     status: row.status as SealedKeyRow['status'],
     version: row.version,
-    sealed: { ciphertext: row.ciphertext, nonce: row.nonce, wrappedDek: row.wrappedDek, kekVersion: row.kekVersion },
+    sealed: {
+      ciphertext: row.ciphertext,
+      nonce: row.nonce,
+      wrappedDek: row.wrappedDek,
+      kekVersion: row.kekVersion,
+    },
   };
 }
 
@@ -71,7 +77,10 @@ export class SqlQcRepository implements QcRepository {
 
   /** Reads the sealed columns: the worker role is the only one granted them (M0004). */
   async findOwnerKey(tx: DbTx, ownerId: string): Promise<SealedKeyRow | null> {
-    const rows = await tx.select().from(providerKeys).where(and(eq(providerKeys.ownerId, ownerId), eq(providerKeys.provider, 'openai')));
+    const rows = await tx
+      .select()
+      .from(providerKeys)
+      .where(and(eq(providerKeys.ownerId, ownerId), eq(providerKeys.provider, 'openai')));
     return rows[0] === undefined ? null : sealedOf(rows[0]);
   }
 

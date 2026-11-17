@@ -7,7 +7,10 @@ import type { BillableCall, PriceRow } from './types.js';
 const decimal = (digits: number, scale: number): z.ZodType<string> =>
   z
     .string()
-    .regex(new RegExp(`^\\d{1,${String(digits - scale)}}(\\.\\d{1,${String(scale)}})?$`), 'must be a non-negative decimal');
+    .regex(
+      new RegExp(`^\\d{1,${String(digits - scale)}}(\\.\\d{1,${String(scale)}})?$`),
+      'must be a non-negative decimal',
+    );
 
 const rowSchema = z
   .object({
@@ -52,9 +55,11 @@ export function parsePriceTable(content: unknown): PriceRow[] {
   const issues: string[] = [];
   const seen = new Set<string>();
   for (const row of parsed.data.rows) {
-    if (!isRealDate(row.effectiveFrom)) issues.push(`${row.provider} ${row.operation}: effectiveFrom is not a date`);
+    if (!isRealDate(row.effectiveFrom))
+      issues.push(`${row.provider} ${row.operation}: effectiveFrom is not a date`);
     const key = `${row.provider}|${row.operation}|${row.effectiveFrom}`;
-    if (seen.has(key)) issues.push(`${row.provider} ${row.operation} ${row.effectiveFrom}: duplicate row`);
+    if (seen.has(key))
+      issues.push(`${row.provider} ${row.operation} ${row.effectiveFrom}: duplicate row`);
     seen.add(key);
   }
   if (issues.length > 0) throw new PriceTableInvalidError(issues);
@@ -62,10 +67,19 @@ export function parsePriceTable(content: unknown): PriceRow[] {
 }
 
 /** The row in force on `day` (`YYYY-MM-DD`, UTC) for a call: the latest `effectiveFrom` not after it. */
-export function priceInForce(rows: readonly PriceRow[], call: BillableCall, day: string): PriceRow | undefined {
+export function priceInForce(
+  rows: readonly PriceRow[],
+  call: BillableCall,
+  day: string,
+): PriceRow | undefined {
   let best: PriceRow | undefined;
   for (const row of rows) {
-    if (row.provider !== call.provider || row.operation !== call.operation || row.effectiveFrom > day) continue;
+    if (
+      row.provider !== call.provider ||
+      row.operation !== call.operation ||
+      row.effectiveFrom > day
+    )
+      continue;
     if (best === undefined || row.effectiveFrom > best.effectiveFrom) best = row;
   }
   return best;

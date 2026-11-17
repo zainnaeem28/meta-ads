@@ -1,7 +1,11 @@
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { campaigns, drafts } from '../../../database/schema/campaigns.js';
 import type { DbTx } from '../../../platform/db/index.js';
-import type { CampaignRecord, HistoryQuery, HistoryRepository } from '../application/history-ports.js';
+import type {
+  CampaignRecord,
+  HistoryQuery,
+  HistoryRepository,
+} from '../application/history-ports.js';
 
 const columns = {
   id: campaigns.id,
@@ -61,7 +65,11 @@ export class DrizzleHistoryRepository implements HistoryRepository {
   }
 
   async isActive(tx: DbTx, id: string): Promise<boolean> {
-    const rows = await tx.select({ id: campaigns.id }).from(campaigns).where(and(eq(campaigns.id, id), active)).limit(1);
+    const rows = await tx
+      .select({ id: campaigns.id })
+      .from(campaigns)
+      .where(and(eq(campaigns.id, id), active))
+      .limit(1);
     return rows.length === 1;
   }
 

@@ -16,7 +16,8 @@ export const IMAGE_CONTENT_TYPES: Readonly<Record<ImageFormat, string>> = {
 };
 
 /** The reasons `media_objects.reject_reason` allows. */
-export type RejectReason = 'type_not_allowed' | 'pixel_cap_exceeded' | 'decompression_bomb' | 'decode_failed';
+export type RejectReason =
+  'type_not_allowed' | 'pixel_cap_exceeded' | 'decompression_bomb' | 'decode_failed';
 
 /** The file itself is unacceptable: the row becomes `rejected` and the job is never retried. */
 export class ImageRejected extends Error {

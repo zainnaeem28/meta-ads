@@ -19,7 +19,11 @@ class VendorGateStartup implements OnModuleInit, OnApplicationBootstrap {
     for (const wrapper of this.discovery.getProviders()) {
       const instance: unknown = wrapper.instance;
       if (typeof instance !== 'object' || instance === null) continue;
-      for (let c: object | null = Object.getPrototypeOf(instance) as object | null; c !== null; c = Object.getPrototypeOf(c) as object | null) {
+      for (
+        let c: object | null = Object.getPrototypeOf(instance) as object | null;
+        c !== null;
+        c = Object.getPrototypeOf(c) as object | null
+      ) {
         const vendor = ADAPTER_VENDORS[(c.constructor as { name: string }).name];
         if (vendor !== undefined) {
           gateInstance(this.gate, vendor, instance);
@@ -45,7 +49,10 @@ export class VendorGateModule {
       module: VendorGateModule,
       imports: [DiscoveryModule],
       global: true,
-      providers: [{ provide: VENDOR_GATE, useValue: new VendorGate(register, env) }, VendorGateStartup],
+      providers: [
+        { provide: VENDOR_GATE, useValue: new VendorGate(register, env) },
+        VendorGateStartup,
+      ],
       exports: [VENDOR_GATE],
     };
   }

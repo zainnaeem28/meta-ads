@@ -35,19 +35,34 @@ describe('CMP-031 AdminShell', () => {
       ['Settings', '/admin/settings'],
       ['Back to workspace', '/campaigns'],
     ]);
-    expect(links.map((l) => l.getAttribute('aria-current'))).toEqual([null, null, 'page', null, null, null]);
+    expect(links.map((l) => l.getAttribute('aria-current'))).toEqual([
+      null,
+      null,
+      'page',
+      null,
+      null,
+      null,
+    ]);
     expect(links.at(-1)?.className).toContain('mt-auto');
   });
 
   it('shows the unacknowledged count on Alerts only, with an accessible text, capped at 99+', () => {
     const { rerender } = shell({ alertCount: 0 });
     expect(document.querySelector('[data-alert-count]')).toBeNull();
-    rerender(<AdminShell path="/admin/accounts" alertCount={3}><p /></AdminShell>);
+    rerender(
+      <AdminShell path="/admin/accounts" alertCount={3}>
+        <p />
+      </AdminShell>,
+    );
     const alerts = screen.getByRole('link', { name: /^Alerts/ });
     expect(alerts).toHaveTextContent('3');
     expect(alerts).toHaveTextContent('3 unacknowledged');
     expect(document.querySelectorAll('[data-alert-count]')).toHaveLength(1);
-    rerender(<AdminShell path="/admin/accounts" alertCount={140}><p /></AdminShell>);
+    rerender(
+      <AdminShell path="/admin/accounts" alertCount={140}>
+        <p />
+      </AdminShell>,
+    );
     expect(screen.getByText('99+')).toBeInTheDocument();
     expect(formatAlertCount(99)).toBe('99');
   });
@@ -57,13 +72,19 @@ describe('CMP-031 AdminShell', () => {
     const badge = document.querySelector('[data-alert-count]') as HTMLElement;
     expect(badge.className).toContain('size-2');
     expect(within(badge).getByText('3 unacknowledged')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to workspace' })).toHaveAttribute('title', 'Back to workspace');
+    expect(screen.getByRole('link', { name: 'Back to workspace' })).toHaveAttribute(
+      'title',
+      'Back to workspace',
+    );
   });
 
   it('tab bar uses the short labels and has no foot link', () => {
     shell({ layout: 'tabbar' });
     const nav = screen.getByRole('navigation', { name: 'Main' });
-    expect(within(nav).getByRole('link', { name: 'Invites' })).toHaveAttribute('title', 'Invitations');
+    expect(within(nav).getByRole('link', { name: 'Invites' })).toHaveAttribute(
+      'title',
+      'Invitations',
+    );
     expect(within(nav).getByText('Back to workspace').closest('a')?.className).toContain('hidden');
   });
 
@@ -84,12 +105,23 @@ describe('CMP-031 AdminShell', () => {
   it('unavailable (403): no navigation, explanation and a way back', () => {
     shell({ unavailable: true });
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Administration is not available' })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Back to workspace' })[0]).toHaveAttribute('href', '/campaigns');
+    expect(
+      screen.getByRole('heading', { name: 'Administration is not available' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Back to workspace' })[0]).toHaveAttribute(
+      'href',
+      '/campaigns',
+    );
   });
 
   it('has the skip link first, landmarks and no axe violations in every layout and state', async () => {
-    for (const props of [{ layout: 'auto', alertCount: 3 }, { layout: 'rail', alertCount: 3 }, { layout: 'tabbar', alertCount: 3 }, { layout: 'sidebar' }, { unavailable: true }] as const) {
+    for (const props of [
+      { layout: 'auto', alertCount: 3 },
+      { layout: 'rail', alertCount: 3 },
+      { layout: 'tabbar', alertCount: 3 },
+      { layout: 'sidebar' },
+      { unavailable: true },
+    ] as const) {
       const { container, unmount } = shell({ userName: 'Sam', ...props });
       expect(container.querySelector('a, button')).toHaveTextContent('Skip to content');
       expect(screen.getByRole('banner')).toBeInTheDocument();
@@ -114,7 +146,11 @@ describe('CMP-031 AdminShell', () => {
     shell({ onNavigate, onSignOut, userName: 'Sam' });
     await user.click(screen.getByRole('button', { name: 'Account menu' }));
     expect(screen.getByText('Signed in as Administrator')).toBeInTheDocument();
-    expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual(['Switch to workspace', 'Account and security', 'Sign out']);
+    expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
+      'Switch to workspace',
+      'Account and security',
+      'Sign out',
+    ]);
     await user.click(screen.getByRole('menuitem', { name: 'Switch to workspace' }));
     expect(onNavigate).toHaveBeenCalledWith('/campaigns');
     await user.click(screen.getByRole('button', { name: 'Account menu' }));
@@ -147,6 +183,12 @@ describe('CMP-031 AdminShell', () => {
   });
 
   it('exports five items with admin routes', () => {
-    expect(ADMIN_NAV.map((i) => i.href)).toEqual(['/admin/accounts', '/admin/invitations', '/admin/usage', '/admin/alerts', '/admin/settings']);
+    expect(ADMIN_NAV.map((i) => i.href)).toEqual([
+      '/admin/accounts',
+      '/admin/invitations',
+      '/admin/usage',
+      '/admin/alerts',
+      '/admin/settings',
+    ]);
   });
 });

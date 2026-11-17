@@ -1,0 +1,29 @@
+## scripts/ci/lint.sh
+
+> shroomap@0.0.0 lint .
+> eslint .
+
+
+> shroomap@0.0.0 format:check .
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+exit 0
+## scripts/ci/deps.sh
+Scanned ./pnpm-lock.yaml file and found 788 packages
+End status: 0 dirs visited, 1 inodes visited, 1 Extract calls, 25.997825ms elapsed, 25.997895ms wall time
+dismissed high CVE-2026-112366 (owner DevOps Engineer, expires 2026-12-17)
+recorded medium GHSA-67mh-4wv8-2f99 owner=DevOps Engineer due=2026-12-17
+recorded medium CVE-2026-118764 owner=DevOps Engineer due=2026-12-17
+RESULT PASS: 0 blocking, 2 recorded, 1 dismissed, 0 tool failures
+dismissed high GHSA-fc5q-39xc-vjpf (owner DevOps Engineer, expires 2026-12-17)
+recorded medium GHSA-67mh-4wv8-2f99 owner=DevOps Engineer due=2026-12-17
+recorded medium GHSA-g3hv-75wg-m249 owner=DevOps Engineer due=2026-12-17
+RESULT PASS: 0 blocking, 2 recorded, 1 dismissed, 0 tool failures
+exit 0
+## scripts/ci/probes/run-all.sh (tail)
+PASS  L5 apps/web imports apps/api                               layers exit 1: VIOLATION web-no-api: apps/web/src/page.ts -> apps/api/src/modules/audit/index.ts
+== real tree
+PASS  real tree passes layers.sh: layers: 863 modules, 0 violations
+ALL PROBES BEHAVED AS EXPECTED

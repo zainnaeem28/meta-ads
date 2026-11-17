@@ -13,7 +13,8 @@ import type {
 } from '../../application/worker/ports.js';
 
 const MESSAGE_MAX = 300;
-const clip = (text: string): string => (text.length <= MESSAGE_MAX ? text : text.slice(0, MESSAGE_MAX));
+const clip = (text: string): string =>
+  text.length <= MESSAGE_MAX ? text : text.slice(0, MESSAGE_MAX);
 /** The provider keeps a finished output for 7 days; a task older than that is gone and is not asked about (TD-D30). */
 const CLEANUP_HORIZON_DAYS = 7;
 
@@ -74,11 +75,19 @@ export class SqlVideoWorkerRepository implements VideoWorkerRepository {
       provider: row.provider as SealedKeyRow['provider'],
       status: row.status as SealedKeyRow['status'],
       version: row.version,
-      sealed: { ciphertext: row.ciphertext, nonce: row.nonce, wrappedDek: row.wrappedDek, kekVersion: row.kekVersion },
+      sealed: {
+        ciphertext: row.ciphertext,
+        nonce: row.nonce,
+        wrappedDek: row.wrappedDek,
+        kekVersion: row.kekVersion,
+      },
     };
   }
 
-  async findSegmentText(tx: DbTx, segmentId: string): Promise<{ prompt: string; dialogue: string } | null> {
+  async findSegmentText(
+    tx: DbTx,
+    segmentId: string,
+  ): Promise<{ prompt: string; dialogue: string } | null> {
     const rows = await tx
       .select({ prompt: briefSegments.prompt, dialogue: briefSegments.dialogue })
       .from(briefSegments)
@@ -87,7 +96,9 @@ export class SqlVideoWorkerRepository implements VideoWorkerRepository {
   }
 
   async campaignActive(tx: DbTx, campaignId: string): Promise<boolean> {
-    const result = await tx.execute(sql`select 1 from campaigns where id = ${campaignId} and state = 'active'`);
+    const result = await tx.execute(
+      sql`select 1 from campaigns where id = ${campaignId} and state = 'active'`,
+    );
     return result.rows.length === 1;
   }
 
@@ -108,18 +119,26 @@ export class SqlVideoWorkerRepository implements VideoWorkerRepository {
   }
 
   async setErrorCode(tx: DbTx, jobId: string, code: string): Promise<void> {
-    await tx.execute(sql`update video_jobs set last_error_code = ${code.slice(0, 64)}, updated_at = now() where id = ${jobId}`);
+    await tx.execute(
+      sql`update video_jobs set last_error_code = ${code.slice(0, 64)}, updated_at = now() where id = ${jobId}`,
+    );
   }
 
-  async copyOpen(tx: DbTx, jobId: string, windowHours: number): Promise<'open' | 'window_passed' | 'not_copying'> {
+  async copyOpen(
+    tx: DbTx,
+    jobId: string,
+    windowHours: number,
+  ): Promise<'open' | 'window_passed' | 'not_copying'> {
     const result = await tx.execute(
       sql`select state, output_media_id is not null as copied,
                  provider_completed_at is not null as finished,
                  provider_completed_at < now() - make_interval(hours => ${windowHours}) as passed
           from video_jobs where id = ${jobId}`,
     );
-    const row = result.rows[0] as { state: string; copied: boolean; finished: boolean; passed: boolean | null } | undefined;
-    if (row === undefined || row.state !== 'processing' || !row.finished || row.copied) return 'not_copying';
+    const row = result.rows[0] as
+      { state: string; copied: boolean; finished: boolean; passed: boolean | null } | undefined;
+    if (row === undefined || row.state !== 'processing' || !row.finished || row.copied)
+      return 'not_copying';
     return row.passed === true ? 'window_passed' : 'open';
   }
 
@@ -169,7 +188,14 @@ export class SqlVideoWorkerRepository implements VideoWorkerRepository {
               or (state = 'completed' and output_media_id is not null))
           order by created_at limit ${limit}`,
     );
-    return (result.rows as { id: string; owner_id: string; key_id: string | null; provider_task_id: string }[]).map((row) => ({
+    return (
+      result.rows as {
+        id: string;
+        owner_id: string;
+        key_id: string | null;
+        provider_task_id: string;
+      }[]
+    ).map((row) => ({
       id: row.id,
       ownerId: row.owner_id,
       keyId: row.key_id,

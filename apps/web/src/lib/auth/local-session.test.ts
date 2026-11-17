@@ -19,8 +19,16 @@ describe('local session cookie', () => {
   });
   it('treats a forged, tampered or malformed cookie as expired', async () => {
     const [payload, signature] = (await signLocalSession(session)).split('.');
-    const forged = Buffer.from(JSON.stringify({ ...session, exp: NOW + 9999 })).toString('base64url');
-    for (const bad of [`${forged}.${signature}`, `${payload}.AAAA`, 'garbage', `${payload}.${signature}.x`, 'a.b']) {
+    const forged = Buffer.from(JSON.stringify({ ...session, exp: NOW + 9999 })).toString(
+      'base64url',
+    );
+    for (const bad of [
+      `${forged}.${signature}`,
+      `${payload}.AAAA`,
+      'garbage',
+      `${payload}.${signature}.x`,
+      'a.b',
+    ]) {
       expect(await readLocalSession(bad, NOW)).toEqual({ status: 'expired' });
     }
     const wrongShape = Buffer.from('{"sub":1}').toString('base64url');

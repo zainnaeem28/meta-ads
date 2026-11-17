@@ -41,13 +41,19 @@ export const usageEvents = pgTable(
     unique('usage_events_call_uq').on(table.jobType, table.jobId, table.callSeq),
     index('usage_events_owner_at_idx').on(table.ownerId, table.at),
     index('usage_events_at_idx').on(table.at),
-    check('usage_events_provider_ck', sql`${table.provider} in ('openai', 'wavespeed', 'assembly_vendor')`),
+    check(
+      'usage_events_provider_ck',
+      sql`${table.provider} in ('openai', 'wavespeed', 'assembly_vendor')`,
+    ),
     check(
       'usage_events_job_type_ck',
       sql`${table.jobType} in ('brief_generation', 'image_analysis', 'video', 'qc', 'thumbstopper', 'assembly')`,
     ),
     check('usage_events_call_seq_ck', sql`${table.callSeq} >= 1`),
-    check('usage_events_outcome_ck', sql`${table.outcome} in ('succeeded', 'failed', 'rejected', 'unconfirmed')`),
+    check(
+      'usage_events_outcome_ck',
+      sql`${table.outcome} in ('succeeded', 'failed', 'rejected', 'unconfirmed')`,
+    ),
     check(
       'usage_events_cost_basis_ck',
       sql`${table.costBasis} in ('estimate', 'zero_rejected', 'unconfirmed_estimate')`,
@@ -103,7 +109,10 @@ export const priceTable = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.provider, table.operation, table.effectiveFrom] }),
-    check('price_table_provider_ck', sql`${table.provider} in ('openai', 'wavespeed', 'assembly_vendor')`),
+    check(
+      'price_table_provider_ck',
+      sql`${table.provider} in ('openai', 'wavespeed', 'assembly_vendor')`,
+    ),
     check('price_table_price_ck', sql`${table.unitPriceUsd} >= 0`),
     check('price_table_units_ck', sql`${table.unitsPerCall} >= 0`),
   ],
