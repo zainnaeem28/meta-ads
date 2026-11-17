@@ -32,7 +32,11 @@ export class SealedEnvelopeKeyWrap implements KeyWrapPort {
       const nonce = randomBytes(NONCE_BYTES);
       const cipher = createCipheriv('aes-256-gcm', dek, nonce, { authTagLength: GCM_TAG_BYTES });
       cipher.setAAD(aadBytes(aad));
-      const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final(), cipher.getAuthTag()]);
+      const ciphertext = Buffer.concat([
+        cipher.update(plaintext),
+        cipher.final(),
+        cipher.getAuthTag(),
+      ]);
       const wrappedDek = publicEncrypt(
         { key: kek, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256' },
         dek,

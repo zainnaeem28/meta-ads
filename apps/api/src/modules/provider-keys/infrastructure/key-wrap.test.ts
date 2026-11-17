@@ -4,7 +4,12 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { ProviderKeysModule } from '../provider-keys.module.js';
 import { KEY_WRAP_PORT, UnsealFailed, aadBytes } from '../domain/key-wrap.js';
 import type { KeyAad, Sealed } from '../domain/key-wrap.js';
-import { KekConfigError, parseActiveVersion, parsePrivateKeys, parsePublicKeys } from './kek-config.js';
+import {
+  KekConfigError,
+  parseActiveVersion,
+  parsePrivateKeys,
+  parsePublicKeys,
+} from './kek-config.js';
 import { KeyUnsealer } from './key-unsealer.js';
 import { SealedEnvelopeKeyWrap } from './sealed-envelope.js';
 import { AAD, generateKek, kekEnv } from './test-support.js';
@@ -28,7 +33,8 @@ beforeAll(() => {
   unsealer = KeyUnsealer.fromEnv(kekEnv({ 1: v1 }, 1, true));
 }, 120_000);
 
-const seal = (aad: KeyAad = AAD, s: SealedEnvelopeKeyWrap = sealer) => s.seal(Buffer.from(PLAINTEXT), aad);
+const seal = (aad: KeyAad = AAD, s: SealedEnvelopeKeyWrap = sealer) =>
+  s.seal(Buffer.from(PLAINTEXT), aad);
 const clone = (s: Sealed, change: Partial<Sealed>): Sealed => ({ ...s, ...change });
 const flip = (b: Buffer, at: number): Buffer => {
   const copy = Buffer.from(b);
@@ -161,7 +167,10 @@ describe('KEK configuration', () => {
     fails(() => parsePublicKeys('{"1.5":"x"}'), /positive integers/);
     fails(() => parsePublicKeys('{"1":5}'), /positive integers/);
     fails(() => parsePublicKeys('{"1":"not a pem"}'), /unreadable public key/);
-    fails(() => parsePrivateKeys('{"1":"not a pem"}'), /KEK_PRIVATE_KEYS: holds an unreadable private key/);
+    fails(
+      () => parsePrivateKeys('{"1":"not a pem"}'),
+      /KEK_PRIVATE_KEYS: holds an unreadable private key/,
+    );
   });
 
   it('refuses a key that is not RSA-3072', () => {

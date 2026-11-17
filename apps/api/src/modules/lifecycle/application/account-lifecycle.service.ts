@@ -80,7 +80,8 @@ export class AccountLifecycleService {
   suspend(actorId: string, userId: string, requestId: string | null): Promise<AccountView> {
     return this.database.uow.run(async (tx) => {
       const target = await this.requireTarget(tx, userId);
-      if (target.status === 'suspended') return this.admin.setStatus(tx, change(actorId, target, 'suspended'));
+      if (target.status === 'suspended')
+        return this.admin.setStatus(tx, change(actorId, target, 'suspended'));
       const view = await this.admin.setStatus(tx, change(actorId, target, 'suspended'));
       await this.cancelJobs(tx, userId, 'cancelled_account_suspended');
       await this.record(tx, actorId, 'account.suspended', userId, requestId);
@@ -93,19 +94,33 @@ export class AccountLifecycleService {
     return this.database.uow.run(async (tx) => {
       const target = await this.requireTarget(tx, userId);
       const view = await this.admin.setStatus(tx, change(actorId, target, 'active'));
-      if (target.status !== 'active') await this.record(tx, actorId, 'account.reinstated', userId, requestId);
+      if (target.status !== 'active')
+        await this.record(tx, actorId, 'account.reinstated', userId, requestId);
       return view;
     });
   }
 
   /** API-103: the typed email must match; nothing changes otherwise. */
-  remove(actorId: string, userId: string, confirmation: string, requestId: string | null): Promise<RemovalAccepted> {
+  remove(
+    actorId: string,
+    userId: string,
+    confirmation: string,
+    requestId: string | null,
+  ): Promise<RemovalAccepted> {
     return this.database.uow.run(async (tx) => {
       const target = await this.requireTarget(tx, userId);
       if (!confirmationMatches(confirmation, target.email)) {
-        throw new DomainError('confirmation_mismatch', 'The typed email does not match the account.', [
-          { field: 'confirmation', code: 'mismatch', message: 'Type the exact email of the account.' },
-        ]);
+        throw new DomainError(
+          'confirmation_mismatch',
+          'The typed email does not match the account.',
+          [
+            {
+              field: 'confirmation',
+              code: 'mismatch',
+              message: 'Type the exact email of the account.',
+            },
+          ],
+        );
       }
       await this.admin.setStatus(tx, change(actorId, target, 'removed'));
       await this.cancelJobs(tx, userId, 'cancelled_account_removed');
@@ -113,14 +128,21 @@ export class AccountLifecycleService {
       await this.repository.hideCampaigns(tx, userId);
       const runId = newId();
       await this.repository.insertRun(tx, { id: runId, userId, holdHours: this.holdHours });
-      await this.queue.send(tx, runId, this.holdHours > 0 ? { startAfterSec: Math.ceil(holdMs(this.holdHours) / 1000) } : {});
+      await this.queue.send(
+        tx,
+        runId,
+        this.holdHours > 0 ? { startAfterSec: Math.ceil(holdMs(this.holdHours) / 1000) } : {},
+      );
       await this.record(tx, actorId, 'account.removed', userId, requestId);
       return { deletionRunId: runId, state: 'running' as const };
     });
   }
 
   /** API-105: the account runs, newest change first, IDs only. */
-  async listErasures(actorId: string, input: ListErasuresInput): Promise<PageResult<ErasureRunView>> {
+  async listErasures(
+    actorId: string,
+    input: ListErasuresInput,
+  ): Promise<PageResult<ErasureRunView>> {
     const key = this.cursorKey;
     if (key === undefined || key === '') throw new Error('CURSOR_SIGNING_KEY is not configured');
     const scope = { owner: actorId, filters: { state: input.state ?? null, list: 'erasures' } };
@@ -131,7 +153,11 @@ export class AccountLifecycleService {
       const id = sortKey.slice(at + 1);
       if (at < 1 || !/^[0-9a-f-]{36}$/.test(id) || Number.isNaN(Date.parse(sortKey.slice(0, at)))) {
         throw new DomainError('validation_failed', 'The request is not valid.', [
-          { field: 'cursor', code: 'cursor_invalid', message: 'The cursor is invalid or has expired.' },
+          {
+            field: 'cursor',
+            code: 'cursor_invalid',
+            message: 'The cursor is invalid or has expired.',
+          },
         ]);
       }
       after = { updatedAt: sortKey.slice(0, at), id };
@@ -180,7 +206,8 @@ export class AccountLifecycleService {
   private async requireTarget(tx: DbTx, userId: string): Promise<AccountSubject> {
     const target = await this.repository.lockAndFind(tx, userId);
     if (target === undefined) throw new DomainError('not_found', 'The account was not found.');
-    if (target.status === 'removed') throw new DomainError('state_conflict', 'The account was removed.');
+    if (target.status === 'removed')
+      throw new DomainError('state_conflict', 'The account was removed.');
     return target;
   }
 
@@ -225,6 +252,11 @@ function change(
   actorId: string,
   target: AccountSubject,
   status: 'active' | 'suspended' | 'removed',
-): { actorId: string; userId: string; status: 'active' | 'suspended' | 'removed'; expectedVersion: number } {
+): {
+  actorId: string;
+  userId: string;
+  status: 'active' | 'suspended' | 'removed';
+  expectedVersion: number;
+} {
   return { actorId, userId: target.id, status, expectedVersion: target.version };
 }

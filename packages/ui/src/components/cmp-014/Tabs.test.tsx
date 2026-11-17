@@ -15,7 +15,13 @@ const TABS: TabItem[] = [
   { id: 'export', label: 'Export' },
 ];
 
-function Harness({ initial = 'brief', onChange }: { initial?: string; onChange?: (id: string) => void }) {
+function Harness({
+  initial = 'brief',
+  onChange,
+}: {
+  initial?: string;
+  onChange?: (id: string) => void;
+}) {
   const [value, setValue] = useState(initial);
   return (
     <Tabs

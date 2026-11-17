@@ -2,9 +2,18 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { DomainError } from '../../../platform/http/domain-error.js';
 import { DATABASE } from '../../../platform/db/index.js';
 import type { Database } from '../../../platform/db/index.js';
-import type { ActorContext, ActorRole, AuthResult, SessionAuthenticator } from '../../../platform/http/auth.guard.js';
+import type {
+  ActorContext,
+  ActorRole,
+  AuthResult,
+  SessionAuthenticator,
+} from '../../../platform/http/auth.guard.js';
 import { AuditService } from '../../audit/index.js';
-import { IDENTITY_PORT, IdentityTokenInvalid, IdentityUnavailable } from '../domain/identity-port.js';
+import {
+  IDENTITY_PORT,
+  IdentityTokenInvalid,
+  IdentityUnavailable,
+} from '../domain/identity-port.js';
 import type { Claims, IdentityPort } from '../domain/identity-port.js';
 import { LinkingService } from './linking.service.js';
 import { AUTH_OPTIONS, USER_STORE } from './ports.js';
@@ -50,18 +59,25 @@ export class SessionService implements SessionAuthenticator {
     try {
       claims = await this.identity.verifyToken(token);
     } catch (error) {
-      if (error instanceof IdentityTokenInvalid) throw new DomainError('unauthenticated', 'Sign in to continue.');
+      if (error instanceof IdentityTokenInvalid)
+        throw new DomainError('unauthenticated', 'Sign in to continue.');
       if (error instanceof IdentityUnavailable) {
-        throw new DomainError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.');
+        throw new DomainError(
+          'service_unavailable',
+          'The service is temporarily unavailable. Try again shortly.',
+        );
       }
       throw error;
     }
     // Status and role are read from the row on every request, never cached.
     const user =
-      (await this.users.findBySubject(this.database.db, claims.sub)) ?? (await this.linking.linkOnFirstToken(claims));
+      (await this.users.findBySubject(this.database.db, claims.sub)) ??
+      (await this.linking.linkOnFirstToken(claims));
     if (user === undefined) return { linked: false, session: { subject: claims.sub } };
-    if (user.status === 'suspended') throw new DomainError('account_suspended', 'This account is suspended.');
-    if (user.status === 'removed') throw new DomainError('account_removed', 'This account has been removed.');
+    if (user.status === 'suspended')
+      throw new DomainError('account_suspended', 'This account is suspended.');
+    if (user.status === 'removed')
+      throw new DomainError('account_removed', 'This account has been removed.');
     return { linked: true, actor: actorOf(user, claims, this.options) };
   }
 

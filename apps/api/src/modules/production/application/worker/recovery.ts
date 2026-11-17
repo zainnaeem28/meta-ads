@@ -76,14 +76,24 @@ export function videoRecoveryHooks(deps: {
     and submitting_at <= now() - make_interval(secs => ${config.submitOrphanAfterSec})`;
   const orphans = perOwner(
     'production.video-submit-orphans',
-    (tx) => ownerOf(tx, sql`select owner_id::text as owner_id from video_jobs where ${orphaned} order by submitting_at limit 1`),
+    (tx) =>
+      ownerOf(
+        tx,
+        sql`select owner_id::text as owner_id from video_jobs where ${orphaned} order by submitting_at limit 1`,
+      ),
     async (tx, ownerId) => {
       const settled = await tx.execute(
         sql`update video_jobs set state = 'failed', cause_class = 'outcome_unknown', updated_at = now()
             where ${orphaned} and owner_id = ${ownerId} returning id::text as id, provider_model`,
       );
       for (const job of settled.rows as unknown as Settled[]) {
-        await usage.convertUnconfirmed(tx, { ownerId, call: { provider: 'wavespeed', operation: job.provider_model }, jobType: 'video', jobId: job.id, callSeq: 1 });
+        await usage.convertUnconfirmed(tx, {
+          ownerId,
+          call: { provider: 'wavespeed', operation: job.provider_model },
+          jobType: 'video',
+          jobId: job.id,
+          callSeq: 1,
+        });
         await usage.release(tx, { ownerId, jobType: 'video', jobId: job.id });
       }
       return settled.rows.length;
@@ -105,7 +115,8 @@ export function videoRecoveryHooks(deps: {
             order by provider_completed_at limit ${BATCH}`,
       );
       let enqueued = 0;
-      for (const row of open.rows as { id: string }[]) if (await enqueueCopy(boss, tx, row.id)) enqueued += 1;
+      for (const row of open.rows as { id: string }[])
+        if (await enqueueCopy(boss, tx, row.id)) enqueued += 1;
       return { swept: expired.rows.length + enqueued };
     },
   };
@@ -115,8 +126,11 @@ export function videoRecoveryHooks(deps: {
     'production.video-reservations',
     (tx) => ownerOf(tx, sql`select j.owner_id::text as owner_id ${terminal} limit 1`),
     async (tx, ownerId) => {
-      const jobs = await tx.execute(sql`select j.id::text as id ${terminal} and j.owner_id = ${ownerId} limit ${BATCH}`);
-      for (const { id } of jobs.rows as { id: string }[]) await usage.release(tx, { ownerId, jobType: 'video', jobId: id });
+      const jobs = await tx.execute(
+        sql`select j.id::text as id ${terminal} and j.owner_id = ${ownerId} limit ${BATCH}`,
+      );
+      for (const { id } of jobs.rows as { id: string }[])
+        await usage.release(tx, { ownerId, jobType: 'video', jobId: id });
       return jobs.rows.length;
     },
   );
@@ -135,7 +149,11 @@ export class ProductionRecovery implements OnModuleInit {
 
   onModuleInit(): void {
     const known = new Set(this.registry.names());
-    for (const hook of videoRecoveryHooks({ boss: this.boss, usage: this.usage, config: this.config })) {
+    for (const hook of videoRecoveryHooks({
+      boss: this.boss,
+      usage: this.usage,
+      config: this.config,
+    })) {
       if (!known.has(hook.name)) this.registry.register(hook);
     }
   }

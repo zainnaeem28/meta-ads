@@ -41,13 +41,17 @@ export function reconcileIssues(
 ): Reconciliation {
   const firing = new Set(findings.map(keyOf));
   const close = existing
-    .filter((issue) => issue.resolution === 'open' && checked.has(issue.segmentId) && !firing.has(keyOf(issue)))
+    .filter(
+      (issue) =>
+        issue.resolution === 'open' && checked.has(issue.segmentId) && !firing.has(keyOf(issue)),
+    )
     .map((issue) => issue.id);
   const holding = new Set(
     existing
       .filter(
         (issue) =>
-          issue.resolution === 'open' || (issue.resolution === 'cleared_with_reason' && !changed.has(issue.segmentId)),
+          issue.resolution === 'open' ||
+          (issue.resolution === 'cleared_with_reason' && !changed.has(issue.segmentId)),
       )
       .map(keyOf),
   );

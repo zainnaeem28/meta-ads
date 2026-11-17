@@ -77,7 +77,8 @@ export interface InvitationListQuery {
   readonly state?: InvitationState | undefined;
 }
 
-const CURSOR_KEY = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?)\|([0-9a-f-]{36})$/;
+const CURSOR_KEY =
+  /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?)\|([0-9a-f-]{36})$/;
 
 /**
  * Invitations (ARCHITECTURE 5.1, TD-D29). The provider call never runs inside a transaction: the row is written first
@@ -97,7 +98,10 @@ export class InvitationService {
   ) {}
 
   /** API-110. Expired rows read as `expired` and stale `pending` sends as `send_failed`, whether or not the job ran. */
-  async list(actor: InvitationActor, query: InvitationListQuery): Promise<PageResult<InvitationView>> {
+  async list(
+    actor: InvitationActor,
+    query: InvitationListQuery,
+  ): Promise<PageResult<InvitationView>> {
     const key = this.options.cursorKey;
     if (key === undefined) throw new Error('CURSOR_SIGNING_KEY is not configured');
     const scope = { owner: actor.userId, filters: { state: query.state ?? null } };
@@ -112,7 +116,13 @@ export class InvitationService {
       ...(query.state === undefined ? {} : { state: query.state }),
       ...(after === undefined ? {} : { after }),
     });
-    const page = buildPage(rows, query.limit, (row) => `${row.createdAtText}|${row.id}`, key, scope);
+    const page = buildPage(
+      rows,
+      query.limit,
+      (row) => `${row.createdAtText}|${row.id}`,
+      key,
+      scope,
+    );
     const now = Date.now();
     return new PageResult(
       page.items.map((row) => this.view(row, now)),
@@ -121,12 +131,18 @@ export class InvitationService {
   }
 
   /** API-111: the same answer for a fresh address, a registered one and a failed send. */
-  async create(actor: InvitationActor, rawEmail: string): Promise<{ email: string; message: string }> {
+  async create(
+    actor: InvitationActor,
+    rawEmail: string,
+  ): Promise<{ email: string; message: string }> {
     await this.limiter.enforce(INVITE_RATE_SCOPE, actor.userId, INVITE_RATE);
     const email = normalizeEmail(rawEmail);
     const domains = this.options.allowedDomains;
     if (domains.length > 0 && !domains.includes(email.slice(email.lastIndexOf('@') + 1))) {
-      throw new DomainError('invite_domain_not_allowed', 'Invitations are limited to approved email domains.');
+      throw new DomainError(
+        'invite_domain_not_allowed',
+        'Invitations are limited to approved email domains.',
+      );
     }
     const accepted = { email, message: INVITE_MESSAGE };
     if (await this.store.hasAccount(this.database.db, email)) return accepted;
@@ -135,13 +151,24 @@ export class InvitationService {
     const replaced = await this.database.uow.run(async (tx) => {
       await this.store.lockEmail(tx, email);
       const previous = await this.store.revokeInvitedByEmail(tx, email);
-      await this.store.insertInvited(tx, { id, email, invitedBy: actor.userId, expiresAt: this.expiry() });
+      await this.store.insertInvited(tx, {
+        id,
+        email,
+        invitedBy: actor.userId,
+        expiresAt: this.expiry(),
+      });
       await this.record(tx, actor, 'invitation.created', id);
       return previous;
     });
     // A replaced invitation is revoked at the provider only when its handle is set (a still-`pending` one has none).
     if (replaced?.idpInvitationId != null) {
-      await settleProviderRevoke(this.identity, this.store, this.database.db, replaced.id, replaced.idpInvitationId);
+      await settleProviderRevoke(
+        this.identity,
+        this.store,
+        this.database.db,
+        replaced.id,
+        replaced.idpInvitationId,
+      );
     }
     await this.deliver(id, email, false);
     return accepted;
@@ -183,7 +210,8 @@ export class InvitationService {
       return found.idpInvitationId;
     });
     // A failed provider revoke is retried by the hourly job: the row keeps its handle until the revoke succeeds.
-    if (handle !== null) await settleProviderRevoke(this.identity, this.store, this.database.db, id, handle);
+    if (handle !== null)
+      await settleProviderRevoke(this.identity, this.store, this.database.db, id, handle);
     return this.read(id);
   }
 

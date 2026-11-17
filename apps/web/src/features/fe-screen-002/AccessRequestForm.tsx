@@ -23,7 +23,9 @@ export function AccessRequestForm({ onDone }: { onDone: (outcome: AccessFormOutc
   const mutation = useCreateAccessRequest();
 
   const fieldError =
-    isApiClientError(error) && error.code === 'validation_failed' ? ACCESS_FORM_COPY.noteTooLong : undefined;
+    isApiClientError(error) && error.code === 'validation_failed'
+      ? ACCESS_FORM_COPY.noteTooLong
+      : undefined;
   const alert = error && !fieldError ? resolveError(error, { surface: 'context' }) : null;
 
   const submit = (event: FormEvent) => {
@@ -45,11 +47,20 @@ export function AccessRequestForm({ onDone }: { onDone: (outcome: AccessFormOutc
   return (
     <form onSubmit={submit} className="flex w-full flex-col gap-3" noValidate>
       {alert ? (
-        <Alert role="alert" variant={alert.tone === 'destructive' ? 'destructive' : 'warning'} data-code={alert.code}>
+        <Alert
+          role="alert"
+          variant={alert.tone === 'destructive' ? 'destructive' : 'warning'}
+          data-code={alert.code}
+        >
           {alert.message}
         </Alert>
       ) : null}
-      <FormField label={ACCESS_FORM_COPY.label} mark="optional" help={ACCESS_FORM_COPY.help} error={fieldError}>
+      <FormField
+        label={ACCESS_FORM_COPY.label}
+        mark="optional"
+        help={ACCESS_FORM_COPY.help}
+        error={fieldError}
+      >
         {(control) => (
           <Textarea
             {...control}

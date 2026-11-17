@@ -4,13 +4,17 @@ import { Readable } from 'node:stream';
 export const SNIFF_BYTES = 12;
 
 const startsWith = (head: Buffer, bytes: readonly number[], offset = 0): boolean =>
-  head.length >= offset + bytes.length && bytes.every((byte, index) => head[offset + index] === byte);
+  head.length >= offset + bytes.length &&
+  bytes.every((byte, index) => head[offset + index] === byte);
 
 /** The type found from the first bytes, never from the client's claim; null for everything else (SVG, PDF, executables). */
 export function sniffImageType(head: Buffer): string | null {
   if (startsWith(head, [0xff, 0xd8, 0xff])) return 'image/jpeg';
   if (startsWith(head, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'image/png';
-  if (startsWith(head, [0x47, 0x49, 0x46, 0x38, 0x37, 0x61]) || startsWith(head, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61])) {
+  if (
+    startsWith(head, [0x47, 0x49, 0x46, 0x38, 0x37, 0x61]) ||
+    startsWith(head, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61])
+  ) {
     return 'image/gif';
   }
   if (startsWith(head, [0x52, 0x49, 0x46, 0x46]) && startsWith(head, [0x57, 0x45, 0x42, 0x50], 8)) {
@@ -58,5 +62,9 @@ export async function peek(
       yield next.value;
     }
   }
-  return { head: first.subarray(0, SNIFF_BYTES), body: Readable.from(replay(), { objectMode: false }), counted: () => seen };
+  return {
+    head: first.subarray(0, SNIFF_BYTES),
+    body: Readable.from(replay(), { objectMode: false }),
+    counted: () => seen,
+  };
 }

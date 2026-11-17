@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
-import { BriefGenerationJob, BRIEF_GENERATE_QUEUE } from './application/worker/brief-generation.job.js';
-import { BRIEF_ANALYZE_IMAGE_QUEUE, ImageAnalysisJob } from './application/worker/image-analysis.job.js';
+import {
+  BriefGenerationJob,
+  BRIEF_GENERATE_QUEUE,
+} from './application/worker/brief-generation.job.js';
+import {
+  BRIEF_ANALYZE_IMAGE_QUEUE,
+  ImageAnalysisJob,
+} from './application/worker/image-analysis.job.js';
 import {
   BRIEF_AUTH_THRESHOLD,
   BRIEF_JOB_REPOSITORY,
@@ -14,7 +20,11 @@ import {
 import type { BriefWorkerConfig, JobLog, KeyOpener } from './application/worker/ports.js';
 import { ProviderCallRunner } from './application/worker/provider-call.js';
 import { TEXT_AI_PORT } from './application/worker/text-ai.port.js';
-import { BRIEF_REPOSITORY, BRIEF_RULES, CLAIM_COUNTS_REPOSITORY } from './application/brief-ports.js';
+import {
+  BRIEF_REPOSITORY,
+  BRIEF_RULES,
+  CLAIM_COUNTS_REPOSITORY,
+} from './application/brief-ports.js';
 import { BriefService } from './application/brief.service.js';
 import { ClaimCountsService } from './application/claim-counts.service.js';
 import { IssuesService } from './application/issues.service.js';
@@ -29,8 +39,14 @@ import { SubmitController } from './transport/submit.controller.js';
 import { SubmitService } from './transport/submit.service.js';
 import { BRIEF_JOB_MODELS, BriefJobCreator, JOB_IDEMPOTENCY_TTL } from './transport/submit-jobs.js';
 import { IssuesController } from './transport/issues.controller.js';
-import { DEFAULT_BRAND_RULES_FILE, loadBrandRulesFile } from './infrastructure/repositories/brand-rules-file.js';
-import { BRAND_RULE_FILE, BrandRulesReader } from './infrastructure/repositories/brand-rules.reader.js';
+import {
+  DEFAULT_BRAND_RULES_FILE,
+  loadBrandRulesFile,
+} from './infrastructure/repositories/brand-rules-file.js';
+import {
+  BRAND_RULE_FILE,
+  BrandRulesReader,
+} from './infrastructure/repositories/brand-rules.reader.js';
 import { DrizzleBrandRulesRepository } from './infrastructure/repositories/brand-rules.repository.js';
 import { DrizzleBriefJobs } from './infrastructure/brief-jobs.repository.js';
 import { DrizzleKeyAuthReporter } from './infrastructure/key-auth.reporter.js';
@@ -59,7 +75,8 @@ export interface BriefWorkerEdge {
 
 function required(env: Env, name: string): string {
   const value = env[name];
-  if (value === undefined || value === '') throw new Error(`${name} is required for brief generation`);
+  if (value === undefined || value === '')
+    throw new Error(`${name} is required for brief generation`);
   return value;
 }
 
@@ -92,7 +109,8 @@ function optional(env: Env, name: string): string | undefined {
 function idempotencyTtl(env: Env): number {
   const text = optional(env, 'IDEMPOTENCY_TTL_HOURS');
   const value = text === undefined ? 24 : Number(text);
-  if (!Number.isInteger(value) || value < 1) throw new Error('IDEMPOTENCY_TTL_HOURS must be a positive integer');
+  if (!Number.isInteger(value) || value < 1)
+    throw new Error('IDEMPOTENCY_TTL_HOURS must be a positive integer');
   return value;
 }
 
@@ -129,11 +147,20 @@ export class BriefModule {
   }
 
   /** API-024, 035, 036 and 053 (TASK-051): the job-creating rule SB-D14 and the operations that use it. */
-  private static jobOperations(env: Env, edge: BriefApiEdge): Required<Pick<DynamicModule, 'imports' | 'providers' | 'controllers'>> {
+  private static jobOperations(
+    env: Env,
+    edge: BriefApiEdge,
+  ): Required<Pick<DynamicModule, 'imports' | 'providers' | 'controllers'>> {
     return {
       imports: [edge.media, edge.usage],
       providers: [
-        { provide: BRIEF_JOB_MODELS, useValue: { text: optional(env, 'OPENAI_TEXT_MODEL'), vision: optional(env, 'OPENAI_VISION_MODEL') } },
+        {
+          provide: BRIEF_JOB_MODELS,
+          useValue: {
+            text: optional(env, 'OPENAI_TEXT_MODEL'),
+            vision: optional(env, 'OPENAI_VISION_MODEL'),
+          },
+        },
         { provide: JOB_IDEMPOTENCY_TTL, useValue: idempotencyTtl(env) },
         BriefJobCreator,
         SubmitService,

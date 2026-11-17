@@ -13,8 +13,17 @@ import {
   accountPrefixes,
   ledgerKeyAndBody,
 } from './account-erasure-steps.js';
-import { ACCOUNT_ERASURE_QUEUEING, ACCOUNT_IDENTITY, ACCOUNT_LIFECYCLE_REPOSITORY } from './account-lifecycle-ports.js';
-import type { AccountErasureQueueing, AccountIdentity, AccountLifecycleRepository, AccountRun } from './account-lifecycle-ports.js';
+import {
+  ACCOUNT_ERASURE_QUEUEING,
+  ACCOUNT_IDENTITY,
+  ACCOUNT_LIFECYCLE_REPOSITORY,
+} from './account-lifecycle-ports.js';
+import type {
+  AccountErasureQueueing,
+  AccountIdentity,
+  AccountLifecycleRepository,
+  AccountRun,
+} from './account-lifecycle-ports.js';
 import {
   CAMPAIGN_DELETION_CONFIG,
   CAMPAIGN_ERASURE_LEDGER,
@@ -66,9 +75,13 @@ export class AccountErasureJob {
 
   async handle(job: { id: string; data: unknown }, log: JobLog): Promise<AccountErasureOutcome> {
     const runId = (job.data as { runId?: unknown } | null)?.runId;
-    if (typeof runId !== 'string') throw new TypeError('lifecycle.account-erasure job has no runId');
+    if (typeof runId !== 'string')
+      throw new TypeError('lifecycle.account-erasure job has no runId');
     const outcome = await this.run(runId, log);
-    log.info({ module: 'lifecycle', outcome: outcome === 'failed' ? 'error' : 'ok', runId }, `account erasure: ${outcome}`);
+    log.info(
+      { module: 'lifecycle', outcome: outcome === 'failed' ? 'error' : 'ok', runId },
+      `account erasure: ${outcome}`,
+    );
     return outcome;
   }
 
@@ -78,7 +91,9 @@ export class AccountErasureJob {
       if (run === undefined || run.state !== 'running') return 'skipped';
       const waitMs = Date.parse(run.notBefore) - Date.now();
       if (waitMs > 0) {
-        await this.database.uow.run((tx) => this.queue.send(tx, runId, { startAfterSec: Math.ceil(waitMs / 1000) }));
+        await this.database.uow.run((tx) =>
+          this.queue.send(tx, runId, { startAfterSec: Math.ceil(waitMs / 1000) }),
+        );
         return 'waiting';
       }
       try {
@@ -97,20 +112,27 @@ export class AccountErasureJob {
         // Step 0: nothing is erased until the ledger holds the entry (a repeat of the put is success).
         const entry = ledgerKeyAndBody(run);
         await this.ledger.record(entry.key, entry.body);
-        const subject = await this.database.uow.run((tx) => this.repository.findSubject(tx, run.subjectId));
+        const subject = await this.database.uow.run((tx) =>
+          this.repository.findSubject(tx, run.subjectId),
+        );
         if (subject !== undefined) await this.identity.revokeSessions(subject.idpSubject);
         await this.advance(run, ACCOUNT_STEP_DELETE_IDP_USER);
         return 'continue';
       }
       case ACCOUNT_STEP_DELETE_IDP_USER: {
-        const subject = await this.database.uow.run((tx) => this.repository.findSubject(tx, run.subjectId));
+        const subject = await this.database.uow.run((tx) =>
+          this.repository.findSubject(tx, run.subjectId),
+        );
         if (subject !== undefined) await this.identity.deleteUser(subject.idpSubject);
         await this.advance(run, ACCOUNT_STEP_PURGE_STORAGE);
         return 'continue';
       }
       case ACCOUNT_STEP_PURGE_STORAGE: {
         await this.providers.deleteFinishedTasks(log).catch(() => {
-          log.warn({ module: 'lifecycle', outcome: 'error', runId: run.id }, 'provider task deletion failed; the hourly cleanup retries');
+          log.warn(
+            { module: 'lifecycle', outcome: 'error', runId: run.id },
+            'provider task deletion failed; the hourly cleanup retries',
+          );
         });
         for (const prefix of accountPrefixes(run.subjectId)) await this.media.sweepPrefix(prefix);
         // Jobs cancelled at the removal may still be inside a provider call or a copy: wait out the longest deadline.
@@ -126,17 +148,27 @@ export class AccountErasureJob {
         await this.providers.deleteFinishedTasks(log).catch(() => undefined);
         let left = 0;
         for (const prefix of accountPrefixes(run.subjectId)) await this.media.sweepPrefix(prefix);
-        for (const prefix of accountPrefixes(run.subjectId)) left += await this.media.sweepPrefix(prefix);
+        for (const prefix of accountPrefixes(run.subjectId))
+          left += await this.media.sweepPrefix(prefix);
         await this.database.uow.run((tx) => this.repository.setRemaining(tx, run.id, left));
         if (left > 0) throw new ErasureVerificationFailed(left);
-        await this.database.uow.run((tx) => this.repository.advance(tx, run.id, { step: ACCOUNT_STEP_HARD_DELETE, remainingObjects: 0 }));
+        await this.database.uow.run((tx) =>
+          this.repository.advance(tx, run.id, {
+            step: ACCOUNT_STEP_HARD_DELETE,
+            remainingObjects: 0,
+          }),
+        );
         return 'continue';
       }
       case ACCOUNT_STEP_HARD_DELETE: {
-        const subject = await this.database.uow.run((tx) => this.repository.findSubject(tx, run.subjectId));
+        const subject = await this.database.uow.run((tx) =>
+          this.repository.findSubject(tx, run.subjectId),
+        );
         if (subject !== undefined) {
           // The invitations of this address that still exist at the provider are revoked first; a retry finds them again.
-          const pending = await this.database.uow.run((tx) => this.repository.invitationsToRevoke(tx, subject.email));
+          const pending = await this.database.uow.run((tx) =>
+            this.repository.invitationsToRevoke(tx, subject.email),
+          );
           for (const invitationId of pending) await this.identity.revokeInvitation(invitationId);
         }
         await this.database.uow.run(async (tx) => {
@@ -181,11 +213,17 @@ export class AccountErasureJob {
         objectId: run.subjectId,
         outcome: 'failed',
       });
-      alert = await this.alerts.raiseAlert(tx, 'account_erasure_stuck', run.subjectId, { attempts, step: run.step });
+      alert = await this.alerts.raiseAlert(tx, 'account_erasure_stuck', run.subjectId, {
+        attempts,
+        step: run.step,
+      });
       return true;
     });
     alert?.announce();
-    log.warn({ module: 'lifecycle', outcome: 'error', runId: run.id, step: run.step, errorClass }, stuck ? 'account erasure stuck' : 'account erasure step failed; retrying');
+    log.warn(
+      { module: 'lifecycle', outcome: 'error', runId: run.id, step: run.step, errorClass },
+      stuck ? 'account erasure stuck' : 'account erasure step failed; retrying',
+    );
     if (stuck) return 'stuck';
     // The queue retries the job with its backoff; this counts as one attempt of the run.
     throw error;

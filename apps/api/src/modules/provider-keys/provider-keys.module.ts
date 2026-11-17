@@ -18,9 +18,16 @@ import { PROVIDER_PROBE_PORT } from './domain/provider-probe.js';
 import { NoJobsInFlight } from './infrastructure/in-flight.js';
 import { fingerprinterFromEnv, keyPolicyFromEnv } from './infrastructure/key-config.js';
 import { EgressProviderProbe } from './infrastructure/provider-probe.js';
-import { DrizzleKeyEventRepository, DrizzleProviderKeyRepository } from './infrastructure/provider-keys.repositories.js';
+import {
+  DrizzleKeyEventRepository,
+  DrizzleProviderKeyRepository,
+} from './infrastructure/provider-keys.repositories.js';
 import { SealedEnvelopeKeyWrap } from './infrastructure/sealed-envelope.js';
-import { KEY_EVENT_CURSOR_KEY, ProviderKeysController, cursorKeyFrom } from './transport/provider-keys.controller.js';
+import {
+  KEY_EVENT_CURSOR_KEY,
+  ProviderKeysController,
+  cursorKeyFrom,
+} from './transport/provider-keys.controller.js';
 
 /**
  * What the api composition root passes in when a database is configured: the audit module instance (the trail is layer
@@ -63,7 +70,11 @@ export class ProviderKeysModule {
         { provide: PROVIDER_KEY_REPOSITORY, useClass: DrizzleProviderKeyRepository },
         { provide: KEY_EVENT_REPOSITORY, useClass: DrizzleKeyEventRepository },
         { provide: IN_FLIGHT_JOB_READER, useValue: edge.inFlight ?? new NoJobsInFlight() },
-        { provide: KEY_ENTRY_LIMITER, useFactory: (database: Database) => new RateLimiter(database.db), inject: [DATABASE] },
+        {
+          provide: KEY_ENTRY_LIMITER,
+          useFactory: (database: Database) => new RateLimiter(database.db),
+          inject: [DATABASE],
+        },
         { provide: PROVIDER_PROBE_PORT, useClass: EgressProviderProbe },
         { provide: KEY_EVENT_CURSOR_KEY, useFactory: () => cursorKeyFrom(env) },
         ProviderKeysService,

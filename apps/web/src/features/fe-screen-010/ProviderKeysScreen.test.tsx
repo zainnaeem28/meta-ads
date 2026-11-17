@@ -8,7 +8,16 @@ import { installApiClient } from '../../lib/api/client';
 import { server } from '../../lib/api/msw.setup';
 import { createQueryClient } from '../../lib/query/query-client';
 import { ProviderKeysScreen } from './ProviderKeysScreen';
-import { cardState, deleteBody, formatEvent, formatAdded, formatLastUsed, presentEvent, replaceWarning, savedMessage } from './copy';
+import {
+  cardState,
+  deleteBody,
+  formatEvent,
+  formatAdded,
+  formatLastUsed,
+  presentEvent,
+  replaceWarning,
+  savedMessage,
+} from './copy';
 
 const ORIGIN = 'http://api.test';
 const BASE = `${ORIGIN}/api/v1`;
@@ -27,23 +36,60 @@ const status = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 const none = (provider: string) =>
-  status({ provider, configured: false, status: null, last4: null, fingerprint: null, version: null, createdAt: null, updatedAt: null, lastValidatedAt: null });
+  status({
+    provider,
+    configured: false,
+    status: null,
+    last4: null,
+    fingerprint: null,
+    version: null,
+    createdAt: null,
+    updatedAt: null,
+    lastValidatedAt: null,
+  });
 const list = (...data: unknown[]) => HttpResponse.json({ success: true, data, metaData: meta });
 const events = (data: unknown[] = [], next: string | null = null) =>
   HttpResponse.json({
     success: true,
     data,
-    metaData: { ...meta, pagination: { type: 'cursor', limit: 20, returnedCount: data.length, hasNextPage: next !== null, nextCursor: next } },
+    metaData: {
+      ...meta,
+      pagination: {
+        type: 'cursor',
+        limit: 20,
+        returnedCount: data.length,
+        hasNextPage: next !== null,
+        nextCursor: next,
+      },
+    },
   });
 const failure = (httpStatus: number, code: string, headers: Record<string, string> = {}) =>
-  HttpResponse.json({ success: false, error: { code, message: 'x', details: [] }, metaData: meta }, { status: httpStatus, headers });
+  HttpResponse.json(
+    { success: false, error: { code, message: 'x', details: [] }, metaData: meta },
+    { status: httpStatus, headers },
+  );
 const me = (role = 'user') =>
-  HttpResponse.json({ success: true, data: { linkState: 'linked', id: 'u1', role, status: 'active', mfa: { required: true, satisfied: true }, recentAuth: { satisfied: true, maxAgeSeconds: 600 }, keyNotices: [] }, metaData: meta });
+  HttpResponse.json({
+    success: true,
+    data: {
+      linkState: 'linked',
+      id: 'u1',
+      role,
+      status: 'active',
+      mfa: { required: true, satisfied: true },
+      recentAuth: { satisfied: true, maxAgeSeconds: 600 },
+      keyNotices: [],
+    },
+    metaData: meta,
+  });
 
 let uninstall: () => void;
 beforeEach(() => {
   uninstall = installApiClient({ origin: ORIGIN, getToken: () => Promise.resolve(null) });
-  server.use(http.get(`${BASE}/me`, () => me()), http.get(`${BASE}/me/key-events`, () => events()));
+  server.use(
+    http.get(`${BASE}/me`, () => me()),
+    http.get(`${BASE}/me/key-events`, () => events()),
+  );
 });
 afterEach(() => {
   cleanup();
@@ -56,7 +102,8 @@ const show = () =>
       <ProviderKeysScreen />
     </QueryClientProvider>,
   );
-const serve = (...keys: unknown[]) => server.use(http.get(`${BASE}/me/provider-keys`, () => list(...keys)));
+const serve = (...keys: unknown[]) =>
+  server.use(http.get(`${BASE}/me/provider-keys`, () => list(...keys)));
 const KEY = 'sk-proj-abcdefghijklmnopqrstuvwxyz';
 
 describe('SCREEN-010 provider keys', () => {
@@ -78,12 +125,18 @@ describe('SCREEN-010 provider keys', () => {
     expect(card.getByText('3 Nov 2026')).toBeInTheDocument();
     expect(card.getByText(/12 Nov 2026/)).toBeInTheDocument();
     expect(card.getByText('Jobs running').nextElementSibling).toHaveTextContent('0');
-    expect(within(screen.getByRole('region', { name: 'OpenAI' })).getByRole('button', { name: 'Replace key' })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'OpenAI' })).getByRole('button', {
+        name: 'Replace key',
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add WaveSpeed key' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /show|reveal|copy/i })).toBeNull();
     expect(screen.queryByText('Add both keys to create ads')).toBeNull();
     expect(await screen.findByText('No key activity yet.')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[data-key-badge="missing"]')).not.toBeNull());
+    await waitFor(() =>
+      expect(document.querySelector('[data-key-badge="missing"]')).not.toBeNull(),
+    );
   });
 
   it('empty: neither key added, warning and two Add buttons', async () => {
@@ -103,7 +156,14 @@ describe('SCREEN-010 provider keys', () => {
         body = await request.json();
         await new Promise<void>((resolve) => (release = resolve));
         serve(status(), status({ provider: 'wavespeed', last4: '9fK2' }));
-        return HttpResponse.json({ success: true, data: { ...status({ provider: 'wavespeed', last4: '9fK2', fingerprint: 'b21e88d0aaaa' }), probe: 'valid' }, metaData: meta });
+        return HttpResponse.json({
+          success: true,
+          data: {
+            ...status({ provider: 'wavespeed', last4: '9fK2', fingerprint: 'b21e88d0aaaa' }),
+            probe: 'valid',
+          },
+          metaData: meta,
+        });
       }),
     );
     show();
@@ -120,23 +180,51 @@ describe('SCREEN-010 provider keys', () => {
     expect(await within(dialog).findByText(/Testing the key/)).toBeInTheDocument();
     expect(field).toHaveValue('');
     expect(field).toBeDisabled();
-    expect(screen.getByRole('region', { name: 'WaveSpeed' })).toHaveAttribute('data-state', 'testing');
+    expect(screen.getByRole('region', { name: 'WaveSpeed' })).toHaveAttribute(
+      'data-state',
+      'testing',
+    );
     release();
     expect(await screen.findByText('WaveSpeed key saved')).toBeInTheDocument();
     expect(body).toEqual({ apiKey: KEY });
     expect(screen.getByText(/It ends in …9fK2/)).toBeInTheDocument();
-    expect(screen.getByText(/cannot|will not be able to see the full key again/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/cannot|will not be able to see the full key again/),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.body.textContent).not.toContain(KEY);
-    expect(screen.getByRole('region', { name: 'WaveSpeed' })).toHaveAttribute('data-state', 'active');
+    expect(screen.getByRole('region', { name: 'WaveSpeed' })).toHaveAttribute(
+      'data-state',
+      'active',
+    );
   });
 
   it('untested: a key stored without a probe says so', async () => {
     serve(status(), none('wavespeed'));
     server.use(
       http.put(`${BASE}/me/provider-keys/wavespeed`, () => {
-        serve(status(), status({ provider: 'wavespeed', status: 'untested', last4: '9fK2', lastValidatedAt: null }));
-        return HttpResponse.json({ success: true, data: { ...status({ provider: 'wavespeed', status: 'untested', last4: '9fK2', lastValidatedAt: null }), probe: 'unknown' }, metaData: meta });
+        serve(
+          status(),
+          status({
+            provider: 'wavespeed',
+            status: 'untested',
+            last4: '9fK2',
+            lastValidatedAt: null,
+          }),
+        );
+        return HttpResponse.json({
+          success: true,
+          data: {
+            ...status({
+              provider: 'wavespeed',
+              status: 'untested',
+              last4: '9fK2',
+              lastValidatedAt: null,
+            }),
+            probe: 'unknown',
+          },
+          metaData: meta,
+        });
       }),
     );
     show();
@@ -144,7 +232,10 @@ describe('SCREEN-010 provider keys', () => {
     fireEvent.change(screen.getByLabelText('WaveSpeed API key'), { target: { value: KEY } });
     fireEvent.click(screen.getByRole('button', { name: 'Test and save' }));
     expect(await screen.findByTestId('untested-wavespeed')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'WaveSpeed' })).toHaveAttribute('data-state', 'untested');
+    expect(screen.getByRole('region', { name: 'WaveSpeed' })).toHaveAttribute(
+      'data-state',
+      'untested',
+    );
   });
 
   it('validation-error: key_invalid shows the field error, keeps the dialog, empties the field', async () => {
@@ -164,7 +255,12 @@ describe('SCREEN-010 provider keys', () => {
   it('an empty field is refused before any call', async () => {
     serve(none('openai'), none('wavespeed'));
     let called = false;
-    server.use(http.put(`${BASE}/me/provider-keys/openai`, () => ((called = true), failure(500, 'internal_error'))));
+    server.use(
+      http.put(
+        `${BASE}/me/provider-keys/openai`,
+        () => ((called = true), failure(500, 'internal_error')),
+      ),
+    );
     show();
     fireEvent.click(await screen.findByRole('button', { name: 'Add OpenAI key' }));
     fireEvent.click(screen.getByRole('button', { name: 'Test and save' }));
@@ -174,18 +270,29 @@ describe('SCREEN-010 provider keys', () => {
 
   it('rate-limited: states the wait', async () => {
     serve(none('openai'), none('wavespeed'));
-    server.use(http.put(`${BASE}/me/provider-keys/openai`, () => failure(429, 'rate_limited', { 'Retry-After': '420' })));
+    server.use(
+      http.put(`${BASE}/me/provider-keys/openai`, () =>
+        failure(429, 'rate_limited', { 'Retry-After': '420' }),
+      ),
+    );
     show();
     fireEvent.click(await screen.findByRole('button', { name: 'Add OpenAI key' }));
     fireEvent.change(screen.getByLabelText('OpenAI API key'), { target: { value: KEY } });
     fireEvent.click(screen.getByRole('button', { name: 'Test and save' }));
-    expect(await screen.findByText('Too many attempts. Try again in 7 minutes.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Too many attempts. Try again in 7 minutes.'),
+    ).toBeInTheDocument();
   });
 
   it('step-up: recent_auth_required closes the dialog and asks to confirm; nothing is resubmitted', async () => {
     serve(none('openai'), none('wavespeed'));
     let puts = 0;
-    server.use(http.put(`${BASE}/me/provider-keys/openai`, () => ((puts += 1), failure(403, 'recent_auth_required'))));
+    server.use(
+      http.put(
+        `${BASE}/me/provider-keys/openai`,
+        () => ((puts += 1), failure(403, 'recent_auth_required')),
+      ),
+    );
     show();
     fireEvent.click(await screen.findByRole('button', { name: 'Add OpenAI key' }));
     fireEvent.change(screen.getByLabelText('OpenAI API key'), { target: { value: KEY } });
@@ -202,11 +309,17 @@ describe('SCREEN-010 provider keys', () => {
     serve(status({ inFlightJobCount: 1 }), none('wavespeed'));
     server.use(http.put(`${BASE}/me/provider-keys/openai`, () => failure(422, 'key_invalid')));
     show();
-    fireEvent.click(within(await screen.findByRole('region', { name: 'OpenAI' })).getByRole('button', { name: 'Replace key' }));
+    fireEvent.click(
+      within(await screen.findByRole('region', { name: 'OpenAI' })).getByRole('button', {
+        name: 'Replace key',
+      }),
+    );
     const dialog = await screen.findByRole('dialog', { name: 'Replace OpenAI key?' });
     expect(dialog).toHaveTextContent('1 job is running on the current key');
     expect(dialog).toHaveTextContent('revoke the old key at OpenAI');
-    fireEvent.change(within(dialog).getByLabelText('New OpenAI API key'), { target: { value: KEY } });
+    fireEvent.change(within(dialog).getByLabelText('New OpenAI API key'), {
+      target: { value: KEY },
+    });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Test and replace' }));
     expect(await within(dialog).findByText(/did not accept this key/)).toBeInTheDocument();
     expect(screen.getByTestId('key-hint')).toHaveTextContent('…7Q2d');
@@ -229,7 +342,9 @@ describe('SCREEN-010 provider keys', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete key' }));
     expect(await screen.findByText('OpenAI key deleted.')).toBeInTheDocument();
     expect(deleted).toBe('openai');
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Add OpenAI key' })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add OpenAI key' })).toBeInTheDocument(),
+    );
   });
 
   it('delete: not_found uses the §9.1 copy inside the dialog', async () => {
@@ -237,7 +352,9 @@ describe('SCREEN-010 provider keys', () => {
     server.use(http.delete(`${BASE}/me/provider-keys/openai`, () => failure(404, 'not_found')));
     show();
     fireEvent.click(await screen.findByRole('button', { name: 'Delete OpenAI key' }));
-    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete key' }));
+    fireEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete key' }),
+    );
     expect(await screen.findByText('This page or item is not available.')).toBeInTheDocument();
   });
 
@@ -245,24 +362,42 @@ describe('SCREEN-010 provider keys', () => {
     serve(status(), status({ provider: 'wavespeed', status: 'disabled', last4: '9fK2' }));
     show();
     expect(await screen.findByText('Your WaveSpeed key was disabled')).toBeInTheDocument();
-    expect(screen.getByText(/failed authentication 5 times in a row\. Replace it to generate clips again/)).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'WaveSpeed' })).toHaveAttribute('data-state', 'disabled');
-    await waitFor(() => expect(document.querySelector('[data-key-badge="disabled"]')).not.toBeNull());
+    expect(
+      screen.getByText(
+        /failed authentication 5 times in a row\. Replace it to generate clips again/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'WaveSpeed' })).toHaveAttribute(
+      'data-state',
+      'disabled',
+    );
+    await waitFor(() =>
+      expect(document.querySelector('[data-key-badge="disabled"]')).not.toBeNull(),
+    );
   });
 
   it('key events: the trail lists the API-013 events and pages with the cursor', async () => {
     serve(status(), status({ provider: 'wavespeed' }));
     const seen: string[] = [];
-    const event = (id: string, kind: string, provider = 'openai') => ({ id: `${id}0000000-0000-4000-8000-000000000000`, provider, kind, at: '2026-11-12T16:02:00Z' });
+    const event = (id: string, kind: string, provider = 'openai') => ({
+      id: `${id}0000000-0000-4000-8000-000000000000`,
+      provider,
+      kind,
+      at: '2026-11-12T16:02:00Z',
+    });
     server.use(
       http.get(`${BASE}/me/key-events`, ({ request }) => {
         const cursor = new URL(request.url).searchParams.get('cursor');
         seen.push(cursor ?? '-');
-        return cursor ? events([event('2', 'deleted', 'wavespeed')]) : events([event('1', 'test_failed', 'wavespeed')], 'c1');
+        return cursor
+          ? events([event('2', 'deleted', 'wavespeed')])
+          : events([event('1', 'test_failed', 'wavespeed')], 'c1');
       }),
     );
     show();
-    expect(await screen.findByText('WaveSpeed key test failed (authentication)')).toBeInTheDocument();
+    expect(
+      await screen.findByText('WaveSpeed key test failed (authentication)'),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
     expect(await screen.findByText('WaveSpeed key deleted')).toBeInTheDocument();
     expect(seen).toEqual(['-', 'c1']);
@@ -276,12 +411,17 @@ describe('SCREEN-010 provider keys', () => {
 
   it('loads only the listed operations', async () => {
     const seen: string[] = [];
-    server.events.on('request:start', ({ request }) => void seen.push(`${request.method} ${new URL(request.url).pathname}`));
+    server.events.on(
+      'request:start',
+      ({ request }) => void seen.push(`${request.method} ${new URL(request.url).pathname}`),
+    );
     serve(status(), status({ provider: 'wavespeed' }));
     show();
     await screen.findByRole('heading', { name: 'WaveSpeed' });
     await waitFor(() => expect(seen).toContain('GET /api/v1/me/key-events'));
-    expect(new Set(seen)).toEqual(new Set(['GET /api/v1/me', 'GET /api/v1/me/provider-keys', 'GET /api/v1/me/key-events']));
+    expect(new Set(seen)).toEqual(
+      new Set(['GET /api/v1/me', 'GET /api/v1/me/provider-keys', 'GET /api/v1/me/key-events']),
+    );
     server.events.removeAllListeners();
   });
 });
@@ -299,8 +439,24 @@ describe('SCREEN-010 copy', () => {
     expect(savedMessage('OpenAI', '7Q2d', 'unknown').body).toContain('checked by your first job');
   });
   it('every event kind has a label', () => {
-    for (const kind of ['added', 'replaced', 'deleted', 'test_passed', 'test_failed', 'stored_untested', 'validated_by_job', 'auth_failed', 'disabled', 'disabled_by_operator', 'attempt_rate_limited', 'rewrapped', 'future']) {
-      expect(presentEvent({ id: 'x', provider: 'openai', kind, at: '' } as never).label).toContain('OpenAI');
+    for (const kind of [
+      'added',
+      'replaced',
+      'deleted',
+      'test_passed',
+      'test_failed',
+      'stored_untested',
+      'validated_by_job',
+      'auth_failed',
+      'disabled',
+      'disabled_by_operator',
+      'attempt_rate_limited',
+      'rewrapped',
+      'future',
+    ]) {
+      expect(presentEvent({ id: 'x', provider: 'openai', kind, at: '' } as never).label).toContain(
+        'OpenAI',
+      );
     }
     expect(formatEvent('nope')).toBe('');
     expect(formatLastUsed(null)).toBeNull();

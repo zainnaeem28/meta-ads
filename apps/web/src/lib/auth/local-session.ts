@@ -34,7 +34,9 @@ const fromBase64Url = (text: string): Uint8Array => {
 };
 
 const key = (usage: 'sign' | 'verify') =>
-  crypto.subtle.importKey('raw', encoder.encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, [usage]);
+  crypto.subtle.importKey('raw', encoder.encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, [
+    usage,
+  ]);
 
 /** The user id of a local account: stable per email, never the email itself. */
 export async function localSubject(email: string): Promise<string> {
@@ -64,8 +66,14 @@ export async function readLocalSession(
       encoder.encode(payload),
     );
     if (!valid) return { status: 'expired' };
-    const parsed = JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as Partial<LocalSession>;
-    if (typeof parsed.sub !== 'string' || typeof parsed.email !== 'string' || typeof parsed.exp !== 'number') {
+    const parsed = JSON.parse(
+      new TextDecoder().decode(fromBase64Url(payload)),
+    ) as Partial<LocalSession>;
+    if (
+      typeof parsed.sub !== 'string' ||
+      typeof parsed.email !== 'string' ||
+      typeof parsed.exp !== 'number'
+    ) {
       return { status: 'expired' };
     }
     if (parsed.exp <= nowSeconds) return { status: 'expired' };

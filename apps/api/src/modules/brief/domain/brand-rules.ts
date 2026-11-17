@@ -38,13 +38,17 @@ const pattern = z
     }
   });
 
-const phraseParams = z.object({ phrases: z.array(z.string().min(1).max(80)).min(1).max(100), fields }).strict();
+const phraseParams = z
+  .object({ phrases: z.array(z.string().min(1).max(80)).min(1).max(100), fields })
+  .strict();
 const regexParams = z.object({ pattern, fields }).strict();
 const minParams = z.object({ min: z.number().int().min(1).max(120) }).strict();
 const maxParams = z
   .object({ target: z.number().int().min(1).max(120), hardMax: z.number().int().min(1).max(120) })
   .strict()
-  .refine((params) => params.hardMax >= params.target, { message: 'hardMax must not be below target' });
+  .refine((params) => params.hardMax >= params.target, {
+    message: 'hardMax must not be below target',
+  });
 const ctaParams = z.object({ text: z.string().min(1).max(120) }).strict();
 const emDashParams = z.object({}).strict();
 const ageParams = z.object({ patterns: z.array(pattern).min(1).max(20) }).strict();
@@ -79,7 +83,11 @@ const ruleShape = z
     const parsed = PARAMS[rule.kind].safeParse(rule.params);
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
-        context.addIssue({ code: 'custom', message: issue.message, path: ['params', ...issue.path] });
+        context.addIssue({
+          code: 'custom',
+          message: issue.message,
+          path: ['params', ...issue.path],
+        });
       }
     }
   });
@@ -90,7 +98,9 @@ const fileShape = z
     rulesVersion: z.number().int().min(1),
     note: z.string().optional(),
     rules: z.array(ruleShape).min(1),
-    sensitiveAttributeFilter: z.object({ terms: z.array(z.string().min(1).max(40)).min(1).max(500) }).strict(),
+    sensitiveAttributeFilter: z
+      .object({ terms: z.array(z.string().min(1).max(40)).min(1).max(500) })
+      .strict(),
   })
   .strict();
 
@@ -141,7 +151,9 @@ export function parseBrandRules(content: unknown): BrandRuleSet {
 }
 
 /** Checks one stored row (`brand_rules` read back) with the same rules as the file. */
-export function parseStoredRule(row: Omit<BrandRule, 'rulesVersion'> & { rulesVersion: number }): BrandRule {
+export function parseStoredRule(
+  row: Omit<BrandRule, 'rulesVersion'> & { rulesVersion: number },
+): BrandRule {
   const parsed = ruleShape.safeParse({
     id: row.id,
     class: row.class,

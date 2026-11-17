@@ -7,7 +7,9 @@ describe('assembly settings and reuse hash', () => {
     expect(assemblyConfigFrom({}).rendersPerDay).toBe(20);
     expect(assemblyConfigFrom({ ASSEMBLY_RENDERS_PER_USER_PER_DAY: '30' }).rendersPerDay).toBe(30);
     for (const bad of ['0', '201', 'x', '1.5']) {
-      expect(() => assemblyConfigFrom({ ASSEMBLY_RENDERS_PER_USER_PER_DAY: bad })).toThrow('ASSEMBLY_RENDERS_PER_USER_PER_DAY');
+      expect(() => assemblyConfigFrom({ ASSEMBLY_RENDERS_PER_USER_PER_DAY: bad })).toThrow(
+        'ASSEMBLY_RENDERS_PER_USER_PER_DAY',
+      );
     }
   });
 

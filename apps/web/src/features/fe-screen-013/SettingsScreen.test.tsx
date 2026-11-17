@@ -55,7 +55,9 @@ describe('SCREEN-013 settings', () => {
       }),
     );
     mount();
-    expect(screen.getAllByRole('status').some((n) => n.textContent === 'Loading settings')).toBe(true);
+    expect(screen.getAllByRole('status').some((n) => n.textContent === 'Loading settings')).toBe(
+      true,
+    );
     expect(document.querySelector('[data-state="loading"]')).toHaveAttribute('aria-busy', 'true');
     expect(await screen.findByRole('heading', { level: 2, name: 'Sign-up' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
@@ -110,7 +112,9 @@ describe('SCREEN-013 settings', () => {
     mount();
     fireEvent.click(await screen.findByRole('radio', { name: /Open/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Save sign-up mode' }));
-    const alert = (await screen.findByText(/Open sign-up cannot be turned on yet/)).closest('[role]') as HTMLElement;
+    const alert = (await screen.findByText(/Open sign-up cannot be turned on yet/)).closest(
+      '[role]',
+    ) as HTMLElement;
     expect(alert).toHaveAttribute('role', 'status');
     expect(alert).toHaveTextContent('Open sign-up cannot be turned on yet.');
     expect(alert).toHaveTextContent('Email verification is not enabled.');
@@ -155,7 +159,9 @@ describe('SCREEN-013 settings', () => {
         calls += 1;
         return calls <= 3
           ? failure(500, 'internal_error', 'x')
-          : HttpResponse.json(settings({ mfaRequiredFor: 'admins', accessRequestFormEnabled: true }));
+          : HttpResponse.json(
+              settings({ mfaRequiredFor: 'admins', accessRequestFormEnabled: true }),
+            );
       }),
     );
     mount();

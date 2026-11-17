@@ -57,5 +57,6 @@ export const SCREEN_005_COPY = {
   untitledDraft: 'Untitled draft',
   draftStatus: 'Draft',
   steps: ['Format', 'Product', 'Audience and direction', 'Concept and script'],
-  deleteLabel: (name: string, draft: boolean) => (draft ? `Delete draft ${name}` : `Delete ${name}`),
+  deleteLabel: (name: string, draft: boolean) =>
+    draft ? `Delete draft ${name}` : `Delete ${name}`,
 } as const;

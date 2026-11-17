@@ -56,7 +56,10 @@ async function apiBoss(): Promise<PgBoss> {
   return boss;
 }
 
-async function query<T extends pg.QueryResultRow>(text: string, values: unknown[] = []): Promise<T[]> {
+async function query<T extends pg.QueryResultRow>(
+  text: string,
+  values: unknown[] = [],
+): Promise<T[]> {
   const client = new pg.Client({ connectionString: database.url });
   await client.connect();
   try {
@@ -74,10 +77,12 @@ async function newJob(): Promise<string> {
 }
 
 const stateOf = async (id: string) =>
-  (await query<{ state: string; cause_class: string | null }>(
-    'select state, cause_class from fake_jobs where id = $1',
-    [id],
-  ))[0]!;
+  (
+    await query<{ state: string; cause_class: string | null }>(
+      'select state, cause_class from fake_jobs where id = $1',
+      [id],
+    )
+  )[0]!;
 
 beforeAll(async () => {
   database = await createTestDatabase({ label: 'task030', migrations: false });
@@ -122,7 +127,9 @@ describe('the worker process handles a job end to end', () => {
     expect(byQueue.get(SWEEP_QUEUE)).toBe('* * * * *');
     // Hourly sweeps are scheduled by their owners' handlers: none was registered here.
     expect(byQueue.has('platform.cleanup')).toBe(false);
-    expect(CRON_SCHEDULES.map((entry) => entry.queue)).toContain('production.provider-copy-cleanup');
+    expect(CRON_SCHEDULES.map((entry) => entry.queue)).toContain(
+      'production.provider-copy-cleanup',
+    );
   });
 
   it('schedules an hourly sweep once its owner registers a handler', async () => {
@@ -176,7 +183,8 @@ describe('kill the worker mid-job', () => {
       handlers: { 'brief.generate': handlerFor(() => second.app!) },
     });
     await vi.waitFor(
-      async () => expect(await stateOf(jobId)).toEqual({ state: 'failed', cause_class: 'outcome_unknown' }),
+      async () =>
+        expect(await stateOf(jobId)).toEqual({ state: 'failed', cause_class: 'outcome_unknown' }),
       { timeout: 15_000 },
     );
 

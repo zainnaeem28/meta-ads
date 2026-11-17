@@ -11,6 +11,12 @@ export class PgBossCampaignDeletionQueueing implements CampaignDeletionQueueing 
   constructor(@Inject(BOSS) private readonly boss: Pick<PgBoss, 'send'>) {}
 
   async send(tx: DbTx, runId: string, options: { startAfterSec?: number } = {}): Promise<void> {
-    await enqueue(this.boss, tx, CAMPAIGN_DELETION_QUEUE, { runId }, options.startAfterSec === undefined ? {} : { startAfter: options.startAfterSec });
+    await enqueue(
+      this.boss,
+      tx,
+      CAMPAIGN_DELETION_QUEUE,
+      { runId },
+      options.startAfterSec === undefined ? {} : { startAfter: options.startAfterSec },
+    );
   }
 }

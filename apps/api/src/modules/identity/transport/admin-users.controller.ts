@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Headers, Inject, Param, Put, Query, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Inject,
+  Param,
+  Put,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { CurrentActor } from '../../../platform/http/auth.guard.js';
@@ -23,7 +34,11 @@ export function versionOf(header: string | undefined): number {
   const match = header === undefined ? null : /^"([0-9]{1,9})"$/.exec(header.trim());
   if (match?.[1] === undefined || Number(match[1]) < 1) {
     throw new DomainError('validation_failed', 'The request is not valid.', [
-      { field: 'If-Match', code: header === undefined ? 'required' : 'invalid_format', message: 'Send the ETag of the last read, e.g. "3".' },
+      {
+        field: 'If-Match',
+        code: header === undefined ? 'required' : 'invalid_format',
+        message: 'Send the ETag of the last read, e.g. "3".',
+      },
     ]);
   }
   return Number(match[1]);
@@ -36,7 +51,10 @@ export class AdminUsersController {
   constructor(@Inject(AdminUsersService) private readonly admin: AdminUsersService) {}
 
   @Get()
-  list(@CurrentActor() actor: ActorContext, @Query() query: unknown): Promise<PageResult<AdminUserView>> {
+  list(
+    @CurrentActor() actor: ActorContext,
+    @Query() query: unknown,
+  ): Promise<PageResult<AdminUserView>> {
     return this.admin.listUsers(actor, parseWith(listQuery, query ?? {}));
   }
 

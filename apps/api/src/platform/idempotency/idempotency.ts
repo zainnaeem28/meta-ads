@@ -35,7 +35,9 @@ function canonical(value: unknown): string {
 
 /** SHA-256 of method, path and canonical JSON body (key order does not matter). */
 export function requestHash(method: string, path: string, body: unknown): Buffer {
-  return createHash('sha256').update(`${method.toUpperCase()}\n${path}\n${canonical(body)}`).digest();
+  return createHash('sha256')
+    .update(`${method.toUpperCase()}\n${path}\n${canonical(body)}`)
+    .digest();
 }
 
 /** The `Idempotency-Key` header: required on the operations that ask for it (400 `validation_failed` when absent or malformed). */
@@ -43,12 +45,20 @@ export function parseIdempotencyKey(header: string | readonly string[] | undefin
   const value = Array.isArray(header) ? undefined : (header as string | undefined)?.trim();
   if (value === undefined || value === '') {
     throw new DomainError('validation_failed', 'The Idempotency-Key header is required.', [
-      { field: 'Idempotency-Key', code: 'required', message: 'Send a unique Idempotency-Key header.' },
+      {
+        field: 'Idempotency-Key',
+        code: 'required',
+        message: 'Send a unique Idempotency-Key header.',
+      },
     ]);
   }
   if (value.length > MAX_KEY_LENGTH || !/^[\x21-\x7e]+$/.test(value)) {
     throw new DomainError('validation_failed', 'The Idempotency-Key header is not valid.', [
-      { field: 'Idempotency-Key', code: 'invalid', message: `Use 1 to ${MAX_KEY_LENGTH} visible ASCII characters.` },
+      {
+        field: 'Idempotency-Key',
+        code: 'invalid',
+        message: `Use 1 to ${MAX_KEY_LENGTH} visible ASCII characters.`,
+      },
     ]);
   }
   return value;
@@ -115,7 +125,13 @@ export async function withIdempotency<T>(
     returning 1`);
   if (inserted.rows.length === 1) {
     const result = await create(resourceId);
-    return { replayed: false, result, resourceType: options.resourceType, resourceId, responseStatus: options.responseStatus };
+    return {
+      replayed: false,
+      result,
+      resourceType: options.resourceType,
+      resourceId,
+      responseStatus: options.responseStatus,
+    };
   }
   const existing = await lookupRecord(tx, scope);
   if (existing === undefined) {
@@ -123,7 +139,15 @@ export async function withIdempotency<T>(
     return withIdempotency(tx, scope, options, create);
   }
   if (!existing.requestHash.equals(scope.requestHash)) {
-    throw new DomainError('idempotency_key_reused', 'This request key was already used for a different request.');
+    throw new DomainError(
+      'idempotency_key_reused',
+      'This request key was already used for a different request.',
+    );
   }
-  return { replayed: true, resourceType: existing.resourceType, resourceId: existing.resourceId, responseStatus: existing.responseStatus };
+  return {
+    replayed: true,
+    resourceType: existing.resourceType,
+    resourceId: existing.resourceId,
+    responseStatus: existing.responseStatus,
+  };
 }

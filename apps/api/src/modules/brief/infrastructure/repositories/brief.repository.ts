@@ -1,5 +1,11 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
-import { briefJobs, briefSegments, briefs, claimEvents, claimIssues } from '../../../../database/schema/brief.js';
+import {
+  briefJobs,
+  briefSegments,
+  briefs,
+  claimEvents,
+  claimIssues,
+} from '../../../../database/schema/brief.js';
 import { newId } from '../../../../platform/shared-kernel/index.js';
 import type { DbTx } from '../../../../platform/db/index.js';
 import type {
@@ -38,7 +44,11 @@ const issueColumns = {
   clearReason: claimIssues.clearReason,
 };
 
-type IssueRow = Omit<IssueRecord, 'field' | 'class' | 'resolution'> & { field: string; class: string; resolution: string };
+type IssueRow = Omit<IssueRecord, 'field' | 'class' | 'resolution'> & {
+  field: string;
+  class: string;
+  resolution: string;
+};
 
 const toIssue = (row: IssueRow): IssueRecord => ({
   ...row,
@@ -54,7 +64,12 @@ const toBrief = (row: Omit<BriefRecord, 'state'> & { state: string }): BriefReco
 
 /** Drizzle persistence of `briefs`, `brief_segments`, `claim_issues` and `claim_events` (M0009). */
 export class DrizzleBriefRepository implements BriefRepository {
-  async findBrief(tx: DbTx, ownerId: string, campaignId: string, lock = false): Promise<BriefRecord | null> {
+  async findBrief(
+    tx: DbTx,
+    ownerId: string,
+    campaignId: string,
+    lock = false,
+  ): Promise<BriefRecord | null> {
     const query = tx
       .select(briefColumns)
       .from(briefs)
@@ -80,7 +95,12 @@ export class DrizzleBriefRepository implements BriefRepository {
     return rows.map((row) => ({ ...row, state: row.state as SegmentRecord['state'] }));
   }
 
-  async issues(tx: DbTx, briefId: string, acceptedAt: string | null, limit: number): Promise<IssueRecord[]> {
+  async issues(
+    tx: DbTx,
+    briefId: string,
+    acceptedAt: string | null,
+    limit: number,
+  ): Promise<IssueRecord[]> {
     const since =
       acceptedAt === null ? undefined : sql`${claimIssues.resolvedAt} > ${acceptedAt}::timestamptz`;
     const rows = await tx
@@ -90,9 +110,7 @@ export class DrizzleBriefRepository implements BriefRepository {
       .where(
         and(
           eq(claimIssues.briefId, briefId),
-          since === undefined
-            ? undefined
-            : sql`(${claimIssues.resolution} = 'open' or ${since})`,
+          since === undefined ? undefined : sql`(${claimIssues.resolution} = 'open' or ${since})`,
         ),
       )
       .orderBy(
@@ -111,7 +129,12 @@ export class DrizzleBriefRepository implements BriefRepository {
       .select(issueColumns)
       .from(claimIssues)
       .innerJoin(briefSegments, eq(briefSegments.id, claimIssues.segmentId))
-      .where(and(eq(claimIssues.briefId, briefId), inArray(claimIssues.resolution, ['open', 'cleared_with_reason'])));
+      .where(
+        and(
+          eq(claimIssues.briefId, briefId),
+          inArray(claimIssues.resolution, ['open', 'cleared_with_reason']),
+        ),
+      );
     return rows.map(toIssue);
   }
 
@@ -169,7 +192,12 @@ export class DrizzleBriefRepository implements BriefRepository {
     return toBrief(row);
   }
 
-  async insertIssues(tx: DbTx, ownerId: string, briefId: string, issues: readonly NewIssue[]): Promise<void> {
+  async insertIssues(
+    tx: DbTx,
+    ownerId: string,
+    briefId: string,
+    issues: readonly NewIssue[],
+  ): Promise<void> {
     if (issues.length === 0) return;
     await tx.insert(claimIssues).values(issues.map((issue) => ({ ...issue, ownerId, briefId })));
   }
@@ -189,10 +217,17 @@ export class DrizzleBriefRepository implements BriefRepository {
     events: readonly { issueId: string; class: RuleClass; outcome: ClaimOutcome }[],
   ): Promise<void> {
     if (events.length === 0) return;
-    await tx.insert(claimEvents).values(events.map((event) => ({ ...event, id: newId(), ownerId, briefId })));
+    await tx
+      .insert(claimEvents)
+      .values(events.map((event) => ({ ...event, id: newId(), ownerId, briefId })));
   }
 
-  async findIssue(tx: DbTx, ownerId: string, issueId: string, lock = false): Promise<IssueRecord | null> {
+  async findIssue(
+    tx: DbTx,
+    ownerId: string,
+    issueId: string,
+    lock = false,
+  ): Promise<IssueRecord | null> {
     // `FOR UPDATE OF claim_issues`: the joined segment row is not locked.
     const query = tx
       .select(issueColumns)
@@ -203,10 +238,20 @@ export class DrizzleBriefRepository implements BriefRepository {
     return row === undefined ? null : toIssue(row);
   }
 
-  async clearIssue(tx: DbTx, issueId: string, userId: string, reason: string): Promise<IssueRecord> {
+  async clearIssue(
+    tx: DbTx,
+    issueId: string,
+    userId: string,
+    reason: string,
+  ): Promise<IssueRecord> {
     await tx
       .update(claimIssues)
-      .set({ resolution: 'cleared_with_reason', clearedBy: userId, clearReason: reason, resolvedAt: sql`now()` })
+      .set({
+        resolution: 'cleared_with_reason',
+        clearedBy: userId,
+        clearReason: reason,
+        resolvedAt: sql`now()`,
+      })
       .where(and(eq(claimIssues.id, issueId), eq(claimIssues.resolution, 'open')));
     const found = await this.findIssue(tx, userId, issueId);
     if (found === null) throw new Error(`issue ${issueId} vanished while locked`);

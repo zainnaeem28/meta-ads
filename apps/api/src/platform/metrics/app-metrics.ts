@@ -40,10 +40,26 @@ export class AppMetrics {
       buckets: WAIT_BUCKETS,
       registers,
     });
-    this.poolSize = new Gauge({ name: 'db_pool_size', help: 'Database pool connections open', registers });
-    this.poolInUse = new Gauge({ name: 'db_pool_in_use', help: 'Database pool connections in use', registers });
-    this.poolWaiting = new Gauge({ name: 'db_pool_waiting', help: 'Database pool requests waiting for a connection', registers });
-    this.bossSendFailures = new Counter({ name: 'pgboss_send_failures_total', help: 'pg-boss send failures', registers });
+    this.poolSize = new Gauge({
+      name: 'db_pool_size',
+      help: 'Database pool connections open',
+      registers,
+    });
+    this.poolInUse = new Gauge({
+      name: 'db_pool_in_use',
+      help: 'Database pool connections in use',
+      registers,
+    });
+    this.poolWaiting = new Gauge({
+      name: 'db_pool_waiting',
+      help: 'Database pool requests waiting for a connection',
+      registers,
+    });
+    this.bossSendFailures = new Counter({
+      name: 'pgboss_send_failures_total',
+      help: 'pg-boss send failures',
+      registers,
+    });
     this.dropped = new Counter({
       name: 'telemetry_dropped_total',
       help: 'Error-reporter and heartbeat events dropped since process start',
@@ -62,11 +78,19 @@ export class AppMetrics {
       buckets: DURATION_BUCKETS,
       registers,
     });
-    this.queueDepth = new Gauge({ name: 'queue_depth', help: 'Queued jobs per queue, set each sweep', labelNames: ['queue'], registers });
+    this.queueDepth = new Gauge({
+      name: 'queue_depth',
+      help: 'Queued jobs per queue, set each sweep',
+      labelNames: ['queue'],
+      registers,
+    });
   }
 
   observeRequest(method: string, route: string, status: number, durationMs: number): void {
-    this.httpDuration.observe({ method, route, status_class: statusClass(status) }, durationMs / 1000);
+    this.httpDuration.observe(
+      { method, route, status_class: statusClass(status) },
+      durationMs / 1000,
+    );
     this.window.recordRequest(durationMs, status);
   }
 
@@ -95,7 +119,12 @@ export class AppMetrics {
     this.jobTransitions.inc({ job_type: jobType, state });
   }
 
-  providerCall(provider: string, operation: string, outcomeClass: string, durationMs: number): void {
+  providerCall(
+    provider: string,
+    operation: string,
+    outcomeClass: string,
+    durationMs: number,
+  ): void {
     this.providerLatency.observe({ provider, operation, class: outcomeClass }, durationMs / 1000);
   }
 

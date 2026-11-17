@@ -17,7 +17,10 @@ const AssemblyCreate = z
   .object({
     clips: z.array(z.uuid()).min(1).max(4),
     thumbstopperJobId: z.uuid().nullish(),
-    confirmations: z.object({ qcOverride: z.array(z.uuid()).max(4).default([]) }).strict().default({ qcOverride: [] }),
+    confirmations: z
+      .object({ qcOverride: z.array(z.uuid()).max(4).default([]) })
+      .strict()
+      .default({ qcOverride: [] }),
   })
   .strict();
 
@@ -72,7 +75,11 @@ export class AssemblyController {
     const qcOverride = body.confirmations.qcOverride;
     if (!unique(qcOverride)) {
       throw new DomainError('validation_failed', 'The request is not valid.', [
-        { field: 'confirmations.qcOverride', code: 'not_unique', message: 'Each clip can be confirmed once.' },
+        {
+          field: 'confirmations.qcOverride',
+          code: 'not_unique',
+          message: 'Each clip can be confirmed once.',
+        },
       ]);
     }
     const foreign = qcOverride.flatMap((id, index) => (body.clips.includes(id) ? [] : [index]));
@@ -100,6 +107,9 @@ export class AssemblyController {
   @Get('assemblies/:assemblyId')
   async get(@CurrentActor() actor: ActorContext | undefined, @Param() rawParams: unknown) {
     const { assemblyId } = parseWith(AssemblyParams, rawParams);
-    return assemblyView({ assembly: await this.assemblies.get(owner(actor), assemblyId), reused: false });
+    return assemblyView({
+      assembly: await this.assemblies.get(owner(actor), assemblyId),
+      reused: false,
+    });
   }
 }

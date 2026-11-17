@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { COMMAND_ROLE, OPS_COMMANDS, OpsRefusedError, assertEnvironmentMatch, isRunId, parseArgs, usage } from './args.js';
+import {
+  COMMAND_ROLE,
+  OPS_COMMANDS,
+  OpsRefusedError,
+  assertEnvironmentMatch,
+  isRunId,
+  parseArgs,
+  usage,
+} from './args.js';
 
 const RUN = '0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b';
 
@@ -8,7 +16,11 @@ describe('ops-cli arguments', () => {
     for (const command of ['first-admin:reopen', 'keys:disable-all', 'kek:rewrap'] as const) {
       expect(parseArgs([command, '--env=staging'])).toEqual({ command, env: 'staging', args: [] });
     }
-    expect(parseArgs(['erasure:resume', RUN, '--env=production'])).toEqual({ command: 'erasure:resume', env: 'production', args: [RUN] });
+    expect(parseArgs(['erasure:resume', RUN, '--env=production'])).toEqual({
+      command: 'erasure:resume',
+      env: 'production',
+      args: [RUN],
+    });
   });
 
   it('refuses an unknown command, a missing environment and stray arguments', () => {

@@ -50,7 +50,8 @@ const COLUMNS = {
   outputMediaId: thumbstopperJobs.outputMediaId,
 };
 
-const notFound = (what: string): DomainError => new DomainError('not_found', `This ${what} does not exist.`);
+const notFound = (what: string): DomainError =>
+  new DomainError('not_found', `This ${what} does not exist.`);
 
 /**
  * API-075 and API-076 (REQ-022, ARCHITECTURE §5.5): generate the call-out image of a campaign on the owner's OpenAI key, or
@@ -68,14 +69,25 @@ export class ThumbService {
     @Inject(CALLOUT_RULES) private readonly rules: CalloutRules,
   ) {}
 
-  async generate(ownerId: string, campaignId: string, calloutText: string, key: string, requestHash: Buffer): Promise<ThumbOutcome> {
+  async generate(
+    ownerId: string,
+    campaignId: string,
+    calloutText: string,
+    key: string,
+    requestHash: Buffer,
+  ): Promise<ThumbOutcome> {
     const model = this.config.imageModel;
     if (model === undefined) {
-      throw new DomainError('service_unavailable', 'This service is not configured for image generation yet. Try again later.');
+      throw new DomainError(
+        'service_unavailable',
+        'This service is not configured for image generation yet. Try again later.',
+      );
     }
     const rules = await this.rules.activeRules();
     const run = (): Promise<ThumbOutcome> =>
-      this.database.uow.run((tx) => this.generateIn(tx, { ownerId, campaignId, calloutText, key, requestHash, model, rules }));
+      this.database.uow.run((tx) =>
+        this.generateIn(tx, { ownerId, campaignId, calloutText, key, requestHash, model, rules }),
+      );
     try {
       return await run();
     } catch (error) {
@@ -92,7 +104,9 @@ export class ThumbService {
       const [job] = await tx
         .select(COLUMNS)
         .from(thumbstopperJobs)
-        .where(and(eq(thumbstopperJobs.campaignId, campaignId), eq(thumbstopperJobs.ownerId, ownerId)))
+        .where(
+          and(eq(thumbstopperJobs.campaignId, campaignId), eq(thumbstopperJobs.ownerId, ownerId)),
+        )
         .orderBy(desc(thumbstopperJobs.createdAt), desc(thumbstopperJobs.id))
         .limit(1);
       return job ?? null;
@@ -105,7 +119,9 @@ export class ThumbService {
       const [row] = await tx
         .select({ count: sql<number>`count(*)::int` })
         .from(thumbstopperJobs)
-        .where(and(eq(thumbstopperJobs.ownerId, ownerId), inArray(thumbstopperJobs.state, NON_TERMINAL)));
+        .where(
+          and(eq(thumbstopperJobs.ownerId, ownerId), inArray(thumbstopperJobs.state, NON_TERMINAL)),
+        );
       return row?.count ?? 0;
     });
   }
@@ -114,7 +130,11 @@ export class ThumbService {
   async cancel(tx: DbTx, ownerId: string, cause: string, campaignId?: string): Promise<number> {
     await lockXact(tx, 'spend', ownerId);
     const live = await tx
-      .select({ id: thumbstopperJobs.id, state: thumbstopperJobs.state, model: thumbstopperJobs.providerModel })
+      .select({
+        id: thumbstopperJobs.id,
+        state: thumbstopperJobs.state,
+        model: thumbstopperJobs.providerModel,
+      })
       .from(thumbstopperJobs)
       .where(
         and(
@@ -127,8 +147,18 @@ export class ThumbService {
     if (live.length > 0) {
       await tx
         .update(thumbstopperJobs)
-        .set({ state: 'cancelled', causeClass: cause, causeMessage: 'This image was cancelled.', updatedAt: sql`now()` })
-        .where(inArray(thumbstopperJobs.id, live.map((job) => job.id)));
+        .set({
+          state: 'cancelled',
+          causeClass: cause,
+          causeMessage: 'This image was cancelled.',
+          updatedAt: sql`now()`,
+        })
+        .where(
+          inArray(
+            thumbstopperJobs.id,
+            live.map((job) => job.id),
+          ),
+        );
     }
     for (const job of live) {
       // A call that may already have been sent has an unknown outcome and keeps its estimate counted (SB-D9).
@@ -164,7 +194,10 @@ export class ThumbService {
     const record = await lookupRecord(tx, scope);
     if (record !== undefined) {
       if (!record.requestHash.equals(requestHash)) {
-        throw new DomainError('idempotency_key_reused', 'This request key was already used for a different request.');
+        throw new DomainError(
+          'idempotency_key_reused',
+          'This request key was already used for a different request.',
+        );
       }
       return { job: await this.byId(tx, ownerId, record.resourceId), reused: true };
     }
@@ -173,18 +206,33 @@ export class ThumbService {
       throw new DomainError(
         'open_claim_issues',
         'Change the call-out text so it passes the claim rules, then try again.',
-        issues.map((issue) => ({ field: 'calloutText', code: issue.ruleId, message: issue.message })),
+        issues.map((issue) => ({
+          field: 'calloutText',
+          code: issue.ruleId,
+          message: issue.message,
+        })),
       );
     }
     const reuseHash = thumbReuseHash(campaignId, calloutText, model);
     const [reusable] = await tx
       .select({ id: thumbstopperJobs.id })
       .from(thumbstopperJobs)
-      .where(and(eq(thumbstopperJobs.ownerId, ownerId), eq(thumbstopperJobs.reuseHash, reuseHash), notInArray(thumbstopperJobs.state, NOT_LIVE)));
+      .where(
+        and(
+          eq(thumbstopperJobs.ownerId, ownerId),
+          eq(thumbstopperJobs.reuseHash, reuseHash),
+          notInArray(thumbstopperJobs.state, NOT_LIVE),
+        ),
+      );
     const outcome = await withIdempotency(
       tx,
       scope,
-      { resourceType: 'thumbstopper_job', responseStatus: 202, ttlHours: this.config.idempotencyTtlHours, resourceId: reusable?.id },
+      {
+        resourceType: 'thumbstopper_job',
+        responseStatus: 202,
+        ttlHours: this.config.idempotencyTtlHours,
+        resourceId: reusable?.id,
+      },
       async (id) => {
         if (reusable !== undefined) return { id: reusable.id, reused: true };
         await this.create(tx, { ownerId, campaignId, calloutText, model, reuseHash }, id);
@@ -192,15 +240,29 @@ export class ThumbService {
       },
     );
     const id = outcome.replayed ? outcome.resourceId : outcome.result.id;
-    return { job: await this.byId(tx, ownerId, id), reused: outcome.replayed || outcome.result.reused };
+    return {
+      job: await this.byId(tx, ownerId, id),
+      reused: outcome.replayed || outcome.result.reused,
+    };
   }
 
   /** The owner's active campaign; a foreign, deleting or missing one is `not_found`. Locked for a write so deletion queues behind it. */
-  private async assertCampaign(tx: DbTx, ownerId: string, campaignId: string, lock: boolean): Promise<void> {
+  private async assertCampaign(
+    tx: DbTx,
+    ownerId: string,
+    campaignId: string,
+    lock: boolean,
+  ): Promise<void> {
     const query = tx
       .select({ id: campaigns.id })
       .from(campaigns)
-      .where(and(eq(campaigns.id, campaignId), eq(campaigns.ownerId, ownerId), eq(campaigns.state, 'active')));
+      .where(
+        and(
+          eq(campaigns.id, campaignId),
+          eq(campaigns.ownerId, ownerId),
+          eq(campaigns.state, 'active'),
+        ),
+      );
     const [campaign] = lock ? await query.for('share') : await query;
     if (campaign === undefined) throw notFound('campaign');
   }
@@ -208,7 +270,13 @@ export class ThumbService {
   /** SB-D14 after the reuse lookup: lock, OpenAI key check (REQ-019), cap check with the reservation, the job, the queue message. */
   private async create(
     tx: DbTx,
-    plan: { ownerId: string; campaignId: string; calloutText: string; model: string; reuseHash: string },
+    plan: {
+      ownerId: string;
+      campaignId: string;
+      calloutText: string;
+      model: string;
+      reuseHash: string;
+    },
     id: string,
   ): Promise<void> {
     await lockXact(tx, 'spend', plan.ownerId);
@@ -240,13 +308,25 @@ export class ThumbService {
       .where(and(eq(providerKeys.ownerId, ownerId), eq(providerKeys.provider, 'openai')));
     if (key === undefined) {
       throw new DomainError('key_missing', 'Add your OpenAI key in Settings, then try again.', [
-        { field: 'openaiKey', code: 'missing', message: 'No OpenAI key is stored for your account.' },
+        {
+          field: 'openaiKey',
+          code: 'missing',
+          message: 'No OpenAI key is stored for your account.',
+        },
       ]);
     }
     if (key.status === 'disabled') {
-      throw new DomainError('key_disabled', 'Your OpenAI key is disabled. Enter it again in Settings, then try again.', [
-        { field: 'openaiKey', code: 'disabled', message: 'Your OpenAI key was disabled after repeated authentication failures.' },
-      ]);
+      throw new DomainError(
+        'key_disabled',
+        'Your OpenAI key is disabled. Enter it again in Settings, then try again.',
+        [
+          {
+            field: 'openaiKey',
+            code: 'disabled',
+            message: 'Your OpenAI key was disabled after repeated authentication failures.',
+          },
+        ],
+      );
     }
     return key;
   }
@@ -256,7 +336,8 @@ export class ThumbService {
       .select(COLUMNS)
       .from(thumbstopperJobs)
       .where(and(eq(thumbstopperJobs.id, id), eq(thumbstopperJobs.ownerId, ownerId)));
-    if (job === undefined) throw new DomainError('not_found', 'This request no longer has a result.');
+    if (job === undefined)
+      throw new DomainError('not_found', 'This request no longer has a result.');
     return job;
   }
 }

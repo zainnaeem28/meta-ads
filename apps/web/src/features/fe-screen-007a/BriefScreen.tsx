@@ -486,7 +486,9 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
               </div>
               <div className="flex gap-4">
                 <dt className="w-20 shrink-0 text-muted-foreground">{COPY.asideLength}</dt>
-                <dd>{camp ? `${camp.segmentCount} segments · ${camp.segmentCount * 15} s` : '–'}</dd>
+                <dd>
+                  {camp ? `${camp.segmentCount} segments · ${camp.segmentCount * 15} s` : '–'}
+                </dd>
               </div>
             </dl>
             {camp ? (

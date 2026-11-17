@@ -17,7 +17,8 @@ export type SanitizeOutcome = 'ready' | 'rejected' | 'skipped';
 
 async function readAll(stream: AsyncIterable<unknown>): Promise<Buffer> {
   const chunks: Buffer[] = [];
-  for await (const chunk of stream) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array));
+  for await (const chunk of stream)
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array));
   return Buffer.concat(chunks);
 }
 
@@ -43,7 +44,9 @@ export class SanitizeJob {
   async handle(job: { id: string; data: unknown }, log: JobLog): Promise<SanitizeOutcome> {
     const mediaId = (job.data as { mediaId?: unknown } | null)?.mediaId;
     if (typeof mediaId !== 'string') throw new TypeError('media.sanitize job has no mediaId');
-    const attempts = await this.database.uow.run((tx) => this.maintenance.jobAttempts(tx, SANITIZE_QUEUE, job.id));
+    const attempts = await this.database.uow.run((tx) =>
+      this.maintenance.jobAttempts(tx, SANITIZE_QUEUE, job.id),
+    );
     const finalAttempt = attempts !== null && attempts.retryCount >= attempts.retryLimit;
     const outcome = await this.run(mediaId, finalAttempt, log);
     log.info({ module: 'media', outcome: 'ok', mediaId }, `sanitize: ${outcome}`);
@@ -66,7 +69,10 @@ export class SanitizeJob {
         return 'rejected';
       }
       if (!finalAttempt) throw error;
-      log.warn({ module: 'media', outcome: 'error', mediaId }, 'sanitize failed on its last attempt; rejecting');
+      log.warn(
+        { module: 'media', outcome: 'error', mediaId },
+        'sanitize failed on its last attempt; rejecting',
+      );
       await this.reject(row, 'decode_failed', log);
       return 'rejected';
     }
@@ -111,7 +117,12 @@ export class SanitizeJob {
     }
   }
 
-  private async finish(row: MediaRecord, target: string, clean: Buffer, log: JobLog): Promise<SanitizeOutcome> {
+  private async finish(
+    row: MediaRecord,
+    target: string,
+    clean: Buffer,
+    log: JobLog,
+  ): Promise<SanitizeOutcome> {
     const info = await this.sanitizer.inspect(clean);
     await this.database.uow.run(async (tx) => {
       await this.repository.lockUsage(tx, row.ownerId);
@@ -134,7 +145,10 @@ export class SanitizeJob {
       await this.maintenance.markRejected(tx, row.id, reason);
       await this.repository.addUsage(tx, row.ownerId, -(row.bytes ?? 0));
     });
-    log.info({ module: 'media', outcome: 'ok', mediaId: row.id, reason }, `sanitize rejected: ${reason}`);
+    log.info(
+      { module: 'media', outcome: 'ok', mediaId: row.id, reason },
+      `sanitize rejected: ${reason}`,
+    );
     await this.dropQuarantine(row, log);
   }
 
@@ -143,7 +157,10 @@ export class SanitizeJob {
     try {
       await this.storage.delete(quarantineKey(row.ownerId, row.id));
     } catch {
-      log.warn({ module: 'media', outcome: 'error', mediaId: row.id }, 'quarantine object not deleted');
+      log.warn(
+        { module: 'media', outcome: 'error', mediaId: row.id },
+        'quarantine object not deleted',
+      );
     }
   }
 }

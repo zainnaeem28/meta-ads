@@ -21,7 +21,12 @@ export function Pagination({ page, pageSize, total, onPageChange }: PaginationPr
     >
       <span role="status">{total === 1 ? '1 row' : `${total} rows`}</span>
       <div className="inline-flex items-center gap-2">
-        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
           Previous
         </Button>
         <Button

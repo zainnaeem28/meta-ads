@@ -85,7 +85,18 @@ export class ReportingController {
     for (const account of view.accounts) {
       for (const p of account.providers) {
         lines.push(
-          csvRow([account.userId, p.provider, p.calls, p.succeeded, p.failed, p.rejected, p.unconfirmed, p.estimatedCostUsd, p.latencyP50Ms, p.latencyP95Ms]),
+          csvRow([
+            account.userId,
+            p.provider,
+            p.calls,
+            p.succeeded,
+            p.failed,
+            p.rejected,
+            p.unconfirmed,
+            p.estimatedCostUsd,
+            p.latencyP50Ms,
+            p.latencyP95Ms,
+          ]),
         );
       }
     }
@@ -100,6 +111,9 @@ export class ReportingController {
       requestId: request.id,
     });
     const day = (iso: string): string => iso.slice(0, 10);
-    return new CsvResult(`${lines.join('\r\n')}\r\n`, `usage-${day(view.from)}-${day(view.to)}.csv`);
+    return new CsvResult(
+      `${lines.join('\r\n')}\r\n`,
+      `usage-${day(view.from)}-${day(view.to)}.csv`,
+    );
   }
 }

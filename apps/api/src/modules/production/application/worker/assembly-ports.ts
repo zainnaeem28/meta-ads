@@ -36,7 +36,10 @@ export interface AssemblyProgress {
 
 /** AssemblyPort: joins local clip files into one MP4 on the local disk only. It never reads storage or the database. */
 export interface AssemblyPort {
-  render(input: AssemblyRenderInput, onProgress: (progress: AssemblyProgress) => void): Promise<{ readonly bytes: number }>;
+  render(
+    input: AssemblyRenderInput,
+    onProgress: (progress: AssemblyProgress) => void,
+  ): Promise<{ readonly bytes: number }>;
 }
 export const ASSEMBLY_PORT = Symbol('ASSEMBLY_PORT');
 
@@ -60,7 +63,13 @@ export const ASSEMBLY_WORKER_CONFIG = Symbol('ASSEMBLY_WORKER_CONFIG');
 export interface AssemblyMedia {
   registerFinal(
     tx: DbTx,
-    input: { readonly id: string; readonly ownerId: string; readonly campaignId: string; readonly storageKey: string; readonly bytes: number },
+    input: {
+      readonly id: string;
+      readonly ownerId: string;
+      readonly campaignId: string;
+      readonly storageKey: string;
+      readonly bytes: number;
+    },
   ): Promise<void>;
 }
 export const ASSEMBLY_MEDIA = Symbol('ASSEMBLY_MEDIA');

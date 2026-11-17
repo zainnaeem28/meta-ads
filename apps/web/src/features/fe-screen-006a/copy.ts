@@ -52,7 +52,12 @@ export const SCREEN_006_COPY = {
     goals: { awareness: 'Awareness', conversion: 'Conversion', retention: 'Retention' },
     tone: 'Tone',
     toneHelp: 'Review guidance for the brand approver, not a pass or fail test.',
-    tones: ['Calm and grounded', 'Warm and personal', 'Energetic and upbeat', 'Direct and practical'],
+    tones: [
+      'Calm and grounded',
+      'Warm and personal',
+      'Energetic and upbeat',
+      'Direct and practical',
+    ],
     segments: 'Segments',
   },
   step4: {
@@ -96,8 +101,13 @@ export const SCREEN_006_COPY = {
   startOverBody: 'This deletes your answers so far and begins a new brief. It cannot be undone.',
   startOverConfirm: 'Start over',
   next4Title: 'What happens next',
-  next4: ['You review and edit the brief.', 'You generate one clip per segment.', 'You assemble and download the final ad.'],
-  next4Note: 'Costs are billed to your own OpenAI and WaveSpeed accounts, with your daily and monthly limits applied.',
+  next4: [
+    'You review and edit the brief.',
+    'You generate one clip per segment.',
+    'You assemble and download the final ad.',
+  ],
+  next4Note:
+    'Costs are billed to your own OpenAI and WaveSpeed accounts, with your daily and monthly limits applied.',
 } as const;
 
 export const SEGMENT_SECONDS = 15;

@@ -5,7 +5,8 @@ const CTA = 'Take the free 2-minute quiz';
 /** n words in sentences of five words each, ending with a full stop. */
 const words = (n: number): string => {
   const out: string[] = [];
-  for (let i = 1; i <= n; i += 1) out.push(i % 5 === 0 || i === n ? `word${String(i)}.` : `word${String(i)}`);
+  for (let i = 1; i <= n; i += 1)
+    out.push(i % 5 === 0 || i === n ? `word${String(i)}.` : `word${String(i)}`);
   return out.join(' ');
 };
 
@@ -52,7 +53,8 @@ describe('removeDashes (TC-BRF-04)', () => {
 
 describe('shortenDialogue (TC-BRF-03)', () => {
   it('returns text that already fits unchanged', () => {
-    for (const n of [30, 42, 43, 45]) expect(shortenDialogue(words(n))).toEqual({ text: words(n), trimmed: false });
+    for (const n of [30, 42, 43, 45])
+      expect(shortenDialogue(words(n))).toEqual({ text: words(n), trimmed: false });
   });
 
   it('cuts 46 and 50 words to at most 45, at the last sentence boundary that fits', () => {
@@ -86,13 +88,17 @@ describe('shortenDialogue (TC-BRF-03)', () => {
   it('falls back to a plain cut when the suffix is absent, empty or as long as the limit', () => {
     expect(countWords(shortenDialogue(words(50), { keepSuffix: CTA }).text)).toBe(45);
     expect(countWords(shortenDialogue(words(50), { keepSuffix: '' }).text)).toBe(45);
-    expect(countWords(shortenDialogue(words(50), { keepSuffix: 'a b c', max: 3 }).text)).toBeLessThanOrEqual(3);
+    expect(
+      countWords(shortenDialogue(words(50), { keepSuffix: 'a b c', max: 3 }).text),
+    ).toBeLessThanOrEqual(3);
   });
 
   it('returns only the call to action when nothing before it fits', () => {
     const text = `${words(10)} ${CTA}.`;
     expect(shortenDialogue(text, { max: 5, keepSuffix: CTA }).text).toBe(`${CTA}.`);
-    expect(shortenDialogue(`${words(10)} a b c.`, { max: 3, keepSuffix: 'a b c' }).text).toBe('a b c.');
+    expect(shortenDialogue(`${words(10)} a b c.`, { max: 3, keepSuffix: 'a b c' }).text).toBe(
+      'a b c.',
+    );
   });
 
   it('honours another maximum and an empty text', () => {

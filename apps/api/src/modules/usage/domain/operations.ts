@@ -40,6 +40,7 @@ export function configuredOperations(env: Env, includeDefaults = false): Billabl
   add('openai', value(env, 'OPENAI_IMAGE_MODEL'));
   add('wavespeed', value(env, 'WAVESPEED_MODEL_I2V') ?? fallback('WAVESPEED_MODEL_I2V'));
   add('wavespeed', value(env, 'WAVESPEED_MODEL_T2V') ?? fallback('WAVESPEED_MODEL_T2V'));
-  if (value(env, 'ASSEMBLY_ADAPTER') === 'shotstack') add('assembly_vendor', ASSEMBLY_VENDOR_OPERATION);
+  if (value(env, 'ASSEMBLY_ADAPTER') === 'shotstack')
+    add('assembly_vendor', ASSEMBLY_VENDOR_OPERATION);
   return calls;
 }

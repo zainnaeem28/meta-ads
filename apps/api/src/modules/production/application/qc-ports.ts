@@ -20,7 +20,8 @@ export interface TranscribePort {
 export const TRANSCRIBE_PORT = Symbol('TRANSCRIBE_PORT');
 
 /** The clip's audio track as 16 kHz mono WAV, or `none` when the file has no audio track. Throws when the file cannot be read. */
-export type ExtractedAudio = { readonly kind: 'audio'; readonly wav: Buffer } | { readonly kind: 'none' };
+export type ExtractedAudio =
+  { readonly kind: 'audio'; readonly wav: Buffer } | { readonly kind: 'none' };
 
 export interface AudioExtractor {
   extract(clip: Readable): Promise<ExtractedAudio>;

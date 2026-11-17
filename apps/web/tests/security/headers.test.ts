@@ -2,7 +2,13 @@
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LOCAL_SESSION_COOKIE, signLocalSession } from '../../src/lib/auth/local-session';
-import { buildCsp, clerkFrontendOrigin, dynamicHeaders, isKeyPage, storageOrigins } from '../../src/lib/security/csp';
+import {
+  buildCsp,
+  clerkFrontendOrigin,
+  dynamicHeaders,
+  isKeyPage,
+  storageOrigins,
+} from '../../src/lib/security/csp';
 import middleware from '../../src/middleware';
 
 /** Route classes of the web app: public auth page, signed-in page, the key page, probe page, redirect, home. */
@@ -24,7 +30,10 @@ const call = async (path: string, session: boolean) => {
     ? await signLocalSession({ sub: 's', email: 'a@b.co', exp: Math.floor(Date.now() / 1000) + 60 })
     : undefined;
   return middleware(
-    new NextRequest(`${origin}${path}`, cookie ? { headers: { cookie: `${LOCAL_SESSION_COOKIE}=${cookie}` } } : {}),
+    new NextRequest(
+      `${origin}${path}`,
+      cookie ? { headers: { cookie: `${LOCAL_SESSION_COOKIE}=${cookie}` } } : {},
+    ),
     {} as never,
   ) as Promise<Response>;
 };
@@ -58,12 +67,15 @@ describe('nonce', () => {
   it('is fresh per request and forwarded to the page with the policy', async () => {
     const a = await call('/sign-in', false);
     const b = await call('/sign-in', false);
-    const nonce = (r: Response) => /'nonce-([^']+)'/.exec(r.headers.get('content-security-policy')!)![1];
+    const nonce = (r: Response) =>
+      /'nonce-([^']+)'/.exec(r.headers.get('content-security-policy')!)![1];
     expect(nonce(a)).not.toBe(nonce(b));
     expect(nonce(a)!.length).toBeGreaterThanOrEqual(22);
     // The framework reads the forwarded request headers to mark its own scripts.
     expect(a.headers.get('x-middleware-request-x-nonce')).toBe(nonce(a));
-    expect(a.headers.get('x-middleware-request-content-security-policy')).toBe(a.headers.get('content-security-policy'));
+    expect(a.headers.get('x-middleware-request-content-security-policy')).toBe(
+      a.headers.get('content-security-policy'),
+    );
   });
 });
 
@@ -90,7 +102,8 @@ describe('key page (REQ-019)', () => {
     const thirdParty = (list: string[]) => list.filter((v) => /^https?:/.test(v));
     expect(thirdParty(csp['script-src']!)).toEqual(['https://clerk.shroomap.example']);
     // Every script-src entry is self, the request nonce or the provider origin: nothing else.
-    for (const v of csp['script-src']!) expect(v).toMatch(/^('self'|'nonce-N'|https:\/\/clerk\.shroomap\.example)$/);
+    for (const v of csp['script-src']!)
+      expect(v).toMatch(/^('self'|'nonce-N'|https:\/\/clerk\.shroomap\.example)$/);
     expect(csp['frame-src']).toEqual(["'none'"]);
     expect(csp['img-src']).not.toContain('https://img.clerk.com');
   });
@@ -118,13 +131,19 @@ describe('key page (REQ-019)', () => {
       'https://acct.r2.cloudflarestorage.com',
       'https://media.acct.r2.cloudflarestorage.com',
     ]);
-    expect(buildCsp({ nonce: 'N', pathname: '/campaigns', env })).toContain('upgrade-insecure-requests');
+    expect(buildCsp({ nonce: 'N', pathname: '/campaigns', env })).toContain(
+      'upgrade-insecure-requests',
+    );
   });
 
   it('sends HSTS only for hosted environments, and the key page path match is exact', () => {
     const pass = { nonce: 'N', pathname: '/', env: { APP_ENV: 'production' } };
-    expect(dynamicHeaders(pass)['Strict-Transport-Security']).toMatch(/^max-age=\d+; includeSubDomains$/);
-    expect(dynamicHeaders({ ...pass, env: { APP_ENV: 'development' } })['Strict-Transport-Security']).toBeUndefined();
+    expect(dynamicHeaders(pass)['Strict-Transport-Security']).toMatch(
+      /^max-age=\d+; includeSubDomains$/,
+    );
+    expect(
+      dynamicHeaders({ ...pass, env: { APP_ENV: 'development' } })['Strict-Transport-Security'],
+    ).toBeUndefined();
     expect(isKeyPage('/settings/provider-keys/')).toBe(true);
     expect(isKeyPage('/settings/provider-keys-x')).toBe(false);
   });
@@ -132,15 +151,26 @@ describe('key page (REQ-019)', () => {
 
 describe('origin helpers', () => {
   it('decode the provider host from the publishable key and ignore malformed input', () => {
-    expect(clerkFrontendOrigin(`pk_live_${btoa('clerk.a.example$')}`)).toBe('https://clerk.a.example');
-    for (const bad of [undefined, '', 'pk_test_', 'pk_test_!!!', `pk_test_${btoa('bad host$')}`, 'sk_test_abc'])
+    expect(clerkFrontendOrigin(`pk_live_${btoa('clerk.a.example$')}`)).toBe(
+      'https://clerk.a.example',
+    );
+    for (const bad of [
+      undefined,
+      '',
+      'pk_test_',
+      'pk_test_!!!',
+      `pk_test_${btoa('bad host$')}`,
+      'sk_test_abc',
+    ])
       expect(clerkFrontendOrigin(bad)).toBeNull();
   });
   it('accept only http(s) storage endpoints', () => {
     expect(storageOrigins({})).toEqual([]);
     expect(storageOrigins({ R2_ENDPOINT: 'javascript:alert(1)' })).toEqual([]);
     expect(storageOrigins({ R2_ENDPOINT: 'nonsense' })).toEqual([]);
-    expect(storageOrigins({ R2_ENDPOINT: 'http://localhost:9000' })).toEqual(['http://localhost:9000']);
+    expect(storageOrigins({ R2_ENDPOINT: 'http://localhost:9000' })).toEqual([
+      'http://localhost:9000',
+    ]);
   });
   it('allow eval only in development builds', () => {
     const csp = (NODE_ENV: string) => buildCsp({ nonce: 'N', pathname: '/', env: { NODE_ENV } });

@@ -69,7 +69,9 @@ test.describe('@TASK-076 job card, claim issue, segment editor (CMP-022, 023, 02
       await page.evaluate(() => document.fonts.ready);
       const clipped = await section.locator('[data-variant]').evaluateAll((els) =>
         els
-          .filter((e) => e.scrollWidth > e.clientWidth || !e.closest('article, section')?.contains(e))
+          .filter(
+            (e) => e.scrollWidth > e.clientWidth || !e.closest('article, section')?.contains(e),
+          )
           .filter((e) => {
             const a = e.getBoundingClientRect();
             const c = e.closest('article')?.getBoundingClientRect();

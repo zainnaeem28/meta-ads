@@ -94,8 +94,13 @@ export class ProviderKeysService {
     @Inject(KEY_POLICY) private readonly policy: KeyPolicy,
   ) {}
 
-  private async view(record: KeyRecord | undefined, provider: Provider, ownerId: string): Promise<KeyStatusView> {
-    const inFlightJobCount = record === undefined ? 0 : await this.inFlightJobCount(ownerId, provider);
+  private async view(
+    record: KeyRecord | undefined,
+    provider: Provider,
+    ownerId: string,
+  ): Promise<KeyStatusView> {
+    const inFlightJobCount =
+      record === undefined ? 0 : await this.inFlightJobCount(ownerId, provider);
     return {
       provider,
       configured: record !== undefined,
@@ -114,7 +119,13 @@ export class ProviderKeysService {
   async keyStatus(ownerId: string): Promise<KeyStatusView[]> {
     const records = await this.keys.list(this.database.db, ownerId);
     return Promise.all(
-      PROVIDERS.map((provider) => this.view(records.find((r) => r.provider === provider), provider, ownerId)),
+      PROVIDERS.map((provider) =>
+        this.view(
+          records.find((r) => r.provider === provider),
+          provider,
+          ownerId,
+        ),
+      ),
     );
   }
 
@@ -133,7 +144,12 @@ export class ProviderKeysService {
     );
     if (result.allowed) return;
     if (result.count === result.limit + 1) {
-      await this.events.insert(this.database.db, { ownerId, keyId: null, provider, kind: 'attempt_rate_limited' });
+      await this.events.insert(this.database.db, {
+        ownerId,
+        keyId: null,
+        provider,
+        kind: 'attempt_rate_limited',
+      });
     }
     throw new RateLimitedError(result.retryAfterSeconds);
   }
@@ -160,7 +176,8 @@ export class ProviderKeysService {
     try {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const stored = await this.persist(ownerId, provider, key, plaintext, verdict, context);
-        if (stored !== undefined) return { ...(await this.view(stored, provider, ownerId)), probe: verdict };
+        if (stored !== undefined)
+          return { ...(await this.view(stored, provider, ownerId)), probe: verdict };
       }
     } finally {
       plaintext.fill(0);
@@ -168,8 +185,17 @@ export class ProviderKeysService {
     throw new DomainError('state_conflict', 'The key was changed by another request. Try again.');
   }
 
-  private async refuse(ownerId: string, provider: Provider, reason: FormatProblem | 'rejected'): Promise<never> {
-    await this.events.insert(this.database.db, { ownerId, keyId: null, provider, kind: 'test_failed' });
+  private async refuse(
+    ownerId: string,
+    provider: Provider,
+    reason: FormatProblem | 'rejected',
+  ): Promise<never> {
+    await this.events.insert(this.database.db, {
+      ownerId,
+      keyId: null,
+      provider,
+      kind: 'test_failed',
+    });
     throw keyInvalid(reason);
   }
 
@@ -202,7 +228,13 @@ export class ProviderKeysService {
           ? await this.keys.insert(tx, id, ownerId, provider, write)
           : await this.keys.replace(tx, id, existing.version, write);
       if (!written) return undefined;
-      await this.event(tx, ownerId, id, provider, verdict === 'valid' ? 'test_passed' : 'stored_untested');
+      await this.event(
+        tx,
+        ownerId,
+        id,
+        provider,
+        verdict === 'valid' ? 'test_passed' : 'stored_untested',
+      );
       await this.event(tx, ownerId, id, provider, existing === null ? 'added' : 'replaced');
       await this.audit.record(tx, {
         actorId: ownerId,
@@ -228,7 +260,11 @@ export class ProviderKeysService {
   }
 
   /** API-012: hard delete (the sealed values go with the row). Jobs in flight fail lazily with `key_deleted`. */
-  async deleteKey(ownerId: string, provider: Provider, context: RequestContext = {}): Promise<void> {
+  async deleteKey(
+    ownerId: string,
+    provider: Provider,
+    context: RequestContext = {},
+  ): Promise<void> {
     await this.database.uow.run(async (tx) => {
       const id = await this.keys.delete(tx, ownerId, provider);
       if (id === null) throw new DomainError('not_found', 'No key is stored for this provider.');
@@ -275,7 +311,9 @@ export class ProviderKeysService {
         objectId: null,
         outcome: 'allowed',
       });
-      const alert = await this.alerts.raiseAlert(tx, 'keys_disabled_all', null, { keys: disabled.length });
+      const alert = await this.alerts.raiseAlert(tx, 'keys_disabled_all', null, {
+        keys: disabled.length,
+      });
       return { alert, count: disabled.length };
     });
     pending.alert.announce();
@@ -296,7 +334,12 @@ export class ProviderKeysService {
         }
         return;
       }
-      const row = await this.keys.recordFailure(tx, keyId, version, this.policy.autoDisableThreshold);
+      const row = await this.keys.recordFailure(
+        tx,
+        keyId,
+        version,
+        this.policy.autoDisableThreshold,
+      );
       if (row === null) return;
       await this.event(tx, row.ownerId, keyId, row.provider, 'auth_failed');
       if (row.status !== 'disabled') return;

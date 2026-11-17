@@ -40,12 +40,18 @@ export function EmptyState({
     .filter(Boolean)
     .join(' ');
   return (
-    <div role={variant === 'error' ? 'alert' : undefined} data-variant={variant} className={classes}>
+    <div
+      role={variant === 'error' ? 'alert' : undefined}
+      data-variant={variant}
+      className={classes}
+    >
       <span aria-hidden="true" className="text-muted-foreground">
         <Icon name={ICON[variant]} size={24} />
       </span>
       <Heading className="text-body font-semibold text-foreground">{title}</Heading>
-      {description ? <p className="max-w-prose text-ui text-muted-foreground">{description}</p> : null}
+      {description ? (
+        <p className="max-w-prose text-ui text-muted-foreground">{description}</p>
+      ) : null}
       {variant === 'error' && onRetry ? (
         <Button variant="outline" size="sm" onClick={onRetry}>
           Try again

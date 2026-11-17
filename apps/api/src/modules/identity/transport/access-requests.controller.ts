@@ -9,7 +9,10 @@ import { Scope } from '../../../platform/http/scope-registry.js';
 import { parseWith } from '../../../platform/http/validation.pipe.js';
 import { clientIp } from '../../../platform/rate-limit/index.js';
 import { AccessRequestService } from '../application/access-requests.service.js';
-import type { AccessRequestActor, AccessRequestView } from '../application/access-requests.service.js';
+import type {
+  AccessRequestActor,
+  AccessRequestView,
+} from '../application/access-requests.service.js';
 import { ACCESS_REQUEST_STATES } from '../domain/records.js';
 
 // The request shapes of OpenAPI design.5: AccessRequestCreate (closed object, note up to 500, body optional), the list
@@ -42,7 +45,12 @@ export class AccessRequestsController {
   ): Promise<{ state: 'received' }> {
     const parsed = parseWith(createBody, body ?? {});
     const subject = auth.linked ? auth.actor.userId : auth.session.subject;
-    return this.requests.create(subject, auth.linked, clientIp(request, trustProxyHops()), parsed.note);
+    return this.requests.create(
+      subject,
+      auth.linked,
+      clientIp(request, trustProxyHops()),
+      parsed.note,
+    );
   }
 }
 
@@ -52,7 +60,8 @@ export class AdminAccessRequestsController {
   constructor(@Inject(AccessRequestService) private readonly requests: AccessRequestService) {}
 
   private actorOf(actor: ActorContext | undefined, request: FastifyRequest): AccessRequestActor {
-    if (actor === undefined) throw new DomainError('not_linked', 'This account is not linked to ShrooMap yet.');
+    if (actor === undefined)
+      throw new DomainError('not_linked', 'This account is not linked to ShrooMap yet.');
     return { userId: actor.userId, requestId: request.id };
   }
 
@@ -92,7 +101,11 @@ export class AdminAccessRequestsController {
     const result = idParam.safeParse(raw);
     if (!result.success) {
       throw new DomainError('validation_failed', 'The request is not valid.', [
-        { field: 'accessRequestId', code: 'invalid_format', message: 'The value has the wrong format.' },
+        {
+          field: 'accessRequestId',
+          code: 'invalid_format',
+          message: 'The value has the wrong format.',
+        },
       ]);
     }
     return result.data;

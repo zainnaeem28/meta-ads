@@ -46,7 +46,10 @@ export function verifyDelayMs(deadlineMinutes: number, graceSeconds: number): nu
 }
 
 /** A failure counted against the run: stuck once the limit is reached, otherwise retried by the queue's backoff. */
-export function nextOnFailure(attempts: number, limit: number): { attempts: number; stuck: boolean } {
+export function nextOnFailure(
+  attempts: number,
+  limit: number,
+): { attempts: number; stuck: boolean } {
   const next = attempts + 1;
   return { attempts: next, stuck: next >= limit };
 }
