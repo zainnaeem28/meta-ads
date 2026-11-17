@@ -96,12 +96,16 @@ export function parseProviderOrigin(raw: string): URL | undefined {
   const bare = url.hostname.replace(/^\[|\]$/g, '');
   if (
     url.protocol !== 'https:' ||
-    url.username !== '' || url.password !== '' ||
+    url.username !== '' ||
+    url.password !== '' ||
     url.port !== '' ||
-    url.search !== '' || url.hash !== '' ||
+    url.search !== '' ||
+    url.hash !== '' ||
     (url.pathname !== '/' && url.pathname !== '') ||
-    isIP(bare) !== 0 || /^\d+(\.\d+)*$/.test(bare)
-  ) return undefined;
+    isIP(bare) !== 0 ||
+    /^\d+(\.\d+)*$/.test(bare)
+  )
+    return undefined;
   return url;
 }
 
