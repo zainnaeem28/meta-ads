@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { send } from './support/cells.js';
+import { FAKE_KEY } from './support/requests.js';
 import * as fx from './support/fixtures.js';
 import { isAdmin, isGuarded, operations } from './support/spec.js';
 import { baseClaims, forgedTokens, signedWith } from './support/tokens.js';
@@ -151,7 +152,7 @@ describe('closed DTOs: no field the contract does not name is applied (TC-ZT-06)
       const cases: [string, string, unknown, Record<string, string>][] = [
         ['PATCH', `/drafts/${draft.id}`, { productName: 'Changed', [name]: value }, { 'if-match': '"1"' }],
         ['PATCH', `/campaigns/${c.id}/brief`, { segments: [{ position: 1, dialogue: 'Changed line.' }], [name]: value }, { 'if-match': '"1"' }],
-        ['PUT', '/me/provider-keys/openai', { apiKey: 'sk-conformance-a1B2c3D4e5F6g7H8i9J0k1L2', [name]: value }, {}],
+        ['PUT', '/me/provider-keys/openai', { apiKey: FAKE_KEY, [name]: value }, {}],
       ];
       for (const [method, path, body, extra] of cases) {
         const res = await w.call(method as 'PATCH', path, user.token, body, extra);
