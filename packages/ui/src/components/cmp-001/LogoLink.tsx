@@ -11,7 +11,7 @@ export function LogoLink({ href = '/', logo, className, ...rest }: LogoLinkProps
     <a
       href={href}
       aria-label="ShrooMap home"
-      className={['inline-flex items-center', className].filter(Boolean).join(' ')}
+      className={['inline-flex min-h-11 min-w-11 items-center', className].filter(Boolean).join(' ')}
       {...rest}
     >
       <Logo size="header" {...(logo as object)} alt="" />
