@@ -34,6 +34,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/prod-qc/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-asm/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-ffmpeg/junit.xml' }],
+      ['junit', { outputFile: 'reports/prod-thumb/junit.xml' }],
       ['junit', { outputFile: 'reports/lifecycle-del/junit.xml' }],
       ['junit', { outputFile: 'reports/erasure/junit.xml' }],
       ['junit', { outputFile: 'reports/opscli/junit.xml' }],
@@ -215,6 +216,15 @@ export default defineConfig({
         // has no statements to speak of. The FFmpeg adapter itself is unit tested.
         'src/modules/production/application/worker/assembly-render.job.ts',
         'src/modules/production/application/worker/assembly-recovery.ts',
+        // The thumbstopper service (API-075, API-076), its job, the sweep hooks, the SQL repository, the controller and the port file are
+        // proven on real PostgreSQL through the api and worker composition roots by thumb-api.integration.test.ts and
+        // thumb-worker.integration.test.ts (TC-THM-01 to 08); the adapter, the call-out check, the view and the settings are unit tested.
+        'src/modules/production/application/thumb-ports.ts',
+        'src/modules/production/application/thumb.service.ts',
+        'src/modules/production/application/thumb-submit.job.ts',
+        'src/modules/production/application/thumb-recovery.ts',
+        'src/modules/production/infrastructure/openai-image/thumb.repository.ts',
+        'src/modules/production/transport/thumb.controller.ts',
         // The ops-cli SQL of the four commands, their production binding and the barrel are proven on real PostgreSQL through
         // `runOps` with the production `executeCommand`, the real worker composition root and the compiled `dist/bin/ops.js` by
         // ops-cli.integration.test.ts; the argument rules, the runner and the key cryptography are unit tested here.

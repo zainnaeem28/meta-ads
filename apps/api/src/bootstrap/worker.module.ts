@@ -23,7 +23,7 @@ import type { StoragePort } from '../modules/media/index.js';
 import { MEDIA_REPOSITORY } from '../modules/media/application/ports.js';
 import type { MediaRepository } from '../modules/media/application/ports.js';
 import { mediaConfigFrom } from '../modules/media/media.module.js';
-import { AssemblyRenderJob, ProductionWorkerModule, ProviderCopyCleanup, QcRunJob, VideoCopyJob, VideoPollJob, VideoSubmitJob, productionJobHandlers } from '../modules/production/production.module.js';
+import { AssemblyRenderJob, ProductionWorkerModule, ProviderCopyCleanup, QcRunJob, ThumbSubmitJob, VideoCopyJob, VideoPollJob, VideoSubmitJob, productionJobHandlers } from '../modules/production/production.module.js';
 import { LifecycleModule, lifecycleJobHandlers, AccountErasureJob, CampaignDeletionJob } from '../modules/lifecycle/lifecycle.module.js';
 import { MediaDeletion } from '../modules/media/worker/media-deletion.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
@@ -306,6 +306,7 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
             cleanup: () => context.get(ProviderCopyCleanup, { strict: false }),
             qc: () => context.get(QcRunJob, { strict: false }),
             assembly: () => context.get(AssemblyRenderJob, { strict: false }),
+            thumb: () => context.get(ThumbSubmitJob, { strict: false }),
           })),
       ...(lifecycle.length === 0
         ? {}

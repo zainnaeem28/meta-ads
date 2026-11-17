@@ -2,13 +2,14 @@ import { sql } from 'drizzle-orm';
 import { boolean, char, check, date, index, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
 import { campaigns } from './campaigns.js';
 import { mediaObjects } from './media.js';
+import { thumbstopperJobs } from './production-thumb.js';
 import { videoJobs } from './production.js';
 
 // Production tables of migration M0011 (ARCHITECTURE §2.2, §5.7, SB-D11): the assembly of up to four completed clips into
 // the final video, and the clips it was made from. `owner_id` is plain: the owner is checked by the service. The clips'
 // `video_job_id` has no delete rule (NO ACTION, checked at statement end), so a clip that a final was made from cannot be
 // deleted on its own while a campaign's cascade removes assemblies and jobs together. `thumbstopper_job_id` is a plain
-// column until M0012 creates `thumbstopper_jobs` and adds its foreign key (SET NULL). Timestamps are read as text.
+// column in M0011; M0012 (`thumbstopper_jobs`) adds its foreign key (SET NULL). Timestamps are read as text.
 
 const STATES = ['pending', 'queued', 'fetching', 'rendering', 'saving', 'done', 'failed'];
 const CAUSE_CLASSES = [
@@ -34,7 +35,7 @@ export const assemblyJobs = pgTable(
     causeClass: text('cause_class'),
     causeMessage: varchar('cause_message', { length: 300 }),
     reuseHash: char('reuse_hash', { length: 64 }).notNull(),
-    thumbstopperJobId: uuid('thumbstopper_job_id'),
+    thumbstopperJobId: uuid('thumbstopper_job_id').references(() => thumbstopperJobs.id, { onDelete: 'set null' }),
     outputMediaId: uuid('output_media_id').references(() => mediaObjects.id, { onDelete: 'set null' }),
     renderDay: date('render_day', { mode: 'string' }).notNull(),
     leaseUntil: timestamp('lease_until', { withTimezone: true, mode: 'string' }),

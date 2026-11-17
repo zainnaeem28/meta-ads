@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { DATABASE } from '../../platform/db/index.js';
 import type { Database, DbTx } from '../../platform/db/index.js';
 import { ASSEMBLY_CONFIG, ASSEMBLY_RENDER_QUEUE, AssemblyService } from './application/assembly.service.js';
@@ -11,6 +12,11 @@ import { QcRecovery } from './application/qc-recovery.js';
 import { QC_RUN_QUEUE, QcRunJob } from './application/qc-run.job.js';
 import { QcRunsService } from './application/qc-runs.service.js';
 import { startFirstQc } from './application/qc-start.js';
+import { ThumbRecovery } from './application/thumb-recovery.js';
+import { CALLOUT_RULES, IMAGE_GEN_PORT, THUMB_CONFIG, THUMB_MEDIA, THUMB_REPOSITORY } from './application/thumb-ports.js';
+import type { CalloutRules, ThumbConfig, ThumbMedia } from './application/thumb-ports.js';
+import { THUMB_SUBMIT_QUEUE, ThumbService } from './application/thumb.service.js';
+import { ThumbSubmitJob } from './application/thumb-submit.job.js';
 import { VideoJobsService } from './application/video-jobs.service.js';
 import { VIDEO_CONFIG } from './application/video-ports.js';
 import type { VideoConfig } from './application/video-ports.js';
@@ -41,6 +47,8 @@ import { FfmpegAudio } from './infrastructure/openai-transcribe/ffmpeg-audio.js'
 import { OpenAiKeyAuthReporter } from './infrastructure/openai-transcribe/key-auth.reporter.js';
 import { OpenAiTranscribe } from './infrastructure/openai-transcribe/openai-transcribe.js';
 import { SqlQcRepository } from './infrastructure/openai-transcribe/qc.repository.js';
+import { OpenAiImageGen } from './infrastructure/openai-image/thumb-openai-image.js';
+import { SqlThumbRepository } from './infrastructure/openai-image/thumb.repository.js';
 import { WaveSpeedKeyAuthReporter } from './infrastructure/wavespeed/key-auth.reporter.js';
 import { SqlVideoWorkerRepository } from './infrastructure/wavespeed/video-worker.repository.js';
 import { WaveSpeedVideoGen } from './infrastructure/wavespeed/wavespeed-video-gen.js';
@@ -48,12 +56,14 @@ import { VideoProgressReader } from './infrastructure/video-progress.reader.js';
 import type { ProgressSnapshotShape } from './infrastructure/video-progress.reader.js';
 import { AssemblyController } from './transport/assembly.controller.js';
 import { QcController } from './transport/qc.controller.js';
+import { ThumbController } from './transport/thumb.controller.js';
 import { VideoController } from './transport/video.controller.js';
+import { BrandRulesReader } from '../brief/index.js';
 import type { MediaService, StoragePort } from '../media/index.js';
 import { BOSS } from '../../platform/jobs/boss.js';
 import type { SweepRegistry } from '../../platform/jobs/sweep-registry.js';
 
-export { AssemblyRenderJob, ProviderCopyCleanup, QcRunJob, VideoCopyJob, VideoPollJob, VideoSubmitJob };
+export { AssemblyRenderJob, ProviderCopyCleanup, QcRunJob, ThumbSubmitJob, VideoCopyJob, VideoPollJob, VideoSubmitJob };
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -120,8 +130,8 @@ export function assemblyConfigFrom(env: Env): AssemblyConfig {
 }
 
 /**
- * Production: the M0010 video and QC tables (TASK-052), the segment clip operations API-060 to API-064, the assembly API-070 and API-071 (M0011, TASK-055) and the campaign
- * progress reader. Needs the database, the job queue and the usage module.
+ * Production: the M0010 video and QC tables (TASK-052), the segment clip operations API-060 to API-064, the assembly API-070 and API-071 (M0011, TASK-055), the
+ * thumbstopper API-075 and API-076 (M0012, TASK-057) and the campaign progress reader. Needs the database, the job queue and the usage module.
  */
 @Module({})
 export class ProductionModule {
@@ -132,9 +142,17 @@ export class ProductionModule {
       providers: [
         { provide: VIDEO_CONFIG, useValue: videoConfigFrom(env) },
         { provide: ASSEMBLY_CONFIG, useValue: assemblyConfigFrom(env) },
+        { provide: THUMB_CONFIG, useValue: thumbConfigFrom(env) },
+        // The brief module's rule reader, found when first used: the brief module is built beside this one.
+        {
+          provide: CALLOUT_RULES,
+          useFactory: (modules: ModuleRef): CalloutRules => ({ activeRules: () => modules.get(BrandRulesReader, { strict: false }).activeRules() }),
+          inject: [ModuleRef],
+        },
         VideoJobsService,
         QcRunsService,
         AssemblyService,
+        ThumbService,
         {
           provide: VideoProgressReader,
           useFactory: (database: Database) => {
@@ -145,8 +163,8 @@ export class ProductionModule {
           inject: [DATABASE],
         },
       ],
-      controllers: [VideoController, QcController, AssemblyController],
-      exports: [VideoJobsService, QcRunsService, AssemblyService, VideoProgressReader],
+      controllers: [VideoController, QcController, AssemblyController, ThumbController],
+      exports: [VideoJobsService, QcRunsService, AssemblyService, ThumbService, VideoProgressReader],
     };
   }
 }
@@ -264,6 +282,41 @@ export function qcConfigFrom(env: Env, baseUrl?: string): QcConfig {
   };
 }
 
+/**
+ * The thumbstopper settings (TASK-057): `OPENAI_IMAGE_MODEL` (none when the process has none), the job's 5 minute bound and
+ * the stored image's size cap. Checked at start-up, so an unacceptable model name stops the process.
+ */
+export function thumbConfigFrom(env: Env, baseUrl?: string): ThumbConfig {
+  const imageModel = optional(env, 'OPENAI_IMAGE_MODEL');
+  if (imageModel !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/.test(imageModel)) throw new Error('OPENAI_IMAGE_MODEL is not an acceptable model name');
+  return {
+    imageModel,
+    deadlineMinutes: 5,
+    idempotencyTtlHours: videoConfigFrom(env).idempotencyTtlHours,
+    orphanAfterSec: videoWorkerConfigFrom(env).submitOrphanAfterSec,
+    requeueAfterSec: 120,
+    outputMaxBytes: videoWorkerConfigFrom(env).outputMaxBytes,
+    ...(baseUrl === undefined ? {} : { imageUrl: `${baseUrl}/v1/images/generations` }),
+  };
+}
+
+/** The thumbstopper image as the media module records it, in the caller's transaction (quota and row). */
+export function thumbMediaOf(resolve: () => Pick<MediaService, 'registerObject'>): ThumbMedia {
+  return {
+    registerImage: async (tx, input) => {
+      await resolve().registerObject(tx, {
+        id: input.id,
+        ownerId: input.ownerId,
+        kind: 'thumbstopper',
+        storageKey: input.storageKey,
+        bytes: input.bytes,
+        contentType: input.contentType,
+        campaignId: input.campaignId,
+      });
+    },
+  };
+}
+
 /** Object storage resolved on first use: the media module that owns it is built beside this one. */
 function lazyStorage(resolve: () => StoragePort): StoragePort {
   return {
@@ -304,6 +357,10 @@ export class ProductionWorkerModule {
         { provide: QC_REPOSITORY, useClass: SqlQcRepository },
         { provide: QC_KEY_AUTH_REPORTER, useClass: OpenAiKeyAuthReporter },
         { provide: TRANSCRIBE_PORT, useClass: OpenAiTranscribe },
+        { provide: THUMB_CONFIG, useValue: thumbConfigFrom(env, edge.baseUrl) },
+        { provide: THUMB_REPOSITORY, useClass: SqlThumbRepository },
+        { provide: IMAGE_GEN_PORT, useClass: OpenAiImageGen },
+        { provide: THUMB_MEDIA, useValue: thumbMediaOf(edge.media) },
         { provide: AUDIO_EXTRACTOR, useValue: new FfmpegAudio() },
         { provide: ASSEMBLY_WORKER_CONFIG, useValue: assemblyWorkerConfig },
         { provide: ASSEMBLY_PORT, useValue: new FfmpegAssembly({ frameSeconds: assemblyWorkerConfig.frameSeconds }) },
@@ -320,8 +377,10 @@ export class ProductionWorkerModule {
         QcRecovery,
         AssemblyRenderJob,
         AssemblyRecovery,
+        ThumbSubmitJob,
+        ThumbRecovery,
       ],
-      exports: [VideoSubmitJob, VideoPollJob, VideoCopyJob, ProviderCopyCleanup, QcRunJob, AssemblyRenderJob],
+      exports: [VideoSubmitJob, VideoPollJob, VideoCopyJob, ProviderCopyCleanup, QcRunJob, AssemblyRenderJob, ThumbSubmitJob],
     };
   }
 }
@@ -334,6 +393,7 @@ export function productionJobHandlers(resolve: {
   readonly cleanup: () => ProviderCopyCleanup;
   readonly qc: () => QcRunJob;
   readonly assembly: () => AssemblyRenderJob;
+  readonly thumb: () => ThumbSubmitJob;
 }): Readonly<Record<string, (job: { id: string; data: unknown }, log: JobLog) => Promise<void>>> {
   return {
     [VIDEO_SUBMIT_QUEUE]: async (job, log) => {
@@ -350,6 +410,9 @@ export function productionJobHandlers(resolve: {
     },
     [ASSEMBLY_RENDER_QUEUE]: async (job, log) => {
       await resolve.assembly().handle(job, log);
+    },
+    [THUMB_SUBMIT_QUEUE]: async (job, log) => {
+      await resolve.thumb().handle(job, log);
     },
     [PROVIDER_COPY_CLEANUP_QUEUE]: async (_job, log) => {
       const outcome = await resolve.cleanup().run(log);
