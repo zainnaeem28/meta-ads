@@ -12,26 +12,57 @@ const NOW = '2026-11-14T22:40:00.000Z';
 const U1 = '8f3a0000-0000-4000-8000-00000000c21d';
 const meta = { requestId: 'req-flow13', timestamp: NOW };
 const usage = (provider: string, calls: number, failed: number, cost: string, p95: number) => ({
-  provider, calls, succeeded: calls - failed, failed, rejected: 0, unconfirmed: 0,
-  estimatedCostUsd: cost, latencyP50Ms: p95 / 2, latencyP95Ms: p95,
+  provider,
+  calls,
+  succeeded: calls - failed,
+  failed,
+  rejected: 0,
+  unconfirmed: 0,
+  estimatedCostUsd: cost,
+  latencyP50Ms: p95 / 2,
+  latencyP95Ms: p95,
 });
 const REPORT = {
-  from: '2026-10-15T00:00:00.000Z', to: NOW, asOf: NOW, empty: false, costBasis: 'estimate_from_configured_price_table',
-  accounts: [{ userId: U1, providers: [usage('wavespeed', 402, 14, '201.4000', 94000), usage('openai', 318, 4, '38.2000', 6100)] }],
-  providers: [usage('wavespeed', 402, 14, '201.4000', 94000), usage('openai', 318, 4, '38.2000', 6100)],
+  from: '2026-10-15T00:00:00.000Z',
+  to: NOW,
+  asOf: NOW,
+  empty: false,
+  costBasis: 'estimate_from_configured_price_table',
+  accounts: [
+    {
+      userId: U1,
+      providers: [
+        usage('wavespeed', 402, 14, '201.4000', 94000),
+        usage('openai', 318, 4, '38.2000', 6100),
+      ],
+    },
+  ],
+  providers: [
+    usage('wavespeed', 402, 14, '201.4000', 94000),
+    usage('openai', 318, 4, '38.2000', 6100),
+  ],
   jobStates: { succeeded: 512, failed: 23, in_progress: 4 },
   claimChecks: [{ class: 'high_risk', raised: 21, closedByEdit: 21, clearedWithReason: 0 }],
 };
 const ok = (data: unknown) => ({ status: 200, body: { success: true, data, metaData: meta } });
-const failure = (status: number, code: string) => ({ status, body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta } });
+const failure = (status: number, code: string) => ({
+  status,
+  body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta },
+});
 type Answer = { status: number; body: unknown };
 
 const signedIn = async (context: BrowserContext, baseURL: string) =>
-  context.addCookies([{
-    name: LOCAL_SESSION_COOKIE,
-    value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + 600 }),
-    url: baseURL,
-  }]);
+  context.addCookies([
+    {
+      name: LOCAL_SESSION_COOKIE,
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      }),
+      url: baseURL,
+    },
+  ]);
 
 /** Answers API-130 from `answer` (called per request); `passThrough` relays to the running api instead. */
 async function api(page: Page, answer: (n: number, search: URLSearchParams) => Answer | 'real') {
@@ -45,7 +76,14 @@ async function api(page: Page, answer: (n: number, search: URLSearchParams) => A
       'access-control-expose-headers': 'x-request-id,etag',
     };
     if (request.method() === 'OPTIONS') {
-      return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*' } });
+      return route.fulfill({
+        status: 204,
+        headers: {
+          ...cors,
+          'access-control-allow-headers':
+            (await request.headerValue('access-control-request-headers')) ?? '*',
+        },
+      });
     }
     const url = new URL(request.url());
     calls.push(`${request.method()} ${url.pathname}${url.search}`);
@@ -54,12 +92,20 @@ async function api(page: Page, answer: (n: number, search: URLSearchParams) => A
       const response = await route.fetch();
       return route.fulfill({ response, headers: { ...response.headers(), ...cors } });
     }
-    return route.fulfill({ status: a.status, headers: cors, contentType: 'application/json', body: JSON.stringify(a.body) });
+    return route.fulfill({
+      status: a.status,
+      headers: cors,
+      contentType: 'application/json',
+      body: JSON.stringify(a.body),
+    });
   });
   return calls;
 }
 
-const VIEWPORTS = [{ name: '390', width: 390, height: 844 }, { name: '1440', width: 1440, height: 900 }] as const;
+const VIEWPORTS = [
+  { name: '390', width: 390, height: 844 },
+  { name: '1440', width: 1440, height: 900 },
+] as const;
 
 for (const { name, width, height } of VIEWPORTS) {
   test.describe(`@TASK-114 @TC-FLW-13 FLOW-13 admin usage report at ${name} px`, () => {
@@ -73,10 +119,15 @@ for (const { name, width, height } of VIEWPORTS) {
       await page.evaluate(() => document.fonts.ready);
       if (axe) await expectNoAxeViolations(page, `${evidence}/axe/${label}-${name}.json`);
       mkdirSync(`${evidence}/screenshots`, { recursive: true });
-      await page.screenshot({ path: `${evidence}/screenshots/${label}-${name}.png`, fullPage: true });
+      await page.screenshot({
+        path: `${evidence}/screenshots/${label}-${name}.png`,
+        fullPage: true,
+      });
     };
 
-    test('open the report, change the window by keyboard, carry it in the URL and keep it on reload and back', async ({ page }) => {
+    test('open the report, change the window by keyboard, carry it in the URL and keep it on reload and back', async ({
+      page,
+    }) => {
       const calls = await api(page, () => ok(REPORT));
       await page.goto('/admin/accounts');
       await page.goto('/admin/usage');
@@ -106,7 +157,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await expect(page).toHaveURL(/\/admin\/accounts/);
     });
 
-    test('a window above 366 days is refused with the limit and no request; a valid one then succeeds', async ({ page }) => {
+    test('a window above 366 days is refused with the limit and no request; a valid one then succeeds', async ({
+      page,
+    }) => {
       const calls = await api(page, () => ok(REPORT));
       await page.goto('/admin/usage');
       await expect(page.getByRole('table', { name: 'By account and provider' })).toBeVisible();
@@ -127,18 +180,24 @@ for (const { name, width, height } of VIEWPORTS) {
     });
 
     test('the api refusing a window (422) shows the limit, never a report', async ({ page }) => {
-      await api(page, (_n, s) => (s.has('from') ? failure(422, 'report_window_too_large') : ok(REPORT)));
+      await api(page, (_n, s) =>
+        s.has('from') ? failure(422, 'report_window_too_large') : ok(REPORT),
+      );
       await page.goto('/admin/usage?from=2026-10-01&to=2026-10-31');
       await expect(page.getByText('Choose a window of 366 days or fewer.')).toBeVisible();
       await expect(page.getByRole('table', { name: 'Brand checks' })).toHaveCount(0);
       await shot(page, 'window-refused-by-api');
     });
 
-    test('a failed source shows the error state, then Try again shows the report', async ({ page }) => {
+    test('a failed source shows the error state, then Try again shows the report', async ({
+      page,
+    }) => {
       let down = true;
       await api(page, () => (down ? failure(503, 'service_unavailable') : ok(REPORT)));
       await page.goto('/admin/usage');
-      await expect(page.getByRole('heading', { name: 'The report could not be built' })).toBeVisible({ timeout: 15_000 });
+      await expect(
+        page.getByRole('heading', { name: 'The report could not be built' }),
+      ).toBeVisible({ timeout: 15_000 });
       await expect(page.getByText('US$')).toHaveCount(0);
       await shot(page, 'error');
       down = false;
@@ -146,7 +205,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await expect(page.getByRole('table', { name: 'Brand checks' })).toBeVisible();
     });
 
-    test('a non-admin gets 403 and the unavailable state with no administration navigation', async ({ page }) => {
+    test('a non-admin gets 403 and the unavailable state with no administration navigation', async ({
+      page,
+    }) => {
       await api(page, () => failure(403, 'forbidden_role'));
       await page.goto('/admin/usage');
       await expect(page.getByText('Administration is not available')).toBeVisible();
@@ -155,7 +216,9 @@ for (const { name, width, height } of VIEWPORTS) {
       await shot(page, 'non-admin-unavailable');
     });
 
-    test('session expiry: the running api answers 401 without a bearer and the user goes to sign-in with a return path', async ({ page }) => {
+    test('session expiry: the running api answers 401 without a bearer and the user goes to sign-in with a return path', async ({
+      page,
+    }) => {
       const calls = await api(page, () => 'real');
       await page.goto('/admin/usage?from=2026-10-01&to=2026-10-31');
       await page.waitForURL('**/sign-in**');
