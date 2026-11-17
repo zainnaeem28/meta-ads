@@ -29,7 +29,6 @@ import type { Assembly } from '@shroomap/contracts';
 const evidence = process.env.EVIDENCE_DIR ?? '../../docs/evidence/TASK-107';
 const FINAL_URL = `/campaigns/${CAMPAIGN_ID}/final`;
 const CLIPS_URL = `/campaigns/${CAMPAIGN_ID}/clips`;
-const T = '2026-11-17T09:00:00Z';
 const FFMPEG = process.env.FFMPEG_PATH ?? 'ffmpeg';
 const FINAL_MEDIA = mediaId(9);
 
@@ -95,7 +94,7 @@ const world = (over: Partial<World> = {}): World => ({
 
 const current = (w: World) => w.created ?? w.existing;
 
-function answer(w: World, method: string, path: string, body: unknown, origin: string): Answer | 'media' {
+function answer(w: World, method: string, path: string, body: unknown): Answer | 'media' {
   if (w.unavailable && path.startsWith('/campaigns/')) return failure(404, 'not_found');
   if (method === 'GET' && path === '/me/provider-keys') return ok(keyRows());
   if (method === 'GET' && path === `/campaigns/${CAMPAIGN_ID}`) {
@@ -184,7 +183,7 @@ async function api(page: Page, w: World, real = false) {
     const url = new URL(request.url());
     const path = url.pathname.replace('/api/v1', '');
     w.calls.push(`${request.method()} ${path}`);
-    const a = real ? 'real' : answer(w, request.method(), path, request.method() === 'GET' ? null : request.postDataJSON(), origin);
+    const a = real ? 'real' : answer(w, request.method(), path, request.method() === 'GET' ? null : request.postDataJSON());
     if (a === 'real') {
       const response = await route.fetch();
       return route.fulfill({ response, headers: { ...response.headers(), ...cors } });

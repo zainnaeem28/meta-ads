@@ -47,6 +47,12 @@ ba405a0c437230c6ba121e451e9dfda596a907d5:docs/evidence/TASK-112/submit-check.md:
 ba405a0c437230c6ba121e451e9dfda596a907d5:docs/evidence/TASK-112/submit-check.md:openai-key-shaped:41
 2eb06dd6ec63c340d7938ce62be0017759fe76fc:docs/evidence/TASK-108/submit-check.md:openai-key-shaped:3
 2eb06dd6ec63c340d7938ce62be0017759fe76fc:docs/evidence/TASK-108/submit-check.md:openai-key-shaped:42
+# False positive: the ticket branch name (task-114-...) matches the key shape in an earlier TASK-114 report (no credential)
+316d048475495b85205ee5ba0546c23d71375b39:docs/evidence/TASK-114/submit-check.md:openai-key-shaped:3
+316d048475495b85205ee5ba0546c23d71375b39:docs/evidence/TASK-114/submit-check.md:openai-key-shaped:10
+316d048475495b85205ee5ba0546c23d71375b39:docs/evidence/TASK-114/submit-check.md:openai-key-shaped:30
+316d048475495b85205ee5ba0546c23d71375b39:docs/evidence/TASK-114/submit-check.md:openai-key-shaped:32
+316d048475495b85205ee5ba0546c23d71375b39:docs/evidence/TASK-114/submit-check.md:openai-key-shaped:65
 8d573b550474dc760c6e5eb17ec7456db03ee9b6:docs/evidence/TASK-107/submit-check.md:openai-key-shaped:41
 5705b1e422ae668f03fcd2c2de79b0c653aeaa0e:docs/evidence/TASK-108/submit-check.md:openai-key-shaped:3
 5705b1e422ae668f03fcd2c2de79b0c653aeaa0e:docs/evidence/TASK-108/submit-check.md:openai-key-shaped:42
