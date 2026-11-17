@@ -18,16 +18,40 @@ const MFA_CHAIN = `/mfa?step=enrol&return=${encodeURIComponent('/campaigns')}`;
 const id = (n: number) => `c0000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 const campaign = (n: number, name: string) => ({
-  id: id(n), productName: name, productDescriptionExcerpt: 'Description', progress: 'processing', briefState: 'accepted',
-  segmentCount: 3, finalAvailable: false, createdAt: '2026-11-15T12:00:00.000Z', updatedAt: '2026-11-16T11:48:00.000Z',
+  id: id(n),
+  productName: name,
+  productDescriptionExcerpt: 'Description',
+  progress: 'processing',
+  briefState: 'accepted',
+  segmentCount: 3,
+  finalAvailable: false,
+  createdAt: '2026-11-15T12:00:00.000Z',
+  updatedAt: '2026-11-16T11:48:00.000Z',
 });
 const ROWS = [campaign(1, 'Morning Focus Blend'), campaign(2, 'Evening Calm Gummies')];
 
 type Answer = { status: number; body: unknown };
-const ok = (data: unknown, extra: Record<string, unknown> = {}): Answer => ({ status: 200, body: { success: true, data, metaData: { ...meta, ...extra } } });
-const failure = (status: number, code: string): Answer => ({ status, body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta } });
-const linked = ok({ linkState: 'linked', id: id(99), role: 'user', status: 'active', mfa: { required: true, satisfied: true }, recentAuth: { satisfied: true, maxAgeSeconds: 600 }, keyNotices: [] });
-const notLinked = ok({ linkState: 'not_linked', accessRequest: { formEnabled: true, state: 'none' } });
+const ok = (data: unknown, extra: Record<string, unknown> = {}): Answer => ({
+  status: 200,
+  body: { success: true, data, metaData: { ...meta, ...extra } },
+});
+const failure = (status: number, code: string): Answer => ({
+  status,
+  body: { success: false, error: { code, message: 'Refused.', details: [] }, metaData: meta },
+});
+const linked = ok({
+  linkState: 'linked',
+  id: id(99),
+  role: 'user',
+  status: 'active',
+  mfa: { required: true, satisfied: true },
+  recentAuth: { satisfied: true, maxAgeSeconds: 600 },
+  keyNotices: [],
+});
+const notLinked = ok({
+  linkState: 'not_linked',
+  accessRequest: { formEnabled: true, state: 'none' },
+});
 
 interface Api {
   /** What the campaign list (API-040) answers; `me` answers API-001. */
@@ -49,7 +73,14 @@ async function api(page: Page, a: Api = {}) {
       'access-control-expose-headers': 'x-request-id,etag,retry-after',
     };
     if (request.method() === 'OPTIONS') {
-      return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*' } });
+      return route.fulfill({
+        status: 204,
+        headers: {
+          ...cors,
+          'access-control-allow-headers':
+            (await request.headerValue('access-control-request-headers')) ?? '*',
+        },
+      });
     }
     const url = new URL(request.url());
     calls.push(`${request.method()} ${url.pathname.replace('/api/v1', '')}`);
@@ -60,20 +91,52 @@ async function api(page: Page, a: Api = {}) {
     let answer: Answer;
     if (url.pathname.endsWith('/me/provider-keys')) answer = ok([]);
     else if (url.pathname.endsWith('/me')) answer = a.me ?? linked;
-    else if (url.pathname.endsWith('/drafts')) answer = ok([], { pagination: { type: 'cursor', limit: 10, returnedCount: 0, hasNextPage: false, nextCursor: null } });
+    else if (url.pathname.endsWith('/drafts'))
+      answer = ok([], {
+        pagination: {
+          type: 'cursor',
+          limit: 10,
+          returnedCount: 0,
+          hasNextPage: false,
+          nextCursor: null,
+        },
+      });
     else if (url.pathname.endsWith('/campaigns')) {
-      answer = a.campaigns ?? ok(ROWS, { pagination: { type: 'cursor', limit: 10, returnedCount: ROWS.length, hasNextPage: false, nextCursor: null } });
+      answer =
+        a.campaigns ??
+        ok(ROWS, {
+          pagination: {
+            type: 'cursor',
+            limit: 10,
+            returnedCount: ROWS.length,
+            hasNextPage: false,
+            nextCursor: null,
+          },
+        });
     } else answer = failure(404, 'not_found');
-    return route.fulfill({ status: answer.status, headers: cors, contentType: 'application/json', body: JSON.stringify(answer.body) });
+    return route.fulfill({
+      status: answer.status,
+      headers: cors,
+      contentType: 'application/json',
+      body: JSON.stringify(answer.body),
+    });
   });
   return calls;
 }
 
-const sessionFor = (exp: number) => signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp });
-const signedIn = async (context: BrowserContext, baseURL: string, exp = Math.floor(Date.now() / 1000) + 600) =>
+const sessionFor = (exp: number) =>
+  signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp });
+const signedIn = async (
+  context: BrowserContext,
+  baseURL: string,
+  exp = Math.floor(Date.now() / 1000) + 600,
+) =>
   context.addCookies([{ name: LOCAL_SESSION_COOKIE, value: await sessionFor(exp), url: baseURL }]);
 
-const VIEWPORTS = [{ name: '390', width: 390, height: 844 }, { name: '1440', width: 1440, height: 900 }] as const;
+const VIEWPORTS = [
+  { name: '390', width: 390, height: 844 },
+  { name: '1440', width: 1440, height: 900 },
+] as const;
 
 for (const { name, width, height } of VIEWPORTS) {
   test.describe(`@TASK-108 @TC-FLW-05 FLOW-05 sign in and MFA at ${name} px`, () => {
@@ -82,13 +145,18 @@ for (const { name, width, height } of VIEWPORTS) {
     const shot = async (page: Page, label: string) => {
       await page.evaluate(async () => {
         window.scrollTo(0, 0);
-        await Promise.all(['400', '500', '600', '700'].map((x) => document.fonts.load(`${x} 16px Inter`)));
+        await Promise.all(
+          ['400', '500', '600', '700'].map((x) => document.fonts.load(`${x} 16px Inter`)),
+        );
         await document.fonts.ready;
       });
       await expectNoAxeViolations(page, `${evidence}/axe/${label}-${name}.json`);
       mkdirSync(`${evidence}/screenshots`, { recursive: true });
       const hide = await page.addStyleTag({ content: '.fixed { visibility: hidden !important; }' });
-      await page.screenshot({ path: `${evidence}/screenshots/${label}-${name}.png`, fullPage: true });
+      await page.screenshot({
+        path: `${evidence}/screenshots/${label}-${name}.png`,
+        fullPage: true,
+      });
       await hide.evaluate((el) => el.remove());
     };
     const fillSignIn = async (page: Page, password = LOCAL_DEV_PASSWORD) => {
@@ -96,13 +164,17 @@ for (const { name, width, height } of VIEWPORTS) {
       await page.getByLabel('Password').fill(password);
     };
 
-    test('the whole journey: requested URL kept, sign in, two-step enrol with a wrong then the right code, then the campaigns', async ({ page }) => {
+    test('the whole journey: requested URL kept, sign in, two-step enrol with a wrong then the right code, then the campaigns', async ({
+      page,
+    }) => {
       await api(page);
       // 1. An anonymous visit to a deep link goes to SCREEN-001 with the requested URL as the return path.
       await page.goto('/campaigns?tab=drafts');
       await page.waitForURL('**/sign-in**');
       expect(new URL(page.url()).searchParams.get('return')).toBe('/campaigns?tab=drafts');
-      await expect(page.getByRole('heading', { level: 1, name: 'AI UGC Ad Director' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'AI UGC Ad Director' }),
+      ).toBeVisible();
       await expect(page.getByText('Your session ended.')).toHaveCount(0);
       await shot(page, '1-sign-in');
 
@@ -125,8 +197,12 @@ for (const { name, width, height } of VIEWPORTS) {
       await fillSignIn(page);
       await page.getByRole('button', { name: 'Continue' }).click();
       await page.waitForURL('**/mfa?**');
-      await expect(page.getByRole('heading', { level: 1, name: 'Set up two-step verification' })).toBeVisible();
-      await expect(page.getByTestId('mfa-recovery')).toContainText('Recovery needs another second factor');
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Set up two-step verification' }),
+      ).toBeVisible();
+      await expect(page.getByTestId('mfa-recovery')).toContainText(
+        'Recovery needs another second factor',
+      );
       await shot(page, '3-mfa-enrol');
       await page.getByLabel('6-digit code').fill('111111');
       await page.getByRole('button', { name: 'Verify and continue' }).click();
@@ -141,18 +217,29 @@ for (const { name, width, height } of VIEWPORTS) {
 
       // 5. A returning user meets the challenge (not the enrol copy) and the same screen leads on.
       await page.goto('/mfa?return=%2Fcampaigns');
-      await expect(page.getByRole('heading', { level: 1, name: 'Two-step verification' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Two-step verification' }),
+      ).toBeVisible();
       await shot(page, '6-mfa-challenge');
     });
 
-    test('identity not linked: the account has no access yet (SCREEN-002), the request form, and Back to sign in', async ({ page, context, baseURL }) => {
+    test('identity not linked: the account has no access yet (SCREEN-002), the request form, and Back to sign in', async ({
+      page,
+      context,
+      baseURL,
+    }) => {
       await signedIn(context, baseURL!);
       const calls = await api(page, { me: notLinked, campaigns: failure(403, 'not_linked') });
       await page.goto('/campaigns');
       await page.waitForURL('**/access?state=not-linked');
-      await expect(page.getByRole('heading', { level: 1, name: 'This account has no access yet' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'This account has no access yet' }),
+      ).toBeVisible();
       await expect(page.getByRole('button', { name: 'Request access' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute('href', /\/sign-in/);
+      await expect(page.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute(
+        'href',
+        /\/sign-in/,
+      );
       expect(calls).toContain('GET /me');
       expect(calls).toContain('GET /campaigns');
       await shot(page, '7-not-linked');
@@ -160,7 +247,11 @@ for (const { name, width, height } of VIEWPORTS) {
       await page.waitForURL('**/sign-in**');
     });
 
-    test('the two-step requirement from the api (mfa_required) sends the user to SCREEN-003 with the requirement shown', async ({ page, context, baseURL }) => {
+    test('the two-step requirement from the api (mfa_required) sends the user to SCREEN-003 with the requirement shown', async ({
+      page,
+      context,
+      baseURL,
+    }) => {
       await signedIn(context, baseURL!);
       await api(page, { campaigns: failure(403, 'mfa_required') });
       await page.goto('/campaigns');
@@ -173,7 +264,11 @@ for (const { name, width, height } of VIEWPORTS) {
       ['removed', 'This account has been removed'],
       ['invite-invalid', 'This invitation cannot be used'],
     ] as const) {
-      test(`invalid state ${state}: its own message, never the campaigns`, async ({ page, context, baseURL }) => {
+      test(`invalid state ${state}: its own message, never the campaigns`, async ({
+        page,
+        context,
+        baseURL,
+      }) => {
         await signedIn(context, baseURL!);
         const calls = await api(page);
         await page.goto(`/access?state=${state}`);
@@ -184,7 +279,11 @@ for (const { name, width, height } of VIEWPORTS) {
       });
     }
 
-    test('session expiry: an ended session returns to sign-in with the message and the requested page as return path', async ({ page, context, baseURL }) => {
+    test('session expiry: an ended session returns to sign-in with the message and the requested page as return path', async ({
+      page,
+      context,
+      baseURL,
+    }) => {
       await signedIn(context, baseURL!, Math.floor(Date.now() / 1000) - 60);
       await api(page);
       await page.goto('/campaigns/new?draft=abc');
@@ -200,7 +299,11 @@ for (const { name, width, height } of VIEWPORTS) {
       await page.waitForURL('**/campaigns/new?draft=abc');
     });
 
-    test('session expiry at the door: the running api answers 401 without a bearer, nothing is shown, sign-in carries the return path', async ({ page, context, baseURL }) => {
+    test('session expiry at the door: the running api answers 401 without a bearer, nothing is shown, sign-in carries the return path', async ({
+      page,
+      context,
+      baseURL,
+    }) => {
       await signedIn(context, baseURL!);
       const calls = await api(page, { real: true });
       await page.goto('/campaigns');
@@ -210,8 +313,16 @@ for (const { name, width, height } of VIEWPORTS) {
       await expect(page.getByText('Morning Focus Blend')).toHaveCount(0);
     });
 
-    for (const unsafe of ['https://evil.example/steal', '//evil.example', '/\\evil.example', '/sign-in?return=/campaigns']) {
-      test(`unsafe return path ${unsafe} is ignored: sign-in lands on the campaigns, never off-site`, async ({ page, baseURL }) => {
+    for (const unsafe of [
+      'https://evil.example/steal',
+      '//evil.example',
+      '/\\evil.example',
+      '/sign-in?return=/campaigns',
+    ]) {
+      test(`unsafe return path ${unsafe} is ignored: sign-in lands on the campaigns, never off-site`, async ({
+        page,
+        baseURL,
+      }) => {
         await api(page);
         await page.goto(`/sign-in?return=${encodeURIComponent(unsafe)}`);
         await fillSignIn(page);
@@ -225,7 +336,9 @@ for (const { name, width, height } of VIEWPORTS) {
       });
     }
 
-    test('back and cancel: browser Back from the second step returns to the campaigns with the session kept; a visit without a session cannot reach the campaigns', async ({ page }) => {
+    test('back and cancel: browser Back from the second step returns to the campaigns with the session kept; a visit without a session cannot reach the campaigns', async ({
+      page,
+    }) => {
       await api(page);
       await page.goto('/sign-in?return=%2Fcampaigns');
       await fillSignIn(page);
@@ -237,7 +350,9 @@ for (const { name, width, height } of VIEWPORTS) {
       // Cancel: leaving the second step unfinished (no code) and clearing the session sends the next visit to sign-in.
       await page.context().clearCookies();
       await page.goto('/mfa?step=enrol');
-      await expect(page.getByRole('heading', { level: 1, name: 'Set up two-step verification' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Set up two-step verification' }),
+      ).toBeVisible();
       await page.goto('/campaigns');
       await page.waitForURL('**/sign-in**');
       expect(new URL(page.url()).searchParams.get('return')).toBe('/campaigns');
