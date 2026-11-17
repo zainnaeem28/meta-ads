@@ -13,6 +13,18 @@
       "reason": "False positive: generated report whose branch name (task-103-...) matches the key-shaped rule. The branch name is redacted in the tree; only the earlier commit in history carries it. No credential exists.",
       "owner": "Integrator",
       "expires": "2026-12-16"
+    },
+    {
+      "match": "CVE-2026-112366",
+      "reason": "No fixed picomatch exists (npm latest is 4.0.7, the highest affected version; pnpm audit lists patched_versions <0.0.0), so no override or lockfile bump can clear it. picomatch@4.0.7 (ReDoS on attacker-supplied single-branch repeated extglobs) is reached only through development tooling (dependency-cruiser, tinyglobby via typescript-eslint and vite/vitest; pnpm why shows devDependencies only), not the web or api runtime bundle, and no untrusted glob reaches it. Revalidate at expiry; remove this entry as soon as a fixed version is published and bump via a pnpm override.",
+      "owner": "DevOps Engineer",
+      "expires": "2026-12-16"
+    },
+    {
+      "match": "GHSA-fc5q-39xc-vjpf",
+      "reason": "No fixed picomatch exists (npm latest is 4.0.7, the highest affected version; pnpm audit lists patched_versions <0.0.0), so no override or lockfile bump can clear it. picomatch@4.0.7 (ReDoS on attacker-supplied single-branch repeated extglobs) is reached only through development tooling (dependency-cruiser, tinyglobby via typescript-eslint and vite/vitest; pnpm why shows devDependencies only), not the web or api runtime bundle, and no untrusted glob reaches it. Revalidate at expiry; remove this entry as soon as a fixed version is published and bump via a pnpm override.",
+      "owner": "DevOps Engineer",
+      "expires": "2026-12-16"
     }
   ]
 }
