@@ -1,0 +1,28 @@
+restore drill (local): run 23c57500, work /tmp/paperclip-run-aiu-135-f86b41c5-7b9-dqU3bW/restore-drill.pTwo2O
+== provision roles and database
+   roles and database provisioned on the shared test server (run suffix 23c57500); pg_dump 17.12, server 17.11
+== migration rollback check (full history)
+   10 migrations applied with drizzle-kit migrate; 9 pre-migration snapshots restored into new databases equal their pre-migration state (structure and rows); 1 compensating forward migrations verified on copies (the others have none yet: TASK-026 fixtures hold 0001 and 0010 only)
+== seed synthetic data and sealed canary key
+   seeded 3 users, a sealed canary key row (KEK_V1, public fingerprint 2893618677d35ac31788c2faf5b4e8e71cdb62490fb32a551e5af38b37b65da4), invitation and access request of the later-erased user, 2 campaigns, 6 objects
+== backup (dump, age, media, ledger mirror)
+   dump 150970 bytes (age-encrypted, plaintext never on disk), 3 media objects in the manifest, no key material in the backup tree
+== changes after backup, erasure, disaster
+   finding F-DR-3 (not a restore defect): on the live database, as shipped, /health/ready answers 503 because app_api has no USAGE on schema drizzle and no SELECT on its ledger, which the schema-head check reads (protected routes 401 401)
+   baseline smoke on the live database with that grant: /health/ready 200; the same grant is part of the ledger rebuild on the restored copy
+   after the backup: 1 user and 1 campaign written (2 rows, lost by design), user B erased with ledger object erasure/2026-11-17T11-59-38-000Z-df4fdb6c-a95c-4bbe-b9b4-59c747e21096; live database dropped
+== restore into an empty database
+   finding F-DR-2: the dump of --schema=public does not carry extension pg_trgm, so a one-pass pg_restore fails on the trigram indexes; the drill restores in sections (pre-data, CREATE EXTENSION, data, post-data). The backup service could add --extension=pg_trgm (change request for TASK-011)
+   finding F-DR-1: the logical dump (--schema=public --schema=pgboss) carries no drizzle ledger, so a restored database reports schema head 0 and db:migrate would re-run every migration; the drill rebuilds it from the journal (identical to the lost ledger, 10 rows). The backup service should dump --schema=drizzle too (change request for TASK-011)
+   restored into a new empty database: schema history (10 migrations), row counts equal the backup moment, constraints valid, roles and grants kept, pgboss present; 3 media objects restored with matching SHA-256
+== erasure ledger reconciliation (T-22)
+   FAILED; last log lines:
+   | NOTE before reconciliation the restored database holds the user erased after the backup (as expected from an old backup)
+   | NOTE simulated fault: reconciliation skipped
+   | erased user still present after restore: 4 rows
+   before reconciliation the restored database holds the user erased after the backup (as expected from an old backup)
+   simulated fault: reconciliation skipped
+
+restore drill FAIL: restore n/as (RTO 8 h), data lost window n/as (RPO 24 h)
+record: (temporary file)
+junit:  (temporary file)
