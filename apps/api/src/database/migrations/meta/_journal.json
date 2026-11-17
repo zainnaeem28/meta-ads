@@ -64,6 +64,13 @@
       "when": 1794880406884,
       "tag": "0090_task-052-production-video",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794892786111,
+      "tag": "0060_task-058-lifecycle",
+      "breakpoints": true
     }
   ]
 }
