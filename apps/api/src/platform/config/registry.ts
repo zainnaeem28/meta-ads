@@ -151,6 +151,7 @@ export const REGISTRY = {
   EGRESS_ALLOWED_HOSTS: pub(egressHosts, AW, {
     default: '{"openai":["api.openai.com"],"wavespeed":["api.wavespeed.ai"]}',
   }),
+  WORKER_PROVIDER_ORIGIN_OVERRIDE: pub(httpsUrl, W),
   WAVESPEED_MODEL_I2V: pub(pathSafe, W, { default: 'bytedance/seedance-2.0/image-to-video' }),
   WAVESPEED_MODEL_T2V: pub(pathSafe, W, { default: 'bytedance/seedance-2.0/text-to-video' }),
   VIDEO_RESOLUTION: pub(en(['480p', '720p', '1080p']), W, { default: '1080p' }),

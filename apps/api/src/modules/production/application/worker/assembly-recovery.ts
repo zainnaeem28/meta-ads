@@ -22,13 +22,23 @@ type Boss = Parameters<typeof enqueue>[0];
  *   `fetching`; one that has used all its attempts ends `render_failed` instead.
  * A message is not added while one is waiting, retrying or running for the job.
  */
-export function assemblyRecoveryHooks(deps: { readonly boss: Boss; readonly config: AssemblyWorkerConfig }): SweepHook[] {
+export function assemblyRecoveryHooks(deps: {
+  readonly boss: Boss;
+  readonly config: AssemblyWorkerConfig;
+}): SweepHook[] {
   const { boss, config } = deps;
   const noMessage = sql`not exists (select 1 from pgboss.job p where p.name = ${ASSEMBLY_RENDER_QUEUE} and (p.singleton_key = a.id::text or p.data->>'jobId' = a.id::text) and p.state in ('created', 'retry', 'active'))`;
-  const send = async (tx: Parameters<SweepHook['run']>[0], ids: readonly string[]): Promise<number> => {
+  const send = async (
+    tx: Parameters<SweepHook['run']>[0],
+    ids: readonly string[],
+  ): Promise<number> => {
     let enqueued = 0;
     for (const id of ids) {
-      if ((await enqueue(boss, tx, ASSEMBLY_RENDER_QUEUE, { jobId: id }, { singletonKey: id })) !== null) enqueued += 1;
+      if (
+        (await enqueue(boss, tx, ASSEMBLY_RENDER_QUEUE, { jobId: id }, { singletonKey: id })) !==
+        null
+      )
+        enqueued += 1;
     }
     return enqueued;
   };
@@ -42,7 +52,11 @@ export function assemblyRecoveryHooks(deps: { readonly boss: Boss; readonly conf
             order by a.updated_at limit ${BATCH}`,
       );
       const ids = (waiting.rows as { id: string }[]).map((row) => row.id);
-      if (ids.length > 0) await tx.update(assemblyJobs).set({ state: 'queued', updatedAt: sql`now()` }).where(and(inArray(assemblyJobs.id, ids), eq(assemblyJobs.state, 'pending')));
+      if (ids.length > 0)
+        await tx
+          .update(assemblyJobs)
+          .set({ state: 'queued', updatedAt: sql`now()` })
+          .where(and(inArray(assemblyJobs.id, ids), eq(assemblyJobs.state, 'pending')));
       return { swept: await send(tx, ids) };
     },
   };
@@ -55,7 +69,12 @@ export function assemblyRecoveryHooks(deps: { readonly boss: Boss; readonly conf
               and a.attempts < ${config.maxAttempts} and ${noMessage}
             order by a.lease_until limit ${BATCH}`,
       );
-      return { swept: await send(tx, (abandoned.rows as { id: string }[]).map((row) => row.id)) };
+      return {
+        swept: await send(
+          tx,
+          (abandoned.rows as { id: string }[]).map((row) => row.id),
+        ),
+      };
     },
   };
   const exhausted: SweepHook = {

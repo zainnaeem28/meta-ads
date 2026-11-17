@@ -11,10 +11,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shroomap-local}
       POSTGRES_DB: ${POSTGRES_DB:-shroomap_dev}
-    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    ports: ['127.0.0.1:${POSTGRES_PORT:-5432}:5432']
+    volumes: ['pgdata:/var/lib/postgresql/data']
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 5s
       timeout: 3s
       retries: 12
@@ -26,9 +26,9 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-shroomap-local}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-shroomap-local-secret}
     ports:
-      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes: ["miniodata:/data"]
+      - '127.0.0.1:${MINIO_PORT:-9000}:9000'
+      - '127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001'
+    volumes: ['miniodata:/data']
 
   minio-init:
     image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
@@ -37,22 +37,22 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-shroomap-local}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-shroomap-local-secret}
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: ['/bin/sh', '-c']
     command:
       - until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do sleep 1; done && mc mb --ignore-existing local/app local/ledger
-    restart: "no"
+    restart: 'no'
 
   stubs:
     build:
       context: ..
       dockerfile: docker/Dockerfile.stubs
-    ports: ["127.0.0.1:${STUB_PORT:-8089}:8089"]
+    ports: ['127.0.0.1:${STUB_PORT:-8089}:8089']
 
   mail:
     image: axllent/mailpit:v1.27.8@sha256:6abc8e633df15eaf785cfcf38bae48e66f64beecdc03121e249d0f9ec15f0707
     ports:
-      - "127.0.0.1:${MAIL_SMTP_PORT:-1025}:1025"
-      - "127.0.0.1:${MAIL_UI_PORT:-8025}:8025"
+      - '127.0.0.1:${MAIL_SMTP_PORT:-1025}:1025'
+      - '127.0.0.1:${MAIL_UI_PORT:-8025}:8025'
 
 volumes:
   pgdata:

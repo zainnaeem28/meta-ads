@@ -19,7 +19,11 @@ type Boss = Parameters<typeof enqueue>[0];
  * refusal (its estimate was reserved with the clip) and no key stamped, so the handler uses whatever OpenAI key the owner
  * has when it runs. Once per clip: a clip that already has a run gets none. Returns the run ID, or null when none was made.
  */
-export async function startFirstQc(boss: Boss, tx: DbTx, input: { readonly ownerId: string; readonly videoJobId: string }): Promise<string | null> {
+export async function startFirstQc(
+  boss: Boss,
+  tx: DbTx,
+  input: { readonly ownerId: string; readonly videoJobId: string },
+): Promise<string | null> {
   const id = newId();
   const inserted = await tx.execute(
     sql`insert into qc_runs (id, owner_id, video_job_id, reuse_hash, deadline_at)

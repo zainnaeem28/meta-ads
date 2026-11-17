@@ -92,6 +92,20 @@ If `DATABASE_URL` is already set in your shell, unset it (`unset DATABASE_URL`):
 
 `NEXT_PUBLIC_*` values are inlined into the web build, which is why `web.env` is loaded for it. The api builds to `apps/api/dist`.
 
+### Local token route (local mode only)
+
+With `IDENTITY_MODE=local` and `APP_ENV=development` or `test`, the api's own in-process identity provider signs the session tokens it verifies, so no other process could get one. For a local-mode web, a script or an end-to-end test, the api serves `POST /api/v1/dev/token` (no Authorization header):
+
+```bash
+curl -s -X POST http://localhost:4000/api/v1/dev/token -H 'content-type: application/json' -d '{"email":"owner@example.test"}'
+# {"success":true,"data":{"token":"<jwt>","sub":"user_local_...","email":"owner@example.test","expiresInSeconds":3600}}
+curl -s http://localhost:4000/api/v1/me -H "authorization: Bearer <jwt>"
+```
+
+The body is `{ "email": "<address>", "secondFactor": true|false }` (`secondFactor` defaults to `true`; `false` mints a token with no second-factor evidence, `fva` `[0,-1]`). The route mints a token for that address (one stable subject per address) and registers it with the local provider; the account is then linked by the normal first-token rules (`OWNER_EMAIL` becomes the first administrator, `INVITE_EMAIL_DOMAINS`, invitations and signup mode apply). Tokens carry the same claims as real ones (`iss`, `sub`, `sid`, `iat`, `exp` one hour, `fva`, `azp` = `WEB_ORIGIN`), and every check still runs: signature, issuer, expiry, `azp`, role and status read from the database, MFA, recent authentication and rate limits. The route is not mounted with `IDENTITY_MODE=clerk`, and the process refuses to start with `IDENTITY_MODE=local` when `APP_ENV` is `staging` or `production`. It lives in the api process only: the worker has its own local provider and does not accept these tokens.
+
+The local-mode web (`AUTH_MODE=local`, no Clerk key) uses this route for you: its own `GET /local-token` (answers only in local mode, 404 otherwise) exchanges the signed-in local session for the api token server-side, and the browser sends it as the bearer, cached until shortly before it expires. Run the api with `IDENTITY_MODE=local` and set `NEXT_PUBLIC_API_ORIGIN` to it (default `http://localhost:4000`); nothing else changes in the web steps. With a Clerk key the Clerk session token is the bearer and `/local-token` does not exist in effect.
+
 ## 6. Migrate and seed
 
 Order is fixed (release order, `docs/ops/release.md`): `db:migrate`, `jobs:migrate`, `db:seed`.
@@ -142,6 +156,20 @@ curl -s -o /dev/null -w 'web sign-in %{http_code}\n' http://localhost:3000/sign-
 ```
 
 Expected: `live 200`, `ready 200`, `401`, `200`. `/health/ready` answers 200 only when PostgreSQL answers, pg-boss is installed, the applied migration count is within `MIN_SCHEMA_HEAD`..`MAX_SCHEMA_HEAD` and the configuration is valid. Open `http://localhost:3000/sign-in`: in local mode the page shows the local password and the local second-step code. The first administrator is the account whose email equals `OWNER_EMAIL` (set it in `.env.local.d/api.env` before the first sign-in; `ops first-admin:reopen` re-arms the link).
+
+### Pointing the worker at the provider stubs (test seam)
+
+The built worker (`node dist/main.worker.js`) calls `https://api.wavespeed.ai` and `https://api.openai.com` (the QC transcription and the thumbnail image). To run it against `tools/provider-stubs` set, in the worker's environment:
+
+```bash
+APP_ENV=test                                   # or development; the setting is refused (start-up stops) in staging and production
+WORKER_PROVIDER_ORIGIN_OVERRIDE=https://provider-stubs.internal
+EGRESS_ALLOWED_HOSTS='{"openai":["api.openai.com","provider-stubs.internal"],"wavespeed":["api.wavespeed.ai","provider-stubs.internal"]}'
+```
+
+The override is not an open redirect. It must be a bare `https` origin (a DNS name, port 443, no path, query or credentials), and its host must be named exactly, with no wildcard, under both `openai` and `wavespeed` in `EGRESS_ALLOWED_HOSTS`; otherwise the worker refuses to start. Every call still goes through the egress layer, which checks the host, the resolved address and the redirects as for the real providers. The stub must therefore be reachable as that name over TLS on port 443 (put a TLS front in front of the stub and trust its CA with `NODE_EXTRA_CA_CERTS`). Names that resolve to loopback or private addresses are refused by the egress layer's address check outside the in-process tests.
+
+The S3 endpoint override already exists: `R2_ENDPOINT` (and `STORAGE_PUBLIC_ORIGIN` for the api) takes any URL, including MinIO's `http://localhost:9000`, in development and test; staging and production require https.
 
 `next start` prints a warning that `output: standalone` prefers `node .next/standalone/server.js`; the container image does that, `next start` is the local shortcut.
 

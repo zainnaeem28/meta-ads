@@ -12,7 +12,11 @@ const signedIn = async (context: BrowserContext, baseURL: string) =>
   context.addCookies([
     {
       name: LOCAL_SESSION_COOKIE,
-      value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + 600 }),
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      }),
       url: baseURL,
     },
   ]);
@@ -25,7 +29,12 @@ const settings = (over: Record<string, unknown> = {}) =>
       accessRequestFormEnabled: false,
       mfaRequiredFor: 'all',
       inviteEmailDomains: [],
-      openModePrerequisites: { emailVerificationRequired: false, signupRateLimitEnabled: false, abuseLimitsEnabled: false, verificationRecordId: null },
+      openModePrerequisites: {
+        emailVerificationRequired: false,
+        signupRateLimitEnabled: false,
+        abuseLimitsEnabled: false,
+        verificationRecordId: null,
+      },
       ...over,
     },
     metaData: { requestId: 'req-e2e-13' },
@@ -42,7 +51,11 @@ const refusal = JSON.stringify({
 });
 
 type Reply = (o: Parameters<Route['fulfill']>[0]) => Promise<void>;
-type Handler = (route: { fulfill: Reply; body: () => string | null }, method: string, path: string) => Promise<void> | void;
+type Handler = (
+  route: { fulfill: Reply; body: () => string | null },
+  method: string,
+  path: string,
+) => Promise<void> | void;
 
 // The built web app calls the api origin. The api sets no CORS headers yet, so browser requests are relayed through the
 // route handler, which adds them; the two admin operations are scripted (contract-shaped) because the local test
@@ -59,7 +72,11 @@ async function relay(page: Page, scripted?: Handler) {
     if (request.method() === 'OPTIONS') {
       return route.fulfill({
         status: 204,
-        headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*' },
+        headers: {
+          ...cors,
+          'access-control-allow-headers':
+            (await request.headerValue('access-control-request-headers')) ?? '*',
+        },
       });
     }
     const path = new URL(request.url()).pathname;
@@ -86,14 +103,20 @@ test.describe('@TASK-101 SCREEN-013 admin settings through the built web app', (
     await signedIn(context, baseURL!);
   });
 
-  test('real api without an administrator session sends the page to sign-in (real entry point)', async ({ page }) => {
+  test('real api without an administrator session sends the page to sign-in (real entry point)', async ({
+    page,
+  }) => {
     await relay(page);
-    await page.route('**/sign-in**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<main>Sign in stub</main>' }));
+    await page.route('**/sign-in**', (route) =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<main>Sign in stub</main>' }),
+    );
     await page.goto('/admin/settings');
     await expect(page).toHaveURL(/\/sign-in\?reason=session-expired&return=%2Fadmin%2Fsettings$/);
   });
 
-  test('default, keyboard-only save of open mode, saved toast; only API-120 and API-121 are called', async ({ page }) => {
+  test('default, keyboard-only save of open mode, saved toast; only API-120 and API-121 are called', async ({
+    page,
+  }) => {
     const calls: string[] = [];
     let mode = 'invited_only';
     await relay(page, async (route, method, path) => {
@@ -119,7 +142,9 @@ test.describe('@TASK-101 SCREEN-013 admin settings through the built web app', (
     expect(calls).toEqual(['GET ' + SETTINGS, 'PUT ' + MODE]);
   });
 
-  test('open-refused explains what is missing and keeps Invited only; the step-up dialog is keyboard operable', async ({ page }) => {
+  test('open-refused explains what is missing and keeps Invited only; the step-up dialog is keyboard operable', async ({
+    page,
+  }) => {
     let step = 0;
     await relay(page, async (route, method) => {
       if (method === 'GET') return route.fulfill(json(settings()));
@@ -127,13 +152,22 @@ test.describe('@TASK-101 SCREEN-013 admin settings through the built web app', (
       return route.fulfill(
         step === 1
           ? json(refusal, 422)
-          : json(JSON.stringify({ success: false, error: { code: 'recent_auth_required', message: 'x', details: [] }, metaData: { requestId: 'r' } }), 403),
+          : json(
+              JSON.stringify({
+                success: false,
+                error: { code: 'recent_auth_required', message: 'x', details: [] },
+                metaData: { requestId: 'r' },
+              }),
+              403,
+            ),
       );
     });
     await page.goto('/admin/settings');
     await page.locator('label', { hasText: 'Anyone can create an account' }).click();
     await page.getByRole('button', { name: 'Save sign-up mode' }).click();
-    await expect(page.getByText(/Open sign-up cannot be turned on yet\. Email verification is not enabled/)).toBeVisible();
+    await expect(
+      page.getByText(/Open sign-up cannot be turned on yet\. Email verification is not enabled/),
+    ).toBeVisible();
     await expect(page.getByRole('radio', { name: /Invited only/ })).toBeChecked();
     await page.locator('label', { hasText: 'Anyone can create an account' }).click();
     await page.getByRole('button', { name: 'Save sign-up mode' }).click();
@@ -155,7 +189,21 @@ test.describe('@TASK-101 SCREEN-013 admin settings through the built web app', (
             if (state === 'loading') await gate;
             return route.fulfill(json(settings()));
           }
-          return route.fulfill(state === 'saved' ? json(settings({ signupMode: 'open', openModePrerequisites: { emailVerificationRequired: true, signupRateLimitEnabled: true, abuseLimitsEnabled: true, verificationRecordId: 'VR-2026-04' } })) : json(refusal, 422));
+          return route.fulfill(
+            state === 'saved'
+              ? json(
+                  settings({
+                    signupMode: 'open',
+                    openModePrerequisites: {
+                      emailVerificationRequired: true,
+                      signupRateLimitEnabled: true,
+                      abuseLimitsEnabled: true,
+                      verificationRecordId: 'VR-2026-04',
+                    },
+                  }),
+                )
+              : json(refusal, 422),
+          );
         });
         await page.goto('/admin/settings');
         if (state === 'loading') {
@@ -165,14 +213,26 @@ test.describe('@TASK-101 SCREEN-013 admin settings through the built web app', (
           if (state !== 'default') {
             await page.locator('label', { hasText: 'Anyone can create an account' }).click();
             await page.getByRole('button', { name: 'Save sign-up mode' }).click();
-            await expect(page.getByText(state === 'saved' ? 'Sign-up mode saved.' : /Open sign-up cannot be turned on yet/)).toBeVisible();
+            await expect(
+              page.getByText(
+                state === 'saved' ? 'Sign-up mode saved.' : /Open sign-up cannot be turned on yet/,
+              ),
+            ).toBeVisible();
           }
         }
         await page.evaluate(() => document.fonts.ready);
-        await expectNoAxeViolations(page, `${evidence}/axe/${info.project.name}-${state}-${name}.json`);
+        await expectNoAxeViolations(
+          page,
+          `${evidence}/axe/${info.project.name}-${state}-${name}.json`,
+        );
         mkdirSync(`${evidence}/screenshots`, { recursive: true });
-        await page.screenshot({ path: `${evidence}/screenshots/${state}-${name}.png`, fullPage: true });
-        await expect(page).toHaveScreenshot(`fe-screen-013-${state}-${name}.png`, { fullPage: true });
+        await page.screenshot({
+          path: `${evidence}/screenshots/${state}-${name}.png`,
+          fullPage: true,
+        });
+        await expect(page).toHaveScreenshot(`fe-screen-013-${state}-${name}.png`, {
+          fullPage: true,
+        });
         release();
       });
     }

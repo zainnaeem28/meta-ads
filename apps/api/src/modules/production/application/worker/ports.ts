@@ -81,7 +81,11 @@ export interface VideoJobRow {
   readonly segmentRevision: number;
   readonly referenceMediaId: string | null;
   readonly providerModel: string;
-  readonly options: { readonly durationSeconds: number; readonly resolution: string; readonly aspectRatio: string };
+  readonly options: {
+    readonly durationSeconds: number;
+    readonly resolution: string;
+    readonly aspectRatio: string;
+  };
   readonly state: string;
   readonly keyId: string | null;
   readonly keyVersion: number | null;
@@ -109,7 +113,12 @@ export interface SealedKeyRow {
 export interface KeyOpener {
   unseal(
     sealed: SealedKeyRow['sealed'],
-    aad: { readonly userId: string; readonly provider: 'openai' | 'wavespeed'; readonly keyId: string; readonly version: number },
+    aad: {
+      readonly userId: string;
+      readonly provider: 'openai' | 'wavespeed';
+      readonly keyId: string;
+      readonly version: number;
+    },
   ): Buffer;
 }
 export const KEY_OPENER = Symbol('KEY_OPENER');
@@ -146,7 +155,10 @@ export interface VideoWorkerRepository {
   findJob(tx: DbTx, jobId: string): Promise<VideoJobRow | null>;
   findKey(tx: DbTx, keyId: string): Promise<SealedKeyRow | null>;
   /** The segment's text as it is now. */
-  findSegmentText(tx: DbTx, segmentId: string): Promise<{ readonly prompt: string; readonly dialogue: string } | null>;
+  findSegmentText(
+    tx: DbTx,
+    segmentId: string,
+  ): Promise<{ readonly prompt: string; readonly dialogue: string } | null>;
   /** True while the campaign exists and is not being deleted. */
   campaignActive(tx: DbTx, campaignId: string): Promise<boolean>;
   /** `pending` to `failed` (no call was made). False when the job is no longer `pending`. */
@@ -156,12 +168,21 @@ export interface VideoWorkerRepository {
   /** Records the last error code of a failed call for support (never a provider body). */
   setErrorCode(tx: DbTx, jobId: string, code: string): Promise<void>;
   /** The job in the copy phase: `processing`, provider finished, no output yet, copy window still open. */
-  copyOpen(tx: DbTx, jobId: string, windowHours: number): Promise<'open' | 'window_passed' | 'not_copying'>;
+  copyOpen(
+    tx: DbTx,
+    jobId: string,
+    windowHours: number,
+  ): Promise<'open' | 'window_passed' | 'not_copying'>;
   /**
    * Guard after the put (ARCHITECTURE §5.5): in one transaction the job must still be `processing` with the provider
    * finished and the campaign `active`; then the job becomes `completed` with the registered media row.
    */
-  completeCopy(tx: DbTx, job: VideoJobRow, target: CopyTarget, register: (tx: DbTx) => Promise<void>): Promise<CopyGuard>;
+  completeCopy(
+    tx: DbTx,
+    job: VideoJobRow,
+    target: CopyTarget,
+    register: (tx: DbTx) => Promise<void>,
+  ): Promise<CopyGuard>;
   /** `processing` (copying) to `failed` `output_unreachable`. False when the job already left that state. */
   failCopy(tx: DbTx, jobId: string, message: string): Promise<boolean>;
   markOutputDeleted(tx: DbTx, jobId: string): Promise<void>;
@@ -177,7 +198,13 @@ export interface ProductionMedia {
   /** Records the stored clip in the caller's transaction (quota and row). */
   registerClip(
     tx: DbTx,
-    input: { readonly id: string; readonly ownerId: string; readonly campaignId: string; readonly storageKey: string; readonly bytes: number },
+    input: {
+      readonly id: string;
+      readonly ownerId: string;
+      readonly campaignId: string;
+      readonly storageKey: string;
+      readonly bytes: number;
+    },
   ): Promise<void>;
 }
 export const PRODUCTION_MEDIA = Symbol('PRODUCTION_MEDIA');

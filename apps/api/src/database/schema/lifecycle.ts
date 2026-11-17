@@ -1,5 +1,15 @@
 import { sql } from 'drizzle-orm';
-import { check, integer, pgTable, smallint, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  check,
+  integer,
+  pgTable,
+  smallint,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 
 // Lifecycle table of migration M0007 (ARCHITECTURE §2.2, §5.8). `deletion_runs` is history: it has no foreign key,
 // because a run outlives the campaign or account it removes, and `subject_id` and `owner_id` are plain IDs. One run
@@ -18,9 +28,15 @@ export const deletionRuns = pgTable(
     attempts: smallint('attempts').notNull().default(0),
     remainingObjects: integer('remaining_objects'),
     lastErrorClass: varchar('last_error_class', { length: 64 }),
-    notBefore: timestamp('not_before', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    notBefore: timestamp('not_before', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     uniqueIndex('deletion_runs_subject_uq').on(table.kind, table.subjectId),
@@ -31,6 +47,9 @@ export const deletionRuns = pgTable(
       sql`(${table.kind} = 'campaign' and ${table.step} between 1 and 4) or (${table.kind} = 'account' and ${table.step} between 1 and 5)`,
     ),
     check('deletion_runs_attempts_ck', sql`${table.attempts} >= 0`),
-    check('deletion_runs_remaining_ck', sql`${table.remainingObjects} is null or ${table.remainingObjects} >= 0`),
+    check(
+      'deletion_runs_remaining_ck',
+      sql`${table.remainingObjects} is null or ${table.remainingObjects} >= 0`,
+    ),
   ],
 );

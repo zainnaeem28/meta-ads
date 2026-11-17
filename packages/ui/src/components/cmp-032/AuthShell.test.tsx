@@ -7,19 +7,22 @@ import { AUTH_VARIANTS, AuthShell } from './index';
 afterEach(cleanup);
 
 describe('CMP-032 AuthShell', () => {
-  it.each(AUTH_VARIANTS)('%s variant has a main landmark, one h1 and no axe violations', async (variant) => {
-    const { container } = render(
-      <AuthShell variant={variant} title="AI UGC Ad Director" description="Sign in.">
-        <button>Continue</button>
-      </AuthShell>,
-    );
-    expect(screen.getAllByRole('main')).toHaveLength(1);
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
-    expect(container.querySelector('[data-brand-panel]')).toHaveAttribute('aria-hidden', 'true');
-    expect(container.firstElementChild).toHaveAttribute('data-variant', variant);
-    expect((await axe.run(container)).violations).toEqual([]);
-  });
+  it.each(AUTH_VARIANTS)(
+    '%s variant has a main landmark, one h1 and no axe violations',
+    async (variant) => {
+      const { container } = render(
+        <AuthShell variant={variant} title="AI UGC Ad Director" description="Sign in.">
+          <button>Continue</button>
+        </AuthShell>,
+      );
+      expect(screen.getAllByRole('main')).toHaveLength(1);
+      expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+      expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
+      expect(container.querySelector('[data-brand-panel]')).toHaveAttribute('aria-hidden', 'true');
+      expect(container.firstElementChild).toHaveAttribute('data-variant', variant);
+      expect((await axe.run(container)).violations).toEqual([]);
+    },
+  );
 
   it('provider loading shows a busy status and hides the children', async () => {
     const { container } = render(

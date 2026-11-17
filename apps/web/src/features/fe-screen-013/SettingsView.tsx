@@ -37,8 +37,12 @@ function Row({ term, children }: { term: string; children: ReactNode }) {
 }
 
 function Prerequisites({ settings }: { settings: Settings }) {
-  const { emailVerificationRequired, signupRateLimitEnabled, abuseLimitsEnabled, verificationRecordId } =
-    settings.openModePrerequisites;
+  const {
+    emailVerificationRequired,
+    signupRateLimitEnabled,
+    abuseLimitsEnabled,
+    verificationRecordId,
+  } = settings.openModePrerequisites;
   const limits = signupRateLimitEnabled && abuseLimitsEnabled;
   const status = (ok: boolean) =>
     ok ? (
@@ -55,7 +59,11 @@ function Prerequisites({ settings }: { settings: Settings }) {
       <Row term={C.prerequisites.email}>{status(emailVerificationRequired)}</Row>
       <Row term={C.prerequisites.limits}>{status(limits)}</Row>
       <Row term={C.prerequisites.record}>
-        {verificationRecordId ? <Badge variant="info">{verificationRecordId}</Badge> : <Badge>None</Badge>}
+        {verificationRecordId ? (
+          <Badge variant="info">{verificationRecordId}</Badge>
+        ) : (
+          <Badge>None</Badge>
+        )}
       </Row>
     </dl>
   );
@@ -79,13 +87,21 @@ export function SettingsView({
     return (
       <div className="mx-auto flex w-full max-w-prose flex-col gap-6" data-state="error">
         {header}
-        <ErrorNotice error={loadError} surface="page" onAction={(a) => a === 'retry' && onRetryLoad?.()} />
+        <ErrorNotice
+          error={loadError}
+          surface="page"
+          onAction={(a) => a === 'retry' && onRetryLoad?.()}
+        />
       </div>
     );
   }
   if (!settings) {
     return (
-      <div className="mx-auto flex w-full max-w-prose flex-col gap-6" data-state="loading" aria-busy="true">
+      <div
+        className="mx-auto flex w-full max-w-prose flex-col gap-6"
+        data-state="loading"
+        aria-busy="true"
+      >
         {header}
         <p role="status" className="text-ui text-muted-foreground">
           {C.loading}
@@ -145,18 +161,16 @@ export function SettingsView({
           <Prerequisites settings={settings} />
         </div>
       </Card>
-      <Card
-        variant="section"
-        title={C.security.title}
-        headingLevel={2}
-      >
+      <Card variant="section" title={C.security.title} headingLevel={2}>
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
             <p className="text-ui text-muted-foreground">{C.security.sub}</p>
             <Badge icon="lock">{C.security.badge}</Badge>
           </div>
           <dl className="divide-y divide-border">
-            <Row term={C.mfa.label}>{settings.mfaRequiredFor === 'all' ? C.mfa.all : C.mfa.admins}</Row>
+            <Row term={C.mfa.label}>
+              {settings.mfaRequiredFor === 'all' ? C.mfa.all : C.mfa.admins}
+            </Row>
             <Row term={C.accessForm}>
               <Badge variant={settings.accessRequestFormEnabled ? 'success' : 'neutral'}>
                 {settings.accessRequestFormEnabled ? 'On' : 'Off'}

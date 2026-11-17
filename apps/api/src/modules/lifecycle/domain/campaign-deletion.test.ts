@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { errorClassOf, ledgerBodyOf, ledgerKeyOf, nextOnFailure, verifyDelayMs } from './campaign-deletion.js';
+import {
+  errorClassOf,
+  ledgerBodyOf,
+  ledgerKeyOf,
+  nextOnFailure,
+  verifyDelayMs,
+} from './campaign-deletion.js';
 
 describe('campaign deletion rules', () => {
   it('builds the ledger key from the run time and id, and the body from IDs and kind only', () => {
-    expect(ledgerKeyOf('2026-11-17 10:20:30.123456+00', 'r1')).toBe('erasure/2026-11-17T10-20-30-123Z-r1');
-    const body = JSON.parse(ledgerBodyOf({ id: 'r1', kind: 'campaign', subjectId: 's1' })) as Record<string, string>;
+    expect(ledgerKeyOf('2026-11-17 10:20:30.123456+00', 'r1')).toBe(
+      'erasure/2026-11-17T10-20-30-123Z-r1',
+    );
+    const body = JSON.parse(
+      ledgerBodyOf({ id: 'r1', kind: 'campaign', subjectId: 's1' }),
+    ) as Record<string, string>;
     expect(Object.keys(body).sort()).toEqual(['kind', 'runId', 'subjectId']);
   });
 

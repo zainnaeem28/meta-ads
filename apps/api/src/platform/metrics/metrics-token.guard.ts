@@ -24,7 +24,8 @@ export class MetricsTokenGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const header = context.switchToHttp().getRequest<FastifyRequest>().headers.authorization;
-    const presented = typeof header === 'string' && header.startsWith('Bearer ') ? header.slice(7) : '';
+    const presented =
+      typeof header === 'string' && header.startsWith('Bearer ') ? header.slice(7) : '';
     // Always hash and compare so the work does not depend on whether a token is configured or presented.
     const equal = timingSafeEqual(digest(presented), this.expected ?? digest(''));
     if (this.expected === null || presented === '' || !equal) throw new NotFoundException();

@@ -34,7 +34,11 @@ export interface AccountView {
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
-  readonly erasure: null | { readonly deletionRunId: string; readonly step: number; readonly state: string };
+  readonly erasure: null | {
+    readonly deletionRunId: string;
+    readonly step: number;
+    readonly state: string;
+  };
 }
 
 /** The identity module's admin service as lifecycle uses it: the status change with the admin invariant, under its lock. */
@@ -77,7 +81,11 @@ export interface AccountLifecycleRepository {
   /** Takes the `admin-invariant` lock and reads the account; undefined when there is none. */
   lockAndFind(tx: DbTx, userId: string): Promise<AccountSubject | undefined>;
   /** Every non-terminal brief job of the owner becomes `cancelled`; returned for the reservations. */
-  cancelBriefJobs(tx: DbTx, ownerId: string, cause: 'cancelled_account_suspended' | 'cancelled_account_removed'): Promise<CancelledBriefJob[]>;
+  cancelBriefJobs(
+    tx: DbTx,
+    ownerId: string,
+    cause: 'cancelled_account_suspended' | 'cancelled_account_removed',
+  ): Promise<CancelledBriefJob[]>;
   /** Hard-deletes the owner's provider keys and writes one `deleted` event each; returns how many. */
   deleteKeys(tx: DbTx, ownerId: string): Promise<number>;
   /** Every `active` campaign of the owner becomes `deleting` (invisible at once); returns how many. */
@@ -86,8 +94,15 @@ export interface AccountLifecycleRepository {
   findRunBySubject(tx: DbTx, userId: string): Promise<AccountRun | undefined>;
   listRuns(tx: DbTx, query: AccountRunQuery): Promise<AccountRunListed[]>;
   /** The run of an account run id, with the data the steps need; undefined for another kind. */
-  findRun(tx: DbTx, runId: string): Promise<(AccountRun & { createdAt: string; notBefore: string; ownerId: string }) | undefined>;
-  advance(tx: DbTx, runId: string, patch: { step: number; remainingObjects?: number | null }): Promise<void>;
+  findRun(
+    tx: DbTx,
+    runId: string,
+  ): Promise<(AccountRun & { createdAt: string; notBefore: string; ownerId: string }) | undefined>;
+  advance(
+    tx: DbTx,
+    runId: string,
+    patch: { step: number; remainingObjects?: number | null },
+  ): Promise<void>;
   /** The run waits this long before its next step (`not_before`). */
   setNotBefore(tx: DbTx, runId: string, inMs: number): Promise<void>;
   recordFailure(tx: DbTx, runId: string, errorClass: string): Promise<number>;

@@ -77,7 +77,11 @@ export function Table<T>({
       className="w-full overflow-x-auto rounded-md border border-border bg-card text-foreground max-md:overflow-x-visible"
     >
       {sortable.length > 0 ? (
-        <div role="group" aria-label="Order list" className="flex flex-wrap gap-2 border-b border-border p-2 md:hidden">
+        <div
+          role="group"
+          aria-label="Order list"
+          className="flex flex-wrap gap-2 border-b border-border p-2 md:hidden"
+        >
           {sortable.map((c) => {
             const active = sort?.columnId === c.id ? sort.direction : undefined;
             return (
@@ -91,7 +95,13 @@ export function Table<T>({
               >
                 {c.header}
                 <Icon
-                  name={active === 'ascending' ? 'chevron-up' : active === 'descending' ? 'chevron-down' : 'arrow-up-down'}
+                  name={
+                    active === 'ascending'
+                      ? 'chevron-up'
+                      : active === 'descending'
+                        ? 'chevron-down'
+                        : 'arrow-up-down'
+                  }
                   size={16}
                 />
               </Button>
@@ -129,7 +139,13 @@ export function Table<T>({
                     >
                       {c.header}
                       <Icon
-                        name={active === 'ascending' ? 'chevron-up' : active === 'descending' ? 'chevron-down' : 'arrow-up-down'}
+                        name={
+                          active === 'ascending'
+                            ? 'chevron-up'
+                            : active === 'descending'
+                              ? 'chevron-down'
+                              : 'arrow-up-down'
+                        }
                         size={16}
                       />
                     </Button>
@@ -149,10 +165,18 @@ export function Table<T>({
         <tbody role="rowgroup" className="max-md:block">
           {state === 'loading'
             ? Array.from({ length: skeletonRows }, (_, i) => (
-                <tr key={i} role="row" data-skeleton className="min-h-control-touch border-t border-border max-md:block max-md:p-4">
+                <tr
+                  key={i}
+                  role="row"
+                  data-skeleton
+                  className="min-h-control-touch border-t border-border max-md:block max-md:p-4"
+                >
                   {Array.from({ length: span }, (_, j) => (
                     <td key={j} role="cell" className={CELL}>
-                      <span aria-hidden="true" className="block h-4 w-3/4 rounded-sm bg-muted motion-safe:animate-pulse" />
+                      <span
+                        aria-hidden="true"
+                        className="block h-4 w-3/4 rounded-sm bg-muted motion-safe:animate-pulse"
+                      />
                     </td>
                   ))}
                 </tr>
@@ -173,10 +197,14 @@ export function Table<T>({
                   >
                     {columns.map((c, i) => (
                       <td key={c.id} role="cell" className={CELL}>
-                        <span className="text-caption text-muted-foreground md:hidden">{c.header}</span>
+                        <span className="text-caption text-muted-foreground md:hidden">
+                          {c.header}
+                        </span>
                         <span className="block min-w-0 break-words">
                           {c.cell(row)}
-                          {i === 0 && selected ? <span className="sr-only"> (selected)</span> : null}
+                          {i === 0 && selected ? (
+                            <span className="sr-only"> (selected)</span>
+                          ) : null}
                         </span>
                       </td>
                     ))}

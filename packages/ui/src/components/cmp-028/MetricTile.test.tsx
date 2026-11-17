@@ -65,11 +65,17 @@ describe('CMP-028 Metric tile and inline bar', () => {
 
   it('grid is 1 up, 2 up from tablet and 4 up on desktop', () => {
     const { container } = render(<MetricGrid />);
-    expect(container.firstElementChild).toHaveClass('grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-4');
+    expect(container.firstElementChild).toHaveClass(
+      'grid-cols-1',
+      'md:grid-cols-2',
+      'lg:grid-cols-4',
+    );
   });
 
   it('bar uses its own label when given', () => {
-    render(<MetricTile label="Videos" value="1" bar={{ value: 1, max: 2, label: 'Share of target' }} />);
+    render(
+      <MetricTile label="Videos" value="1" bar={{ value: 1, max: 2, label: 'Share of target' }} />,
+    );
     expect(screen.getByRole('meter', { name: 'Share of target' })).toBeInTheDocument();
   });
 });

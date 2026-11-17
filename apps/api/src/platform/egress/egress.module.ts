@@ -24,7 +24,8 @@ export function egressOptionsFrom(config: EgressModuleConfig): EgressOptions {
 
 export function assertAllowList(allowed: AllowedHosts): void {
   const problems = validateAllowList(allowed);
-  if (problems.length > 0) throw new Error(`EGRESS_ALLOWED_HOSTS is not acceptable: ${problems.join('; ')}`);
+  if (problems.length > 0)
+    throw new Error(`EGRESS_ALLOWED_HOSTS is not acceptable: ${problems.join('; ')}`);
 }
 
 @Module({})

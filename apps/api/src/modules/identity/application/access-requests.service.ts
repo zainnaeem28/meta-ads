@@ -12,7 +12,11 @@ import type { IdentityPort } from '../domain/identity-port.js';
 import { normalizeEmail } from '../domain/records.js';
 import type { AccessRequestState } from '../domain/records.js';
 import { ACCESS_REQUEST_STORE } from './access-requests.store.js';
-import type { AccessRequestDb, AccessRequestRow, AccessRequestStorePort } from './access-requests.store.js';
+import type {
+  AccessRequestDb,
+  AccessRequestRow,
+  AccessRequestStorePort,
+} from './access-requests.store.js';
 import { AUTH_OPTIONS } from './ports.js';
 import type { AuthOptions } from './ports.js';
 
@@ -25,7 +29,9 @@ export interface AccessRequestOptions {
   readonly cursorKey: string | undefined;
 }
 
-export function accessRequestOptionsFrom(env: Readonly<Record<string, string | undefined>>): AccessRequestOptions {
+export function accessRequestOptionsFrom(
+  env: Readonly<Record<string, string | undefined>>,
+): AccessRequestOptions {
   return { ipKey: env['RATE_LIMIT_IP_KEY'], cursorKey: env['CURSOR_SIGNING_KEY'] };
 }
 
@@ -59,7 +65,8 @@ export interface AccessRequestListQuery {
   readonly state: AccessRequestState;
 }
 
-const CURSOR_POSITION = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?)\|([0-9a-f-]{36})$/;
+const CURSOR_POSITION =
+  /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?)\|([0-9a-f-]{36})$/;
 
 /** Access requests (ARCHITECTURE 3.3, 5.1; REQ-003). The requester's subject and email come from the token and the provider. */
 @Injectable()
@@ -78,11 +85,21 @@ export class AccessRequestService {
    * API-002. The answer is the same whether the request was recorded, one is pending, or the address already has an
    * account. Only an unlinked subject with a verified provider email gets a row; nobody else learns anything.
    */
-  async create(subject: string, linked: boolean, ip: string, note: string | undefined): Promise<{ state: 'received' }> {
-    if (!this.auth.accessRequestFormEnabled) throw new DomainError('not_found', 'There is nothing here.');
+  async create(
+    subject: string,
+    linked: boolean,
+    ip: string,
+    note: string | undefined,
+  ): Promise<{ state: 'received' }> {
+    if (!this.auth.accessRequestFormEnabled)
+      throw new DomainError('not_found', 'There is nothing here.');
     await this.limiter.enforce(ACCESS_REQUEST_SUBJECT_SCOPE, subject, ACCESS_REQUEST_SUBJECT_RATE);
     if (this.options.ipKey === undefined) throw new Error('RATE_LIMIT_IP_KEY is not configured');
-    await this.limiter.enforce(ACCESS_REQUEST_IP_SCOPE, ipSubject(this.options.ipKey, ip), ACCESS_REQUEST_IP_RATE);
+    await this.limiter.enforce(
+      ACCESS_REQUEST_IP_SCOPE,
+      ipSubject(this.options.ipKey, ip),
+      ACCESS_REQUEST_IP_RATE,
+    );
     const received = { state: 'received' } as const;
     if (linked) return received;
 
@@ -95,7 +112,10 @@ export class AccessRequestService {
     } catch (error) {
       if (error instanceof IdentityNotFound) return received;
       if (error instanceof IdentityUnavailable) {
-        throw new DomainError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.');
+        throw new DomainError(
+          'service_unavailable',
+          'The service is temporarily unavailable. Try again shortly.',
+        );
       }
       throw error;
     }
@@ -123,7 +143,10 @@ export class AccessRequestService {
   }
 
   /** API-115. */
-  async list(actor: AccessRequestActor, query: AccessRequestListQuery): Promise<PageResult<AccessRequestView>> {
+  async list(
+    actor: AccessRequestActor,
+    query: AccessRequestListQuery,
+  ): Promise<PageResult<AccessRequestView>> {
     const key = this.options.cursorKey;
     if (key === undefined) throw new Error('CURSOR_SIGNING_KEY is not configured');
     const scope = { owner: actor.userId, filters: { state: query.state } };
@@ -138,8 +161,17 @@ export class AccessRequestService {
       limit: query.limit,
       ...(after === undefined ? {} : { after }),
     });
-    const page = buildPage(rows, query.limit, (row) => `${row.createdAtText}|${row.id}`, key, scope);
-    return new PageResult(page.items.map((row) => this.view(row)), page.pagination);
+    const page = buildPage(
+      rows,
+      query.limit,
+      (row) => `${row.createdAtText}|${row.id}`,
+      key,
+      scope,
+    );
+    return new PageResult(
+      page.items.map((row) => this.view(row)),
+      page.pagination,
+    );
   }
 
   /**
@@ -152,10 +184,17 @@ export class AccessRequestService {
         const found = await this.store.findById(tx, id, true);
         if (found === undefined) throw new DomainError('not_found', NOT_FOUND);
         if (found.state === 'approved') return this.view(found);
-        if (found.state !== 'pending') throw new DomainError('state_conflict', 'Only a pending request can be approved.');
+        if (found.state !== 'pending')
+          throw new DomainError('state_conflict', 'Only a pending request can be approved.');
         const domains = this.auth.inviteEmailDomains;
-        if (domains.length > 0 && !domains.includes(found.email.slice(found.email.lastIndexOf('@') + 1))) {
-          throw new DomainError('invite_domain_not_allowed', 'Access is limited to approved email domains.');
+        if (
+          domains.length > 0 &&
+          !domains.includes(found.email.slice(found.email.lastIndexOf('@') + 1))
+        ) {
+          throw new DomainError(
+            'invite_domain_not_allowed',
+            'Access is limited to approved email domains.',
+          );
         }
         const existing = await this.store.findAccount(tx, found.idpSubject, found.email);
         if (existing !== undefined && existing.idpSubject !== found.idpSubject) {
@@ -163,7 +202,11 @@ export class AccessRequestService {
         }
         const userId = existing?.id ?? newId();
         if (existing === undefined) {
-          await this.store.insertUser(tx, { id: userId, idpSubject: found.idpSubject, email: found.email });
+          await this.store.insertUser(tx, {
+            id: userId,
+            idpSubject: found.idpSubject,
+            email: found.email,
+          });
         }
         if (!(await this.store.decide(tx, id, 'approved', actor.userId, userId))) {
           throw new DomainError('state_conflict', 'Only a pending request can be approved.');
@@ -173,7 +216,8 @@ export class AccessRequestService {
       });
     } catch (error) {
       // A concurrent first token or approve created the account between the check and the insert.
-      if (isUniqueViolation(error)) throw new DomainError('state_conflict', 'That email address already has an account.');
+      if (isUniqueViolation(error))
+        throw new DomainError('state_conflict', 'That email address already has an account.');
       throw error;
     }
   }
@@ -184,7 +228,8 @@ export class AccessRequestService {
       const found = await this.store.findById(tx, id, true);
       if (found === undefined) throw new DomainError('not_found', NOT_FOUND);
       if (found.state === 'declined') return this.view(found);
-      if (found.state !== 'pending') throw new DomainError('state_conflict', 'Only a pending request can be declined.');
+      if (found.state !== 'pending')
+        throw new DomainError('state_conflict', 'Only a pending request can be declined.');
       if (!(await this.store.decide(tx, id, 'declined', actor.userId, null))) {
         throw new DomainError('state_conflict', 'Only a pending request can be declined.');
       }

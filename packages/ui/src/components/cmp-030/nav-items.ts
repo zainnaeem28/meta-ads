@@ -13,7 +13,12 @@ export interface NavItem {
 export const OPERATOR_NAV: readonly NavItem[] = [
   { id: 'campaigns', label: 'Campaigns', href: '/campaigns', icon: 'clapperboard' },
   { id: 'new-brief', label: 'New brief', href: '/campaigns/new', icon: 'square-pen' },
-  { id: 'provider-keys', label: 'Provider keys', href: '/settings/provider-keys', icon: 'key-round' },
+  {
+    id: 'provider-keys',
+    label: 'Provider keys',
+    href: '/settings/provider-keys',
+    icon: 'key-round',
+  },
 ];
 
 export const PROVIDER_KEYS_HREF = '/settings/provider-keys';

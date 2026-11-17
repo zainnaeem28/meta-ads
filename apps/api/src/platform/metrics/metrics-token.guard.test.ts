@@ -5,7 +5,11 @@ import { MetricsTokenGuard } from './metrics-token.guard.js';
 
 const TOKEN = 'm'.repeat(43);
 const context = (authorization?: string): ExecutionContext =>
-  ({ switchToHttp: () => ({ getRequest: () => ({ headers: authorization === undefined ? {} : { authorization } }) }) }) as never;
+  ({
+    switchToHttp: () => ({
+      getRequest: () => ({ headers: authorization === undefined ? {} : { authorization } }),
+    }),
+  }) as never;
 
 describe('MetricsTokenGuard (TD-D41)', () => {
   const guard = new MetricsTokenGuard(TOKEN);

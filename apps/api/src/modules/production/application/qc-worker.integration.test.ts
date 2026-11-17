@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import 'reflect-metadata';
 import { generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -63,7 +64,8 @@ async function startTestBucket(bucket = 'app'): Promise<TestBucket> {
     res.setHeader('content-type', 'application/xml');
     res.end(`<?xml version="1.0" encoding="UTF-8"?>${body}`);
   };
-  const error = (res: ServerResponse, status: number, code: string): void => xml(res, status, `<Error><Code>${code}</Code><Message>${code}</Message></Error>`);
+  const error = (res: ServerResponse, status: number, code: string): void =>
+    xml(res, status, `<Error><Code>${code}</Code><Message>${code}</Message></Error>`);
   const server = createHttpServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://local');
     const key = decodeURIComponent(url.pathname.split('/').slice(2).join('/'));
@@ -73,16 +75,29 @@ async function startTestBucket(bucket = 'app'): Promise<TestBucket> {
       const body = Buffer.concat(parts);
       if (key === '' && req.method === 'GET') {
         const prefix = url.searchParams.get('prefix') ?? '';
-        const listed = [...objects.entries()].filter(([name]) => name.startsWith(prefix)).sort(([a], [b]) => a.localeCompare(b));
-        const contents = listed.map(([name, o]) => `<Contents><Key>${name}</Key><Size>${String(o.body.length)}</Size><LastModified>${o.at.toISOString()}</LastModified></Contents>`).join('');
-        return xml(res, 200, `<ListBucketResult><Name>${bucket}</Name><Prefix>${prefix}</Prefix><KeyCount>${String(listed.length)}</KeyCount><IsTruncated>false</IsTruncated>${contents}</ListBucketResult>`);
+        const listed = [...objects.entries()]
+          .filter(([name]) => name.startsWith(prefix))
+          .sort(([a], [b]) => a.localeCompare(b));
+        const contents = listed
+          .map(
+            ([name, o]) =>
+              `<Contents><Key>${name}</Key><Size>${String(o.body.length)}</Size><LastModified>${o.at.toISOString()}</LastModified></Contents>`,
+          )
+          .join('');
+        return xml(
+          res,
+          200,
+          `<ListBucketResult><Name>${bucket}</Name><Prefix>${prefix}</Prefix><KeyCount>${String(listed.length)}</KeyCount><IsTruncated>false</IsTruncated>${contents}</ListBucketResult>`,
+        );
       }
       if (key === '' && req.method === 'POST' && url.searchParams.has('delete')) {
-        for (const match of body.toString().matchAll(/<Key>([^<]+)<\/Key>/g)) objects.delete(match[1] as string);
+        for (const match of body.toString().matchAll(/<Key>([^<]+)<\/Key>/g))
+          objects.delete(match[1] as string);
         return xml(res, 200, '<DeleteResult></DeleteResult>');
       }
       if (req.method === 'PUT') {
-        if (req.headers['if-none-match'] === '*' && objects.has(key)) return error(res, 412, 'PreconditionFailed');
+        if (req.headers['if-none-match'] === '*' && objects.has(key))
+          return error(res, 412, 'PreconditionFailed');
         objects.set(key, { body, type: String(req.headers['content-type'] ?? ''), at: new Date() });
         res.setHeader('etag', '"stub"');
         res.statusCode = 200;
@@ -111,12 +126,21 @@ async function startTestBucket(bucket = 'app'): Promise<TestBucket> {
     accessKey: 'stub-access',
     secretKey: 'stub-secret',
     bucket,
-    stop: () => new Promise<void>((resolve) => { server.closeAllConnections(); server.close(() => resolve()); }),
+    stop: () =>
+      new Promise<void>((resolve) => {
+        server.closeAllConnections();
+        server.close(() => resolve());
+      }),
   };
 }
 
 const lines: string[] = [];
-const sink = new Writable({ write(chunk: Buffer, _e, done) { lines.push(chunk.toString()); done(); } });
+const sink = new Writable({
+  write(chunk: Buffer, _e, done) {
+    lines.push(chunk.toString());
+    done();
+  },
+});
 
 let testDb: TestDatabase;
 let pool: pg.Pool;
@@ -130,9 +154,20 @@ let fakeBin: string;
 let savedPath: string | undefined;
 
 /** A small MP4: a size field, `ftyp`, a brand, then filler. `marker` text in it makes the fake ffprobe report no audio. */
-const mp4 = (marker = ''): Buffer => Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypisom'), Buffer.alloc(12, 7), Buffer.from(marker)]);
+const mp4 = (marker = ''): Buffer =>
+  Buffer.concat([
+    Buffer.from([0, 0, 0, 24]),
+    Buffer.from('ftypisom'),
+    Buffer.alloc(12, 7),
+    Buffer.from(marker),
+  ]);
 
-interface Call { method: string; url: string; auth: string | undefined; body: string }
+interface Call {
+  method: string;
+  url: string;
+  auth: string | undefined;
+  body: string;
+}
 let calls: Call[] = [];
 interface Behaviour {
   /** The transcription answer. */
@@ -143,10 +178,17 @@ const defaults = (): Behaviour => ({ transcribe: () => ({ text: DIALOGUE }) });
 const transcribes = (): Call[] => calls.filter((c) => c.url === '/v1/audio/transcriptions');
 
 function kekMaps() {
-  const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 3072, publicExponent: 0x10001 });
+  const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+    modulusLength: 3072,
+    publicExponent: 0x10001,
+  });
   return {
-    KEK_PUBLIC_KEYS: JSON.stringify({ 1: publicKey.export({ type: 'spki', format: 'pem' }).toString() }),
-    KEK_PRIVATE_KEYS: JSON.stringify({ 1: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString() }),
+    KEK_PUBLIC_KEYS: JSON.stringify({
+      1: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    }),
+    KEK_PRIVATE_KEYS: JSON.stringify({
+      1: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+    }),
     KEK_ACTIVE_VERSION: '1',
   };
 }
@@ -159,9 +201,17 @@ function egressModule(): DynamicModule {
     timeoutMs: 2500,
     maxBytes: 5_000_000,
     resolver: async () => ['127.0.0.1'],
-    testing: { isBlockedAddress: (address) => address !== '127.0.0.1', tls: { ca: stub.ca }, port: stub.port },
+    testing: {
+      isBlockedAddress: (address) => address !== '127.0.0.1',
+      tls: { ca: stub.ca },
+      port: stub.port,
+    },
   });
-  return { module: StubEgress, providers: [{ provide: EGRESS, useValue: egress }], exports: [EGRESS] };
+  return {
+    module: StubEgress,
+    providers: [{ provide: EGRESS, useValue: egress }],
+    exports: [EGRESS],
+  };
 }
 
 const baseEnv = () => ({
@@ -199,8 +249,14 @@ function installFakeFfmpeg(): string {
     writeFileSync(join(dir, name), `#!/bin/sh\n${body}\n`);
     chmodSync(join(dir, name), 0o755);
   };
-  write('ffprobe', 'for a; do f="$a"; done\nif grep -q NOAUDIO "$f"; then printf ""; else printf "1\\n"; fi');
-  write('ffmpeg', 'while [ $# -gt 0 ]; do if [ "$1" = "-i" ]; then f="$2"; fi; shift; done\nif grep -q BROKEN "$f"; then exit 1; fi\nprintf "RIFFfakewav"');
+  write(
+    'ffprobe',
+    'for a; do f="$a"; done\nif grep -q NOAUDIO "$f"; then printf ""; else printf "1\\n"; fi',
+  );
+  write(
+    'ffmpeg',
+    'while [ $# -gt 0 ]; do if [ "$1" = "-i" ]; then f="$2"; fi; shift; done\nif grep -q BROKEN "$f"; then exit 1; fi\nprintf "RIFFfakewav"',
+  );
   return dir;
 }
 
@@ -213,7 +269,12 @@ beforeAll(async () => {
     req.on('data', (chunk: Buffer) => parts.push(chunk));
     req.on('end', () => {
       const url = req.url ?? '';
-      calls.push({ method: req.method ?? '', url, auth: req.headers['authorization'], body: Buffer.concat(parts).toString('latin1') });
+      calls.push({
+        method: req.method ?? '',
+        url,
+        auth: req.headers['authorization'],
+        body: Buffer.concat(parts).toString('latin1'),
+      });
       const json = (status: number, body: unknown): void => {
         res.statusCode = status;
         res.setHeader('content-type', 'application/json');
@@ -222,13 +283,32 @@ beforeAll(async () => {
       if (req.method === 'POST' && url === '/v1/audio/transcriptions') {
         const answer = behaviour.transcribe();
         if (answer.hang === true) return;
-        return json(answer.status ?? 200, answer.status === undefined || answer.status < 300 ? { text: answer.text ?? DIALOGUE } : { error: { code: 'server_error' } });
+        return json(
+          answer.status ?? 200,
+          answer.status === undefined || answer.status < 300
+            ? { text: answer.text ?? DIALOGUE }
+            : { error: { code: 'server_error' } },
+        );
       }
-      if (req.method === 'POST' && url.startsWith('/api/v3/predictions/delete')) return json(200, { code: 200, message: 'success' });
-      if (req.method === 'POST' && url.startsWith('/api/v3/')) return json(200, { code: 200, message: 'success', data: { id: 'task-qc-1', status: 'created' } });
+      if (req.method === 'POST' && url.startsWith('/api/v3/predictions/delete'))
+        return json(200, { code: 200, message: 'success' });
+      if (req.method === 'POST' && url.startsWith('/api/v3/'))
+        return json(200, {
+          code: 200,
+          message: 'success',
+          data: { id: 'task-qc-1', status: 'created' },
+        });
       const read = /^\/api\/v3\/predictions\/([^/]+)\/result$/.exec(url);
       if (req.method === 'GET' && read !== null) {
-        return json(200, { code: 200, data: { id: read[1], status: 'completed', outputs: [`https://${CDN_HOST}:${String(stub.port)}/files/clip.mp4`], error: '' } });
+        return json(200, {
+          code: 200,
+          data: {
+            id: read[1],
+            status: 'completed',
+            outputs: [`https://${CDN_HOST}:${String(stub.port)}/files/clip.mp4`],
+            error: '',
+          },
+        });
       }
       if (url.startsWith('/files/')) {
         res.setHeader('content-type', 'video/mp4');
@@ -254,12 +334,21 @@ beforeAll(async () => {
   ]) {
     const tables = readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants')[0] ?? '';
     for (const statement of tables.split('--> statement-breakpoint')) {
-      const sql = statement.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim();
+      const sql = statement
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n')
+        .trim();
       if (sql !== '') await pool.query(sql);
     }
   }
   await installJobs(testDb.url);
-  await runSeed({ dataset: 'reference', appEnv: 'development', databaseUrl: testDb.url, steps: [priceTableSeedStep()] });
+  await runSeed({
+    dataset: 'reference',
+    appEnv: 'development',
+    databaseUrl: testDb.url,
+    steps: [priceTableSeedStep()],
+  });
   const stream = buildLogger({ level: 'debug', destination: sink });
   worker = await createWorkerApp(workerConfig(), {
     logger: stream.logger,
@@ -293,7 +382,14 @@ beforeEach(() => {
   behaviour = defaults();
 });
 
-interface Fixture { owner: string; campaign: string; segment: string; job: string; run: string; storageKey: string }
+interface Fixture {
+  owner: string;
+  campaign: string;
+  segment: string;
+  job: string;
+  run: string;
+  storageKey: string;
+}
 interface Options {
   /** The clip's bytes; the marker decides what the fake ffmpeg finds in it. */
   clipMarker?: string;
@@ -316,59 +412,130 @@ async function clip(opts: Options = {}): Promise<Fixture> {
   const owner = opts.sameOwner?.owner ?? randomUUID();
   const keyId = opts.sameOwner?.keyId ?? randomUUID();
   if (opts.sameOwner === undefined) {
-    await pool.query(`insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`, [owner, `sub_${owner.slice(0, 20)}`, `${owner.slice(0, 12)}@example.test`]);
+    await pool.query(
+      `insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`,
+      [owner, `sub_${owner.slice(0, 20)}`, `${owner.slice(0, 12)}@example.test`],
+    );
     if (opts.openAiKey !== 'none') {
-      const sealed = wrap.seal(Buffer.from(OPENAI_KEY), { userId: owner, provider: 'openai', keyId, version: 1 });
+      const sealed = wrap.seal(Buffer.from(OPENAI_KEY), {
+        userId: owner,
+        provider: 'openai',
+        keyId,
+        version: 1,
+      });
       await pool.query(
         `insert into provider_keys (id, owner_id, provider, status, version, ciphertext, nonce, wrapped_dek, kek_version, last4, fingerprint, fingerprint_pepper_version)
          values ($1, $2, 'openai', $3, 1, $4, $5, $6, $7, 'cdef', $8, 1)`,
-        [keyId, owner, opts.openAiKey === 'disabled' ? 'disabled' : 'active', sealed.ciphertext, sealed.nonce, sealed.wrappedDek, sealed.kekVersion, 'c'.repeat(64)],
+        [
+          keyId,
+          owner,
+          opts.openAiKey === 'disabled' ? 'disabled' : 'active',
+          sealed.ciphertext,
+          sealed.nonce,
+          sealed.wrappedDek,
+          sealed.kekVersion,
+          'c'.repeat(64),
+        ],
       );
     }
   }
   const campaign = randomUUID();
   const brief = randomUUID();
   const segment = randomUUID();
-  await pool.query(`insert into campaigns (id, owner_id, product_name, product_description, segment_count) values ($1, $2, 'Calm Cap', 'A slow morning drink', 2)`, [campaign, owner]);
-  await pool.query(`insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, 'accepted', now())`, [brief, campaign, owner]);
-  await pool.query(`insert into brief_segments (id, brief_id, position, dialogue, prompt, word_count) values ($1, $2, 1, $3, 'A bright kitchen at dawn', 6)`, [segment, brief, opts.dialogue ?? DIALOGUE]);
+  await pool.query(
+    `insert into campaigns (id, owner_id, product_name, product_description, segment_count) values ($1, $2, 'Calm Cap', 'A slow morning drink', 2)`,
+    [campaign, owner],
+  );
+  await pool.query(
+    `insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, 'accepted', now())`,
+    [brief, campaign, owner],
+  );
+  await pool.query(
+    `insert into brief_segments (id, brief_id, position, dialogue, prompt, word_count) values ($1, $2, 1, $3, 'A bright kitchen at dawn', 6)`,
+    [segment, brief, opts.dialogue ?? DIALOGUE],
+  );
   const job = randomUUID();
   const storageKey = `u/${owner}/c/${campaign}/clip/${job}.mp4`;
   await storage.put(storageKey, mp4(opts.clipMarker), 'video/mp4', 1_000_000);
-  await pool.query(`insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'clip', 'ready', $3, 40, 'video/mp4', $4)`, [job, owner, storageKey, campaign]);
+  await pool.query(
+    `insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'clip', 'ready', $3, 40, 'video/mp4', $4)`,
+    [job, owner, storageKey, campaign],
+  );
   await pool.query(
     `insert into video_jobs (id, owner_id, campaign_id, segment_id, segment_revision, provider_model, options, state, reuse_hash, deadline_at, provider_task_id, provider_completed_at, output_media_id)
      values ($1, $2, $3, $4, 1, $5, '{"durationSeconds":15,"resolution":"1080p","aspectRatio":"9:16"}', 'completed', $6, now(), 'task-1', now(), $1)`,
     [job, owner, campaign, segment, MODEL, randomBytes(32).toString('hex')],
   );
   const run = randomUUID();
-  const at = (offset: string | undefined, fallback: string): string => `now() + interval '${offset ?? fallback}'`;
+  const at = (offset: string | undefined, fallback: string): string =>
+    `now() + interval '${offset ?? fallback}'`;
   await pool.query(
     `insert into qc_runs (id, owner_id, video_job_id, state, reuse_hash, key_id, key_version, call_count, submitting_at, deadline_at, created_at)
      values ($1, $2, $3, $4, $5, $6, $7, $8, ${opts.submittingAt === undefined ? 'null' : at(opts.submittingAt, '0 seconds')}, ${at(opts.deadlineAt, '10 minutes')}, ${at(opts.createdAt, '0 seconds')})`,
-    [run, owner, job, opts.runState ?? 'pending', randomBytes(32).toString('hex'), opts.stampKey === true && opts.openAiKey !== 'none' ? keyId : null, opts.stampKey === true && opts.openAiKey !== 'none' ? 1 : null, opts.callCount ?? 0],
+    [
+      run,
+      owner,
+      job,
+      opts.runState ?? 'pending',
+      randomBytes(32).toString('hex'),
+      opts.stampKey === true && opts.openAiKey !== 'none' ? keyId : null,
+      opts.stampKey === true && opts.openAiKey !== 'none' ? 1 : null,
+      opts.callCount ?? 0,
+    ],
   );
-  await pool.query(`insert into spend_reservations (id, owner_id, job_type, job_id, estimated_cost_usd, remaining_calls) values ($1, $2, 'qc', $3, 0.01, 1)`, [randomUUID(), owner, run]);
+  await pool.query(
+    `insert into spend_reservations (id, owner_id, job_type, job_id, estimated_cost_usd, remaining_calls) values ($1, $2, 'qc', $3, 0.01, 1)`,
+    [randomUUID(), owner, run],
+  );
   if (opts.videoReservation === true) {
-    await pool.query(`insert into spend_reservations (id, owner_id, job_type, job_id, estimated_cost_usd, remaining_calls) values ($1, $2, 'video', $3, 0.01, 1)`, [randomUUID(), owner, job]);
+    await pool.query(
+      `insert into spend_reservations (id, owner_id, job_type, job_id, estimated_cost_usd, remaining_calls) values ($1, $2, 'video', $3, 0.01, 1)`,
+      [randomUUID(), owner, job],
+    );
   }
   return { owner, campaign, segment, job, run, storageKey };
 }
 
-const runRow = async (id: string): Promise<Record<string, any>> => (await pool.query('select * from qc_runs where id = $1', [id])).rows[0] as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-async function untilRun(id: string, done: (row: Record<string, any>) => boolean, what: string, ms = 60_000): Promise<Record<string, any>> { // eslint-disable-line @typescript-eslint/no-explicit-any
+const runRow = async (id: string): Promise<Record<string, any>> =>
+  (await pool.query('select * from qc_runs where id = $1', [id])).rows[0] as Record<string, any>;
+async function untilRun(
+  id: string,
+  done: (row: Record<string, any>) => boolean,
+  what: string,
+  ms = 60_000,
+): Promise<Record<string, any>> {
   const deadline = Date.now() + ms;
   for (;;) {
     const row = await runRow(id);
     if (done(row)) return row;
-    if (Date.now() > deadline) throw new Error(`qc run ${id}: ${what}; stayed ${String(row['state'])}/${String(row['qc_state'])} (${String(row['last_error_code'])})`);
+    if (Date.now() > deadline)
+      throw new Error(
+        `qc run ${id}: ${what}; stayed ${String(row['state'])}/${String(row['qc_state'])} (${String(row['last_error_code'])})`,
+      );
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
-const finished = (id: string) => untilRun(id, (row) => row['state'] === 'completed' || row['state'] === 'failed' || row['state'] === 'cancelled', 'did not finish');
+const finished = (id: string) =>
+  untilRun(
+    id,
+    (row) =>
+      row['state'] === 'completed' || row['state'] === 'failed' || row['state'] === 'cancelled',
+    'did not finish',
+  );
 const events = async (jobType: string, jobId: string) =>
-  (await pool.query(`select call_seq, outcome, cost_basis, provider, operation from usage_events where job_type = $1 and job_id = $2 order by call_seq`, [jobType, jobId])).rows as Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
-const reservationCount = async (jobType: string, jobId: string) => (await pool.query(`select 1 from spend_reservations where job_type = $1 and job_id = $2`, [jobType, jobId])).rowCount;
+  (
+    await pool.query(
+      `select call_seq, outcome, cost_basis, provider, operation from usage_events where job_type = $1 and job_id = $2 order by call_seq`,
+      [jobType, jobId],
+    )
+  ).rows as Record<string, any>[];
+const reservationCount = async (jobType: string, jobId: string) =>
+  (
+    await pool.query(`select 1 from spend_reservations where job_type = $1 and job_id = $2`, [
+      jobType,
+      jobId,
+    ])
+  ).rowCount;
 const send = (run: string) => apiBoss.send('production.qc-run', { runId: run });
 async function sweepNow(): Promise<void> {
   for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -380,7 +547,6 @@ async function sweepNow(): Promise<void> {
   throw new Error('the recovery sweep never ran');
 }
 const logText = (): string => lines.join('\n');
-
 
 describe('production.qc-run, through the worker process', () => {
   it('passes a clip whose spoken words match: one call, the key opened in the worker, usage recorded, reservations released (TC-QC-01)', async () => {
@@ -395,7 +561,15 @@ describe('production.qc-run, through the worker process', () => {
     expect(sent[0]?.body).toContain('name="model"\r\n\r\ngpt-transcribe');
     expect(sent[0]?.body).toContain('name="language"\r\n\r\nen');
     expect(sent[0]?.body).toContain('RIFFfakewav');
-    expect(await events('qc', f.run)).toEqual([expect.objectContaining({ call_seq: 1, outcome: 'succeeded', provider: 'openai', operation: 'gpt-transcribe', cost_basis: 'estimate' })]);
+    expect(await events('qc', f.run)).toEqual([
+      expect.objectContaining({
+        call_seq: 1,
+        outcome: 'succeeded',
+        provider: 'openai',
+        operation: 'gpt-transcribe',
+        cost_basis: 'estimate',
+      }),
+    ]);
     expect(await reservationCount('qc', f.run)).toBe(0);
     expect(await reservationCount('video', f.job)).toBe(0);
     expect(logText()).not.toContain(OPENAI_KEY);
@@ -407,7 +581,9 @@ describe('production.qc-run, through the worker process', () => {
     await send(f.run);
     const row = await finished(f.run);
     expect(row).toMatchObject({ state: 'completed', qc_state: 'failed' });
-    expect(row['reason']).toBe(`33% of the words differ from the script. Missing: calm, start. Extra: ${CANARY}, ${CANARY}.`);
+    expect(row['reason']).toBe(
+      `33% of the words differ from the script. Missing: calm, start. Extra: ${CANARY}, ${CANARY}.`,
+    );
     expect(Number(row['word_error_rate'])).toBe(0.333);
     expect(logText()).not.toContain(CANARY);
   });
@@ -416,7 +592,11 @@ describe('production.qc-run, through the worker process', () => {
     const f = await clip({ clipMarker: 'NOAUDIO', videoReservation: true });
     await send(f.run);
     const row = await finished(f.run);
-    expect(row).toMatchObject({ qc_state: 'skipped', reason: 'No audio track in this clip.', call_count: 0 });
+    expect(row).toMatchObject({
+      qc_state: 'skipped',
+      reason: 'No audio track in this clip.',
+      call_count: 0,
+    });
     expect(transcribes()).toHaveLength(0);
     expect(await events('qc', f.run)).toEqual([]);
     expect(await reservationCount('qc', f.run)).toBe(0);
@@ -426,11 +606,17 @@ describe('production.qc-run, through the worker process', () => {
   it('skips when the audio cannot be read, and when the clip is gone from storage, without a call', async () => {
     const broken = await clip({ clipMarker: 'BROKEN' });
     await send(broken.run);
-    expect(await finished(broken.run)).toMatchObject({ qc_state: 'skipped', last_error_code: 'audio_unreadable' });
+    expect(await finished(broken.run)).toMatchObject({
+      qc_state: 'skipped',
+      last_error_code: 'audio_unreadable',
+    });
     const gone = await clip();
     await storage.delete(gone.storageKey);
     await send(gone.run);
-    expect(await finished(gone.run)).toMatchObject({ qc_state: 'skipped', last_error_code: 'qc_error' });
+    expect(await finished(gone.run)).toMatchObject({
+      qc_state: 'skipped',
+      last_error_code: 'qc_error',
+    });
     expect(transcribes()).toHaveLength(0);
   });
 
@@ -440,7 +626,11 @@ describe('production.qc-run, through the worker process', () => {
       await send(f.run);
       const row = await finished(f.run);
       expect(row['qc_state']).toBe('skipped');
-      expect(row['reason']).toBe(openAiKey === 'none' ? 'Add your OpenAI key in Settings, then re-run QC.' : 'Your OpenAI key is disabled. Enter it again in Settings, then re-run QC.');
+      expect(row['reason']).toBe(
+        openAiKey === 'none'
+          ? 'Add your OpenAI key in Settings, then re-run QC.'
+          : 'Your OpenAI key is disabled. Enter it again in Settings, then re-run QC.',
+      );
       expect(await reservationCount('qc', f.run)).toBe(0);
     }
     expect(transcribes()).toHaveLength(0);
@@ -451,8 +641,15 @@ describe('production.qc-run, through the worker process', () => {
     const f = await clip({ videoReservation: true });
     await send(f.run);
     const row = await finished(f.run);
-    expect(row).toMatchObject({ state: 'completed', qc_state: 'skipped', reason: 'The transcription service was not available. Re-run QC.', call_count: 1 });
-    expect(await events('qc', f.run)).toEqual([expect.objectContaining({ outcome: 'unconfirmed', cost_basis: 'unconfirmed_estimate' })]);
+    expect(row).toMatchObject({
+      state: 'completed',
+      qc_state: 'skipped',
+      reason: 'The transcription service was not available. Re-run QC.',
+      call_count: 1,
+    });
+    expect(await events('qc', f.run)).toEqual([
+      expect.objectContaining({ outcome: 'unconfirmed', cost_basis: 'unconfirmed_estimate' }),
+    ]);
     expect(await reservationCount('qc', f.run)).toBe(0);
     expect(await reservationCount('video', f.job)).toBe(0);
   });
@@ -461,9 +658,19 @@ describe('production.qc-run, through the worker process', () => {
     behaviour.transcribe = () => ({ status: 401 });
     const f = await clip({ stampKey: true });
     await send(f.run);
-    expect(await finished(f.run)).toMatchObject({ qc_state: 'skipped', last_error_code: 'configuration' });
-    expect(await events('qc', f.run)).toEqual([expect.objectContaining({ outcome: 'rejected', cost_basis: 'zero_rejected' })]);
-    const key = (await pool.query(`select consecutive_auth_failures from provider_keys where owner_id = $1 and provider = 'openai'`, [f.owner])).rows[0];
+    expect(await finished(f.run)).toMatchObject({
+      qc_state: 'skipped',
+      last_error_code: 'configuration',
+    });
+    expect(await events('qc', f.run)).toEqual([
+      expect.objectContaining({ outcome: 'rejected', cost_basis: 'zero_rejected' }),
+    ]);
+    const key = (
+      await pool.query(
+        `select consecutive_auth_failures from provider_keys where owner_id = $1 and provider = 'openai'`,
+        [f.owner],
+      )
+    ).rows[0];
     expect(key.consecutive_auth_failures).toBe(1);
   });
 
@@ -471,7 +678,10 @@ describe('production.qc-run, through the worker process', () => {
     const f = await clip();
     await pool.query('update brief_segments set revision = 2 where id = $1', [f.segment]);
     await send(f.run);
-    expect(await finished(f.run)).toMatchObject({ qc_state: 'skipped', reason: 'The segment changed after this clip was made, so its audio was not compared.' });
+    expect(await finished(f.run)).toMatchObject({
+      qc_state: 'skipped',
+      reason: 'The segment changed after this clip was made, so its audio was not compared.',
+    });
     expect(transcribes()).toHaveLength(0);
   });
 
@@ -483,12 +693,23 @@ describe('production.qc-run, through the worker process', () => {
     const before = await runRow(first.run);
     behaviour.transcribe = () => ({ text: DIALOGUE });
     const next = randomUUID();
-    await pool.query(`insert into qc_runs (id, owner_id, video_job_id, reuse_hash, deadline_at) values ($1, $2, $3, $4, now() + interval '10 minutes')`, [next, first.owner, first.job, randomBytes(32).toString('hex')]);
+    await pool.query(
+      `insert into qc_runs (id, owner_id, video_job_id, reuse_hash, deadline_at) values ($1, $2, $3, $4, now() + interval '10 minutes')`,
+      [next, first.owner, first.job, randomBytes(32).toString('hex')],
+    );
     await send(next);
     expect(await finished(next)).toMatchObject({ qc_state: 'passed' });
     expect(await runRow(first.run)).toEqual(before);
-    const history = (await pool.query(`select id, qc_state from qc_runs where video_job_id = $1 order by created_at desc, id`, [first.job])).rows;
-    expect(history.map((r: { qc_state: string }) => r.qc_state).sort()).toEqual(['failed', 'passed']);
+    const history = (
+      await pool.query(
+        `select id, qc_state from qc_runs where video_job_id = $1 order by created_at desc, id`,
+        [first.job],
+      )
+    ).rows;
+    expect(history.map((r: { qc_state: string }) => r.qc_state).sort()).toEqual([
+      'failed',
+      'passed',
+    ]);
   });
 
   it('transcribes at most once when the same message is delivered twice', async () => {
@@ -510,42 +731,87 @@ describe('production.qc-run, through the worker process', () => {
 });
 
 describe('the first QC of a clip, through the whole worker path', () => {
-  it('is created in the transaction that completes the clip and passes, with the clip\'s own QC reservation used (TC-QC-01, 05)', async () => {
+  it("is created in the transaction that completes the clip and passes, with the clip's own QC reservation used (TC-QC-01, 05)", async () => {
     const owner = randomUUID();
     const wsKey = randomUUID();
     const aiKey = randomUUID();
-    await pool.query(`insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`, [owner, `sub_${owner.slice(0, 20)}`, `${owner.slice(0, 12)}@example.test`]);
-    for (const [id, provider, secret] of [[wsKey, 'wavespeed', WAVESPEED_KEY], [aiKey, 'openai', OPENAI_KEY]] as const) {
-      const sealed = wrap.seal(Buffer.from(secret), { userId: owner, provider, keyId: id, version: 1 });
+    await pool.query(
+      `insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`,
+      [owner, `sub_${owner.slice(0, 20)}`, `${owner.slice(0, 12)}@example.test`],
+    );
+    for (const [id, provider, secret] of [
+      [wsKey, 'wavespeed', WAVESPEED_KEY],
+      [aiKey, 'openai', OPENAI_KEY],
+    ] as const) {
+      const sealed = wrap.seal(Buffer.from(secret), {
+        userId: owner,
+        provider,
+        keyId: id,
+        version: 1,
+      });
       await pool.query(
         `insert into provider_keys (id, owner_id, provider, status, version, ciphertext, nonce, wrapped_dek, kek_version, last4, fingerprint, fingerprint_pepper_version)
          values ($1, $2, $3, 'active', 1, $4, $5, $6, $7, 'cdef', $8, 1)`,
-        [id, owner, provider, sealed.ciphertext, sealed.nonce, sealed.wrappedDek, sealed.kekVersion, (provider === 'openai' ? 'd' : 'e').repeat(64)],
+        [
+          id,
+          owner,
+          provider,
+          sealed.ciphertext,
+          sealed.nonce,
+          sealed.wrappedDek,
+          sealed.kekVersion,
+          (provider === 'openai' ? 'd' : 'e').repeat(64),
+        ],
       );
     }
     const campaign = randomUUID();
     const brief = randomUUID();
     const segment = randomUUID();
     const job = randomUUID();
-    await pool.query(`insert into campaigns (id, owner_id, product_name, product_description, segment_count) values ($1, $2, 'Calm Cap', 'A slow morning drink', 1)`, [campaign, owner]);
-    await pool.query(`insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, 'accepted', now())`, [brief, campaign, owner]);
-    await pool.query(`insert into brief_segments (id, brief_id, position, dialogue, prompt, word_count) values ($1, $2, 1, $3, 'A bright kitchen at dawn', 6)`, [segment, brief, DIALOGUE]);
+    await pool.query(
+      `insert into campaigns (id, owner_id, product_name, product_description, segment_count) values ($1, $2, 'Calm Cap', 'A slow morning drink', 1)`,
+      [campaign, owner],
+    );
+    await pool.query(
+      `insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, 'accepted', now())`,
+      [brief, campaign, owner],
+    );
+    await pool.query(
+      `insert into brief_segments (id, brief_id, position, dialogue, prompt, word_count) values ($1, $2, 1, $3, 'A bright kitchen at dawn', 6)`,
+      [segment, brief, DIALOGUE],
+    );
     await pool.query(
       `insert into video_jobs (id, owner_id, campaign_id, segment_id, segment_revision, provider_model, options, state, reuse_hash, key_id, key_version, deadline_at)
        values ($1, $2, $3, $4, 1, $5, '{"durationSeconds":15,"resolution":"1080p","aspectRatio":"9:16"}', 'pending', $6, $7, 1, now() + interval '30 minutes')`,
       [job, owner, campaign, segment, MODEL, randomBytes(32).toString('hex'), wsKey],
     );
-    await pool.query(`insert into spend_reservations (id, owner_id, job_type, job_id, estimated_cost_usd, remaining_calls) values ($1, $2, 'video', $3, 1.51, 2)`, [randomUUID(), owner, job]);
+    await pool.query(
+      `insert into spend_reservations (id, owner_id, job_type, job_id, estimated_cost_usd, remaining_calls) values ($1, $2, 'video', $3, 1.51, 2)`,
+      [randomUUID(), owner, job],
+    );
     await apiBoss.send('production.video-submit', { jobId: job });
     await untilJob(job, 'completed');
-    const run = (await pool.query('select id::text from qc_runs where video_job_id = $1', [job])).rows;
+    const run = (await pool.query('select id::text from qc_runs where video_job_id = $1', [job]))
+      .rows;
     expect(run).toHaveLength(1);
-    const row = await untilRun(run[0].id as string, (r) => r['state'] === 'completed', 'did not complete');
+    const row = await untilRun(
+      run[0].id as string,
+      (r) => r['state'] === 'completed',
+      'did not complete',
+    );
     expect(row).toMatchObject({ qc_state: 'passed', key_id: null });
     expect(transcribes()).toHaveLength(1);
     expect(transcribes()[0]?.auth).toBe(`Bearer ${OPENAI_KEY}`);
-    expect((await events('video', job)).map((e) => [e['call_seq'], e['outcome'], e['provider']])).toEqual([[1, 'succeeded', 'wavespeed']]);
-    expect((await events('qc', run[0].id as string)).map((e) => [e['call_seq'], e['outcome'], e['provider']])).toEqual([[1, 'succeeded', 'openai']]);
+    expect(
+      (await events('video', job)).map((e) => [e['call_seq'], e['outcome'], e['provider']]),
+    ).toEqual([[1, 'succeeded', 'wavespeed']]);
+    expect(
+      (await events('qc', run[0].id as string)).map((e) => [
+        e['call_seq'],
+        e['outcome'],
+        e['provider'],
+      ]),
+    ).toEqual([[1, 'succeeded', 'openai']]);
     expect(await reservationCount('video', job)).toBe(0);
     expect(await reservationCount('qc', run[0].id as string)).toBe(0);
   });
@@ -554,20 +820,38 @@ describe('the first QC of a clip, through the whole worker path', () => {
 async function untilJob(job: string, state: string, ms = 60_000): Promise<void> {
   const deadline = Date.now() + ms;
   for (;;) {
-    const row = (await pool.query('select state, cause_class, cause_message from video_jobs where id = $1', [job])).rows[0];
+    const row = (
+      await pool.query('select state, cause_class, cause_message from video_jobs where id = $1', [
+        job,
+      ])
+    ).rows[0];
     if (row.state === state) return;
-    if (Date.now() > deadline || row.state === 'failed') throw new Error(`video job stayed ${String(row.state)} (${String(row.cause_class)}: ${String(row.cause_message)})`);
+    if (Date.now() > deadline || row.state === 'failed')
+      throw new Error(
+        `video job stayed ${String(row.state)} (${String(row.cause_class)}: ${String(row.cause_message)})`,
+      );
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 
 describe('the QC recovery sweep', () => {
   it('settles a run that lost its answer as skipped "interrupted", keeping the estimate counted, and releases the reservations', async () => {
-    const f = await clip({ runState: 'submitting', submittingAt: '-120 seconds', callCount: 1, videoReservation: true });
+    const f = await clip({
+      runState: 'submitting',
+      submittingAt: '-120 seconds',
+      callCount: 1,
+      videoReservation: true,
+    });
     await sweepNow();
     await untilRun(f.run, (r) => r['state'] === 'completed', 'was not settled');
-    expect(await runRow(f.run)).toMatchObject({ qc_state: 'skipped', reason: 'The check was interrupted. Re-run QC.', last_error_code: 'outcome_unknown' });
-    expect(await events('qc', f.run)).toEqual([expect.objectContaining({ outcome: 'unconfirmed' })]);
+    expect(await runRow(f.run)).toMatchObject({
+      qc_state: 'skipped',
+      reason: 'The check was interrupted. Re-run QC.',
+      last_error_code: 'outcome_unknown',
+    });
+    expect(await events('qc', f.run)).toEqual([
+      expect.objectContaining({ outcome: 'unconfirmed' }),
+    ]);
     expect(await reservationCount('qc', f.run)).toBe(0);
     expect(await reservationCount('video', f.job)).toBe(0);
     expect(transcribes()).toHaveLength(0);
@@ -577,7 +861,10 @@ describe('the QC recovery sweep', () => {
     const f = await clip({ deadlineAt: '-1 minute', createdAt: '-11 minutes' });
     await sweepNow();
     await untilRun(f.run, (r) => r['state'] === 'completed', 'was not settled');
-    expect(await runRow(f.run)).toMatchObject({ qc_state: 'skipped', reason: 'The check did not start in time. Re-run QC.' });
+    expect(await runRow(f.run)).toMatchObject({
+      qc_state: 'skipped',
+      reason: 'The check did not start in time. Re-run QC.',
+    });
     expect(await events('qc', f.run)).toEqual([]);
     expect(await reservationCount('qc', f.run)).toBe(0);
   });

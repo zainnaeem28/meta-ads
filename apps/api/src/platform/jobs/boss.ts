@@ -76,7 +76,9 @@ export async function assertJobsReady(
       `pg-boss schema is at version ${String(installed)}, this build needs ${String(expected)}: run jobs:migrate`,
     );
   }
-  const present = new Set((await boss.getQueues(queues.map((queue) => queue.name))).map((q) => q.name));
+  const present = new Set(
+    (await boss.getQueues(queues.map((queue) => queue.name))).map((q) => q.name),
+  );
   const missing = queues.filter((queue) => !present.has(queue.name)).map((queue) => queue.name);
   if (missing.length > 0) {
     throw new JobsNotReadyError(

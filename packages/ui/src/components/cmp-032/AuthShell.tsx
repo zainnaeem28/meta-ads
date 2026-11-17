@@ -42,7 +42,10 @@ export function AuthShell({
   className,
 }: AuthShellProps) {
   const Main = landmark ? 'main' : 'div';
-  const classes = ['grid min-h-screen grid-cols-1 bg-background text-foreground lg:grid-cols-2', className]
+  const classes = [
+    'grid min-h-screen grid-cols-1 bg-background text-foreground lg:grid-cols-2',
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
   return (
@@ -61,9 +64,14 @@ export function AuthShell({
         ) : (
           <p className="max-w-prose text-section text-surface-inverse-muted">{PANEL_COPY}</p>
         )}
-        {panel?.footer ? <p className="text-ui text-surface-inverse-muted">{panel.footer}</p> : null}
+        {panel?.footer ? (
+          <p className="text-ui text-surface-inverse-muted">{panel.footer}</p>
+        ) : null}
       </aside>
-      <Main id={landmark ? 'main' : undefined} className="flex flex-col items-center justify-center gap-6 px-4 py-8 lg:px-8">
+      <Main
+        id={landmark ? 'main' : undefined}
+        className="flex flex-col items-center justify-center gap-6 px-4 py-8 lg:px-8"
+      >
         <div className="lg:hidden" data-mobile-lockup="">
           <Logo surface="background" size={160} />
         </div>
@@ -72,7 +80,10 @@ export function AuthShell({
             <h1 className="text-page font-semibold text-card-foreground">{title}</h1>
             {description ? <p className="text-ui text-muted-foreground">{description}</p> : null}
           </div>
-          <div data-slot={variant === 'message' ? 'message' : 'idp-slot'} className="flex flex-col gap-3">
+          <div
+            data-slot={variant === 'message' ? 'message' : 'idp-slot'}
+            className="flex flex-col gap-3"
+          >
             {providerState === 'loading' ? (
               <SkeletonRegion status="Loading sign-in">
                 <Skeleton className="h-control" />

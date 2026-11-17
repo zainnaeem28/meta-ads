@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -12,11 +20,16 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const SUITE = join(import.meta.dirname);
 const REPO = resolve(SUITE, '..', '..', '..', '..');
 const SCANNER = join(SUITE, 'support', 'scan-sinks.mjs');
-const SUBMIT_CHECK = process.env['SUBMIT_CHECK'] ?? join(process.env['AGENT_HOME'] ?? '/nonexistent', 'submit_check.py');
+const SUBMIT_CHECK =
+  process.env['SUBMIT_CHECK'] ??
+  join(process.env['AGENT_HOME'] ?? '/nonexistent', 'submit_check.py');
 let work: string;
 
 function git(cwd: string, ...args: string[]): string {
-  return execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@invalid', ...args], { cwd, encoding: 'utf8' });
+  return execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@invalid', ...args], {
+    cwd,
+    encoding: 'utf8',
+  });
 }
 
 /** A throwaway repository: `main` with a README, branch `ticket` with the scanner and one fixture committed on top. */
@@ -37,7 +50,21 @@ function ticketRepo(name: string, fixture: string): string {
 }
 
 function gate(dir: string, report: string) {
-  return spawnSync('python3', [SUBMIT_CHECK, '--base', 'main', '--check', 'node scan-sinks.mjs --out reports/sinks.sarif fixtures', '--secrets', 'reports/sinks.sarif', '--out', report], { cwd: dir, encoding: 'utf8', env: { ...process.env, CI: '1' } });
+  return spawnSync(
+    'python3',
+    [
+      SUBMIT_CHECK,
+      '--base',
+      'main',
+      '--check',
+      'node scan-sinks.mjs --out reports/sinks.sarif fixtures',
+      '--secrets',
+      'reports/sinks.sarif',
+      '--out',
+      report,
+    ],
+    { cwd: dir, encoding: 'utf8', env: { ...process.env, CI: '1' } },
+  );
 }
 
 beforeAll(() => {
@@ -49,7 +76,10 @@ afterAll(() => {
 
 describe('the sink scanner through the real submit_check.py gate (TC-LOG-03)', () => {
   it('finds the real submit_check.py', () => {
-    expect(existsSync(SUBMIT_CHECK), `set SUBMIT_CHECK or AGENT_HOME (looked for ${SUBMIT_CHECK})`).toBe(true);
+    expect(
+      existsSync(SUBMIT_CHECK),
+      `set SUBMIT_CHECK or AGENT_HOME (looked for ${SUBMIT_CHECK})`,
+    ).toBe(true);
   });
 
   it('fails on the committed leaking fixture, names the rules and never prints a value', () => {
@@ -75,8 +105,19 @@ describe('the sink scanner through the real submit_check.py gate (TC-LOG-03)', (
   });
 
   it('passes on the tree: nothing this suite or its evidence wrote holds a canary, a synthetic address or a token', () => {
-    for (const path of ['apps/api/reports/security', 'docs/evidence/TASK-116']) mkdirSync(join(REPO, path), { recursive: true });
-    const run = spawnSync('node', [SCANNER, '--out', join(work, 'tree.sarif'), join(REPO, 'apps/api/reports/security'), join(REPO, 'docs/evidence/TASK-116')], { cwd: REPO, encoding: 'utf8' });
+    for (const path of ['apps/api/reports/security', 'docs/evidence/TASK-116'])
+      mkdirSync(join(REPO, path), { recursive: true });
+    const run = spawnSync(
+      'node',
+      [
+        SCANNER,
+        '--out',
+        join(work, 'tree.sarif'),
+        join(REPO, 'apps/api/reports/security'),
+        join(REPO, 'docs/evidence/TASK-116'),
+      ],
+      { cwd: REPO, encoding: 'utf8' },
+    );
     expect(run.status, run.stdout + run.stderr).toBe(0);
   });
 });

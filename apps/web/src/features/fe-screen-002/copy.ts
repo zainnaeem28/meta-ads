@@ -1,5 +1,11 @@
 /** Copy for SCREEN-002 (UI-UX §8 and §9.1). No state names an account, an address or whether one exists. */
-export const SCREEN_002_STATES = ['not-linked', 'request-pending', 'suspended', 'removed', 'invite-invalid'] as const;
+export const SCREEN_002_STATES = [
+  'not-linked',
+  'request-pending',
+  'suspended',
+  'removed',
+  'invite-invalid',
+] as const;
 export type Screen002State = (typeof SCREEN_002_STATES)[number];
 
 /** States a visitor can be sent to by name (`?state=`); the others are decided by API-001. */

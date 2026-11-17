@@ -71,6 +71,11 @@ export class LocalIdentity implements IdentityPort {
     return this.options.issuer ?? LOCAL_ISSUER;
   }
 
+  /** The `azp` of a token a browser session would carry: the configured web origin, when there is one. */
+  get authorizedParty(): string | undefined {
+    return this.options.authorizedParties?.[0];
+  }
+
   jwks(): { keys: JwkEntry[] } {
     return { keys: [this.publicJwk] };
   }

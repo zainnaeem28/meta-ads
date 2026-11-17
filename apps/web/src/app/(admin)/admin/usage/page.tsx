@@ -8,7 +8,8 @@ export const metadata: Metadata = {
 };
 
 type Query = Record<string, string | string[] | undefined>;
-const one = (value: string | string[] | undefined): string => (Array.isArray(value) ? (value[0] ?? '') : (value ?? ''));
+const one = (value: string | string[] | undefined): string =>
+  Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 
 /** `/admin/usage` (SCREEN-015, `?from=&to=` as UTC dates). The api decides the role; a non-admin gets the unavailable state. */
 export default async function UsageRoute({ searchParams }: { searchParams: Promise<Query> }) {

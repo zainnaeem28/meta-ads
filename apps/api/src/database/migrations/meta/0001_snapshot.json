@@ -308,11 +308,7 @@
       "compositePrimaryKeys": {
         "idempotency_records_owner_id_operation_id_key_pk": {
           "name": "idempotency_records_owner_id_operation_id_key_pk",
-          "columns": [
-            "owner_id",
-            "operation_id",
-            "key"
-          ]
+          "columns": ["owner_id", "operation_id", "key"]
         }
       },
       "uniqueConstraints": {},
@@ -359,11 +355,7 @@
       "compositePrimaryKeys": {
         "rate_limit_buckets_scope_subject_window_start_pk": {
           "name": "rate_limit_buckets_scope_subject_window_start_pk",
-          "columns": [
-            "scope",
-            "subject",
-            "window_start"
-          ]
+          "columns": ["scope", "subject", "window_start"]
         }
       },
       "uniqueConstraints": {},

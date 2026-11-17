@@ -6,7 +6,10 @@ import { EXIT_CONFIG, StartupPriceCheck } from './startup-price-check.js';
 import { UsageService } from './usage.service.js';
 
 const OK: BillableCall = { provider: 'openai', operation: 'text' };
-const MISSING: BillableCall = { provider: 'wavespeed', operation: 'bytedance/seedance-2.0/image-to-video' };
+const MISSING: BillableCall = {
+  provider: 'wavespeed',
+  operation: 'bytedance/seedance-2.0/image-to-video',
+};
 
 function setup(operations: BillableCall[], fail?: Error) {
   const repository = new FakeUsageRepository();
@@ -42,7 +45,10 @@ describe('start-up price check (TD-D39)', () => {
   });
 
   it('exits 1, without detail, when the database cannot be read', async () => {
-    const { check, exit, stderr } = setup([OK], new Error('connect ECONNREFUSED postgres://user:secret@host/db'));
+    const { check, exit, stderr } = setup(
+      [OK],
+      new Error('connect ECONNREFUSED postgres://user:secret@host/db'),
+    );
     await check.onApplicationBootstrap();
     expect(exit).toHaveBeenCalledExactlyOnceWith(1);
     expect(JSON.stringify(stderr.mock.calls)).not.toContain('secret');

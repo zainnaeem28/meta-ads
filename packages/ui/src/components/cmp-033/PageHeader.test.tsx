@@ -10,7 +10,11 @@ describe('CMP-033 PageHeader', () => {
   it('renders exactly one h1 with description and actions, no axe violations', async () => {
     const { container } = render(
       <main>
-        <PageHeader title="Campaigns" description="Your ads." actions={<button>New brief</button>} />
+        <PageHeader
+          title="Campaigns"
+          description="Your ads."
+          actions={<button>New brief</button>}
+        />
       </main>,
     );
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);

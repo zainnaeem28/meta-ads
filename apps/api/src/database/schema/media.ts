@@ -49,7 +49,10 @@ export const mediaObjects = pgTable(
     index('media_objects_unattached_idx')
       .on(table.createdAt)
       .where(sql`${table.kind} = 'upload' and ${table.attachedAt} is null`),
-    check('media_objects_kind_ck', sql`${table.kind} in ('upload', 'clip', 'final', 'thumbstopper')`),
+    check(
+      'media_objects_kind_ck',
+      sql`${table.kind} in ('upload', 'clip', 'final', 'thumbstopper')`,
+    ),
     check('media_objects_state_ck', sql`${table.state} in ('processing', 'ready', 'rejected')`),
     check(
       'media_objects_reject_ck',

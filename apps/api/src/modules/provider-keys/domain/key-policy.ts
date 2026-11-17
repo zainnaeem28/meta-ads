@@ -29,7 +29,11 @@ export type KeyFormats = Readonly<Record<Provider, RegExp>>;
 export const normalizeKey = (raw: string): string => raw.trim();
 
 /** An `sk-` key is an OpenAI key: entered for WaveSpeed it gets its own reason before the format rule runs. */
-export function checkKeyFormat(provider: Provider, key: string, formats: KeyFormats): FormatProblem | undefined {
+export function checkKeyFormat(
+  provider: Provider,
+  key: string,
+  formats: KeyFormats,
+): FormatProblem | undefined {
   if (provider === 'wavespeed' && key.startsWith('sk-')) return 'wrong_provider';
   return formats[provider].test(key) ? undefined : 'format';
 }

@@ -15,6 +15,8 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error: unknown) => {
-  process.stderr.write(`api failed to start: ${error instanceof Error ? error.message : String(error)}\n`);
+  process.stderr.write(
+    `api failed to start: ${error instanceof Error ? error.message : String(error)}\n`,
+  );
   process.exit(1);
 });

@@ -157,8 +157,10 @@ export function DialogPanel({
   );
 }
 
-export interface DialogProps
-  extends Omit<DialogPanelProps, 'discarding' | 'onKeepEditing' | 'onDiscard' | 'titleId' | 'onCancel'> {
+export interface DialogProps extends Omit<
+  DialogPanelProps,
+  'discarding' | 'onKeepEditing' | 'onDiscard' | 'titleId' | 'onCancel'
+> {
   open: boolean;
   /** Called when the dialog should close (cancel, Escape, overlay click, or discard confirmed). */
   onClose: () => void;
