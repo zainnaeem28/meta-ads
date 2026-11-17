@@ -207,6 +207,24 @@ describe('SCREEN-006 steps 1 to 3', () => {
     expect(screen.getByRole('button', { name: COPY.step4.generate })).toBeDisabled();
   });
 
+  it('step 3: leaving without a segment count names it and does not save (F2)', async () => {
+    resume({ step: 3 });
+    const bodies: unknown[] = [];
+    server.use(
+      http.patch(`${BASE}/drafts/${ID}`, async ({ request }) => {
+        bodies.push(await request.json());
+        return ok(draft({ version: 2, step: 4 }));
+      }),
+    );
+    show({ draftId: ID });
+    await screen.findByRole('heading', { level: 2, name: COPY.step3.title });
+    next(/Next: Concept/);
+    expect((await screen.findAllByText(COPY.step3.segmentsRequired)).length).toBeGreaterThan(0);
+    expect(bodies).toHaveLength(0);
+    fireEvent.click(screen.getByRole('radio', { name: '2' }));
+    expect(screen.queryByText(COPY.step3.segmentsRequired)).toBeNull();
+  });
+
   it('saving: the button and the header show progress while the save is in flight', async () => {
     resume();
     server.use(http.patch(`${BASE}/drafts/${ID}`, () => new Promise(() => undefined)));
@@ -363,12 +381,10 @@ describe('draft model', () => {
   });
   it('checks steps, clamps the saved step, and reads the ETag', () => {
     expect(validateStep(2, EMPTY_VALUES)).toHaveLength(2);
-    expect(validateStep(3, { ...EMPTY_VALUES, ageMin: '15' })[0]?.message).toBe(
-      COPY.step3.ageRange,
-    );
-    expect(
-      validateStep(3, { ...EMPTY_VALUES, interests: Array(11).fill('x').join(',') }),
-    ).toHaveLength(1);
+    const seg = { ...EMPTY_VALUES, segmentCount: '2' as const };
+    expect(validateStep(3, EMPTY_VALUES)[0]?.message).toBe(COPY.step3.segmentsRequired);
+    expect(validateStep(3, { ...seg, ageMin: '15' })[0]?.message).toBe(COPY.step3.ageRange);
+    expect(validateStep(3, { ...seg, interests: Array(11).fill('x').join(',') })).toHaveLength(1);
     expect(clampStep(5)).toBe(4);
     expect(clampStep(0)).toBe(1);
     expect(etagOf(null, 7)).toBe('"7"');

@@ -69,6 +69,7 @@ const CONTROLS: ControlMap = {
   'audience.ageMax': { id: CONTROL_ID.ageMax, label: COPY.step3.ageMax },
   'audience.interests': { id: CONTROL_ID.interests, label: COPY.step3.interests },
   'audience.interests.*': { id: CONTROL_ID.interests, label: COPY.step3.interests },
+  'direction.segmentCount': { id: CONTROL_ID.segments, label: COPY.step3.segments },
   concept: { id: CONTROL_ID.concept, label: COPY.step4.concept },
   script: { id: CONTROL_ID.script, label: COPY.step4.script },
 };
@@ -335,6 +336,11 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
   const generate = async () => {
     const problems = validateStep(4, values);
     if (problems.length > 0) {
+      // The segment count is chosen in step 3: go back there so the summary link has a control to focus.
+      if (problems.some((p) => p.id === CONTROL_ID.segments)) {
+        move(3);
+        problems.splice(0, problems.length, ...validateStep(3, values));
+      }
       setEntries(
         problems.map((p, i) => ({
           key: `${String(i)}:${p.id}`,
@@ -814,7 +820,11 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
                     </Select>
                   )}
                 </FormField>
-                <div className="flex flex-col gap-1">
+                <div
+                  id={CONTROL_ID.segments}
+                  tabIndex={-1}
+                  className="flex flex-col gap-1 outline-none"
+                >
                   <span id="segments-label" className="text-ui font-semibold">
                     {COPY.step3.segments}
                   </span>
@@ -823,7 +833,9 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
                     name="segments"
                     value={values.segmentCount}
                     options={['1', '2', '3', '4'].map((n) => ({ value: n, label: n }))}
-                    onValueChange={(n) => edit({ segmentCount: n as FormValues['segmentCount'] })}
+                    onValueChange={(n) =>
+                      edit({ segmentCount: n as FormValues['segmentCount'] }, CONTROL_ID.segments)
+                    }
                   />
                   <p
                     className="text-caption tabular-nums text-muted-foreground"
@@ -831,6 +843,11 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
                   >
                     {segmentsText(values.segmentCount)}
                   </p>
+                  {err(CONTROL_ID.segments) ? (
+                    <p className="text-caption text-destructive" role="alert">
+                      {err(CONTROL_ID.segments)}
+                    </p>
+                  ) : null}
                 </div>
               </FormGrid>
             </div>
