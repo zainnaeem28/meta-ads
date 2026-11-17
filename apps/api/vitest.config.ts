@@ -28,6 +28,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/brief-data/junit.xml' }],
       ['junit', { outputFile: 'reports/brief-ai/junit.xml' }],
       ['junit', { outputFile: 'reports/brief-api/junit.xml' }],
+      ['junit', { outputFile: 'reports/brief-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -131,6 +132,16 @@ export default defineConfig({
         // composition root by brief-ai.integration.test.ts; the handlers and the adapter are unit tested here.
         'src/modules/brief/infrastructure/brief-jobs.repository.ts',
         'src/modules/brief/infrastructure/key-auth.reporter.ts',
+        // The job-creating operations (API-024, 035, 036, 053) are proven on real PostgreSQL through the api and worker
+        // composition roots by submit.integration.test.ts; the completeness rule, the reuse hash and the job summary are unit
+        // tested here (submit.test.ts).
+        'src/modules/brief/transport/submit-jobs.ts',
+        'src/modules/brief/transport/submit.service.ts',
+        'src/modules/brief/transport/submit.controller.ts',
+        'src/modules/brief/transport/analysis.service.ts',
+        'src/modules/brief/transport/analysis.controller.ts',
+        'src/modules/brief/transport/regenerate.service.ts',
+        'src/modules/brief/transport/regenerate.controller.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',
