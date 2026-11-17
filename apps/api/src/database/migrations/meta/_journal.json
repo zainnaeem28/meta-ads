@@ -71,6 +71,13 @@
       "when": 1794892786111,
       "tag": "0060_task-058-lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794914136074,
+      "tag": "0100_task-055-production-assembly",
+      "breakpoints": true
     }
   ]
 }

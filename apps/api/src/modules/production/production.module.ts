@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
 import { DATABASE } from '../../platform/db/index.js';
 import type { Database, DbTx } from '../../platform/db/index.js';
+import { ASSEMBLY_CONFIG, AssemblyService } from './application/assembly.service.js';
+import type { AssemblyConfig } from './application/assembly.service.js';
 import { QcKeySession } from './application/qc-key-session.js';
 import { AUDIO_EXTRACTOR, QC_CONFIG, QC_KEY_AUTH_REPORTER, QC_REPOSITORY, TRANSCRIBE_PORT } from './application/qc-ports.js';
 import type { QcConfig } from './application/qc-ports.js';
@@ -39,6 +41,7 @@ import { SqlVideoWorkerRepository } from './infrastructure/wavespeed/video-worke
 import { WaveSpeedVideoGen } from './infrastructure/wavespeed/wavespeed-video-gen.js';
 import { VideoProgressReader } from './infrastructure/video-progress.reader.js';
 import type { ProgressSnapshotShape } from './infrastructure/video-progress.reader.js';
+import { AssemblyController } from './transport/assembly.controller.js';
 import { QcController } from './transport/qc.controller.js';
 import { VideoController } from './transport/video.controller.js';
 import type { MediaService, StoragePort } from '../media/index.js';
@@ -103,8 +106,16 @@ export function videoConfigFrom(env: Env): VideoConfig {
   };
 }
 
+/** `ASSEMBLY_RENDERS_PER_USER_PER_DAY` (1 to 200, 20 by default), checked at start-up. */
+export function assemblyConfigFrom(env: Env): AssemblyConfig {
+  return {
+    rendersPerDay: integer(env, 'ASSEMBLY_RENDERS_PER_USER_PER_DAY', 20, 1, 200),
+    idempotencyTtlHours: videoConfigFrom(env).idempotencyTtlHours,
+  };
+}
+
 /**
- * Production: the M0010 video and QC tables (TASK-052), the segment clip operations API-060 to API-064 and the campaign
+ * Production: the M0010 video and QC tables (TASK-052), the segment clip operations API-060 to API-064, the assembly API-070 and API-071 (M0011, TASK-055) and the campaign
  * progress reader. Needs the database, the job queue and the usage module.
  */
 @Module({})
@@ -115,8 +126,10 @@ export class ProductionModule {
       imports: [edge.usage],
       providers: [
         { provide: VIDEO_CONFIG, useValue: videoConfigFrom(env) },
+        { provide: ASSEMBLY_CONFIG, useValue: assemblyConfigFrom(env) },
         VideoJobsService,
         QcRunsService,
+        AssemblyService,
         {
           provide: VideoProgressReader,
           useFactory: (database: Database) => {
@@ -127,8 +140,8 @@ export class ProductionModule {
           inject: [DATABASE],
         },
       ],
-      controllers: [VideoController, QcController],
-      exports: [VideoJobsService, QcRunsService, VideoProgressReader],
+      controllers: [VideoController, QcController, AssemblyController],
+      exports: [VideoJobsService, QcRunsService, AssemblyService, VideoProgressReader],
     };
   }
 }
