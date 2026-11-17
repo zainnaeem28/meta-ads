@@ -6,16 +6,15 @@ import { errorEnvelope } from './response.js';
 const ALLOW_ORDER = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
 
 export type RouteMatch =
-  | { kind: 'found' }
-  | { kind: 'method_not_allowed'; allow: string }
-  | { kind: 'not_found' };
+  { kind: 'found' } | { kind: 'method_not_allowed'; allow: string } | { kind: 'not_found' };
 
 interface Template {
   segments: readonly string[];
   methods: Set<string>;
 }
 
-const segmentsOf = (path: string): string[] => path.split('/').filter((s, i) => i === 0 || s !== '');
+const segmentsOf = (path: string): string[] =>
+  path.split('/').filter((s, i) => i === 0 || s !== '');
 
 /**
  * Every route's method and path template, collected as routes are registered. A request that matched no route is
@@ -50,13 +49,17 @@ export class MethodIndex {
     for (const template of this.templates.values()) {
       if (template.segments.length !== parts.length) continue;
       const fits = template.segments.every(
-        (segment, i) => (segment.startsWith(':') && (parts[i] ?? '') !== '') || segment === parts[i],
+        (segment, i) =>
+          (segment.startsWith(':') && (parts[i] ?? '') !== '') || segment === parts[i],
       );
       if (fits) template.methods.forEach((m) => methods.add(m));
     }
     if (methods.size === 0) return { kind: 'not_found' };
     if (methods.has(verb)) return { kind: 'found' };
-    return { kind: 'method_not_allowed', allow: ALLOW_ORDER.filter((m) => methods.has(m)).join(', ') };
+    return {
+      kind: 'method_not_allowed',
+      allow: ALLOW_ORDER.filter((m) => methods.has(m)).join(', '),
+    };
   }
 }
 

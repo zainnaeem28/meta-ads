@@ -18,7 +18,10 @@ export class MetricLines {
 
   providerCall(provider: string, operation: string, outcomeClass: string, latencyMs: number): void {
     this.metrics.providerCall(provider, operation, outcomeClass, latencyMs);
-    this.logger.info({ module: 'metrics', provider, outcome: outcomeClass, latencyMs }, `metric provider_call ${operation}`);
+    this.logger.info(
+      { module: 'metrics', provider, outcome: outcomeClass, latencyMs },
+      `metric provider_call ${operation}`,
+    );
   }
 
   /** Queue depth is written once per queue each sweep. */

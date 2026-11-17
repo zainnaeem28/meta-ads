@@ -32,7 +32,10 @@ export interface SentryDeps {
  * The beforeSend / beforeBreadcrumb hook: the report is rebuilt from a scrubbed copy and request bodies, cookies and
  * user data are removed outright. A hook failure drops the event (counted) rather than sending an unscrubbed one.
  */
-export function createScrubHook(scrub: Scrubber, onDropped: () => void): <T extends object>(event: T) => T | null {
+export function createScrubHook(
+  scrub: Scrubber,
+  onDropped: () => void,
+): <T extends object>(event: T) => T | null {
   return <T extends object>(event: T): T | null => {
     try {
       const copy = scrubReportEvent(event, scrub) as Record<string, unknown>;

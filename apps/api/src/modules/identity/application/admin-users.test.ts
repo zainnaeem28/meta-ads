@@ -41,11 +41,19 @@ class FakeStore implements AdminUserStore {
   findById = vi.fn((_db: unknown, id: string) => Promise.resolve(this.rows.get(id)));
   setRole = vi.fn((_db: unknown, id: string, version: number, role: string) => {
     const current = this.rows.get(id);
-    return Promise.resolve(current === undefined || current.version !== version ? undefined : { ...current, role, version: version + 1 });
+    return Promise.resolve(
+      current === undefined || current.version !== version
+        ? undefined
+        : { ...current, role, version: version + 1 },
+    );
   });
   setStatus = vi.fn((_db: unknown, id: string, version: number, status: string) => {
     const current = this.rows.get(id);
-    return Promise.resolve(current === undefined || current.version !== version ? undefined : { ...current, status, version: version + 1 });
+    return Promise.resolve(
+      current === undefined || current.version !== version
+        ? undefined
+        : { ...current, status, version: version + 1 },
+    );
   });
   countActiveAdmins = vi.fn(() => Promise.resolve(this.admins));
 }
@@ -58,13 +66,35 @@ let listArgs: unknown[];
 const poolDb = { pool: true };
 
 function make(key: string | null = KEY): AdminUsersService {
-  const database = { db: poolDb, uow: { run: (fn: (tx: unknown) => Promise<unknown>) => fn({ tx: true }) } };
+  const database = {
+    db: poolDb,
+    uow: { run: (fn: (tx: unknown) => Promise<unknown>) => fn({ tx: true }) },
+  };
   return new AdminUsersService(
     database as never,
     store,
-    { list: (_db: unknown, q: unknown) => { listArgs.push(q); return Promise.resolve(listed); } },
-    { record: (_db: unknown, e: never) => { events.push(e); return Promise.resolve('id'); } },
-    { raiseAlert: () => Promise.resolve({ raised: true, alertId: 'a', announce: () => { announced += 1; } }) },
+    {
+      list: (_db: unknown, q: unknown) => {
+        listArgs.push(q);
+        return Promise.resolve(listed);
+      },
+    },
+    {
+      record: (_db: unknown, e: never) => {
+        events.push(e);
+        return Promise.resolve('id');
+      },
+    },
+    {
+      raiseAlert: () =>
+        Promise.resolve({
+          raised: true,
+          alertId: 'a',
+          announce: () => {
+            announced += 1;
+          },
+        }),
+    },
     {} as never,
     key ?? undefined,
   );
@@ -96,9 +126,21 @@ describe('setRole (API-104)', () => {
     const result = await make().setRole(actor, OTHER, 'user', 3, 'req1');
     expect(result).toMatchObject({ changed: true, user: { role: 'user', version: 4 } });
     expect(locks.lockXact).toHaveBeenCalledWith({ tx: true }, 'admin-invariant');
-    expect(events).toEqual([expect.objectContaining({ action: 'role.revoked', outcome: 'allowed', actorType: 'admin', objectId: OTHER })]);
+    expect(events).toEqual([
+      expect.objectContaining({
+        action: 'role.revoked',
+        outcome: 'allowed',
+        actorType: 'admin',
+        objectId: OTHER,
+      }),
+    ]);
     expect(announced).toBe(1);
-    expect(jobs.enqueue).toHaveBeenCalledWith(expect.anything(), { tx: true }, 'identity.revoke-sessions', { userId: OTHER });
+    expect(jobs.enqueue).toHaveBeenCalledWith(
+      expect.anything(),
+      { tx: true },
+      'identity.revoke-sessions',
+      { userId: OTHER },
+    );
   });
 
   it('grants admin to a user with role.granted', async () => {
@@ -114,7 +156,9 @@ describe('setRole (API-104)', () => {
   });
 
   it('refuses an unknown account, an inactive one and a stale version', async () => {
-    expect(await refusal(make().setRole(actor, '00000000-0000-4000-8000-0000000000ff', 'user', 1, 'r'))).toBe('not_found');
+    expect(
+      await refusal(make().setRole(actor, '00000000-0000-4000-8000-0000000000ff', 'user', 1, 'r')),
+    ).toBe('not_found');
     store.rows.set(OTHER, row({ status: 'suspended' }));
     expect(await refusal(make().setRole(actor, OTHER, 'user', 3, 'r'))).toBe('state_conflict');
     store.rows.set(OTHER, row());
@@ -129,7 +173,13 @@ describe('setRole (API-104)', () => {
 
   it('refuses acting on oneself with self_action and an audit event (commit, then error)', async () => {
     expect(await refusal(make().setRole(actor, ME, 'user', 3, 'r'))).toBe('self_action');
-    expect(events).toEqual([expect.objectContaining({ action: 'admin_invariant.refused', outcome: 'denied', objectId: ME })]);
+    expect(events).toEqual([
+      expect.objectContaining({
+        action: 'admin_invariant.refused',
+        outcome: 'denied',
+        objectId: ME,
+      }),
+    ]);
     expect(store.setRole).not.toHaveBeenCalled();
   });
 
@@ -149,18 +199,28 @@ describe('setRole (API-104)', () => {
 
 describe('setStatus (lifecycle caller) and assertAdminInvariant', () => {
   const tx = { tx: true } as never;
-  const input = (over: object = {}) => ({ actorId: ME as string | null, userId: OTHER, status: 'suspended' as const, expectedVersion: 3, ...over });
+  const input = (over: object = {}) => ({
+    actorId: ME as string | null,
+    userId: OTHER,
+    status: 'suspended' as const,
+    expectedVersion: 3,
+    ...over,
+  });
 
   it('suspends and removes another admin while one remains, and queues a session revoke', async () => {
     expect(await make().setStatus(tx, input())).toMatchObject({ status: 'suspended', version: 4 });
     expect(jobs.enqueue).toHaveBeenCalledTimes(1);
-    expect(await make().setStatus(tx, input({ status: 'removed' }))).toMatchObject({ status: 'removed' });
+    expect(await make().setStatus(tx, input({ status: 'removed' }))).toMatchObject({
+      status: 'removed',
+    });
   });
 
   it('reinstates without the invariant and without a job', async () => {
     store.rows.set(OTHER, row({ status: 'suspended' }));
     store.admins = 1;
-    expect(await make().setStatus(tx, input({ status: 'active' }))).toMatchObject({ status: 'active' });
+    expect(await make().setStatus(tx, input({ status: 'active' }))).toMatchObject({
+      status: 'active',
+    });
     expect(jobs.enqueue).not.toHaveBeenCalled();
   });
 
@@ -168,11 +228,17 @@ describe('setStatus (lifecycle caller) and assertAdminInvariant', () => {
     expect(await make().setStatus(tx, input({ status: 'active' }))).toMatchObject({ version: 3 });
     store.rows.set(OTHER, row({ status: 'removed' }));
     expect(await refusal(make().setStatus(tx, input({ status: 'active' })))).toBe('state_conflict');
-    expect(await refusal(make().setStatus(tx, input({ userId: '00000000-0000-4000-8000-0000000000ff' })))).toBe('not_found');
+    expect(
+      await refusal(
+        make().setStatus(tx, input({ userId: '00000000-0000-4000-8000-0000000000ff' })),
+      ),
+    ).toBe('not_found');
   });
 
   it('refuses a stale version and a lost update', async () => {
-    expect(await refusal(make().setStatus(tx, input({ expectedVersion: 1 })))).toBe('version_conflict');
+    expect(await refusal(make().setStatus(tx, input({ expectedVersion: 1 })))).toBe(
+      'version_conflict',
+    );
     store.setStatus.mockResolvedValueOnce(undefined);
     expect(await refusal(make().setStatus(tx, input()))).toBe('version_conflict');
   });
@@ -181,7 +247,9 @@ describe('setStatus (lifecycle caller) and assertAdminInvariant', () => {
     store.admins = 1;
     expect(await refusal(make().setStatus(tx, input({ actorId: null })))).toBe('last_admin');
     expect(events[0]).toMatchObject({ actorType: 'system', action: 'admin_invariant.refused' });
-    expect(await refusal(make().setStatus(tx, input({ userId: ME, status: 'removed' })))).toBe('self_action');
+    expect(await refusal(make().setStatus(tx, input({ userId: ME, status: 'removed' })))).toBe(
+      'self_action',
+    );
     expect(events[1]).toMatchObject({ actorType: 'admin', objectId: ME });
     expect(store.setStatus).not.toHaveBeenCalled();
   });
@@ -200,7 +268,10 @@ describe('setStatus (lifecycle caller) and assertAdminInvariant', () => {
 });
 
 describe('listUsers (API-100)', () => {
-  const rowOf = (n: number): AdminUserListed => ({ ...row({ id: `00000000-0000-4000-8000-00000000010${String(n)}` }), createdAtKey: `2026-01-0${String(n)} 00:00:00.123456+00` });
+  const rowOf = (n: number): AdminUserListed => ({
+    ...row({ id: `00000000-0000-4000-8000-00000000010${String(n)}` }),
+    createdAtKey: `2026-01-0${String(n)} 00:00:00.123456+00`,
+  });
 
   it('pages with a signed cursor, returns email and the filter', async () => {
     listed = [rowOf(3), rowOf(2), rowOf(1)];
@@ -209,20 +280,36 @@ describe('listUsers (API-100)', () => {
     expect(page.pagination).toMatchObject({ hasNextPage: true, returnedCount: 2 });
     expect(listArgs[0]).toEqual({ limit: 3, status: 'active' });
     listed = [];
-    const next = await make().listUsers(actor, { limit: 2, status: 'active', cursor: page.pagination.nextCursor ?? '' });
+    const next = await make().listUsers(actor, {
+      limit: 2,
+      status: 'active',
+      cursor: page.pagination.nextCursor ?? '',
+    });
     expect(next.items).toEqual([]);
-    expect(listArgs[1]).toMatchObject({ after: { createdAt: '2026-01-02 00:00:00.123456+00', id: rowOf(2).id } });
+    expect(listArgs[1]).toMatchObject({
+      after: { createdAt: '2026-01-02 00:00:00.123456+00', id: rowOf(2).id },
+    });
   });
 
   it('refuses a cursor for other filters, a tampered one and a malformed sort key', async () => {
     listed = [rowOf(2), rowOf(1)];
     const page = await make().listUsers(actor, { limit: 1 });
     const cursor = page.pagination.nextCursor ?? '';
-    expect(await refusal(make().listUsers(actor, { limit: 1, status: 'removed', cursor }))).toBe('validation_failed');
-    expect(await refusal(make().listUsers(actor, { limit: 1, cursor: `${cursor}x` }))).toBe('validation_failed');
+    expect(await refusal(make().listUsers(actor, { limit: 1, status: 'removed', cursor }))).toBe(
+      'validation_failed',
+    );
+    expect(await refusal(make().listUsers(actor, { limit: 1, cursor: `${cursor}x` }))).toBe(
+      'validation_failed',
+    );
     const scope = { owner: ME, filters: { status: null } };
-    for (const bad of ['nodivider', 'x|not-an-id', 'not a date|00000000-0000-4000-8000-000000000101']) {
-      expect(await refusal(make().listUsers(actor, { limit: 1, cursor: encodeCursor(KEY, scope, bad) }))).toBe('validation_failed');
+    for (const bad of [
+      'nodivider',
+      'x|not-an-id',
+      'not a date|00000000-0000-4000-8000-000000000101',
+    ]) {
+      expect(
+        await refusal(make().listUsers(actor, { limit: 1, cursor: encodeCursor(KEY, scope, bad) })),
+      ).toBe('validation_failed');
     }
   });
 
@@ -231,7 +318,11 @@ describe('listUsers (API-100)', () => {
   });
 
   it('maps unknown stored values to the safe defaults', () => {
-    expect(viewOf(row({ role: 'weird', status: 'weird' }))).toMatchObject({ role: 'user', status: 'active', erasure: null });
+    expect(viewOf(row({ role: 'weird', status: 'weird' }))).toMatchObject({
+      role: 'user',
+      status: 'active',
+      erasure: null,
+    });
   });
 });
 
@@ -253,8 +344,12 @@ describe('identity.revoke-sessions handler', () => {
   });
 
   it('throws on a provider outage so the queue retries, and on malformed data', async () => {
-    const revokeSessions = vi.fn(() => Promise.reject(new IdentityUnavailable('revokeSessions', 'timeout')));
-    await expect(make({ revokeSessions }).handle({ userId: OTHER })).rejects.toBeInstanceOf(IdentityUnavailable);
+    const revokeSessions = vi.fn(() =>
+      Promise.reject(new IdentityUnavailable('revokeSessions', 'timeout')),
+    );
+    await expect(make({ revokeSessions }).handle({ userId: OTHER })).rejects.toBeInstanceOf(
+      IdentityUnavailable,
+    );
     await expect(make({}).handle(null)).rejects.toThrow(TypeError);
   });
 });
@@ -270,15 +365,28 @@ describe('transport', () => {
   it('validates the query, the path id and the body, and sets the ETag', async () => {
     const calls: unknown[] = [];
     const admin = {
-      listUsers: (_a: unknown, input: unknown) => { calls.push(input); return Promise.resolve('page'); },
-      setRole: (...args: unknown[]) => { calls.push(args.slice(1)); return Promise.resolve({ user: { version: 4 } }); },
+      listUsers: (_a: unknown, input: unknown) => {
+        calls.push(input);
+        return Promise.resolve('page');
+      },
+      setRole: (...args: unknown[]) => {
+        calls.push(args.slice(1));
+        return Promise.resolve({ user: { version: 4 } });
+      },
     };
     const controller = new AdminUsersController(admin as never);
     await controller.list(actor, { limit: '5', status: 'removed' });
     await controller.list(actor, undefined);
     expect(calls.slice(0, 2)).toEqual([{ limit: 5, status: 'removed' }, { limit: 20 }]);
-    for (const bad of [{ limit: '0' }, { limit: '51' }, { status: 'gone' }, { cursor: 'x'.repeat(513) }]) {
-      expect(() => controller.list(actor, bad)).toThrow(expect.objectContaining({ code: 'validation_failed' }));
+    for (const bad of [
+      { limit: '0' },
+      { limit: '51' },
+      { status: 'gone' },
+      { cursor: 'x'.repeat(513) },
+    ]) {
+      expect(() => controller.list(actor, bad)).toThrow(
+        expect.objectContaining({ code: 'validation_failed' }),
+      );
     }
     const header = vi.fn();
     const reply = { header } as never;
@@ -287,9 +395,17 @@ describe('transport', () => {
     expect(result).toEqual({ version: 4 });
     expect(header).toHaveBeenCalledWith('ETag', '"4"');
     expect(calls[2]).toEqual([OTHER, 'user', 3, 'req-1']);
-    await expect(controller.setRole(actor, 'nope', { role: 'user' }, '"3"', request, reply)).rejects.toMatchObject({ code: 'validation_failed' });
-    await expect(controller.setRole(actor, OTHER, { role: 'root' }, '"3"', request, reply)).rejects.toMatchObject({ code: 'validation_failed' });
-    await expect(controller.setRole(actor, OTHER, { role: 'user', extra: 1 }, '"3"', request, reply)).rejects.toMatchObject({ code: 'validation_failed' });
-    await expect(controller.setRole(actor, OTHER, { role: 'user' }, undefined, request, reply)).rejects.toMatchObject({ code: 'validation_failed' });
+    await expect(
+      controller.setRole(actor, 'nope', { role: 'user' }, '"3"', request, reply),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    await expect(
+      controller.setRole(actor, OTHER, { role: 'root' }, '"3"', request, reply),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    await expect(
+      controller.setRole(actor, OTHER, { role: 'user', extra: 1 }, '"3"', request, reply),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    await expect(
+      controller.setRole(actor, OTHER, { role: 'user' }, undefined, request, reply),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
   });
 });

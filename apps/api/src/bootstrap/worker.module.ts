@@ -1,6 +1,10 @@
 import 'reflect-metadata';
 import { Inject, Injectable, Module } from '@nestjs/common';
-import type { DynamicModule, INestApplicationContext, OnApplicationBootstrap } from '@nestjs/common';
+import type {
+  DynamicModule,
+  INestApplicationContext,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { Logger } from 'pino';
 import type { PgBoss } from 'pg-boss';
@@ -14,21 +18,47 @@ import { SWEEP_QUEUE, runRecoverySweep, sweepLockOf } from '../platform/jobs/swe
 import { sweepRegistry } from '../platform/jobs/sweep-registry.js';
 import type { SweepRegistry } from '../platform/jobs/sweep-registry.js';
 import { EXIT_WATCHDOG, Watchdog } from '../platform/jobs/watchdog.js';
+import { parseProviderOrigin } from '../platform/config/schema.js';
 import { EgressModule } from '../platform/egress/index.js';
 import type { EgressModuleConfig } from '../platform/egress/index.js';
 import { AuditModule } from '../modules/audit/index.js';
-import { BriefGenerationJob, BriefModule, ImageAnalysisJob, briefJobHandlers } from '../modules/brief/brief.module.js';
+import {
+  BriefGenerationJob,
+  BriefModule,
+  ImageAnalysisJob,
+  briefJobHandlers,
+} from '../modules/brief/brief.module.js';
 import { MediaService, STORAGE_PORT } from '../modules/media/index.js';
 import type { StoragePort } from '../modules/media/index.js';
 import { MEDIA_REPOSITORY } from '../modules/media/application/ports.js';
 import type { MediaRepository } from '../modules/media/application/ports.js';
 import { mediaConfigFrom } from '../modules/media/media.module.js';
-import { AssemblyRenderJob, ProductionWorkerModule, ProviderCopyCleanup, QcRunJob, ThumbSubmitJob, VideoCopyJob, VideoPollJob, VideoSubmitJob, productionJobHandlers } from '../modules/production/production.module.js';
-import { LifecycleModule, lifecycleJobHandlers, AccountErasureJob, CampaignDeletionJob } from '../modules/lifecycle/lifecycle.module.js';
+import {
+  AssemblyRenderJob,
+  ProductionWorkerModule,
+  ProviderCopyCleanup,
+  QcRunJob,
+  ThumbSubmitJob,
+  VideoCopyJob,
+  VideoPollJob,
+  VideoSubmitJob,
+  productionJobHandlers,
+} from '../modules/production/production.module.js';
+import {
+  LifecycleModule,
+  lifecycleJobHandlers,
+  AccountErasureJob,
+  CampaignDeletionJob,
+} from '../modules/lifecycle/lifecycle.module.js';
 import { MediaDeletion } from '../modules/media/worker/media-deletion.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
 import { IdentityModule, InvitationJobs, identityJobHandlers } from '../modules/identity/index.js';
-import { MediaModule, SanitizeJob, UnattachedSweep, mediaJobHandlers } from '../modules/media/media.module.js';
+import {
+  MediaModule,
+  SanitizeJob,
+  UnattachedSweep,
+  mediaJobHandlers,
+} from '../modules/media/media.module.js';
 import { KeyUnsealer } from '../modules/provider-keys/infrastructure/key-unsealer.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { VendorGateModule } from '../platform/vendor-gate/index.js';
@@ -57,22 +87,52 @@ export interface WorkerJob {
   readonly data: unknown;
 }
 
+/**
+ * The provider origin the worker calls instead of the real APIs, from `WORKER_PROVIDER_ORIGIN_OVERRIDE` (the test seam
+ * the built worker reads) or the programmatic `wavespeedBaseUrl` option. The setting is honoured only when APP_ENV is
+ * development or test and its host is named exactly under both the openai and wavespeed allow-lists; otherwise the
+ * start-up stops. The egress layer checks the host again on every call, so the override can never reach beyond the list.
+ */
+export function providerOriginOf(config: WorkerConfig, option?: string): string | undefined {
+  const setting = config.WORKER_PROVIDER_ORIGIN_OVERRIDE;
+  if (setting === undefined) return option;
+  if (config.APP_ENV !== 'development' && config.APP_ENV !== 'test') {
+    throw new Error(
+      'WORKER_PROVIDER_ORIGIN_OVERRIDE is refused unless APP_ENV is development or test',
+    );
+  }
+  const origin = parseProviderOrigin(setting);
+  if (origin === undefined)
+    throw new Error('WORKER_PROVIDER_ORIGIN_OVERRIDE must be a bare https origin on a host name');
+  const hosts = config.EGRESS_ALLOWED_HOSTS ?? {};
+  for (const vendor of ['openai', 'wavespeed']) {
+    if (!(hosts[vendor] ?? []).some((h) => h.toLowerCase() === origin.hostname)) {
+      throw new Error(
+        `WORKER_PROVIDER_ORIGIN_OVERRIDE host is not named in EGRESS_ALLOWED_HOSTS.${vendor}`,
+      );
+    }
+  }
+  return origin.origin;
+}
+
 /** A queue's handler, registered by the module that owns the queue. It throws to fail the job. */
 export type JobHandler = (job: WorkerJob, log: Logger) => Promise<void>;
 
-export type WorkerConfig = Partial<Pick<ProcessConfig, keyof EgressModuleConfig>> &
+export type WorkerConfig = Partial<
+  Pick<ProcessConfig, keyof EgressModuleConfig | 'APP_ENV' | 'WORKER_PROVIDER_ORIGIN_OVERRIDE'>
+> &
   Pick<
-  ProcessConfig,
-  | 'DATABASE_URL'
-  | 'DATABASE_POOL_MAX'
-  | 'DATABASE_ACQUIRE_TIMEOUT_MS'
-  | 'WORKER_WATCHDOG_SECONDS'
-  | 'WORKER_DRAIN_SECONDS'
-  | 'WORKER_CONCURRENCY_PROVIDER'
-  | 'WORKER_CONCURRENCY_SANITIZE'
-  | 'WORKER_CONCURRENCY_DELETION'
-  | 'HEARTBEAT_URL_WORKER'
->;
+    ProcessConfig,
+    | 'DATABASE_URL'
+    | 'DATABASE_POOL_MAX'
+    | 'DATABASE_ACQUIRE_TIMEOUT_MS'
+    | 'WORKER_WATCHDOG_SECONDS'
+    | 'WORKER_DRAIN_SECONDS'
+    | 'WORKER_CONCURRENCY_PROVIDER'
+    | 'WORKER_CONCURRENCY_SANITIZE'
+    | 'WORKER_CONCURRENCY_DELETION'
+    | 'HEARTBEAT_URL_WORKER'
+  >;
 
 export interface WorkerOptions {
   readonly logger: Logger;
@@ -209,13 +269,18 @@ export interface WorkerApp {
 }
 
 /** The composition root: database, pg-boss (worker role: supervises and schedules), audit and the runtime. */
-export async function createWorkerApp(config: WorkerConfig, options: WorkerOptions): Promise<WorkerApp> {
+export async function createWorkerApp(
+  config: WorkerConfig,
+  options: WorkerOptions,
+): Promise<WorkerApp> {
   const env = options.env ?? process.env;
   // Provider-key custody (REQ-015/016): the seal port and the one unsealer binding in the product. Unreadable or
   // non-RSA-3072 maps stop the start-up here.
-  const keys = env['KEK_PUBLIC_KEYS'] === undefined ? [] : [ProviderKeysModule.register(env, 'worker')];
+  const keys =
+    env['KEK_PUBLIC_KEYS'] === undefined ? [] : [ProviderKeysModule.register(env, 'worker')];
   const keyUnsealer = env['KEK_PRIVATE_KEYS'] === undefined ? undefined : KeyUnsealer.fromEnv(env);
-  const unsealer = keyUnsealer === undefined ? [] : [{ provide: KeyUnsealer, useValue: keyUnsealer }];
+  const unsealer =
+    keyUnsealer === undefined ? [] : [{ provide: KeyUnsealer, useValue: keyUnsealer }];
   // Media (TASK-043): the sanitize job, the hourly sweep and the deletion helpers, on the worker's own storage token.
   const media = env['R2_ENDPOINT'] === undefined ? [] : [MediaModule.registerWorker(env)];
   // Brief (TASK-049): `brief.generate` and `brief.analyze-image` over the OpenAI adapter. Needs the key custody (the
@@ -242,21 +307,21 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
         }),
       ]
     : [];
-  const production =
-    productionEnabled
-      ? [
-          ProductionWorkerModule.register(env, {
-            audit,
-            egress: options.egress ?? EgressModule.register(config),
-            usage: usage as DynamicModule,
-            opener: keyUnsealer,
-            storage: () => context.get<StoragePort>(STORAGE_PORT, { strict: false }),
-            media: () => mediaService(),
-            registry: options.registry ?? sweepRegistry,
-            ...(options.wavespeedBaseUrl === undefined ? {} : { baseUrl: options.wavespeedBaseUrl }),
-          }),
-        ]
-      : [];
+  const providerOrigin = providerOriginOf(config, options.wavespeedBaseUrl);
+  const production = productionEnabled
+    ? [
+        ProductionWorkerModule.register(env, {
+          audit,
+          egress: options.egress ?? EgressModule.register(config),
+          usage: usage as DynamicModule,
+          opener: keyUnsealer,
+          storage: () => context.get<StoragePort>(STORAGE_PORT, { strict: false }),
+          media: () => mediaService(),
+          registry: options.registry ?? sweepRegistry,
+          ...(providerOrigin === undefined ? {} : { baseUrl: providerOrigin }),
+        }),
+      ]
+    : [];
   // The media module's public service for the clip copy (signed reference URL, object registration), built on the worker's
   // own repository and storage; the media worker module does not carry it.
   let media$: MediaService | undefined;
@@ -276,7 +341,9 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
         LifecycleModule.registerWorker(env, {
           audit,
           media: () => context.get(MediaDeletion, { strict: false }),
-          providerTasks: productionEnabled ? () => context.get(ProviderCopyCleanup, { strict: false }) : undefined,
+          providerTasks: productionEnabled
+            ? () => context.get(ProviderCopyCleanup, { strict: false })
+            : undefined,
         }),
       ]
     : [];
@@ -339,6 +406,9 @@ export async function createWorkerApp(config: WorkerConfig, options: WorkerOptio
     ],
   })
   class WorkerModule {}
-  const context: INestApplicationContext = await NestFactory.createApplicationContext(WorkerModule, { logger: false });
+  const context: INestApplicationContext = await NestFactory.createApplicationContext(
+    WorkerModule,
+    { logger: false },
+  );
   return { context, runtime: context.get(WorkerRuntime) };
 }

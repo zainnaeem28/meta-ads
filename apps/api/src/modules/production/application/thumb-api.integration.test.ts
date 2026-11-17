@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles; prettier reflow detached the per-line directives (AIU-256) */
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -15,9 +16,22 @@ import { installJobs } from '../../../platform/jobs/test-support.js';
 import { createHttpLogging } from '../../../platform/logging/index.js';
 import { priceTableSeedStep } from '../../usage/index.js';
 
-const brandRulesFile = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', '..', '..', '..', '..', 'config', 'brand-rules.json'), 'utf8')) as {
+const brandRulesFile = JSON.parse(
+  readFileSync(
+    join(import.meta.dirname, '..', '..', '..', '..', '..', '..', 'config', 'brand-rules.json'),
+    'utf8',
+  ),
+) as {
   rulesVersion: number;
-  rules: { id: string; class: string; clearable: boolean; kind: string; params: unknown; message: string; active: boolean }[];
+  rules: {
+    id: string;
+    class: string;
+    clearable: boolean;
+    kind: string;
+    params: unknown;
+    message: string;
+    active: boolean;
+  }[];
 };
 
 // TASK-057 (production 6/6) through the real api composition root (`createApiApp`, the one `main.api.ts` runs) with
@@ -25,9 +39,23 @@ const brandRulesFile = JSON.parse(readFileSync(join(import.meta.dirname, '..', '
 // reservation, reuse, idempotency) and API-076 read the latest one. TC-THM-01..04, 07, 08.
 
 const ORIGIN = 'http://localhost:3000';
-const contractsDir = join(import.meta.dirname, '..', '..', '..', '..', '..', '..', 'packages', 'contracts');
+const contractsDir = join(
+  import.meta.dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'packages',
+  'contracts',
+);
 
-const sink = new Writable({ write(_chunk: Buffer, _e, done) { done(); } });
+const sink = new Writable({
+  write(_chunk: Buffer, _e, done) {
+    done();
+  },
+});
 let testDb: TestDatabase;
 let pool: pg.Pool;
 let app: Awaited<ReturnType<typeof createApiApp>>['app'];
@@ -43,8 +71,10 @@ let local: Local;
 type Validate = ((value: unknown) => boolean) & { errors?: unknown };
 function contractValidator(schema: string): Validate {
   const requireFromContracts = createRequire(join(contractsDir, 'package.json'));
-  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any }).default; // eslint-disable-line @typescript-eslint/no-explicit-any
-  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void }).default;
+  const Ajv2020 = (requireFromContracts('ajv/dist/2020') as { default: new (o: object) => any })
+    .default;
+  const addFormats = (requireFromContracts('ajv-formats') as { default: (a: unknown) => void })
+    .default;
   const yaml = requireFromContracts('js-yaml') as { load(text: string): { components: unknown } };
   const spec = yaml.load(readFileSync(join(contractsDir, 'openapi.yaml'), 'utf8'));
   const ajv = new Ajv2020({ strict: false, allErrors: true });
@@ -59,10 +89,21 @@ beforeAll(async () => {
   const statements = (file: string): string[] =>
     (readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants')[0] ?? '')
       .split('--> statement-breakpoint')
-      .map((statement) => statement.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim())
+      .map((statement) =>
+        statement
+          .split('\n')
+          .filter((line) => !line.trim().startsWith('--'))
+          .join('\n')
+          .trim(),
+      )
       .filter((statement) => statement !== '');
   for (const statement of statements('0001_task-025-platform.sql')) {
-    if (/^CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(statement)) await pool.query(statement);
+    if (
+      /^CREATE (TABLE|INDEX|UNIQUE INDEX) "?(idempotency_records|rate_limit_buckets)/.test(
+        statement,
+      )
+    )
+      await pool.query(statement);
   }
   await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
   const files = [
@@ -79,12 +120,26 @@ beforeAll(async () => {
   ];
   for (const file of files) for (const statement of statements(file)) await pool.query(statement);
   await installJobs(testDb.url);
-  await runSeed({ dataset: 'reference', appEnv: 'development', databaseUrl: testDb.url, steps: [priceTableSeedStep()] });
+  await runSeed({
+    dataset: 'reference',
+    appEnv: 'development',
+    databaseUrl: testDb.url,
+    steps: [priceTableSeedStep()],
+  });
   // The brand rules the claim check reads, as the release seed leaves them (the seed step itself is the brief module's).
   for (const rule of brandRulesFile.rules) {
     await pool.query(
       `insert into brand_rules (id, class, clearable, kind, params, message, rules_version, active) values ($1, $2, $3, $4, $5::jsonb, $6, $7, $8)`,
-      [rule.id, rule.class, rule.clearable, rule.kind, JSON.stringify(rule.params), rule.message, brandRulesFile.rulesVersion, rule.active],
+      [
+        rule.id,
+        rule.class,
+        rule.clearable,
+        rule.kind,
+        JSON.stringify(rule.params),
+        rule.message,
+        brandRulesFile.rulesVersion,
+        rule.active,
+      ],
     );
   }
   const env: Record<string, string | undefined> = {
@@ -111,8 +166,12 @@ beforeAll(async () => {
     },
     createHttpLogging({ level: 'silent', destination: sink }),
   ));
-  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [...m.providers.values()]);
-  const found = providers.map((p) => p.instance as Partial<Local> | undefined).find((i) => typeof i?.issueToken === 'function');
+  const providers = [...app.get(ModulesContainer, { strict: false }).values()].flatMap((m) => [
+    ...m.providers.values(),
+  ]);
+  const found = providers
+    .map((p) => p.instance as Partial<Local> | undefined)
+    .find((i) => typeof i?.issueToken === 'function');
   if (found === undefined) throw new Error('local identity provider not found');
   local = found as Local;
 }, 300_000);
@@ -127,14 +186,32 @@ afterAll(async () => {
   await testDb?.drop();
 });
 
-
 const fastify = () => app.getHttpAdapter().getInstance();
-interface Body { success: boolean; data?: any; error?: { code: string; message: string; details?: any[] }; metaData: any } // eslint-disable-line @typescript-eslint/no-explicit-any
-async function call(method: 'GET' | 'POST', url: string, token?: string, payload?: unknown, extra: Record<string, string> = {}) {
+interface Body {
+  success: boolean;
+  data?: any;
+  error?: { code: string; message: string; details?: any[] };
+  metaData: any;
+}
+async function call(
+  method: 'GET' | 'POST',
+  url: string,
+  token?: string,
+  payload?: unknown,
+  extra: Record<string, string> = {},
+) {
   const headers: Record<string, string> = { ...extra };
   if (token !== undefined) headers['authorization'] = `Bearer ${token}`;
-  const res = await fastify().inject({ method, url: `/api/v1${url}`, headers, ...(payload === undefined ? {} : { payload: payload as object }) });
-  return { status: res.statusCode, body: (res.body === '' ? { success: true, metaData: {} } : JSON.parse(res.body)) as Body };
+  const res = await fastify().inject({
+    method,
+    url: `/api/v1${url}`,
+    headers,
+    ...(payload === undefined ? {} : { payload: payload as object }),
+  });
+  return {
+    status: res.statusCode,
+    body: (res.body === '' ? { success: true, metaData: {} } : JSON.parse(res.body)) as Body,
+  };
 }
 const post = (url: string, token: string | undefined, key?: string, payload?: unknown) =>
   call('POST', url, token, payload, key === undefined ? {} : { 'idempotency-key': key });
@@ -143,22 +220,41 @@ async function account(keys: 'openai' | 'none' | 'disabled' = 'openai') {
   const sub = `user_t54_${String(++seq)}`;
   const email = `p${String(seq)}@example.test`;
   local.addUser(sub, email, true);
-  await pool.query(`insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`, [email]);
+  await pool.query(
+    `insert into invitations (id, email, expires_at) values (gen_random_uuid(), $1, now() + interval '1 day')`,
+    [email],
+  );
   const token = local.issueToken({ sub, azp: ORIGIN, fva: [1, 1] });
   expect((await call('GET', '/me', token)).status).toBe(200);
-  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0].id as string;
+  const id = (await pool.query(`select id from users where idp_subject = $1`, [sub])).rows[0]
+    .id as string;
   if (keys !== 'none') {
     await pool.query(
       `insert into provider_keys (id, owner_id, provider, status, version, ciphertext, nonce, wrapped_dek, kek_version, last4, fingerprint, fingerprint_pepper_version)
        values ($1, $2, 'openai', $3, 1, $4, $5, $6, 1, 'cdef', $7, 1)`,
-      [randomUUID(), id, keys === 'disabled' ? 'disabled' : 'active', Buffer.alloc(32, 1), Buffer.alloc(12, 2), Buffer.alloc(384, 3), 'b'.repeat(64)],
+      [
+        randomUUID(),
+        id,
+        keys === 'disabled' ? 'disabled' : 'active',
+        Buffer.alloc(32, 1),
+        Buffer.alloc(12, 2),
+        Buffer.alloc(384, 3),
+        'b'.repeat(64),
+      ],
     );
   }
   return { id, token };
 }
 
-interface Setup { campaign: string; brief: string; segments: string[] }
-async function campaign(owner: string, opts: { brief?: string; media?: string | null; segments?: number } = {}): Promise<Setup> {
+interface Setup {
+  campaign: string;
+  brief: string;
+  segments: string[];
+}
+async function campaign(
+  owner: string,
+  opts: { brief?: string; media?: string | null; segments?: number } = {},
+): Promise<Setup> {
   const campaignId = randomUUID();
   const briefId = randomUUID();
   const count = opts.segments ?? 2;
@@ -167,7 +263,10 @@ async function campaign(owner: string, opts: { brief?: string; media?: string | 
     [campaignId, owner, opts.media ?? null, Math.max(count, 1)],
   );
   const state = opts.brief ?? 'accepted';
-  await pool.query(`insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, $4, ${state === 'accepted' ? 'now()' : 'null'})`, [briefId, campaignId, owner, state]);
+  await pool.query(
+    `insert into briefs (id, campaign_id, owner_id, state, accepted_at) values ($1, $2, $3, $4, ${state === 'accepted' ? 'now()' : 'null'})`,
+    [briefId, campaignId, owner, state],
+  );
   const segments: string[] = [];
   for (let position = 1; position <= count; position += 1) {
     const id = randomUUID();
@@ -180,16 +279,20 @@ async function campaign(owner: string, opts: { brief?: string; media?: string | 
   return { campaign: campaignId, brief: briefId, segments };
 }
 
-
-
-
 const count = async (table: string, where: string, params: unknown[]) =>
-  (await pool.query(`select count(*)::int as n from ${table} where ${where}`, params)).rows[0].n as number;
+  (await pool.query(`select count(*)::int as n from ${table} where ${where}`, params)).rows[0]
+    .n as number;
 const jobsOf = (campaignId: string) => count('thumbstopper_jobs', 'campaign_id = $1', [campaignId]);
-const reservationOf = (job: string) => count('spend_reservations', "job_type = 'thumbstopper' and job_id = $1", [job]);
-const queued = (job: string) => count('pgboss.job', "name = 'production.thumbstopper-submit' and data->>'jobId' = $1", [job]);
-const thumb = (campaignId: string, token: string | undefined, key: string | undefined, calloutText: unknown = 'Mellow mornings') =>
-  post(`/campaigns/${campaignId}/thumbstopper`, token, key, { calloutText });
+const reservationOf = (job: string) =>
+  count('spend_reservations', "job_type = 'thumbstopper' and job_id = $1", [job]);
+const queued = (job: string) =>
+  count('pgboss.job', "name = 'production.thumbstopper-submit' and data->>'jobId' = $1", [job]);
+const thumb = (
+  campaignId: string,
+  token: string | undefined,
+  key: string | undefined,
+  calloutText: unknown = 'Mellow mornings',
+) => post(`/campaigns/${campaignId}/thumbstopper`, token, key, { calloutText });
 
 describe('API-075 generate the thumbstopper', () => {
   const valid = contractValidator('ThumbstopperResponse');
@@ -200,14 +303,35 @@ describe('API-075 generate the thumbstopper', () => {
     const res = await thumb(c.campaign, a.token, 'th-1');
     expect(res.status).toBe(202);
     expect(valid(res.body)).toBe(true);
-    expect(res.body.data).toMatchObject({ state: 'pending', label: 'pending', calloutText: 'Mellow mornings', campaignId: c.campaign, outputMediaId: null, reused: false, causeClass: null });
-    const row = (await pool.query('select * from thumbstopper_jobs where id = $1', [res.body.data.id])).rows[0];
-    expect(row).toMatchObject({ owner_id: a.id, campaign_id: c.campaign, state: 'pending', call_count: 0, provider_model: 'local-stub-image' });
+    expect(res.body.data).toMatchObject({
+      state: 'pending',
+      label: 'pending',
+      calloutText: 'Mellow mornings',
+      campaignId: c.campaign,
+      outputMediaId: null,
+      reused: false,
+      causeClass: null,
+    });
+    const row = (
+      await pool.query('select * from thumbstopper_jobs where id = $1', [res.body.data.id])
+    ).rows[0];
+    expect(row).toMatchObject({
+      owner_id: a.id,
+      campaign_id: c.campaign,
+      state: 'pending',
+      call_count: 0,
+      provider_model: 'local-stub-image',
+    });
     expect(row.key_id).not.toBeNull();
     expect(row.key_version).toBe(1);
     expect(await reservationOf(res.body.data.id)).toBe(1);
     expect(await queued(res.body.data.id)).toBe(1);
-    const reservation = (await pool.query(`select remaining_calls, estimated_cost_usd::float as cost from spend_reservations where job_id = $1`, [res.body.data.id])).rows[0];
+    const reservation = (
+      await pool.query(
+        `select remaining_calls, estimated_cost_usd::float as cost from spend_reservations where job_id = $1`,
+        [res.body.data.id],
+      )
+    ).rows[0];
     expect(reservation.remaining_calls).toBe(1);
     // The price table row of the image model prices the estimate (TC-THM-07).
     expect(reservation.cost).toBeCloseTo(0.04, 6);
@@ -218,7 +342,9 @@ describe('API-075 generate the thumbstopper', () => {
     const c = await campaign(a.id);
     const res = await thumb(c.campaign, a.token, 'cl-1', 'This cures your anxiety');
     expect([res.status, res.body.error?.code]).toEqual([422, 'open_claim_issues']);
-    expect(res.body.error?.details).toEqual([expect.objectContaining({ field: 'calloutText', code: 'hr_treatment_cure' })]);
+    expect(res.body.error?.details).toEqual([
+      expect.objectContaining({ field: 'calloutText', code: 'hr_treatment_cure' }),
+    ]);
     expect(await jobsOf(c.campaign)).toBe(0);
     expect(await count('spend_reservations', 'owner_id = $1', [a.id])).toBe(0);
     expect(await count('idempotency_records', 'owner_id = $1', [a.id])).toBe(0);
@@ -229,9 +355,13 @@ describe('API-075 generate the thumbstopper', () => {
     const c = await campaign(a.id);
     const hype = await thumb(c.campaign, a.token, 'cl-2', 'A game changer');
     expect([hype.status, hype.body.error?.code]).toEqual([422, 'open_claim_issues']);
-    expect(hype.body.error?.details).toEqual([expect.objectContaining({ field: 'calloutText', code: 'other_tone_hype' })]);
+    expect(hype.body.error?.details).toEqual([
+      expect.objectContaining({ field: 'calloutText', code: 'other_tone_hype' }),
+    ]);
     const dash = await thumb(c.campaign, a.token, 'cl-3', 'Slow — calm');
-    expect(dash.body.error?.details?.map((d: { code: string }) => d.code)).toEqual(['other_em_dash']);
+    expect(dash.body.error?.details?.map((d: { code: string }) => d.code)).toEqual([
+      'other_em_dash',
+    ]);
     // The brief's structural rules (word count, call to action, age framing) judge a script, not a call-out.
     expect((await thumb(c.campaign, a.token, 'cl-4', 'Hi')).status).toBe(202);
     expect(await jobsOf(c.campaign)).toBe(1);
@@ -262,7 +392,10 @@ describe('API-075 generate the thumbstopper', () => {
     const other = await thumb(c.campaign, a.token, 'live-3', 'Slow mornings');
     expect(other.body.data).toMatchObject({ reused: false });
     expect(other.body.data.id).not.toBe(first.body.data.id);
-    await pool.query(`update thumbstopper_jobs set state = 'failed', cause_class = 'temporary', cause_message = 'OpenAI was not available. Try again.' where id = $1`, [first.body.data.id]);
+    await pool.query(
+      `update thumbstopper_jobs set state = 'failed', cause_class = 'temporary', cause_message = 'OpenAI was not available. Try again.' where id = $1`,
+      [first.body.data.id],
+    );
     const next = await thumb(c.campaign, a.token, 'live-4');
     expect(next.body.data).toMatchObject({ reused: false, state: 'pending' });
     expect(next.body.data.id).not.toBe(first.body.data.id);
@@ -270,7 +403,10 @@ describe('API-075 generate the thumbstopper', () => {
   });
 
   it('refuses a missing or disabled OpenAI key before anything is reserved or queued (TC-THM-03)', async () => {
-    for (const [keys, code] of [['none', 'key_missing'], ['disabled', 'key_disabled']] as const) {
+    for (const [keys, code] of [
+      ['none', 'key_missing'],
+      ['disabled', 'key_disabled'],
+    ] as const) {
       const who = await account(keys);
       const c = await campaign(who.id);
       const res = await thumb(c.campaign, who.token, `key-${keys}`);
@@ -293,10 +429,12 @@ describe('API-075 generate the thumbstopper', () => {
     const res = await thumb(c.campaign, a.token, 'cap');
     expect([res.status, res.body.error?.code]).toEqual([422, 'spend_cap_reached']);
     expect(await jobsOf(c.campaign)).toBe(0);
-    expect(await count('spend_reservations', 'owner_id = $1 and job_type = $2', [a.id, 'thumbstopper'])).toBe(0);
+    expect(
+      await count('spend_reservations', 'owner_id = $1 and job_type = $2', [a.id, 'thumbstopper']),
+    ).toBe(0);
   });
 
-  it('answers 404 for a missing campaign, another owner\'s campaign and a deleting one', async () => {
+  it("answers 404 for a missing campaign, another owner's campaign and a deleting one", async () => {
     const a = await account();
     const b = await account();
     const c = await campaign(a.id);
@@ -312,11 +450,25 @@ describe('API-075 generate the thumbstopper', () => {
     const a = await account();
     const c = await campaign(a.id);
     expect((await thumb(c.campaign, a.token, undefined)).status).toBe(400);
-    for (const [index, body] of [{}, { calloutText: '' }, { calloutText: 'x'.repeat(81) }, { calloutText: 5 }, { calloutText: 'ok', extra: 1 }].entries()) {
-      const res = await post(`/campaigns/${c.campaign}/thumbstopper`, a.token, `val-${String(index)}`, body);
+    for (const [index, body] of [
+      {},
+      { calloutText: '' },
+      { calloutText: 'x'.repeat(81) },
+      { calloutText: 5 },
+      { calloutText: 'ok', extra: 1 },
+    ].entries()) {
+      const res = await post(
+        `/campaigns/${c.campaign}/thumbstopper`,
+        a.token,
+        `val-${String(index)}`,
+        body,
+      );
       expect([res.status, res.body.error?.code]).toEqual([400, 'validation_failed']);
     }
-    expect((await post('/campaigns/not-a-uuid/thumbstopper', a.token, 'val-9', { calloutText: 'ok' })).status).toBe(400);
+    expect(
+      (await post('/campaigns/not-a-uuid/thumbstopper', a.token, 'val-9', { calloutText: 'ok' }))
+        .status,
+    ).toBe(400);
     expect((await thumb(c.campaign, undefined, 'val-10')).status).toBe(401);
     expect((await thumb(c.campaign, a.token, 'val-11', 'x'.repeat(80))).status).toBe(202);
     expect(await jobsOf(c.campaign)).toBe(1);
@@ -325,7 +477,10 @@ describe('API-075 generate the thumbstopper', () => {
   it('two requests with different keys for the same text at once make one job (TC-THM-08)', async () => {
     const a = await account();
     const c = await campaign(a.id);
-    const [x, y] = await Promise.all([thumb(c.campaign, a.token, 'race-1'), thumb(c.campaign, a.token, 'race-2')]);
+    const [x, y] = await Promise.all([
+      thumb(c.campaign, a.token, 'race-1'),
+      thumb(c.campaign, a.token, 'race-2'),
+    ]);
     expect([x.status, y.status]).toEqual([202, 202]);
     expect(x.body.data.id).toBe(y.body.data.id);
     expect(await jobsOf(c.campaign)).toBe(1);
@@ -344,13 +499,28 @@ describe('API-076 read the thumbstopper', () => {
     expect(valid(none.body)).toBe(true);
     expect(none.body.data).toBeNull();
     const first = await thumb(c.campaign, a.token, 'rd-1');
-    await pool.query(`update thumbstopper_jobs set state = 'failed', cause_class = 'credit', cause_message = 'Your OpenAI account has no credit left. Add credit, then try again.' where id = $1`, [first.body.data.id]);
+    await pool.query(
+      `update thumbstopper_jobs set state = 'failed', cause_class = 'credit', cause_message = 'Your OpenAI account has no credit left. Add credit, then try again.' where id = $1`,
+      [first.body.data.id],
+    );
     const failed = await call('GET', `/campaigns/${c.campaign}/thumbstopper`, a.token);
     expect(valid(failed.body)).toBe(true);
-    expect(failed.body.data).toMatchObject({ id: first.body.data.id, state: 'failed', label: 'failed', causeClass: 'credit', causeMessage: 'Your OpenAI account has no credit left. Add credit, then try again.', reused: false });
+    expect(failed.body.data).toMatchObject({
+      id: first.body.data.id,
+      state: 'failed',
+      label: 'failed',
+      causeClass: 'credit',
+      causeMessage: 'Your OpenAI account has no credit left. Add credit, then try again.',
+      reused: false,
+    });
     const next = await thumb(c.campaign, a.token, 'rd-2', 'Slow mornings');
     const latest = await call('GET', `/campaigns/${c.campaign}/thumbstopper`, a.token);
-    expect(latest.body.data).toMatchObject({ id: next.body.data.id, calloutText: 'Slow mornings', state: 'pending', reused: false });
+    expect(latest.body.data).toMatchObject({
+      id: next.body.data.id,
+      calloutText: 'Slow mornings',
+      state: 'pending',
+      reused: false,
+    });
   });
 
   it('shows the output media of a completed job, and answers 404 for foreign, missing and deleting campaigns', async () => {
@@ -363,11 +533,16 @@ describe('API-076 read the thumbstopper', () => {
       `insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'thumbstopper', 'ready', $3, 10, 'image/png', $4)`,
       [mediaId, a.id, `u/${a.id}/c/${c.campaign}/thumbstopper/${mediaId}.png`, c.campaign],
     );
-    await pool.query(`update thumbstopper_jobs set state = 'completed', output_media_id = $1 where id = $1`, [mediaId]);
+    await pool.query(
+      `update thumbstopper_jobs set state = 'completed', output_media_id = $1 where id = $1`,
+      [mediaId],
+    );
     const read = await call('GET', `/campaigns/${c.campaign}/thumbstopper`, a.token);
     expect(valid(read.body)).toBe(true);
     expect(read.body.data).toMatchObject({ state: 'completed', outputMediaId: mediaId });
-    expect((await call('GET', `/campaigns/${randomUUID()}/thumbstopper`, a.token)).status).toBe(404);
+    expect((await call('GET', `/campaigns/${randomUUID()}/thumbstopper`, a.token)).status).toBe(
+      404,
+    );
     expect((await call('GET', `/campaigns/${c.campaign}/thumbstopper`, b.token)).status).toBe(404);
     expect((await call('GET', `/campaigns/${c.campaign}/thumbstopper`)).status).toBe(401);
     expect((await call('GET', '/campaigns/not-a-uuid/thumbstopper', a.token)).status).toBe(400);

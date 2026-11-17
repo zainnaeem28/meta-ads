@@ -48,8 +48,10 @@ export class RateLimiter {
     windowSeconds: number,
   ): Promise<ConsumeResult> {
     if (scope.length === 0 || scope.length > MAX_SCOPE) throw new RangeError('scope length');
-    if (subject.length === 0 || subject.length > MAX_SUBJECT) throw new RangeError('subject length');
-    if (!Number.isInteger(limit) || limit < 1) throw new RangeError('limit must be a positive integer');
+    if (subject.length === 0 || subject.length > MAX_SUBJECT)
+      throw new RangeError('subject length');
+    if (!Number.isInteger(limit) || limit < 1)
+      throw new RangeError('limit must be a positive integer');
     if (!Number.isInteger(windowSeconds) || windowSeconds < 1) {
       throw new RangeError('windowSeconds must be a positive integer');
     }
@@ -66,7 +68,10 @@ export class RateLimiter {
         returning count`);
       count = Number(result.rows[0]?.count);
     } catch {
-      throw new DomainError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.');
+      throw new DomainError(
+        'service_unavailable',
+        'The service is temporarily unavailable. Try again shortly.',
+      );
     }
     return {
       allowed: count <= limit,

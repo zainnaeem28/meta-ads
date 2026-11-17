@@ -41,7 +41,8 @@ function entryOf(raw: unknown): VendorEntry | undefined {
   const text = ['id', 'name', 'service', 'receives', 'classification', 'contractNeeded'] as const;
   if (!text.every((k) => isText(e[k]))) return undefined;
   if (!(e['dataModeKey'] === null || isText(e['dataModeKey']))) return undefined;
-  if (typeof e['contractStatus'] !== 'string' || !STATUSES.includes(e['contractStatus'])) return undefined;
+  if (typeof e['contractStatus'] !== 'string' || !STATUSES.includes(e['contractStatus']))
+    return undefined;
   const rec = e['contractRecord'];
   let contractRecord: ContractRecord | null = null;
   if (rec !== null) {
@@ -85,7 +86,9 @@ export function hasRecordedContract(entry: VendorEntry): boolean {
 export const REGISTER_RELATIVE_PATH = join('docs', 'compliance', 'vendor-register.json');
 
 /** Finds the register by walking up from this file (works from `src` and from `dist`); undefined when absent. */
-export function locateRegister(from: string = dirname(fileURLToPath(import.meta.url))): string | undefined {
+export function locateRegister(
+  from: string = dirname(fileURLToPath(import.meta.url)),
+): string | undefined {
   let dir = resolve(from);
   for (;;) {
     const candidate = join(dir, REGISTER_RELATIVE_PATH);
@@ -119,7 +122,10 @@ export interface RegisterDiff {
   readonly duplicates: readonly string[];
 }
 
-export function diffRegister(register: VendorRegister, required: readonly string[] = REQUIRED_VENDOR_IDS): RegisterDiff {
+export function diffRegister(
+  register: VendorRegister,
+  required: readonly string[] = REQUIRED_VENDOR_IDS,
+): RegisterDiff {
   const ids = register.vendors.map((v) => v.id);
   return {
     missing: required.filter((id) => !ids.includes(id)),

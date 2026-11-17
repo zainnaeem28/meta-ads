@@ -48,8 +48,7 @@ export interface SettleResult {
 
 const utcDay = (at: Date): string => at.toISOString().slice(0, 10);
 const dayStart = (at: Date): Date => new Date(`${utcDay(at)}T00:00:00.000Z`);
-const monthStart = (at: Date): Date =>
-  new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
+const monthStart = (at: Date): Date => new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
 
 /**
  * The usage module's public service (ARCHITECTURE §5.9, SB v6 §4.2): the price lookup, the spend cap and the lifecycle
@@ -104,7 +103,12 @@ export class UsageService {
     const totals = await this.repository.totals(tx, ownerId, dayStart(now), monthStart(now));
     const windows = [
       { code: 'daily', label: 'daily', cap: this.config.dailyCapUnits, spent: totals.dayUnits },
-      { code: 'monthly', label: 'monthly', cap: this.config.monthlyCapUnits, spent: totals.monthUnits },
+      {
+        code: 'monthly',
+        label: 'monthly',
+        cap: this.config.monthlyCapUnits,
+        spent: totals.monthUnits,
+      },
     ] as const;
     for (const window of windows) {
       const total = window.spent + totals.reservedUnits + estimate;
@@ -115,7 +119,11 @@ export class UsageService {
           `${formatUsd(window.spent)} recorded and ${formatUsd(totals.reservedUnits)} reserved by running jobs ` +
           `plus ${formatUsd(estimate)} for this one, all estimates from the price table.`,
         [
-          { field: 'limit', code: window.code, message: `${formatUsd(window.cap)} per ${window.code === 'daily' ? 'UTC day' : 'UTC month'}` },
+          {
+            field: 'limit',
+            code: window.code,
+            message: `${formatUsd(window.cap)} per ${window.code === 'daily' ? 'UTC day' : 'UTC month'}`,
+          },
           {
             field: 'estimateBasis',
             code: 'price_table',
@@ -175,7 +183,10 @@ export class UsageService {
   }
 
   /** The job ended before a call (cancelled or failed while `pending`, or terminal): deletes its reservation. */
-  async release(tx: DbTx, input: { ownerId: string; jobType: JobType; jobId: string }): Promise<boolean> {
+  async release(
+    tx: DbTx,
+    input: { ownerId: string; jobType: JobType; jobId: string },
+  ): Promise<boolean> {
     await lockXact(tx, 'spend', input.ownerId);
     return this.repository.deleteReservation(tx, input.jobType, input.jobId);
   }
@@ -186,7 +197,8 @@ export class UsageService {
     outcome: UsageOutcome,
     costBasis: CostBasis,
   ): Promise<SettleResult> {
-    if (!Number.isInteger(input.callSeq) || input.callSeq < 1) throw new RangeError('callSeq starts at 1');
+    if (!Number.isInteger(input.callSeq) || input.callSeq < 1)
+      throw new RangeError('callSeq starts at 1');
     await lockXact(tx, 'spend', input.ownerId);
     // Throws PriceMissingError: a call was made with no price in force, which the start-up check rules out; fail loudly.
     const estimate = await this.estimateUnits(input.call, tx);
@@ -236,6 +248,9 @@ export class UsageService {
       provider: error.call.provider,
       operation: error.call.operation,
     });
-    return new DomainError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.');
+    return new DomainError(
+      'service_unavailable',
+      'The service is temporarily unavailable. Try again shortly.',
+    );
   }
 }

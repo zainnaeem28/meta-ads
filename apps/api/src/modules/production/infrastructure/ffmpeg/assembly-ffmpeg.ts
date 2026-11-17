@@ -1,7 +1,11 @@
 import { spawn } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 import { AssemblyRenderError } from '../../application/worker/assembly-ports.js';
-import type { AssemblyPort, AssemblyProgress, AssemblyRenderInput } from '../../application/worker/assembly-ports.js';
+import type {
+  AssemblyPort,
+  AssemblyProgress,
+  AssemblyRenderInput,
+} from '../../application/worker/assembly-ports.js';
 
 export interface AssemblyBinaries {
   readonly ffmpeg: string;
@@ -51,13 +55,21 @@ export class AssemblyAborted extends Error {
  * killing it when the time is up or the caller aborts. Resolves with the exit code; the program's own output is read only
  * through `onStdout` and is never put in an error message.
  */
-function run(file: string, args: readonly string[], options: RunOptions): Promise<{ code: number | null; timedOut: boolean }> {
+function run(
+  file: string,
+  args: readonly string[],
+  options: RunOptions,
+): Promise<{ code: number | null; timedOut: boolean }> {
   return new Promise((resolve, reject) => {
     if (options.signal?.aborted === true) {
       reject(new AssemblyAborted());
       return;
     }
-    const child = spawn(file, [...args], { shell: false, stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
+    const child = spawn(file, [...args], {
+      shell: false,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+    });
     let timedOut = false;
     let aborted = false;
     let received = 0;
@@ -121,7 +133,10 @@ export class FfmpegAssembly implements AssemblyPort {
     this.encoder = options.videoEncoder ?? 'libopenh264';
   }
 
-  async render(input: AssemblyRenderInput, onProgress: (progress: AssemblyProgress) => void): Promise<{ readonly bytes: number }> {
+  async render(
+    input: AssemblyRenderInput,
+    onProgress: (progress: AssemblyProgress) => void,
+  ): Promise<{ readonly bytes: number }> {
     if (input.clips.length === 0) throw new AssemblyRenderError('render_failed', 'no clips');
     const probed: Probed[] = [];
     for (const clip of input.clips) probed.push(await this.probe(clip, input.signal));
@@ -140,9 +155,14 @@ export class FfmpegAssembly implements AssemblyPort {
         onProgress({ fraction: Math.min(1, Number(microseconds[1]) / 1_000_000 / total) });
       }
     };
-    const result = await run(this.binaries.ffmpeg, args, { timeoutMs: this.timeoutMs, signal: input.signal, onStdout: read });
+    const result = await run(this.binaries.ffmpeg, args, {
+      timeoutMs: this.timeoutMs,
+      signal: input.signal,
+      onStdout: read,
+    });
     if (result.timedOut) throw new AssemblyRenderError('timeout', 'the render took too long');
-    if (result.code !== 0) throw new AssemblyRenderError('render_failed', `ffmpeg exited with ${String(result.code)}`);
+    if (result.code !== 0)
+      throw new AssemblyRenderError('render_failed', `ffmpeg exited with ${String(result.code)}`);
     const bytes = await stat(input.output).then(
       (file) => file.size,
       () => 0,
@@ -155,17 +175,35 @@ export class FfmpegAssembly implements AssemblyPort {
   /** Size, length and sound of one clip. A file ffprobe cannot read is an input problem, not a render one. */
   private async probe(file: string, signal: AbortSignal | undefined): Promise<Probed> {
     let out = '';
-    const args = ['-v', 'error', '-print_format', 'json', '-show_entries', 'stream=codec_type,width,height:format=duration', file];
+    const args = [
+      '-v',
+      'error',
+      '-print_format',
+      'json',
+      '-show_entries',
+      'stream=codec_type,width,height:format=duration',
+      file,
+    ];
     let result: Awaited<ReturnType<typeof run>>;
     try {
-      result = await run(this.binaries.ffprobe, args, { timeoutMs: PROBE_TIMEOUT_MS, signal, maxStdoutBytes: PROBE_MAX_BYTES, onStdout: (chunk) => (out += chunk) });
+      result = await run(this.binaries.ffprobe, args, {
+        timeoutMs: PROBE_TIMEOUT_MS,
+        signal,
+        maxStdoutBytes: PROBE_MAX_BYTES,
+        onStdout: (chunk) => (out += chunk),
+      });
     } catch (error) {
       // Stopped, or the program itself is missing: not the clip's fault, so not a final answer for the job.
-      if (error instanceof AssemblyAborted || (error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
+      if (error instanceof AssemblyAborted || (error as NodeJS.ErrnoException).code === 'ENOENT')
+        throw error;
       throw new AssemblyRenderError('input_unavailable', 'a clip could not be probed');
     }
-    if (result.code !== 0) throw new AssemblyRenderError('input_unavailable', 'a clip could not be read');
-    let doc: { streams?: { codec_type?: string; width?: number; height?: number }[]; format?: { duration?: string } };
+    if (result.code !== 0)
+      throw new AssemblyRenderError('input_unavailable', 'a clip could not be read');
+    let doc: {
+      streams?: { codec_type?: string; width?: number; height?: number }[];
+      format?: { duration?: string };
+    };
     try {
       doc = JSON.parse(out) as typeof doc;
     } catch {
@@ -173,10 +211,20 @@ export class FfmpegAssembly implements AssemblyPort {
     }
     const video = doc.streams?.find((stream) => stream.codec_type === 'video');
     const seconds = Number(doc.format?.duration);
-    if (video?.width === undefined || video.height === undefined || !Number.isFinite(seconds) || seconds <= 0) {
+    if (
+      video?.width === undefined ||
+      video.height === undefined ||
+      !Number.isFinite(seconds) ||
+      seconds <= 0
+    ) {
       throw new AssemblyRenderError('input_unavailable', 'a clip has no video');
     }
-    return { width: video.width, height: video.height, seconds, hasAudio: doc.streams?.some((stream) => stream.codec_type === 'audio') === true };
+    return {
+      width: video.width,
+      height: video.height,
+      seconds,
+      hasAudio: doc.streams?.some((stream) => stream.codec_type === 'audio') === true,
+    };
   }
 
   /** The whole command line, as an array. */
@@ -195,8 +243,20 @@ export class FfmpegAssembly implements AssemblyPort {
     let index = 0;
     let part = 0;
     if (input.openingFrame !== null) {
-      args.push('-loop', '1', '-framerate', String(FRAME_RATE), '-t', String(this.options.frameSeconds), '-i', input.openingFrame);
-      filters.push(picture(`${String(index)}:v`, `v${String(part)}`), silence(this.options.frameSeconds, `a${String(part)}`));
+      args.push(
+        '-loop',
+        '1',
+        '-framerate',
+        String(FRAME_RATE),
+        '-t',
+        String(this.options.frameSeconds),
+        '-i',
+        input.openingFrame,
+      );
+      filters.push(
+        picture(`${String(index)}:v`, `v${String(part)}`),
+        silence(this.options.frameSeconds, `a${String(part)}`),
+      );
       joined.push(`[v${String(part)}][a${String(part)}]`);
       index += 1;
       part += 1;
@@ -216,11 +276,26 @@ export class FfmpegAssembly implements AssemblyPort {
     });
     filters.push(`${joined.join('')}concat=n=${String(part)}:v=1:a=1[v][a]`);
     args.push(
-      '-filter_complex', filters.join(';'),
-      '-map', '[v]', '-map', '[a]',
-      '-c:v', this.encoder, '-b:v', '6M', '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-b:a', '128k',
-      '-movflags', '+faststart', '-f', 'mp4',
+      '-filter_complex',
+      filters.join(';'),
+      '-map',
+      '[v]',
+      '-map',
+      '[a]',
+      '-c:v',
+      this.encoder,
+      '-b:v',
+      '6M',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '128k',
+      '-movflags',
+      '+faststart',
+      '-f',
+      'mp4',
       input.output,
     );
     return args;

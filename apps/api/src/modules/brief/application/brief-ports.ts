@@ -68,10 +68,20 @@ export type ClaimOutcome = 'raised' | 'closed_by_edit' | 'cleared_with_reason';
 /** Module-private persistence of the brief tables; every method runs in the caller's transaction and is owner-scoped. */
 export interface BriefRepository {
   /** The owner's brief of a campaign; `lock` takes the row `FOR UPDATE`. A foreign and a missing campaign both give null. */
-  findBrief(tx: DbTx, ownerId: string, campaignId: string, lock?: boolean): Promise<BriefRecord | null>;
+  findBrief(
+    tx: DbTx,
+    ownerId: string,
+    campaignId: string,
+    lock?: boolean,
+  ): Promise<BriefRecord | null>;
   segments(tx: DbTx, briefId: string): Promise<SegmentRecord[]>;
   /** Open issues first, then the ones resolved since the last accept (all of them when never accepted); at most `limit`. */
-  issues(tx: DbTx, briefId: string, acceptedAt: string | null, limit: number): Promise<IssueRecord[]>;
+  issues(
+    tx: DbTx,
+    briefId: string,
+    acceptedAt: string | null,
+    limit: number,
+  ): Promise<IssueRecord[]>;
   /** Every issue of the brief that is still open or cleared (what an edit reconciles against). */
   liveIssues(tx: DbTx, briefId: string): Promise<IssueRecord[]>;
   openIssueCount(tx: DbTx, briefId: string): Promise<number>;
@@ -80,7 +90,12 @@ export interface BriefRepository {
   updateSegment(tx: DbTx, write: SegmentWrite): Promise<void>;
   /** Version up by one, new state, `accepted_at` set when accepted and cleared otherwise. */
   saveBrief(tx: DbTx, briefId: string, state: 'draft' | 'accepted'): Promise<BriefRecord>;
-  insertIssues(tx: DbTx, ownerId: string, briefId: string, issues: readonly NewIssue[]): Promise<void>;
+  insertIssues(
+    tx: DbTx,
+    ownerId: string,
+    briefId: string,
+    issues: readonly NewIssue[],
+  ): Promise<void>;
   closeIssues(tx: DbTx, ids: readonly string[]): Promise<void>;
   recordEvents(
     tx: DbTx,
@@ -88,7 +103,12 @@ export interface BriefRepository {
     briefId: string,
     events: readonly { issueId: string; class: RuleClass; outcome: ClaimOutcome }[],
   ): Promise<void>;
-  findIssue(tx: DbTx, ownerId: string, issueId: string, lock?: boolean): Promise<IssueRecord | null>;
+  findIssue(
+    tx: DbTx,
+    ownerId: string,
+    issueId: string,
+    lock?: boolean,
+  ): Promise<IssueRecord | null>;
   clearIssue(tx: DbTx, issueId: string, userId: string, reason: string): Promise<IssueRecord>;
 }
 

@@ -90,7 +90,11 @@ export class Factories {
     return row;
   }
 
-  async insertCampaign(tx: DbTx, ownerId: string, overrides: Partial<CampaignRow> = {}): Promise<CampaignRow> {
+  async insertCampaign(
+    tx: DbTx,
+    ownerId: string,
+    overrides: Partial<CampaignRow> = {},
+  ): Promise<CampaignRow> {
     const row = this.campaign(ownerId, overrides);
     await tx.execute(sql`
       insert into campaigns (id, owner_id, state, product_name, product_description, segment_count, created_at, updated_at)

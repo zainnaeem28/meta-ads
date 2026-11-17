@@ -17,7 +17,8 @@ function fakeDatabase(head: number | 'missing', query?: () => Promise<unknown>):
   return {
     pool: {
       query: (text: string): Promise<unknown> => {
-        if (text.includes('to_regclass')) return Promise.resolve({ rows: [{ t: head === 'missing' ? null : 'x' }] });
+        if (text.includes('to_regclass'))
+          return Promise.resolve({ rows: [{ t: head === 'missing' ? null : 'x' }] });
         return query?.() ?? Promise.resolve({ rows: [] });
       },
     },
@@ -38,19 +39,43 @@ describe('HealthService.failure', () => {
   });
 
   it('fails for a head below the minimum, above the maximum or with no migrations table', async () => {
-    expect(await new HealthService(options({ minSchemaHead: 2 }), fakeDatabase(1)).failure()).toBe('schema_head');
+    expect(await new HealthService(options({ minSchemaHead: 2 }), fakeDatabase(1)).failure()).toBe(
+      'schema_head',
+    );
     expect(await new HealthService(options(), fakeDatabase(4)).failure()).toBe('schema_head');
-    expect(await new HealthService(options(), fakeDatabase('missing')).failure()).toBe('schema_head');
+    expect(await new HealthService(options(), fakeDatabase('missing')).failure()).toBe(
+      'schema_head',
+    );
   });
 
   it('fails when the database errors or does not answer within the time limit', async () => {
-    expect(await new HealthService(options(), fakeDatabase(2, () => Promise.reject(new Error('down')))).failure()).toBe('database');
-    expect(await new HealthService(options(), fakeDatabase(2, () => new Promise(() => undefined))).failure()).toBe('database');
+    expect(
+      await new HealthService(
+        options(),
+        fakeDatabase(2, () => Promise.reject(new Error('down'))),
+      ).failure(),
+    ).toBe('database');
+    expect(
+      await new HealthService(
+        options(),
+        fakeDatabase(2, () => new Promise(() => undefined)),
+      ).failure(),
+    ).toBe('database');
   });
 
   it('fails when pg-boss is not installed or not reachable', async () => {
-    expect(await new HealthService(options(), undefined, { isInstalled: async () => false } as never).failure()).toBe('queue');
-    expect(await new HealthService(options(), undefined, { isInstalled: async () => { throw new Error('x'); } } as never).failure()).toBe('queue');
+    expect(
+      await new HealthService(options(), undefined, {
+        isInstalled: async () => false,
+      } as never).failure(),
+    ).toBe('queue');
+    expect(
+      await new HealthService(options(), undefined, {
+        isInstalled: async () => {
+          throw new Error('x');
+        },
+      } as never).failure(),
+    ).toBe('queue');
   });
 
   it('fails when the configuration is not valid and while draining', async () => {
@@ -64,8 +89,14 @@ describe('HealthService.failure', () => {
 
 describe('healthOptionsFrom', () => {
   it('defaults to an open range and reads the environment', () => {
-    expect(healthOptionsFrom({})).toMatchObject({ minSchemaHead: 0, maxSchemaHead: Number.MAX_SAFE_INTEGER, drainSeconds: 0 });
-    expect(healthOptionsFrom({ MIN_SCHEMA_HEAD: '2', MAX_SCHEMA_HEAD: '4' }, { API_DRAIN_SECONDS: 20 })).toMatchObject({
+    expect(healthOptionsFrom({})).toMatchObject({
+      minSchemaHead: 0,
+      maxSchemaHead: Number.MAX_SAFE_INTEGER,
+      drainSeconds: 0,
+    });
+    expect(
+      healthOptionsFrom({ MIN_SCHEMA_HEAD: '2', MAX_SCHEMA_HEAD: '4' }, { API_DRAIN_SECONDS: 20 }),
+    ).toMatchObject({
       minSchemaHead: 2,
       maxSchemaHead: 4,
       drainSeconds: 20,
@@ -74,6 +105,8 @@ describe('healthOptionsFrom', () => {
 
   it('rejects a malformed or inverted range', () => {
     expect(() => healthOptionsFrom({ MIN_SCHEMA_HEAD: 'x' })).toThrow(/MIN_SCHEMA_HEAD/);
-    expect(() => healthOptionsFrom({ MIN_SCHEMA_HEAD: '5', MAX_SCHEMA_HEAD: '2' })).toThrow(/must not exceed/);
+    expect(() => healthOptionsFrom({ MIN_SCHEMA_HEAD: '5', MAX_SCHEMA_HEAD: '2' })).toThrow(
+      /must not exceed/,
+    );
   });
 });

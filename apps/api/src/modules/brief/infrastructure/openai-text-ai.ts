@@ -1,7 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { assertNoEgress } from '../../../platform/db/index.js';
-import { EGRESS, EgressError, classifyEgressFailure, classifyProviderFailure } from '../../../platform/egress/index.js';
+import {
+  EGRESS,
+  EgressError,
+  classifyEgressFailure,
+  classifyProviderFailure,
+} from '../../../platform/egress/index.js';
 import type { Egress } from '../../../platform/egress/index.js';
 import { BRIEF_WORKER_CONFIG } from '../application/worker/ports.js';
 import type { BriefWorkerConfig } from '../application/worker/ports.js';
@@ -19,7 +24,12 @@ export const CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions'
 const PROVIDER_NAME = 'OpenAI';
 /** A chat completion of a few segments is small; this bounds how much of any answer is read. */
 const MAX_RESPONSE_BYTES = 1024 * 1024;
-const IMAGE_TYPES: ReadonlySet<string> = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const IMAGE_TYPES: ReadonlySet<string> = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
 
 const MAX_POSITION = 4;
 
@@ -55,7 +65,14 @@ const DESCRIPTION_SCHEMA = {
 
 const answerOf = z.object({
   choices: z
-    .array(z.object({ message: z.object({ content: z.string().nullable(), refusal: z.string().nullable().optional() }) }))
+    .array(
+      z.object({
+        message: z.object({
+          content: z.string().nullable(),
+          refusal: z.string().nullable().optional(),
+        }),
+      }),
+    )
     .min(1),
 });
 
@@ -100,7 +117,10 @@ function briefUser(input: BriefInput): string {
     productName: input.productName,
     productDescription: input.productDescription,
     audience: {
-      ageRange: audience.ageMin === null || audience.ageMax === null ? null : `${String(audience.ageMin)}-${String(audience.ageMax)}`,
+      ageRange:
+        audience.ageMin === null || audience.ageMax === null
+          ? null
+          : `${String(audience.ageMin)}-${String(audience.ageMax)}`,
       gender: audience.gender,
       interests: audience.interests,
     },
@@ -132,7 +152,8 @@ function errorCodeOf(body: Buffer): string | undefined {
 export class OpenAiTextAi implements TextAIPort {
   constructor(
     @Inject(EGRESS) private readonly egress: Pick<Egress, 'fetch'>,
-    @Inject(BRIEF_WORKER_CONFIG) private readonly config: Pick<BriefWorkerConfig, 'textModel' | 'visionModel' | 'chatUrl'>,
+    @Inject(BRIEF_WORKER_CONFIG)
+    private readonly config: Pick<BriefWorkerConfig, 'textModel' | 'visionModel' | 'chatUrl'>,
   ) {}
 
   async generateBrief(credential: ProviderCredential, input: BriefInput): Promise<BriefDraft> {
@@ -166,11 +187,16 @@ export class OpenAiTextAi implements TextAIPort {
     const wanted = segments.map((segment) => segment.position).sort((a, b) => a - b);
     const got = draft.segments.map((segment) => segment.position).sort((a, b) => a - b);
     // Shortening may skip positions that were fine (the caller sends only those over the limit): same set back is required.
-    if (wanted.join() !== got.join()) throw new ProviderInvalidResponse('segment positions changed');
+    if (wanted.join() !== got.join())
+      throw new ProviderInvalidResponse('segment positions changed');
     return draft.segments;
   }
 
-  async describeProduct(credential: ProviderCredential, imageBytes: Buffer, contentType: string): Promise<string> {
+  async describeProduct(
+    credential: ProviderCredential,
+    imageBytes: Buffer,
+    contentType: string,
+  ): Promise<string> {
     if (!IMAGE_TYPES.has(contentType)) throw new RangeError('unsupported image type');
     const content = await this.complete(credential, {
       model: this.config.visionModel,
@@ -184,7 +210,10 @@ export class OpenAiTextAi implements TextAIPort {
             { type: 'text', text: 'Describe the product in this image.' },
             {
               type: 'image_url',
-              image_url: { url: `data:${contentType};base64,${imageBytes.toString('base64')}`, detail: 'low' },
+              image_url: {
+                url: `data:${contentType};base64,${imageBytes.toString('base64')}`,
+                detail: 'low',
+              },
             },
           ],
         },
@@ -243,7 +272,11 @@ export class OpenAiTextAi implements TextAIPort {
     if (response.status < 200 || response.status >= 300) {
       const errorCode = errorCodeOf(response.body);
       throw new ProviderCallFailed(
-        classifyProviderFailure(PROVIDER_NAME, { kind: 'http', status: response.status, errorCode }),
+        classifyProviderFailure(PROVIDER_NAME, {
+          kind: 'http',
+          status: response.status,
+          errorCode,
+        }),
       );
     }
     let json: unknown;

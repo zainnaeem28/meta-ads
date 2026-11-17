@@ -60,7 +60,9 @@ async function row(id: string): Promise<Record<string, unknown>> {
 }
 
 function fakeBoss() {
-  const send = vi.fn<(name: string, data?: object | null, options?: object) => Promise<string>>(async () => 'job-id');
+  const send = vi.fn<(name: string, data?: object | null, options?: object) => Promise<string>>(
+    async () => 'job-id',
+  );
   return { send: send as never, calls: send.mock.calls };
 }
 

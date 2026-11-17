@@ -38,7 +38,13 @@ function statementsOf(file: string): string[] {
   const tables = readFileSync(join(REAL_MIGRATIONS, file), 'utf8').split('-- Grants')[0] ?? '';
   return tables
     .split('--> statement-breakpoint')
-    .map((x) => x.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim())
+    .map((x) =>
+      x
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n')
+        .trim(),
+    )
     .filter((x) => x !== '');
 }
 
@@ -46,7 +52,11 @@ beforeAll(async () => {
   minio = await startTestBucket();
   testDb = await createTestDatabase({ label: 'task043', migrations: false });
   pool = new pg.Pool({ connectionString: testDb.url, max: 4 });
-  for (const file of ['0010_task-032-audit.sql', '0020_task-033-identity.sql', '0040_task-041-media.sql']) {
+  for (const file of [
+    '0010_task-032-audit.sql',
+    '0020_task-033-identity.sql',
+    '0040_task-041-media.sql',
+  ]) {
     for (const statement of statementsOf(file)) await pool.query(statement);
   }
   await installJobs(testDb.url);
@@ -105,9 +115,13 @@ async function user(): Promise<string> {
 }
 
 const usage = async (owner: string) =>
-  Number((await pool.query('select bytes_used from storage_usage where owner_id = $1', [owner])).rows[0]?.bytes_used ?? 0);
+  Number(
+    (await pool.query('select bytes_used from storage_usage where owner_id = $1', [owner])).rows[0]
+      ?.bytes_used ?? 0,
+  );
 const media = async (id: string) =>
-  (await pool.query('select * from media_objects where id = $1', [id])).rows[0] as Record<string, any> | undefined; // eslint-disable-line @typescript-eslint/no-explicit-any
+  (await pool.query('select * from media_objects where id = $1', [id])).rows[0] as
+    Record<string, any> | undefined; // eslint-disable-line @typescript-eslint/no-explicit-any
 const exists = async (key: string): Promise<boolean> => {
   try {
     (await storage.get(key)).destroy();
@@ -124,7 +138,11 @@ async function read(key: string): Promise<Buffer> {
 }
 
 /** What `POST /media` leaves behind: the quarantine object, a `processing` row and its reserved bytes. */
-async function stageUpload(owner: string, body: Buffer, contentType = 'image/jpeg'): Promise<string> {
+async function stageUpload(
+  owner: string,
+  body: Buffer,
+  contentType = 'image/jpeg',
+): Promise<string> {
   const id = randomUUID();
   const key = quarantineKey(owner, id);
   await storage.put(key, body, contentType, body.length);
@@ -140,14 +158,22 @@ async function stageUpload(owner: string, body: Buffer, contentType = 'image/jpe
   return id;
 }
 
-const settled = (id: string) => vi.waitFor(async () => expect((await media(id))?.state).not.toBe('processing'), { timeout: 30_000, interval: 200 });
-const blank = (w: number, h: number) => sharp({ create: { width: w, height: h, channels: 3, background: { r: 10, g: 120, b: 200 } } });
+const settled = (id: string) =>
+  vi.waitFor(async () => expect((await media(id))?.state).not.toBe('processing'), {
+    timeout: 30_000,
+    interval: 200,
+  });
+const blank = (w: number, h: number) =>
+  sharp({ create: { width: w, height: h, channels: 3, background: { r: 10, g: 120, b: 200 } } });
 
 describe('media.sanitize handled by the worker process', () => {
   it('TC-UPL-04: a JPEG with GPS becomes ready; the stored object carries no EXIF or GPS; quarantine is gone; quota follows', async () => {
     const owner = await user();
     const source = await blank(120, 90)
-      .withExif({ IFD0: { Copyright: 'secret-owner' }, IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '51/1 30/1 0/1' } })
+      .withExif({
+        IFD0: { Copyright: 'secret-owner' },
+        IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '51/1 30/1 0/1' },
+      })
       .jpeg()
       .toBuffer();
     expect((await sharp(source).metadata()).exif).toBeDefined();
@@ -155,7 +181,14 @@ describe('media.sanitize handled by the worker process', () => {
     await settled(id);
 
     const row = (await media(id))!;
-    expect(row).toMatchObject({ state: 'ready', storage_key: uploadKey(owner, id), content_type: 'image/jpeg', width: 120, height: 90, reject_reason: null });
+    expect(row).toMatchObject({
+      state: 'ready',
+      storage_key: uploadKey(owner, id),
+      content_type: 'image/jpeg',
+      width: 120,
+      height: 90,
+      reject_reason: null,
+    });
     const stored = await read(uploadKey(owner, id));
     expect(Number(row.bytes)).toBe(stored.length);
     expect((await sharp(stored).metadata()).exif).toBeUndefined();
@@ -168,29 +201,53 @@ describe('media.sanitize handled by the worker process', () => {
   it('an animated GIF is stored as its first frame', async () => {
     const owner = await user();
     const frames = await Promise.all(
-      [30, 90, 160].map((v) => sharp({ create: { width: 16, height: 16, channels: 3, background: { r: v, g: v, b: v } } }).png().toBuffer()),
+      [30, 90, 160].map((v) =>
+        sharp({ create: { width: 16, height: 16, channels: 3, background: { r: v, g: v, b: v } } })
+          .png()
+          .toBuffer(),
+      ),
     );
-    const gif = await sharp(frames, { join: { animated: true } }).gif({ delay: [100, 100, 100], loop: 0 }).toBuffer();
+    const gif = await sharp(frames, { join: { animated: true } })
+      .gif({ delay: [100, 100, 100], loop: 0 })
+      .toBuffer();
     const id = await stageUpload(owner, gif, 'image/gif');
     await settled(id);
     expect((await media(id))?.state).toBe('ready');
-    expect((await sharp(await read(uploadKey(owner, id)), { pages: -1 }).metadata()).pages ?? 1).toBe(1);
+    expect(
+      (await sharp(await read(uploadKey(owner, id)), { pages: -1 }).metadata()).pages ?? 1,
+    ).toBe(1);
   });
 
   it.each([
-    ['an image over the dimension cap', () => blank(301, 10).png().toBuffer(), 'pixel_cap_exceeded'],
+    [
+      'an image over the dimension cap',
+      () => blank(301, 10).png().toBuffer(),
+      'pixel_cap_exceeded',
+    ],
     ['an image over the pixel cap', () => blank(250, 250).png().toBuffer(), 'pixel_cap_exceeded'],
-    ['bytes that are not an image', () => Promise.resolve(Buffer.from('MZ\u0090 not an image')), 'decode_failed'],
+    [
+      'bytes that are not an image',
+      () => Promise.resolve(Buffer.from('MZ\u0090 not an image')),
+      'decode_failed',
+    ],
     ['a TIFF', () => blank(8, 8).tiff().toBuffer(), 'type_not_allowed'],
-  ] as const)('rejects %s: reason recorded, no stored object, reservation returned', async (_name, make, reason) => {
-    const owner = await user();
-    const id = await stageUpload(owner, await make(), 'image/png');
-    await settled(id);
-    expect(await media(id)).toMatchObject({ state: 'rejected', reject_reason: reason, bytes: '0', width: null });
-    expect(await exists(uploadKey(owner, id))).toBe(false);
-    expect(await exists(quarantineKey(owner, id))).toBe(false);
-    expect(await usage(owner)).toBe(0);
-  });
+  ] as const)(
+    'rejects %s: reason recorded, no stored object, reservation returned',
+    async (_name, make, reason) => {
+      const owner = await user();
+      const id = await stageUpload(owner, await make(), 'image/png');
+      await settled(id);
+      expect(await media(id)).toMatchObject({
+        state: 'rejected',
+        reject_reason: reason,
+        bytes: '0',
+        width: null,
+      });
+      expect(await exists(uploadKey(owner, id))).toBe(false);
+      expect(await exists(quarantineKey(owner, id))).toBe(false);
+      expect(await usage(owner)).toBe(0);
+    },
+  );
 
   it('a decompression bomb claim (a 60000 x 60000 header in a few bytes) is rejected before any decode', async () => {
     const owner = await user();
@@ -205,7 +262,10 @@ describe('media.sanitize handled by the worker process', () => {
     png.writeUInt32BE((crc ^ 0xffffffff) >>> 0, 29);
     const id = await stageUpload(owner, png, 'image/png');
     await settled(id);
-    expect(await media(id)).toMatchObject({ state: 'rejected', reject_reason: 'pixel_cap_exceeded' });
+    expect(await media(id)).toMatchObject({
+      state: 'rejected',
+      reject_reason: 'pixel_cap_exceeded',
+    });
     expect(await usage(owner)).toBe(0);
   });
 
@@ -217,7 +277,10 @@ describe('media.sanitize handled by the worker process', () => {
     // Simulate the crash window: the row is `ready`, the quarantine object is back.
     await storage.put(quarantineKey(owner, id), Buffer.from('left over'), 'image/png', 100);
     await apiBoss.send('media.sanitize', { mediaId: id });
-    await vi.waitFor(async () => expect(await exists(quarantineKey(owner, id))).toBe(false), { timeout: 30_000, interval: 200 });
+    await vi.waitFor(async () => expect(await exists(quarantineKey(owner, id))).toBe(false), {
+      timeout: 30_000,
+      interval: 200,
+    });
     expect(await media(id)).toEqual(before);
     // A job for an unknown row is simply done.
     await apiBoss.send('media.sanitize', { mediaId: randomUUID() });
@@ -231,7 +294,10 @@ describe('media.sanitize handled by the worker process', () => {
       `insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type) values ($1, $2, 'upload', 'processing', $3, 10, 'image/png')`,
       [id, owner, key],
     );
-    await pool.query(`insert into storage_usage (owner_id, bytes_used) values ($1, 10) on conflict (owner_id) do update set bytes_used = storage_usage.bytes_used + 10`, [owner]);
+    await pool.query(
+      `insert into storage_usage (owner_id, bytes_used) values ($1, 10) on conflict (owner_id) do update set bytes_used = storage_usage.bytes_used + 10`,
+      [owner],
+    );
     const realGet = storage.get.bind(storage);
     let calls = 0;
     storage.get = (k: string) => {
@@ -254,16 +320,32 @@ describe('media.sanitize handled by the worker process', () => {
 });
 
 describe('media.unattached-sweep handled by the worker process', () => {
-  async function insertRow(owner: string, over: { kind?: string; ageHours: number; attached?: boolean; state?: string }): Promise<{ id: string; key: string }> {
+  async function insertRow(
+    owner: string,
+    over: { kind?: string; ageHours: number; attached?: boolean; state?: string },
+  ): Promise<{ id: string; key: string }> {
     const id = randomUUID();
-    const key = over.kind === 'final' ? `u/${owner}/c/${randomUUID()}/final/${id}.mp4` : uploadKey(owner, id);
+    const key =
+      over.kind === 'final' ? `u/${owner}/c/${randomUUID()}/final/${id}.mp4` : uploadKey(owner, id);
     await storage.put(key, Buffer.from('x'.repeat(100)), 'image/png', 100);
     await pool.query(
       `insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, attached_at, created_at, reject_reason)
        values ($1, $2, $3, $4, $5, 100, $6, $7, now() - make_interval(hours => $8), case when $4 = 'rejected' then 'decode_failed' end)`,
-      [id, owner, over.kind ?? 'upload', over.state ?? 'ready', key, over.kind === 'final' ? 'video/mp4' : 'image/png', over.attached === true ? new Date() : null, over.ageHours],
+      [
+        id,
+        owner,
+        over.kind ?? 'upload',
+        over.state ?? 'ready',
+        key,
+        over.kind === 'final' ? 'video/mp4' : 'image/png',
+        over.attached === true ? new Date() : null,
+        over.ageHours,
+      ],
     );
-    await pool.query(`insert into storage_usage (owner_id, bytes_used) values ($1, 100) on conflict (owner_id) do update set bytes_used = storage_usage.bytes_used + 100`, [owner]);
+    await pool.query(
+      `insert into storage_usage (owner_id, bytes_used) values ($1, 100) on conflict (owner_id) do update set bytes_used = storage_usage.bytes_used + 100`,
+      [owner],
+    );
     return { id, key };
   }
 
@@ -277,7 +359,10 @@ describe('media.unattached-sweep handled by the worker process', () => {
     deleteLog.length = 0;
 
     await apiBoss.send('media.unattached-sweep', {});
-    await vi.waitFor(async () => expect(await media(old.id)).toBeUndefined(), { timeout: 30_000, interval: 200 });
+    await vi.waitFor(async () => expect(await media(old.id)).toBeUndefined(), {
+      timeout: 30_000,
+      interval: 200,
+    });
 
     expect(await media(oldRejected.id)).toBeUndefined();
     for (const kept of [young, attached, generated]) {
@@ -287,7 +372,9 @@ describe('media.unattached-sweep handled by the worker process', () => {
     expect(await exists(old.key)).toBe(false);
     expect(await usage(owner)).toBe(300);
     // SB-D17: the object delete ran while its row still existed.
-    expect(deleteLog.filter((entry) => entry.key === old.key).every((entry) => entry.rowExisted)).toBe(true);
+    expect(
+      deleteLog.filter((entry) => entry.key === old.key).every((entry) => entry.rowExisted),
+    ).toBe(true);
     expect(deleteLog.some((entry) => entry.key === old.key)).toBe(true);
   });
 
@@ -301,13 +388,18 @@ describe('media.unattached-sweep handled by the worker process', () => {
     const realDelete = storage.delete.bind(storage);
     storage.delete = () => Promise.reject(new Error('storage down'));
     try {
-      expect(await worker.context.get(UnattachedSweep, { strict: false }).run()).toEqual({ deleted: 0, failed: 1 });
+      expect(await worker.context.get(UnattachedSweep, { strict: false }).run()).toEqual({
+        deleted: 0,
+        failed: 1,
+      });
     } finally {
       storage.delete = realDelete;
     }
     expect(await media(old.id)).toBeDefined();
     expect(await exists(old.key)).toBe(true);
-    expect(await worker.context.get(MediaDeletion, { strict: false }).deleteObjects([old.id])).toBe(1);
+    expect(await worker.context.get(MediaDeletion, { strict: false }).deleteObjects([old.id])).toBe(
+      1,
+    );
   });
 });
 
@@ -318,7 +410,10 @@ describe('deletion helpers', () => {
     const b = randomUUID();
     for (const id of [a, b]) {
       await storage.put(uploadKey(owner, id), Buffer.from('12345'), 'image/png', 5);
-      await pool.query(`insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type) values ($1, $2, 'upload', 'ready', $3, 5, 'image/png')`, [id, owner, uploadKey(owner, id)]);
+      await pool.query(
+        `insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type) values ($1, $2, 'upload', 'ready', $3, 5, 'image/png')`,
+        [id, owner, uploadKey(owner, id)],
+      );
     }
     await pool.query(`insert into storage_usage (owner_id, bytes_used) values ($1, 10)`, [owner]);
     deleteLog.length = 0;
@@ -330,7 +425,7 @@ describe('deletion helpers', () => {
     expect(await deletion.deleteObjects([a])).toBe(0);
   });
 
-  it('deleteForCampaign removes the campaign\'s rows and objects, and sweepPrefix the unregistered ones under its prefix', async () => {
+  it("deleteForCampaign removes the campaign's rows and objects, and sweepPrefix the unregistered ones under its prefix", async () => {
     const owner = await user();
     const other = await user();
     const campaign = randomUUID();
@@ -339,7 +434,10 @@ describe('deletion helpers', () => {
     for (const id of ids) {
       const key = `u/${owner}/c/${campaign}/final/${id}.mp4`;
       await storage.put(key, Buffer.from('video'), 'video/mp4', 5);
-      await pool.query(`insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'final', 'ready', $3, 5, 'video/mp4', $4)`, [id, owner, key, campaign]);
+      await pool.query(
+        `insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'final', 'ready', $3, 5, 'video/mp4', $4)`,
+        [id, owner, key, campaign],
+      );
     }
     await pool.query(`insert into storage_usage (owner_id, bytes_used) values ($1, 10)`, [owner]);
     const stray = `u/${owner}/c/${campaign}/clip/${randomUUID()}.mp4`;
@@ -347,17 +445,30 @@ describe('deletion helpers', () => {
     const otherKey = `u/${other}/c/${randomUUID()}/final/${keep}.mp4`;
     await storage.put(otherKey, Buffer.from('mine'), 'video/mp4', 4);
 
-    const result = await worker.context.get(MediaDeletion, { strict: false }).deleteForCampaign(campaign);
+    const result = await worker.context
+      .get(MediaDeletion, { strict: false })
+      .deleteForCampaign(campaign);
     expect(result).toEqual({ rows: 2, objects: 1 });
     expect(await usage(owner)).toBe(0);
     expect(await exists(stray)).toBe(false);
     expect(await exists(otherKey)).toBe(true);
-    expect((await pool.query('select count(*) n from media_objects where campaign_id = $1', [campaign])).rows[0].n).toBe('0');
+    expect(
+      (await pool.query('select count(*) n from media_objects where campaign_id = $1', [campaign]))
+        .rows[0].n,
+    ).toBe('0');
   });
 
   it('sweepPrefix refuses a prefix wider than an owner or a campaign', async () => {
     const deletion = worker.context.get(MediaDeletion, { strict: false });
-    for (const bad of ['', 'u/', 'q/', 'smoke/', 'u/not-a-uuid/', `u/${randomUUID()}`, `u/${randomUUID()}/media/`]) {
+    for (const bad of [
+      '',
+      'u/',
+      'q/',
+      'smoke/',
+      'u/not-a-uuid/',
+      `u/${randomUUID()}`,
+      `u/${randomUUID()}/media/`,
+    ]) {
       await expect(deletion.sweepPrefix(bad)).rejects.toThrow(TypeError);
     }
     expect(await deletion.sweepPrefix(`q/${randomUUID()}/`)).toBe(0);

@@ -41,8 +41,10 @@ export function isOutOfDate(jobSegmentRevision: number, segmentRevision: number)
 export const NON_TERMINAL = ['pending', 'submitting', 'submitted', 'processing'] as const;
 export const RETRYABLE = ['failed', 'cancelled'] as const;
 
-export const isRetryable = (state: string): boolean => (RETRYABLE as readonly string[]).includes(state);
-export const isNonTerminal = (state: string): boolean => (NON_TERMINAL as readonly string[]).includes(state);
+export const isRetryable = (state: string): boolean =>
+  (RETRYABLE as readonly string[]).includes(state);
+export const isNonTerminal = (state: string): boolean =>
+  (NON_TERMINAL as readonly string[]).includes(state);
 
 /** The user-facing label of a job state (SB §3.5): the screen shows `pending` as "queued" when the running limit holds it. */
 const LABELS: Readonly<Record<string, string>> = {
@@ -72,7 +74,8 @@ export interface ProgressFacts {
 /** ARCHITECTURE §3.2 / TD-D12: `processing`, else `failed`, else `completed`, else `in_progress`. */
 export function deriveProgress(facts: ProgressFacts): CampaignProgress {
   if (facts.anyNonTerminal) return 'processing';
-  if (facts.briefFailed || facts.latestAssemblyFailed || facts.latestVideoStates.some(isRetryable)) return 'failed';
+  if (facts.briefFailed || facts.latestAssemblyFailed || facts.latestVideoStates.some(isRetryable))
+    return 'failed';
   if (facts.assemblyDone) return 'completed';
   return 'in_progress';
 }

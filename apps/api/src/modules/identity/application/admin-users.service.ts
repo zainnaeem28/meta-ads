@@ -90,7 +90,11 @@ export class AdminUsersService {
       const id = sortKey.slice(at + 1);
       if (at < 1 || !/^[0-9a-f-]{36}$/.test(id) || Number.isNaN(Date.parse(sortKey.slice(0, at)))) {
         throw new DomainError('validation_failed', 'The request is not valid.', [
-          { field: 'cursor', code: 'cursor_invalid', message: 'The cursor is invalid or has expired.' },
+          {
+            field: 'cursor',
+            code: 'cursor_invalid',
+            message: 'The cursor is invalid or has expired.',
+          },
         ]);
       }
       after = { createdAt: sortKey.slice(0, at), id };
@@ -101,7 +105,10 @@ export class AdminUsersService {
       ...(after === undefined ? {} : { after }),
     });
     const page = buildPage(rows, input.limit, (row) => `${row.createdAtKey}|${row.id}`, key, scope);
-    return new PageResult(page.items.map((row) => viewOf(row)), page.pagination);
+    return new PageResult(
+      page.items.map((row) => viewOf(row)),
+      page.pagination,
+    );
   }
 
   /**
@@ -173,7 +180,8 @@ export class AdminUsersService {
     const target = await this.users.findById(tx, input.userId);
     if (target === undefined) throw new DomainError('not_found', 'The account was not found.');
     if (target.status === input.status) return viewOf(target);
-    if (target.status === 'removed') throw new DomainError('state_conflict', 'The account was removed.');
+    if (target.status === 'removed')
+      throw new DomainError('state_conflict', 'The account was removed.');
     if (target.version !== input.expectedVersion) {
       throw new DomainError('version_conflict', 'The account changed. Reload and try again.');
     }
@@ -199,11 +207,17 @@ export class AdminUsersService {
         throw error;
       }
     }
-    const updated = await this.users.setStatus(tx, input.userId, input.expectedVersion, input.status);
+    const updated = await this.users.setStatus(
+      tx,
+      input.userId,
+      input.expectedVersion,
+      input.status,
+    );
     if (updated === undefined) {
       throw new DomainError('version_conflict', 'The account changed. Reload and try again.');
     }
-    if (input.status !== 'active') await enqueue(this.boss, tx, REVOKE_SESSIONS_QUEUE, { userId: input.userId });
+    if (input.status !== 'active')
+      await enqueue(this.boss, tx, REVOKE_SESSIONS_QUEUE, { userId: input.userId });
     return viewOf(updated);
   }
 
@@ -218,19 +232,33 @@ export class AdminUsersService {
     change: AdminChange,
   ): Promise<void> {
     await this.assertNotSelf(actorId, target);
-    if (target.role === 'admin' && target.status === 'active' && (await this.users.countActiveAdmins(tx)) <= 1) {
+    if (
+      target.role === 'admin' &&
+      target.status === 'active' &&
+      (await this.users.countActiveAdmins(tx)) <= 1
+    ) {
       throw new DomainError('last_admin', `The last administrator cannot be ${verb(change)}.`);
     }
   }
 
-  private assertNotSelf(actorId: string | null, target: Pick<AdminUserRecord, 'id'>): Promise<void> {
+  private assertNotSelf(
+    actorId: string | null,
+    target: Pick<AdminUserRecord, 'id'>,
+  ): Promise<void> {
     if (actorId !== null && actorId === target.id) {
-      return Promise.reject(new DomainError('self_action', 'You cannot do this to your own account.'));
+      return Promise.reject(
+        new DomainError('self_action', 'You cannot do this to your own account.'),
+      );
     }
     return Promise.resolve();
   }
 
-  private async recordRefusal(tx: DbTx, actor: ActorContext, targetId: string, requestId: string): Promise<void> {
+  private async recordRefusal(
+    tx: DbTx,
+    actor: ActorContext,
+    targetId: string,
+    requestId: string,
+  ): Promise<void> {
     await this.audit.record(tx, {
       actorId: actor.userId,
       actorType: 'admin',
@@ -243,7 +271,8 @@ export class AdminUsersService {
   }
 
   private requireKey(): string {
-    if (this.cursorKey === undefined || this.cursorKey === '') throw new Error('CURSOR_SIGNING_KEY is not configured');
+    if (this.cursorKey === undefined || this.cursorKey === '')
+      throw new Error('CURSOR_SIGNING_KEY is not configured');
     return this.cursorKey;
   }
 }

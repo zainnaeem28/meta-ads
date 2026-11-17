@@ -28,7 +28,11 @@ export type RouteDecision = { kind: 'next' } | { kind: 'redirect'; to: string };
  * What the middleware does with a request: anonymous visitors go to sign-in with the requested URL as the return path
  * (an ended session adds the session-expired message); the home route sends a signed-in user to the campaign list.
  */
-export function decideRoute(input: { pathname: string; search: string; session: SessionKind }): RouteDecision {
+export function decideRoute(input: {
+  pathname: string;
+  search: string;
+  session: SessionKind;
+}): RouteDecision {
   const { pathname, search, session } = input;
   if (isPublicPath(pathname)) return { kind: 'next' };
   if (session === 'active') {
@@ -39,5 +43,8 @@ export function decideRoute(input: { pathname: string; search: string; session: 
   }
   const target = `${pathname}${search}`;
   if (session === 'expired') return { kind: 'redirect', to: signInUrl(target) };
-  return { kind: 'redirect', to: `${ROUTES.signIn}?return=${encodeURIComponent(safeReturnPath(target))}` };
+  return {
+    kind: 'redirect',
+    to: `${ROUTES.signIn}?return=${encodeURIComponent(safeReturnPath(target))}`,
+  };
 }

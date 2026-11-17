@@ -24,7 +24,10 @@ export class IdempotencyModule {
         { provide: IDEMPOTENCY_TTL_HOURS, useValue: config.IDEMPOTENCY_TTL_HOURS ?? 24 },
         {
           provide: PLATFORM_CLEANUP,
-          useFactory: (database: Database): PlatformCleanup => () => runPlatformCleanup(database.db),
+          useFactory:
+            (database: Database): PlatformCleanup =>
+            () =>
+              runPlatformCleanup(database.db),
           inject: [DATABASE],
         },
       ],

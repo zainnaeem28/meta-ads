@@ -152,6 +152,7 @@ The `backup` image never holds the KEK (any `KEK_*`) or the age private key (`AG
 | `INVITATION_SEND_STALE_MIN`         | worker                                     | none                                       | `15`                                                             |
 | `PROVIDER_OUTPUT_MAX_BYTES`         | worker                                     | none                                       | `209715200`                                                      |
 | `EGRESS_ALLOWED_HOSTS`              | api, worker                                | none                                       | `{"openai":["api.openai.com"],"wavespeed":["api.wavespeed.ai"]}` |
+| `WORKER_PROVIDER_ORIGIN_OVERRIDE`   | worker                                     | none                                       | none                                                             |
 | `WAVESPEED_MODEL_I2V`               | worker                                     | none                                       | `bytedance/seedance-2.0/image-to-video`                          |
 | `WAVESPEED_MODEL_T2V`               | worker                                     | none                                       | `bytedance/seedance-2.0/text-to-video`                           |
 | `VIDEO_RESOLUTION`                  | worker                                     | none                                       | `1080p`                                                          |

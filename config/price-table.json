@@ -2,12 +2,61 @@
   "version": 1,
   "note": "Estimates the spend cap counts (REQ-019, SB-D10). Changed only by a reviewed PR and loaded into price_table by the release seed. The figures are estimates for the local stub models and for the models the registry defaults name; a reviewer replaces them with each provider's published price before the paid-call flag is enabled.",
   "rows": [
-    { "provider": "openai", "operation": "local-stub-text", "effectiveFrom": "2026-01-01", "unit": "call", "unitPriceUsd": "0.010000", "unitsPerCall": "1" },
-    { "provider": "openai", "operation": "local-stub-vision", "effectiveFrom": "2026-01-01", "unit": "call", "unitPriceUsd": "0.010000", "unitsPerCall": "1" },
-    { "provider": "openai", "operation": "local-stub-image", "effectiveFrom": "2026-01-01", "unit": "image", "unitPriceUsd": "0.040000", "unitsPerCall": "1" },
-    { "provider": "openai", "operation": "gpt-transcribe", "effectiveFrom": "2026-01-01", "unit": "minute", "unitPriceUsd": "0.006000", "unitsPerCall": "1" },
-    { "provider": "wavespeed", "operation": "bytedance/seedance-2.0/image-to-video", "effectiveFrom": "2026-01-01", "unit": "second", "unitPriceUsd": "0.100000", "unitsPerCall": "15" },
-    { "provider": "wavespeed", "operation": "bytedance/seedance-2.0/text-to-video", "effectiveFrom": "2026-01-01", "unit": "second", "unitPriceUsd": "0.100000", "unitsPerCall": "15" },
-    { "provider": "assembly_vendor", "operation": "shotstack-render", "effectiveFrom": "2026-01-01", "unit": "render", "unitPriceUsd": "0.200000", "unitsPerCall": "1" }
+    {
+      "provider": "openai",
+      "operation": "local-stub-text",
+      "effectiveFrom": "2026-01-01",
+      "unit": "call",
+      "unitPriceUsd": "0.010000",
+      "unitsPerCall": "1"
+    },
+    {
+      "provider": "openai",
+      "operation": "local-stub-vision",
+      "effectiveFrom": "2026-01-01",
+      "unit": "call",
+      "unitPriceUsd": "0.010000",
+      "unitsPerCall": "1"
+    },
+    {
+      "provider": "openai",
+      "operation": "local-stub-image",
+      "effectiveFrom": "2026-01-01",
+      "unit": "image",
+      "unitPriceUsd": "0.040000",
+      "unitsPerCall": "1"
+    },
+    {
+      "provider": "openai",
+      "operation": "gpt-transcribe",
+      "effectiveFrom": "2026-01-01",
+      "unit": "minute",
+      "unitPriceUsd": "0.006000",
+      "unitsPerCall": "1"
+    },
+    {
+      "provider": "wavespeed",
+      "operation": "bytedance/seedance-2.0/image-to-video",
+      "effectiveFrom": "2026-01-01",
+      "unit": "second",
+      "unitPriceUsd": "0.100000",
+      "unitsPerCall": "15"
+    },
+    {
+      "provider": "wavespeed",
+      "operation": "bytedance/seedance-2.0/text-to-video",
+      "effectiveFrom": "2026-01-01",
+      "unit": "second",
+      "unitPriceUsd": "0.100000",
+      "unitsPerCall": "15"
+    },
+    {
+      "provider": "assembly_vendor",
+      "operation": "shotstack-render",
+      "effectiveFrom": "2026-01-01",
+      "unit": "render",
+      "unitPriceUsd": "0.200000",
+      "unitsPerCall": "1"
+    }
   ]
 }

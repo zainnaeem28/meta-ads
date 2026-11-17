@@ -16,7 +16,13 @@ import type { TestDatabase } from '../db/test-database.js';
 import { Scope } from '../http/scope-registry.js';
 import { createHttpLogging } from '../logging/index.js';
 import { RateLimit, RateLimiter } from '../rate-limit/index.js';
-import { PLATFORM_CLEANUP, parseIdempotencyKey, requestHash, runPlatformCleanup, withIdempotency } from './index.js';
+import {
+  PLATFORM_CLEANUP,
+  parseIdempotencyKey,
+  requestHash,
+  runPlatformCleanup,
+  withIdempotency,
+} from './index.js';
 import type { PlatformCleanup } from './index.js';
 
 // TASK-027 on real PostgreSQL, through the real api composition root (createApiApp): the general IP limit, the
@@ -44,7 +50,12 @@ class JobsProbe {
     const out = await database.uow.run((tx: DbTx) =>
       withIdempotency(
         tx,
-        { ownerId: OWNER, operationId: 'API-024', key, requestHash: requestHash('POST', request.url, body) },
+        {
+          ownerId: OWNER,
+          operationId: 'API-024',
+          key,
+          requestHash: requestHash('POST', request.url, body),
+        },
         { resourceType: 'job', responseStatus: 202 },
         async () => {
           created += 1;
@@ -74,7 +85,11 @@ beforeAll(async () => {
   const ddl = readFileSync(`${REAL_MIGRATIONS}/0001_task-025-platform.sql`, 'utf8')
     .split('--> statement-breakpoint')
     .map((statement) => statement.trim())
-    .filter((statement) => /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets)/.test(statement) || /^CREATE INDEX "idempotency_records_expiry_idx"/.test(statement));
+    .filter(
+      (statement) =>
+        /^(CREATE TABLE|CREATE INDEX) "(idempotency_records|rate_limit_buckets)/.test(statement) ||
+        /^CREATE INDEX "idempotency_records_expiry_idx"/.test(statement),
+    );
   expect(ddl).toHaveLength(3);
   for (const statement of ddl) await direct.query(statement);
   // The api fails closed without the pg-boss schema and queues (release order: db:migrate, then jobs:migrate).
@@ -129,12 +144,16 @@ describe('idempotent creation through the running app', () => {
 
   it('creates one resource for concurrent same-key requests', async () => {
     const before = created;
-    const results = await Promise.all(Array.from({ length: 3 }, () => post('k-concurrent', { x: 1 }, '198.51.100.13')));
+    const results = await Promise.all(
+      Array.from({ length: 3 }, () => post('k-concurrent', { x: 1 }, '198.51.100.13')),
+    );
     expect(results.map((r) => r.statusCode)).toEqual([202, 202, 202]);
     expect(new Set(results.map((r) => r.json().data.id)).size).toBe(1);
     expect(results.filter((r) => r.json().data.replayed === false)).toHaveLength(1);
     expect(created - before).toBe(1);
-    const rows = await direct.query("select count(*)::int as n from idempotency_records where key = 'k-concurrent'");
+    const rows = await direct.query(
+      "select count(*)::int as n from idempotency_records where key = 'k-concurrent'",
+    );
     expect(rows.rows[0].n).toBe(1);
   });
 
@@ -142,9 +161,19 @@ describe('idempotent creation through the running app', () => {
     const database = state.database as Database;
     await expect(
       database.uow.run(async (tx) => {
-        await withIdempotency(tx, { ownerId: OWNER, operationId: 'API-024', key: 'k-rollback', requestHash: requestHash('POST', '/x', {}) }, { resourceType: 'job', responseStatus: 202 }, async () => {
-          throw new Error('boom');
-        });
+        await withIdempotency(
+          tx,
+          {
+            ownerId: OWNER,
+            operationId: 'API-024',
+            key: 'k-rollback',
+            requestHash: requestHash('POST', '/x', {}),
+          },
+          { resourceType: 'job', responseStatus: 202 },
+          async () => {
+            throw new Error('boom');
+          },
+        );
       }),
     ).rejects.toThrow('boom');
     const rows = await direct.query("select 1 from idempotency_records where key = 'k-rollback'");
@@ -181,8 +210,12 @@ describe('rate limits through the running app', () => {
     expect(wait).toBeGreaterThanOrEqual(1);
     expect(wait).toBeLessThanOrEqual(600);
     expect((await post('k-rl-other', { n: 9 }, '198.51.100.21')).statusCode).toBe(202);
-    const stored = await direct.query("select subject from rate_limit_buckets where scope = 'job-create'");
-    expect(stored.rows.every((r: { subject: string }) => /^[0-9a-f]{64}$/.test(r.subject))).toBe(true);
+    const stored = await direct.query(
+      "select subject from rate_limit_buckets where scope = 'job-create'",
+    );
+    expect(stored.rows.every((r: { subject: string }) => /^[0-9a-f]{64}$/.test(r.subject))).toBe(
+      true,
+    );
   });
 
   it('refuses the 61st unauthenticated request in a window with 429', async () => {
@@ -198,45 +231,82 @@ describe('rate limits through the running app', () => {
 
   it('does not rate limit the health probe', async () => {
     for (let n = 0; n < 70; n++) {
-      expect((await api.app.inject({ method: 'GET', url: '/health/live', headers: { 'x-forwarded-for': '198.51.100.40' } })).statusCode).toBe(200);
+      expect(
+        (
+          await api.app.inject({
+            method: 'GET',
+            url: '/health/live',
+            headers: { 'x-forwarded-for': '198.51.100.40' },
+          })
+        ).statusCode,
+      ).toBe(200);
     }
   });
 
   it('is 503 service_unavailable, not a pass-through, when the database is unavailable', async () => {
-    const dead = createDatabase(dbConfigOf({ DATABASE_URL: 'postgres://postgres@127.0.0.1:9/none', DATABASE_POOL_MAX: 1, DATABASE_ACQUIRE_TIMEOUT_MS: 300 } as never));
+    const dead = createDatabase(
+      dbConfigOf({
+        DATABASE_URL: 'postgres://postgres@127.0.0.1:9/none',
+        DATABASE_POOL_MAX: 1,
+        DATABASE_ACQUIRE_TIMEOUT_MS: 300,
+      } as never),
+    );
     const limiter = new RateLimiter(dead.db);
-    await expect(limiter.consume('s', 'u', 5, 60)).rejects.toMatchObject({ code: 'service_unavailable', status: 503 });
+    await expect(limiter.consume('s', 'u', 5, 60)).rejects.toMatchObject({
+      code: 'service_unavailable',
+      status: 503,
+    });
     await dead.close().catch(() => undefined);
   });
 
   it('counts each request in one fixed-window row', async () => {
-    const limiter = new RateLimiter((state.database as Database).db, () => Date.UTC(2026, 5, 1, 12, 0, 30));
-    for (let n = 1; n <= 4; n++) expect((await limiter.consume('tc-rlm', 'edge', 3, 60)).allowed).toBe(n <= 3);
-    const rows = await direct.query("select count, window_start from rate_limit_buckets where scope = 'tc-rlm'");
+    const limiter = new RateLimiter((state.database as Database).db, () =>
+      Date.UTC(2026, 5, 1, 12, 0, 30),
+    );
+    for (let n = 1; n <= 4; n++)
+      expect((await limiter.consume('tc-rlm', 'edge', 3, 60)).allowed).toBe(n <= 3);
+    const rows = await direct.query(
+      "select count, window_start from rate_limit_buckets where scope = 'tc-rlm'",
+    );
     expect(rows.rowCount).toBe(1);
     expect(rows.rows[0].count).toBe(4);
     expect(new Date(rows.rows[0].window_start).toISOString()).toBe('2026-06-01T12:00:00.000Z');
-    const next = new RateLimiter((state.database as Database).db, () => Date.UTC(2026, 5, 1, 12, 1, 0));
+    const next = new RateLimiter((state.database as Database).db, () =>
+      Date.UTC(2026, 5, 1, 12, 1, 0),
+    );
     expect((await next.consume('tc-rlm', 'edge', 3, 60)).allowed).toBe(true);
   });
 });
 
 describe('platform.cleanup', () => {
   it('removes expired records and buckets older than a day only', async () => {
-    await direct.query("delete from idempotency_records; delete from rate_limit_buckets;");
+    await direct.query('delete from idempotency_records; delete from rate_limit_buckets;');
     const hash = requestHash('POST', '/x', {});
     const ins = (key: string, expiry: string) =>
-      direct.query(`insert into idempotency_records values ($1, 'API-024', $2, $3, 'job', $4, 202, ${expiry})`, [OWNER, key, hash, randomUUID()]);
+      direct.query(
+        `insert into idempotency_records values ($1, 'API-024', $2, $3, 'job', $4, 202, ${expiry})`,
+        [OWNER, key, hash, randomUUID()],
+      );
     await ins('expired', "now() - interval '1 second'");
     await ins('live', "now() + interval '1 hour'");
     const bucket = (subject: string, age: string) =>
-      direct.query(`insert into rate_limit_buckets values ('s', $1, now() - interval '${age}', 1)`, [subject]);
+      direct.query(
+        `insert into rate_limit_buckets values ('s', $1, now() - interval '${age}', 1)`,
+        [subject],
+      );
     await bucket('old', '25 hours');
     await bucket('recent', '23 hours');
     const handler = api.app.get<PlatformCleanup>(PLATFORM_CLEANUP);
     expect(await handler()).toEqual({ idempotencyRecords: 1, rateLimitBuckets: 1 });
-    expect((await direct.query('select key from idempotency_records')).rows).toEqual([{ key: 'live' }]);
-    expect((await direct.query('select subject from rate_limit_buckets')).rows).toEqual([{ subject: 'recent' }]);
-    expect(await runPlatformCleanup((state.database as Database).db)).toEqual({ idempotencyRecords: 0, rateLimitBuckets: 0 });
+    expect((await direct.query('select key from idempotency_records')).rows).toEqual([
+      { key: 'live' },
+    ]);
+    expect((await direct.query('select subject from rate_limit_buckets')).rows).toEqual([
+      { subject: 'recent' },
+    ]);
+    expect(await runPlatformCleanup((state.database as Database).db)).toEqual({
+      idempotencyRecords: 0,
+      rateLimitBuckets: 0,
+    });
   });
 });

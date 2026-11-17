@@ -2,8 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { Reflector } from '@nestjs/core';
 import { SetMetadata } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
-import { AuthGuard, authorizeScope, bearerToken, requireMfa, requireRecentAuth, requireRole } from './auth.guard.js';
-import type { ActorContext, AuthResult, AuthenticatedRequest, SessionAuthenticator } from './auth.guard.js';
+import {
+  AuthGuard,
+  authorizeScope,
+  bearerToken,
+  requireMfa,
+  requireRecentAuth,
+  requireRole,
+} from './auth.guard.js';
+import type {
+  ActorContext,
+  AuthResult,
+  AuthenticatedRequest,
+  SessionAuthenticator,
+} from './auth.guard.js';
 import { DomainError } from './domain-error.js';
 import { SCOPE_KEY } from './scope-registry.js';
 import type { RouteScope } from './scope-registry.js';
@@ -17,7 +29,10 @@ const actor = (over: Partial<ActorContext> = {}): ActorContext => ({
   authAgeMin: 1,
   ...over,
 });
-const linked = (over: Partial<ActorContext> = {}): AuthResult => ({ linked: true, actor: actor(over) });
+const linked = (over: Partial<ActorContext> = {}): AuthResult => ({
+  linked: true,
+  actor: actor(over),
+});
 const unlinked: AuthResult = { linked: false, session: { subject: 'sub' } };
 const codeOf = (fn: () => unknown): string | undefined => {
   try {
@@ -42,11 +57,17 @@ describe('requireRole, requireMfa, requireRecentAuth', () => {
   it('refuse with the registry codes', () => {
     expect(codeOf(() => requireRole(actor(), 'admin'))).toBe('forbidden_role');
     expect(codeOf(() => requireRole(actor({ role: 'admin' }), 'admin'))).toBeUndefined();
-    expect(codeOf(() => requireMfa(actor({ mfa: { required: true, satisfied: false } })))).toBe('mfa_required');
-    expect(codeOf(() => requireMfa(actor({ mfa: { required: false, satisfied: false } })))).toBeUndefined();
-    expect(codeOf(() => requireRecentAuth(actor({ recentAuth: { satisfied: false, maxAgeSeconds: 600 } })))).toBe(
-      'recent_auth_required',
+    expect(codeOf(() => requireMfa(actor({ mfa: { required: true, satisfied: false } })))).toBe(
+      'mfa_required',
     );
+    expect(
+      codeOf(() => requireMfa(actor({ mfa: { required: false, satisfied: false } }))),
+    ).toBeUndefined();
+    expect(
+      codeOf(() =>
+        requireRecentAuth(actor({ recentAuth: { satisfied: false, maxAgeSeconds: 600 } })),
+      ),
+    ).toBe('recent_auth_required');
   });
 });
 
@@ -55,7 +76,8 @@ describe('authorizeScope (decision order of SECURITY-DESIGN 7.1)', () => {
   const stale = { recentAuth: { satisfied: false, maxAgeSeconds: 600 } };
   it('lets an unlinked session reach only scope T', () => {
     expect(authorizeScope('T', unlinked)).toBeUndefined();
-    for (const scope of ['U', 'U+RA', 'A'] as RouteScope[]) expect(codeOf(() => authorizeScope(scope, unlinked))).toBe('not_linked');
+    for (const scope of ['U', 'U+RA', 'A'] as RouteScope[])
+      expect(codeOf(() => authorizeScope(scope, unlinked))).toBe('not_linked');
   });
   it('does not enforce MFA, role or recent auth on scope T', () => {
     expect(authorizeScope('T', linked(noMfa))?.userId).toBe('u1');
@@ -75,7 +97,10 @@ describe('AuthGuard', () => {
   class Handler {
     handle(): void {}
   }
-  function context(request: Partial<AuthenticatedRequest>, scope: RouteScope | undefined): ExecutionContext {
+  function context(
+    request: Partial<AuthenticatedRequest>,
+    scope: RouteScope | undefined,
+  ): ExecutionContext {
     if (scope !== undefined) SetMetadata(SCOPE_KEY, scope)(Handler.prototype.handle);
     else Reflect.deleteMetadata(SCOPE_KEY, Handler.prototype.handle);
     return {
@@ -99,14 +124,21 @@ describe('AuthGuard', () => {
     };
     return { guard: new AuthGuard(new Reflector(), sessions), calls };
   }
-  const run = async (guard: AuthGuard, request: Partial<AuthenticatedRequest>, scope: RouteScope | undefined) => {
+  const run = async (
+    guard: AuthGuard,
+    request: Partial<AuthenticatedRequest>,
+    scope: RouteScope | undefined,
+  ) => {
     try {
       return await guard.canActivate(context(request, scope));
     } catch (error) {
       return (error as DomainError).code;
     }
   };
-  const bearer = { headers: { authorization: 'Bearer tok' }, id: 'req1' } as Partial<AuthenticatedRequest>;
+  const bearer = {
+    headers: { authorization: 'Bearer tok' },
+    id: 'req1',
+  } as Partial<AuthenticatedRequest>;
 
   it('passes Pub and M without reading a session', async () => {
     const { guard, calls } = setup(new Error('must not run'));
@@ -119,7 +151,9 @@ describe('AuthGuard', () => {
   });
   it('answers 401 without a Bearer token and passes the authenticator error through', async () => {
     expect(await run(setup(linked()).guard, { headers: {} }, 'U')).toBe('unauthenticated');
-    expect(await run(setup(new DomainError('account_suspended', 'x')).guard, bearer, 'U')).toBe('account_suspended');
+    expect(await run(setup(new DomainError('account_suspended', 'x')).guard, bearer, 'U')).toBe(
+      'account_suspended',
+    );
   });
   it('publishes the actor and user id of an allowed request', async () => {
     const { guard } = setup(linked());

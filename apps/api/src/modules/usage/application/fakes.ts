@@ -2,12 +2,7 @@ import { UnitOfWork } from '../../../platform/db/index.js';
 import type { Database, DbTx } from '../../../platform/db/index.js';
 import type { Units } from '../domain/money.js';
 import type { BillableCall, JobType } from '../domain/types.js';
-import type {
-  NewUsageEvent,
-  ReservationRecord,
-  SpendTotals,
-  UsageRepository,
-} from './ports.js';
+import type { NewUsageEvent, ReservationRecord, SpendTotals, UsageRepository } from './ports.js';
 
 /** Test-only in-memory repository and unit of work; the SQL one is proven on PostgreSQL by usage.integration.test.ts. */
 export class FakeUsageRepository implements UsageRepository {
@@ -34,7 +29,9 @@ export class FakeUsageRepository implements UsageRepository {
   }
 
   findReservation(_tx: DbTx, jobType: JobType, jobId: string): Promise<ReservationRecord | null> {
-    return Promise.resolve(this.reservations.find((r) => r.jobType === jobType && r.jobId === jobId) ?? null);
+    return Promise.resolve(
+      this.reservations.find((r) => r.jobType === jobType && r.jobId === jobId) ?? null,
+    );
   }
 
   insertReservation(_tx: DbTx, reservation: ReservationRecord): Promise<boolean> {
@@ -59,7 +56,9 @@ export class FakeUsageRepository implements UsageRepository {
 
   deleteReservation(_tx: DbTx, jobType: JobType, jobId: string): Promise<boolean> {
     const before = this.reservations.length;
-    this.reservations = this.reservations.filter((r) => !(r.jobType === jobType && r.jobId === jobId));
+    this.reservations = this.reservations.filter(
+      (r) => !(r.jobType === jobType && r.jobId === jobId),
+    );
     return Promise.resolve(this.reservations.length < before);
   }
 
@@ -87,6 +86,9 @@ export function fakeDatabase(): { database: Pick<Database, 'uow'>; executed: str
       return Promise.resolve({ rows: [] });
     },
   } as unknown as DbTx;
-  const database = { uow: new UnitOfWork({ transaction: (fn) => fn(tx) }) } as unknown as Pick<Database, 'uow'>;
+  const database = { uow: new UnitOfWork({ transaction: (fn) => fn(tx) }) } as unknown as Pick<
+    Database,
+    'uow'
+  >;
   return { database, executed };
 }

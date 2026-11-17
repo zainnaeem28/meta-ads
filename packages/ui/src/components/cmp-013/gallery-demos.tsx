@@ -22,7 +22,14 @@ function NameField({ onChange }: { onChange?: () => void }) {
 export function DialogStates() {
   return (
     <>
-      <DialogPanel inline title="Pause campaign?" description={PAUSE} confirmLabel="Pause campaign" onConfirm={noop} onCancel={noop} />
+      <DialogPanel
+        inline
+        title="Pause campaign?"
+        description={PAUSE}
+        confirmLabel="Pause campaign"
+        onConfirm={noop}
+        onCancel={noop}
+      />
       <DialogPanel
         inline
         variant="typed-confirm"
@@ -34,10 +41,25 @@ export function DialogStates() {
         onConfirm={noop}
         onCancel={noop}
       />
-      <DialogPanel inline variant="form" title="Rename campaign" confirmLabel="Save name" onConfirm={noop} onCancel={noop}>
+      <DialogPanel
+        inline
+        variant="form"
+        title="Rename campaign"
+        confirmLabel="Save name"
+        onConfirm={noop}
+        onCancel={noop}
+      >
         <NameField />
       </DialogPanel>
-      <DialogPanel inline title="Pause campaign?" description={PAUSE} confirmLabel="Pause campaign" pending onConfirm={noop} onCancel={noop} />
+      <DialogPanel
+        inline
+        title="Pause campaign?"
+        description={PAUSE}
+        confirmLabel="Pause campaign"
+        pending
+        onConfirm={noop}
+        onCancel={noop}
+      />
       <DialogPanel
         inline
         title="Pause campaign?"
@@ -177,7 +199,13 @@ export function MenuStates() {
         <Menu label="Actions for Spring launch" trigger="Actions" items={ROW_ITEMS} defaultOpen />
       </MenuCell>
       <MenuCell id="menu-focus" label="CMP-020 row action menu, first item focused">
-        <Menu label="Actions for Summer sale" trigger="Actions" items={ROW_ITEMS} defaultOpen initialFocus />
+        <Menu
+          label="Actions for Summer sale"
+          trigger="Actions"
+          items={ROW_ITEMS}
+          defaultOpen
+          initialFocus
+        />
       </MenuCell>
       <MenuCell id="menu-hover" label="CMP-020 row action menu, item hover">
         <Menu

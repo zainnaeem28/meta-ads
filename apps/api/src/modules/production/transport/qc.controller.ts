@@ -35,7 +35,12 @@ export class QcController {
     const ownerId = owner(actor);
     const { videoJobId } = parseWith(JobParams, rawParams);
     const key = parseIdempotencyKey(header);
-    const result = await this.runs.rerun(ownerId, videoJobId, key, requestHash('POST', request.url, null));
+    const result = await this.runs.rerun(
+      ownerId,
+      videoJobId,
+      key,
+      requestHash('POST', request.url, null),
+    );
     return { ...qcView(result.run), reused: result.reused };
   }
 }

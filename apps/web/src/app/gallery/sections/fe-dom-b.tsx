@@ -7,7 +7,8 @@ import type { SectionMeta } from '../registry';
 
 export const meta: SectionMeta = {
   id: 'CMP-025',
-  title: 'Domain B: Provider key card, Final preview, Campaign row, Metric tile (CMP-025, 026, 027, 028)',
+  title:
+    'Domain B: Provider key card, Final preview, Campaign row, Metric tile (CMP-025, 026, 027, 028)',
   order: 25,
 };
 
@@ -22,7 +23,11 @@ export default function FeDomBSection() {
       <div data-testid="key-cards" className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {PROVIDERS.flatMap((provider) =>
           KEY_STATES.map((state) => (
-            <Cell key={`${provider}-${state}`} id={`key-${provider}-${state}`} label={`CMP-025 ${provider} ${state}`}>
+            <Cell
+              key={`${provider}-${state}`}
+              id={`key-${provider}-${state}`}
+              label={`CMP-025 ${provider} ${state}`}
+            >
               <KeyCardDemo provider={provider} initial={state} />
             </Cell>
           )),
@@ -46,7 +51,13 @@ export default function FeDomBSection() {
           delta="up 3 since last week"
           bar={{ value: 18, max: 24, tone: 1 }}
         />
-        <MetricTile variant="cost" label="Cost" value="$12.40" unit="USD" bar={{ value: 12, max: 40, tone: 2 }} />
+        <MetricTile
+          variant="cost"
+          label="Cost"
+          value="$12.40"
+          unit="USD"
+          bar={{ value: 12, max: 40, tone: 2 }}
+        />
         <MetricTile label="Videos finished" loading />
         <MetricTile label="Failed runs" value={null} />
         <MetricTile variant="cost" label="Cost" loading />

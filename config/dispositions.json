@@ -34,6 +34,19 @@
       "reason": "ZAP baseline TASK-016 (first baseline): the web page loads the identity provider's browser scripts from a CDN without an integrity attribute (the file is versioned by the provider and changes without notice, so a fixed hash would break sign-in); in local mode the script host is also empty (https:///npm/...). Product defect filed for the Frontend Engineer: serve the provider script from the provider's frontend host with a pinned version, and do not render it in local mode.",
       "owner": "Frontend Engineer",
       "expires": "2026-12-16"
+    },
+    {
+      "match": "CVE-2026-112366",
+      "reason": "picomatch 4.0.7 (GHSA-fc5q-39xc-vjpf, regex DoS via single-branch repeated extglob such as +(*)); no patched version exists (latest published is 4.0.7), so no upgrade or override is possible. Reached only through build and test tooling: dependency-cruiser, typescript-eslint, vite/vitest (dev), and @sentry/nextjs -> @rollup/plugin-commonjs and vite via tinyglobby (build-time bundler plugins). Every glob given to it is a literal from this repository's own config or from the build; no request-handling or user-supplied glob reaches it, and the API runtime image does not use it (pnpm why --prod shows it only under @shroomap/web build dependencies). Re-check for a patched release at expiry. Needs Security Reviewer review.",
+      "owner": "DevOps Engineer",
+      "expires": "2026-12-17"
+    },
+    {
+      "match": "GHSA-fc5q-39xc-vjpf",
+      "path": "picomatch",
+      "reason": "picomatch 4.0.7 (GHSA-fc5q-39xc-vjpf, regex DoS via single-branch repeated extglob such as +(*)); no patched version exists (latest published is 4.0.7), so no upgrade or override is possible. Reached only through build and test tooling: dependency-cruiser, typescript-eslint, vite/vitest (dev), and @sentry/nextjs -> @rollup/plugin-commonjs and vite via tinyglobby (build-time bundler plugins). Every glob given to it is a literal from this repository's own config or from the build; no request-handling or user-supplied glob reaches it, and the API runtime image does not use it (pnpm why --prod shows it only under @shroomap/web build dependencies). Re-check for a patched release at expiry. Needs Security Reviewer review.",
+      "owner": "DevOps Engineer",
+      "expires": "2026-12-17"
     }
   ]
 }

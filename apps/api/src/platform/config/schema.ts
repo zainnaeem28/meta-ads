@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import { z } from 'zod';
 import { complianceRegister, PROVIDER_VENDORS } from './compliance-register.js';
 import type { ComplianceRegister } from './compliance-register.js';
@@ -56,6 +57,56 @@ function withDefaults(kind: ProcessKind, env: Readonly<Record<string, string | u
 
 function mapVersions(map: unknown): Set<string> {
   return new Set(Object.keys((map ?? {}) as Record<string, unknown>));
+}
+
+/** The environments that may point the provider calls at a local stand-in. */
+const ORIGIN_OVERRIDE_ENVS = new Set<AppEnv>(['development', 'test']);
+
+/**
+ * `WORKER_PROVIDER_ORIGIN_OVERRIDE`: refused outside development and test, a bare https origin (no path, query,
+ * credentials or port other than 443, a name rather than an IP) whose host is named exactly (no wildcard) by both the
+ * `openai` and `wavespeed` entries of `EGRESS_ALLOWED_HOSTS`. The egress layer checks the host again on every call.
+ */
+function providerOriginCheck(
+  appEnv: AppEnv,
+  env: Readonly<Record<string, string | undefined>>,
+  c: Record<string, unknown>,
+  fail: (key: string, fault?: ConfigFault) => void,
+): void {
+  const raw = env['WORKER_PROVIDER_ORIGIN_OVERRIDE'];
+  if (!isPresent(raw)) return;
+  const key = 'WORKER_PROVIDER_ORIGIN_OVERRIDE';
+  if (!ORIGIN_OVERRIDE_ENVS.has(appEnv)) return fail(key, 'forbidden');
+  const origin = parseProviderOrigin(raw);
+  if (origin === undefined) return fail(key);
+  const hosts = (c['EGRESS_ALLOWED_HOSTS'] ?? {}) as Record<string, readonly string[] | undefined>;
+  for (const vendor of ['openai', 'wavespeed']) {
+    if (!(hosts[vendor] ?? []).some((h) => h.toLowerCase() === origin.hostname)) return fail(key);
+  }
+}
+
+/** The origin an override value names, or undefined when it is anything more or less than an https host (name, port 443). */
+export function parseProviderOrigin(raw: string): URL | undefined {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return undefined;
+  }
+  const bare = url.hostname.replace(/^\[|\]$/g, '');
+  if (
+    url.protocol !== 'https:' ||
+    url.username !== '' ||
+    url.password !== '' ||
+    url.port !== '' ||
+    url.search !== '' ||
+    url.hash !== '' ||
+    (url.pathname !== '/' && url.pathname !== '') ||
+    isIP(bare) !== 0 ||
+    /^\d+(\.\d+)*$/.test(bare)
+  )
+    return undefined;
+  return url;
 }
 
 /** Rules that span keys or depend on APP_ENV. Each pushes the key it blames. */
@@ -122,6 +173,7 @@ function crossChecks(
   }
 
   if (kind === 'worker') {
+    providerOriginCheck(appEnv, env, c, fail);
     if (env['R2_LEDGER_BUCKET'] !== undefined && env['R2_LEDGER_BUCKET'] === env['R2_BUCKET']) {
       fail('R2_LEDGER_BUCKET');
     }

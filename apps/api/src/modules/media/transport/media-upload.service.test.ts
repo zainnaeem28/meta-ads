@@ -4,19 +4,36 @@ import { DomainError } from '../../../platform/http/domain-error.js';
 import { MediaUploadService } from './media-upload.service.js';
 import { UploadTooLarge } from './sniff.js';
 
-const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32)]);
+const png = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.alloc(32),
+]);
 const result = { id: 'm1', state: 'processing' as const, bytes: png.length, storageKey: 'q/u1/m1' };
 
-function build(overrides: { upload?: ReturnType<typeof vi.fn>; send?: ReturnType<typeof vi.fn> } = {}) {
+function build(
+  overrides: { upload?: ReturnType<typeof vi.fn>; send?: ReturnType<typeof vi.fn> } = {},
+) {
   const media = {
     upload: overrides.upload ?? vi.fn(() => Promise.resolve(result)),
     unregisterObject: vi.fn(() => Promise.resolve(null)),
   };
   const boss = { send: overrides.send ?? vi.fn(() => Promise.resolve('job')) };
-  const database = { uow: { run: vi.fn((fn: (tx: unknown) => unknown) => Promise.resolve(fn({ execute: vi.fn(() => Promise.resolve({ rows: [] })) }))) } };
+  const database = {
+    uow: {
+      run: vi.fn((fn: (tx: unknown) => unknown) =>
+        Promise.resolve(fn({ execute: vi.fn(() => Promise.resolve({ rows: [] })) })),
+      ),
+    },
+  };
   const storage = { delete: vi.fn(() => Promise.resolve()) };
   const config = { maxUploadBytes: 1000 } as never;
-  const service = new MediaUploadService(media as never, database as never, boss as never, storage as never, config);
+  const service = new MediaUploadService(
+    media as never,
+    database as never,
+    boss as never,
+    storage as never,
+    config,
+  );
   return { service, media, boss, database, storage };
 }
 
@@ -25,7 +42,9 @@ describe('MediaUploadService', () => {
     const { service, media, boss } = build();
     expect(service.maxUploadBytes).toBe(1000);
     expect(await service.upload('u1', Readable.from([png]), 5000)).toBe(result);
-    expect(media.upload).toHaveBeenCalledWith(expect.objectContaining({ ownerId: 'u1', contentType: 'image/png', declaredBytes: 1000 }));
+    expect(media.upload).toHaveBeenCalledWith(
+      expect.objectContaining({ ownerId: 'u1', contentType: 'image/png', declaredBytes: 1000 }),
+    );
     expect(boss.send).toHaveBeenCalledWith('media.sanitize', { mediaId: 'm1' }, expect.anything());
   });
 
@@ -40,7 +59,9 @@ describe('MediaUploadService', () => {
 
   it('refuses an unrecognised body with 415 before anything is stored', async () => {
     const { service, media } = build();
-    const error = await service.upload('u1', Readable.from([Buffer.from('<svg/>')]), 10).catch((e: unknown) => e);
+    const error = await service
+      .upload('u1', Readable.from([Buffer.from('<svg/>')]), 10)
+      .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(DomainError);
     expect((error as DomainError).code).toBe('unsupported_media_type');
     expect(media.upload).not.toHaveBeenCalled();
@@ -50,8 +71,16 @@ describe('MediaUploadService', () => {
     const { service } = build({ upload: vi.fn(() => Promise.reject(new UploadTooLarge())) });
     const error = await service.upload('u1', Readable.from([png]), 10).catch((e: unknown) => e);
     expect((error as DomainError).code).toBe('payload_too_large');
-    const wrapped = build({ upload: vi.fn(() => Promise.reject(new Error('x', { cause: new UploadTooLarge() }))) });
-    expect(((await wrapped.service.upload('u1', Readable.from([png]), 10).catch((e: unknown) => e)) as DomainError).code).toBe('payload_too_large');
+    const wrapped = build({
+      upload: vi.fn(() => Promise.reject(new Error('x', { cause: new UploadTooLarge() }))),
+    });
+    expect(
+      (
+        (await wrapped.service
+          .upload('u1', Readable.from([png]), 10)
+          .catch((e: unknown) => e)) as DomainError
+      ).code,
+    ).toBe('payload_too_large');
     const other = new DomainError('storage_quota_reached', 'full');
     const quota = build({ upload: vi.fn(() => Promise.reject(other)) });
     await expect(quota.service.upload('u1', Readable.from([png]), 10)).rejects.toBe(other);
