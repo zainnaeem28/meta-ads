@@ -1,44 +1,17 @@
 
- RUN  v5.1.0 /paperclip/instances/default/projects/49d7702a-17ba-48f6-936a-6f2503a0a47e/1a1eae3f-76eb-4c97-b304-6407a3ae88d7/meta-ads/.paperclip/worktrees/bugfix/AIU-251-task-106-fix-api-local-test-mode-token-route-so-a-local-mode-web-can-call-the-local-mode-api/apps/api
+ RUN  v5.1.0 <repo>/apps/api
 
- ✓ src/modules/identity/transport/dev-token.integration.test.ts (5 tests) 68760ms
+ ✓ src/modules/identity/transport/dev-token.integration.test.ts (5 tests) 113862ms
    ✓ local mode (development, IDENTITY_MODE=local) (2)
-     ✓ mints a token the same process verifies: owner links as admin with a second factor, others as users 5726ms
-     ✓ does not weaken verification: a tampered token is 401, a no-second-factor token says so, bad input is 4xx 7971ms
+     ✓ mints a token the same process verifies: owner links as admin with a second factor, others as users 6778ms
+     ✓ does not weaken verification: a tampered token is 401, a no-second-factor token says so, bad input is 4xx 7102ms
    ✓ outside local mode (3)
-     ✓ does not mount the route with Clerk identity 4976ms
-     ✓ refuses to start with IDENTITY_MODE=local when APP_ENV=staging 15045ms
-     ✓ refuses to start with IDENTITY_MODE=local when APP_ENV=production 8617ms
-(node:761563) DeprecationWarning: Client.activeQuery is deprecated and will be removed in pg@9.0
-(Use `node --trace-deprecation ...` to show where the warning was created)
-(node:761563) DeprecationWarning: Client.queryQueue is deprecated and will be removed in pg@9.0.
- ✓ src/modules/identity/identity-auth.integration.test.ts (17 tests) 2967ms
-⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+     ✓ does not mount the route with Clerk identity 3899ms
+     ✓ refuses to start with IDENTITY_MODE=local when APP_ENV=staging 4637ms
+     ✓ refuses to start with IDENTITY_MODE=local when APP_ENV=production 6157ms
 
-Vitest caught 1 unhandled error during the test run.
-This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
-
-⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
-error: terminating connection due to administrator command
- ❯ parseErrorMessage ../../node_modules/.pnpm/pg-protocol@1.16.1/node_modules/pg-protocol/dist/parser.js:306:11
- ❯ Parser.handlePacket ../../node_modules/.pnpm/pg-protocol@1.16.1/node_modules/pg-protocol/dist/parser.js:143:27
- ❯ Parser.parse ../../node_modules/.pnpm/pg-protocol@1.16.1/node_modules/pg-protocol/dist/parser.js:37:38
- ❯ Socket.<anonymous> ../../node_modules/.pnpm/pg-protocol@1.16.1/node_modules/pg-protocol/dist/index.js:12:42
- ❯ Socket.emit node:events:514:28
- ❯ addChunk node:internal/streams/readable:569:12
- ❯ readableAddChunkPushByteMode node:internal/streams/readable:520:3
- ❯ Readable.push node:internal/streams/readable:400:5
- ❯ TCP.onStreamRead node:internal/stream_base_commons:194:23
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-Serialized Error: { length: 116, severity: 'FATAL', code: '57P01', detail: undefined, hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: undefined, table: undefined, dataType: undefined, constraint: undefined, file: 'postgres.c', routine: 'ProcessInterrupts', client: { _events: [Object], _eventsCount: 1, _maxListeners: undefined, connectionParameters: [Object], user: 'postgres', database: 't_task034_8e2984595474', port: 5432, host: 'test-db', password: null, replication: undefined, _Promise: 'Function<Promise>', _types: [Object], _ending: true, _ended: false, _connecting: false, _connected: true, _connectionError: false, _queryable: false, _activeQuery: null, _txStatus: 'I', enableChannelBinding: false, scramMaxIterations: 100000, connection: [Object], _queryQueue: [Array], _sentQueryQueue: [Array], pipeline: false, binary: false, processID: 562183, secretKey: 1282195221, ssl: false, sslNegotiation: 'postgres', _connectionTimeoutMillis: 0, _connectionCallback: null, release: 'Function<anonymous>', readyForQuery: true, hasExecuted: true, _poolUseCount: 58, constructor: 'Function<Client>', activeQuery: null, _getActiveQuery: 'Function<_getActiveQuery>', _errorAllQueries: 'Function<_errorAllQueries>', _connect: 'Function<_connect>', connect: 'Function<connect>', _attachListeners: 'Function<_attachListeners>', _getPassword: 'Function<_getPassword>', _handleAuthCleartextPassword: 'Function<_handleAuthCleartextPassword>', _handleAuthMD5Password: 'Function<_handleAuthMD5Password>', _handleAuthSASL: 'Function<_handleAuthSASL>', _handleAuthSASLContinue: 'Function<_handleAuthSASLContinue>', _handleAuthSASLFinal: 'Function<_handleAuthSASLFinal>', _handleBackendKeyData: 'Function<_handleBackendKeyData>', _handleReadyForQuery: 'Function<_handleReadyForQuery>', _handleErrorWhileConnecting: 'Function<_handleErrorWhileConnecting>', _handleErrorEvent: 'Function<_handleErrorEvent>', _handleErrorMessage: 'Function<_handleErrorMessage>', _handleRowDescription: 'Function<_handleRowDescription>', _handleDataRow: 'Function<_handleDataRow>', _handlePortalSuspended: 'Function<_handlePortalSuspended>', _handleEmptyQuery: 'Function<_handleEmptyQuery>', _handleCommandComplete: 'Function<_handleCommandComplete>', _handleParseComplete: 'Function<_handleParseComplete>', _handleCopyInResponse: 'Function<_handleCopyInResponse>', _handleCopyData: 'Function<_handleCopyData>', _handleNotification: 'Function<_handleNotification>', _handleNotice: 'Function<_handleNotice>', getStartupConf: 'Function<getStartupConf>', cancel: 'Function<cancel>', setTypeParser: 'Function<setTypeParser>', getTypeParser: 'Function<getTypeParser>', escapeIdentifier: 'Function<escapeIdentifier>', escapeLiteral: 'Function<escapeLiteral>', _pulseQueryQueue: 'Function<_pulseQueryQueue>', _pulsePipelinedQueryQueue: 'Function<_pulsePipelinedQueryQueue>', query: 'Function<query>', ref: 'Function<ref>', unref: 'Function<unref>', getTransactionStatus: 'Function<getTransactionStatus>', end: 'Function<end>', queryQueue: [Array], setMaxListeners: 'Function<setMaxListeners>', getMaxListeners: 'Function<getMaxListeners>', emit: 'Function<emit>', addListener: 'Function<addListener>', on: 'Function<addListener>', prependListener: 'Function<prependListener>', once: 'Function<once>', prependOnceListener: 'Function<prependOnceListener>', removeListener: 'Function<removeListener>', off: 'Function<removeListener>', removeAllListeners: 'Function<removeAllListeners>', listeners: 'Function<listeners>', rawListeners: 'Function<rawListeners>', listenerCount: 'Function<listenerCount>', eventNames: 'Function<eventNames>' } }
-This error originated in "src/modules/identity/identity-auth.integration.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-
-
- Test Files  2 passed (2)
-      Tests  22 passed (22)
-     Errors  1 error
-   Start at  17:35:25
-   Duration  85.46s (tests 85%, import 9%, transform 7%)
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  17:55:20
+   Duration  117.82s (tests 97%, import 3%)
 

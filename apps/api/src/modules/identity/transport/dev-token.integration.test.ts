@@ -128,7 +128,19 @@ describe('outside local mode', () => {
 
   for (const appEnv of ['staging', 'production']) {
     it(`refuses to start with IDENTITY_MODE=local when APP_ENV=${appEnv}`, async () => {
-      await expect(start(appEnv === 'staging' ? 3964 : 3965, { ...hardened('api'), APP_ENV: appEnv, IDENTITY_MODE: 'local' })).rejects.toThrow(/IDENTITY_MODE=local is refused/);
+      // The database host is a closed local port: the refusal must come from the identity configuration, before any connection.
+      const env = {
+        ...validEnv('api', { ...hardened('api'), APP_ENV: appEnv, IDENTITY_MODE: 'local' }),
+        DATABASE_URL: 'postgres://app_api@127.0.0.1:1/app?sslmode=require',
+        API_PORT: appEnv === 'staging' ? '3964' : '3965',
+      };
+      const child = spawn('node', ['dist/main.api.js'], { cwd: apiDir, env: { PATH: process.env['PATH'] ?? '', ...env }, stdio: ['ignore', 'ignore', 'pipe'] });
+      running.push(child);
+      let err = '';
+      child.stderr.on('data', (chunk: Buffer) => (err += chunk.toString()));
+      const code = await new Promise<number | null>((resolve) => child.once('exit', resolve));
+      expect(code).not.toBe(0);
+      expect(err).toMatch(/IDENTITY_MODE=local is refused/);
     });
   }
 });
