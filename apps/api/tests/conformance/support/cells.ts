@@ -64,7 +64,7 @@ export const anonymous: Probe = async (w, op) => [
   await send(w, op, undefined, { extra: { authorization: 'Basic dXNlcjpwYXNz' } }),
 ];
 
-/** Administrator routes that refuse a stale sign-in today (alerts and the usage report); the others are CONF065-F2. */
+/** Administrator routes that refuse a stale sign-in today (alerts and the usage report); the others are SEC116-F2. */
 export const RECENT_AUTH_ROUTES: ReadonlySet<string> = new Set(['API-125', 'API-126', 'API-130', 'API-131']);
 
 /** An identity the provider verifies and the application does not know (no invitation, no approved request). */
@@ -93,7 +93,7 @@ export const forbidden: Probe = async (w, op) => {
     seen.push(await send(w, op, who.noFactor));
   }
   if (isAdmin(op)) seen.push(await send(w, op, (await w.account('plain')).token));
-  // Scope A also promises a recent sign-in; only the routes that enforce it are asked here (CONF065-F2 covers the rest).
+  // Scope A also promises a recent sign-in; only the routes that enforce it are asked here (SEC116-F2 covers the rest).
   if (op.scopes.includes('U+RA') || RECENT_AUTH_ROUTES.has(op.id)) {
     const who = await actorFor(w, op, 'stale');
     seen.push(await send(w, op, w.local.issueToken({ sub: who.sub, azp: ORIGIN, fva: [600, 600] })));

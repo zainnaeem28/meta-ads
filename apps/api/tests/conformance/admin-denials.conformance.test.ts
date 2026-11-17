@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { send } from './support/cells.js';
+import { record, send } from './support/cells.js';
 import { isAdmin, operations } from './support/spec.js';
 import { bootWorld } from './support/world.js';
 import type { Account, World } from './support/world.js';
@@ -73,5 +73,34 @@ describe('administrator success is audited too', () => {
     const version = (view.body.data as { id: string; version: number }[]).find((u) => u.id === target.id)?.version ?? 1;
     expect((await w.call('PUT', `/admin/users/${target.id}/role`, boss.token, { role: 'admin' }, { 'if-match': `"${String(version)}"` })).status).toBe(200);
     expect(await mark('role.granted')).toBe(1);
+  });
+});
+
+describe('the last administrator is kept (last_admin, TC-ADM invariant) when two administrators race', () => {
+  it('two administrators each suspending the other: one wins, the other is 422 last_admin, one active administrator remains', async () => {
+    const a = await w.admin('race-a');
+    const b = await w.admin('race-b');
+    const others = (await w.pool.query(`select id from users where role = 'admin' and status = 'active' and id not in ($1, $2)`, [a.id, b.id])).rows.map((r: { id: string }) => r.id);
+    await w.pool.query(`update users set role = 'user' where id = any($1)`, [others]);
+    const holder = await w.pool.connect();
+    try {
+      // The first request is held at the row of its target; the second passes the guard and waits for the invariant lock.
+      await holder.query('begin');
+      await holder.query('select 1 from users where id = $1 for update', [b.id]);
+      const first = w.call('POST', `/admin/users/${b.id}/suspend`, a.token);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const second = w.call('POST', `/admin/users/${a.id}/suspend`, b.token);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      await holder.query('commit');
+      const results = await Promise.all([first, second]);
+      for (const r of results) record({ op: 'API-101', method: 'POST', status: r.status, code: r.body.error?.code });
+      const outcomes = results.map((r) => `${String(r.status)} ${r.body.error?.code ?? 'ok'}`).sort();
+      expect(outcomes).toEqual(['200 ok', '422 last_admin']);
+      expect(await w.count('users', `role = 'admin' and status = 'active' and id in ($1, $2)`, [a.id, b.id])).toBe(1);
+      expect(await w.count('audit_events', `action = 'admin_invariant.refused'`)).toBeGreaterThanOrEqual(1);
+    } finally {
+      holder.release();
+      await w.pool.query(`update users set role = 'admin' where id = any($1)`, [others]);
+    }
   });
 });
