@@ -9,21 +9,34 @@ export const signedIn = async (context: BrowserContext, baseURL: string) =>
   context.addCookies([
     {
       name: LOCAL_SESSION_COOKIE,
-      value: await signLocalSession({ sub: 'user_local_e2e', email: 'e2e@example.com', exp: Math.floor(Date.now() / 1000) + 600 }),
+      value: await signLocalSession({
+        sub: 'user_local_e2e',
+        email: 'e2e@example.com',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      }),
       url: baseURL,
     },
   ]);
 
 export const NOW = '2026-11-16T12:00:00.000Z';
 export const meta = { requestId: 'req-e2e-118', timestamp: NOW };
-export const ok = (data: unknown, m: unknown = meta) => ({ status: 200, body: { success: true, data, metaData: m } });
+export const ok = (data: unknown, m: unknown = meta) => ({
+  status: 200,
+  body: { success: true, data, metaData: m },
+});
 export const failure = (status: number, code: string, details: unknown[] = []) => ({
   status,
   body: { success: false, error: { code, message: 'Refused.', details }, metaData: meta },
 });
 
-export type Answer = { status: number; body?: unknown; headers?: Record<string, string> } | 'hang' | undefined;
-export type Script = (method: string, path: string, url: URL, route: Route) => Answer | Promise<Answer>;
+export type Answer =
+  { status: number; body?: unknown; headers?: Record<string, string> } | 'hang' | undefined;
+export type Script = (
+  method: string,
+  path: string,
+  url: URL,
+  route: Route,
+) => Answer | Promise<Answer>;
 
 /**
  * Contract-shaped answers for the operations a screen reads (labelled mocks). The built web app calls the api origin; the
@@ -41,7 +54,14 @@ export async function relay(page: Page, script: Script) {
       'access-control-expose-headers': 'x-request-id,etag,retry-after',
     };
     if (request.method() === 'OPTIONS') {
-      return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': (await request.headerValue('access-control-request-headers')) ?? '*' } });
+      return route.fulfill({
+        status: 204,
+        headers: {
+          ...cors,
+          'access-control-allow-headers':
+            (await request.headerValue('access-control-request-headers')) ?? '*',
+        },
+      });
     }
     const url = new URL(request.url());
     const path = url.pathname.replace('/api/v1', '');
@@ -51,7 +71,9 @@ export async function relay(page: Page, script: Script) {
       return route.fulfill({
         status: answer.status,
         headers: { ...cors, ...(answer.headers ?? {}) },
-        ...(answer.status === 204 ? {} : { contentType: 'application/json', body: JSON.stringify(answer.body) }),
+        ...(answer.status === 204
+          ? {}
+          : { contentType: 'application/json', body: JSON.stringify(answer.body) }),
       });
     }
     const response = await route.fetch();
@@ -62,7 +84,9 @@ export async function relay(page: Page, script: Script) {
 export const settle = async (page: Page) => {
   await page.evaluate(async () => {
     window.scrollTo(0, 0);
-    await Promise.all(['400', '500', '600', '700'].map((w) => document.fonts.load(`${w} 16px Inter`)));
+    await Promise.all(
+      ['400', '500', '600', '700'].map((w) => document.fonts.load(`${w} 16px Inter`)),
+    );
     await document.fonts.ready;
   });
 };
@@ -94,20 +118,31 @@ export const contentLoss = (page: Page) =>
   page.evaluate(() => {
     const problems: string[] = [];
     const doc = document.documentElement;
-    if (doc.scrollWidth > window.innerWidth + 1) problems.push(`page scrolls sideways (${doc.scrollWidth} > ${window.innerWidth})`);
+    if (doc.scrollWidth > window.innerWidth + 1)
+      problems.push(`page scrolls sideways (${doc.scrollWidth} > ${window.innerWidth})`);
     for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*'))) {
       const style = getComputedStyle(el);
       if (style.display === 'none' || style.visibility === 'hidden') continue;
-      const clips = ['hidden', 'clip'].includes(style.overflowX) || ['hidden', 'clip'].includes(style.overflowY);
+      const clips =
+        ['hidden', 'clip'].includes(style.overflowX) ||
+        ['hidden', 'clip'].includes(style.overflowY);
       if (!clips || !el.textContent?.trim()) continue;
       if (el.closest('[aria-hidden="true"],.sr-only')) continue;
       const box = el.getBoundingClientRect();
       if (box.width <= 1 || box.height <= 1) continue; // visually hidden on purpose (screen-reader text)
       const ellipsis = style.textOverflow === 'ellipsis';
-      const wide = el.scrollWidth > el.clientWidth + 1 && !ellipsis && ['hidden', 'clip'].includes(style.overflowX);
-      const tall = el.scrollHeight > el.clientHeight + 1 && ['hidden', 'clip'].includes(style.overflowY) && style.display !== 'inline';
+      const wide =
+        el.scrollWidth > el.clientWidth + 1 &&
+        !ellipsis &&
+        ['hidden', 'clip'].includes(style.overflowX);
+      const tall =
+        el.scrollHeight > el.clientHeight + 1 &&
+        ['hidden', 'clip'].includes(style.overflowY) &&
+        style.display !== 'inline';
       if ((wide || tall) && el.clientWidth > 0 && el.clientHeight > 0) {
-        problems.push(`${el.tagName.toLowerCase()}${el.className ? `.${String(el.className).split(' ')[0]}` : ''} clips "${el.textContent.trim().slice(0, 40)}"`);
+        problems.push(
+          `${el.tagName.toLowerCase()}${el.className ? `.${String(el.className).split(' ')[0]}` : ''} clips "${el.textContent.trim().slice(0, 40)}"`,
+        );
       }
     }
     return problems;

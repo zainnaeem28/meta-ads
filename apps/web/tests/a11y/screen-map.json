@@ -1,229 +1,203 @@
 {
- "screens": {
-  "SCREEN-001": {
-   "sources": [
-    {
-     "baseline": "clerk",
-     "evidence": "TASK-087"
-    }
-   ],
-   "states": {
-    "default": {
-     "baseline": "clerk-default",
-     "axe": "TASK-087/axe/chromium-default-{w}.json"
+  "screens": {
+    "SCREEN-001": {
+      "sources": [
+        {
+          "baseline": "clerk",
+          "evidence": "TASK-087"
+        }
+      ],
+      "states": {
+        "default": {
+          "baseline": "clerk-default",
+          "axe": "TASK-087/axe/chromium-default-{w}.json"
+        },
+        "invalid": {
+          "baseline": "clerk-invalid",
+          "axe": "TASK-087/axe/chromium-invalid-{w}.json"
+        },
+        "session-expired": {
+          "baseline": "clerk-session-expired",
+          "axe": "TASK-087/axe/chromium-session-expired-{w}.json"
+        },
+        "loading": {
+          "baseline": "a11y:a11y-screen-001-loading",
+          "axe": "TASK-118/axe/chromium-screen-001-loading-{w}.json"
+        },
+        "error": {
+          "baseline": "a11y:a11y-screen-001-error",
+          "axe": "TASK-118/axe/chromium-screen-001-error-{w}.json"
+        }
+      }
     },
-    "invalid": {
-     "baseline": "clerk-invalid",
-     "axe": "TASK-087/axe/chromium-invalid-{w}.json"
+    "SCREEN-002": {
+      "sources": [
+        {
+          "baseline": "fe-screen-002",
+          "evidence": "TASK-088"
+        }
+      ],
+      "states": {}
     },
-    "session-expired": {
-     "baseline": "clerk-session-expired",
-     "axe": "TASK-087/axe/chromium-session-expired-{w}.json"
+    "SCREEN-003": {
+      "sources": [
+        {
+          "baseline": "fe-screen-001-003",
+          "evidence": "TASK-087"
+        }
+      ],
+      "states": {
+        "default": {
+          "baseline": "fe-screen-001-003-mfa-enrol",
+          "axe": "TASK-087/axe/chromium-mfa-enrol-{w}.json"
+        },
+        "challenge": {
+          "baseline": "clerk-mfa",
+          "axe": "TASK-087/axe/chromium-mfa-{w}.json"
+        },
+        "error": {
+          "baseline": "fe-screen-001-003-mfa-error",
+          "axe": "TASK-087/axe/chromium-mfa-error-{w}.json"
+        }
+      }
     },
-    "loading": {
-     "baseline": "a11y:a11y-screen-001-loading",
-     "axe": "TASK-118/axe/chromium-screen-001-loading-{w}.json"
+    "SCREEN-004": {
+      "sources": [
+        {
+          "baseline": "fe-screen-004",
+          "evidence": "TASK-089"
+        }
+      ],
+      "states": {}
     },
-    "error": {
-     "baseline": "a11y:a11y-screen-001-error",
-     "axe": "TASK-118/axe/chromium-screen-001-error-{w}.json"
-    }
-   }
-  },
-  "SCREEN-002": {
-   "sources": [
-    {
-     "baseline": "fe-screen-002",
-     "evidence": "TASK-088"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-003": {
-   "sources": [
-    {
-     "baseline": "fe-screen-001-003",
-     "evidence": "TASK-087"
-    }
-   ],
-   "states": {
-    "default": {
-     "baseline": "fe-screen-001-003-mfa-enrol",
-     "axe": "TASK-087/axe/chromium-mfa-enrol-{w}.json"
+    "SCREEN-005": {
+      "sources": [
+        {
+          "baseline": "fe-screen-005",
+          "evidence": "TASK-090"
+        }
+      ],
+      "states": {}
     },
-    "challenge": {
-     "baseline": "clerk-mfa",
-     "axe": "TASK-087/axe/chromium-mfa-{w}.json"
+    "SCREEN-006": {
+      "sources": [
+        {
+          "baseline": "fe-screen-006a",
+          "evidence": "TASK-091"
+        },
+        {
+          "baseline": "fe-screen-006b",
+          "evidence": "TASK-092"
+        }
+      ],
+      "states": {
+        "details-summary": {
+          "baseline": "a11y:a11y-screen-006-details-summary",
+          "axe": "TASK-118/axe/chromium-screen-006-details-summary-{w}.json"
+        }
+      }
     },
-    "error": {
-     "baseline": "fe-screen-001-003-mfa-error",
-     "axe": "TASK-087/axe/chromium-mfa-error-{w}.json"
-    }
-   }
-  },
-  "SCREEN-004": {
-   "sources": [
-    {
-     "baseline": "fe-screen-004",
-     "evidence": "TASK-089"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-005": {
-   "sources": [
-    {
-     "baseline": "fe-screen-005",
-     "evidence": "TASK-090"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-006": {
-   "sources": [
-    {
-     "baseline": "fe-screen-006a",
-     "evidence": "TASK-091"
+    "SCREEN-007": {
+      "sources": [
+        {
+          "baseline": "fe-screen-007a",
+          "evidence": "TASK-093"
+        },
+        {
+          "baseline": "fe-screen-007b",
+          "evidence": "TASK-094"
+        }
+      ],
+      "states": {}
     },
-    {
-     "baseline": "fe-screen-006b",
-     "evidence": "TASK-092"
-    }
-   ],
-   "states": {
-    "details-summary": {
-     "baseline": "a11y:a11y-screen-006-details-summary",
-     "axe": "TASK-118/axe/chromium-screen-006-details-summary-{w}.json"
-    }
-   }
-  },
-  "SCREEN-007": {
-   "sources": [
-    {
-     "baseline": "fe-screen-007a",
-     "evidence": "TASK-093"
+    "SCREEN-008": {
+      "sources": [
+        {
+          "baseline": "fe-screen-008",
+          "evidence": "TASK-095"
+        }
+      ],
+      "states": {}
     },
-    {
-     "baseline": "fe-screen-007b",
-     "evidence": "TASK-094"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-008": {
-   "sources": [
-    {
-     "baseline": "fe-screen-008",
-     "evidence": "TASK-095"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-009": {
-   "sources": [
-    {
-     "baseline": "fe-screen-009a",
-     "evidence": "TASK-096"
+    "SCREEN-009": {
+      "sources": [
+        {
+          "baseline": "fe-screen-009a",
+          "evidence": "TASK-096"
+        },
+        {
+          "baseline": "fe-screen-009b",
+          "evidence": "TASK-097"
+        }
+      ],
+      "states": {}
     },
-    {
-     "baseline": "fe-screen-009b",
-     "evidence": "TASK-097"
+    "SCREEN-010": {
+      "sources": [
+        {
+          "baseline": "fe-screen-010",
+          "evidence": "TASK-098"
+        }
+      ],
+      "states": {}
+    },
+    "SCREEN-011": {
+      "sources": [
+        {
+          "baseline": "fe-screen-011",
+          "evidence": "TASK-099"
+        }
+      ],
+      "states": {}
+    },
+    "SCREEN-012": {
+      "sources": [
+        {
+          "baseline": "fe-screen-012",
+          "evidence": "TASK-100"
+        }
+      ],
+      "states": {}
+    },
+    "SCREEN-013": {
+      "sources": [
+        {
+          "baseline": "fe-screen-013",
+          "evidence": "TASK-101"
+        }
+      ],
+      "states": {}
+    },
+    "SCREEN-014": {
+      "sources": [
+        {
+          "baseline": "fe-screen-014",
+          "evidence": "TASK-102"
+        }
+      ],
+      "states": {}
+    },
+    "SCREEN-015": {
+      "sources": [
+        {
+          "baseline": "fe-screen-015",
+          "evidence": "TASK-103"
+        }
+      ],
+      "states": {}
     }
-   ],
-   "states": {}
   },
-  "SCREEN-010": {
-   "sources": [
-    {
-     "baseline": "fe-screen-010",
-     "evidence": "TASK-098"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-011": {
-   "sources": [
-    {
-     "baseline": "fe-screen-011",
-     "evidence": "TASK-099"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-012": {
-   "sources": [
-    {
-     "baseline": "fe-screen-012",
-     "evidence": "TASK-100"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-013": {
-   "sources": [
-    {
-     "baseline": "fe-screen-013",
-     "evidence": "TASK-101"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-014": {
-   "sources": [
-    {
-     "baseline": "fe-screen-014",
-     "evidence": "TASK-102"
-    }
-   ],
-   "states": {}
-  },
-  "SCREEN-015": {
-   "sources": [
-    {
-     "baseline": "fe-screen-015",
-     "evidence": "TASK-103"
-    }
-   ],
-   "states": {}
+  "groups": {
+    "auth-sign-in": ["SCREEN-001"],
+    "auth-mfa": ["SCREEN-003"],
+    "access": ["SCREEN-002"],
+    "not-found": ["SCREEN-004"],
+    "campaigns": ["SCREEN-005"],
+    "wizard": ["SCREEN-006"],
+    "brief": ["SCREEN-007"],
+    "clips": ["SCREEN-008"],
+    "provider-keys": ["SCREEN-010"],
+    "admin-settings": ["SCREEN-011", "SCREEN-012", "SCREEN-013", "SCREEN-014", "SCREEN-015"],
+    "final": ["SCREEN-009"]
   }
- },
- "groups": {
-  "auth-sign-in": [
-   "SCREEN-001"
-  ],
-  "auth-mfa": [
-   "SCREEN-003"
-  ],
-  "access": [
-   "SCREEN-002"
-  ],
-  "not-found": [
-   "SCREEN-004"
-  ],
-  "campaigns": [
-   "SCREEN-005"
-  ],
-  "wizard": [
-   "SCREEN-006"
-  ],
-  "brief": [
-   "SCREEN-007"
-  ],
-  "clips": [
-   "SCREEN-008"
-  ],
-  "provider-keys": [
-   "SCREEN-010"
-  ],
-  "admin-settings": [
-   "SCREEN-011",
-   "SCREEN-012",
-   "SCREEN-013",
-   "SCREEN-014",
-   "SCREEN-015"
-  ],
-  "final": [
-   "SCREEN-009"
-  ]
- }
 }

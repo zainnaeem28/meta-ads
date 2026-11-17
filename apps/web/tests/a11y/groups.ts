@@ -5,7 +5,11 @@ import {
   meta as fixtureMeta,
   mixedList,
 } from '../../src/features/fe-screen-008/fixtures';
-import { CAMPAIGN_ID as FINAL_CAMPAIGN, campaignFixture as finalCampaign, passedList } from '../../src/features/fe-screen-009a/fixtures';
+import {
+  CAMPAIGN_ID as FINAL_CAMPAIGN,
+  campaignFixture as finalCampaign,
+  passedList,
+} from '../../src/features/fe-screen-009a/fixtures';
 import { ok, type Script } from './support';
 
 /**
@@ -27,7 +31,8 @@ export interface Group {
   wideOnly?: string[];
 }
 
-const id = (prefix: string, n: number) => `${prefix}0000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const id = (prefix: string, n: number) =>
+  `${prefix}0000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const linked = ok({
   linkState: 'linked',
   id: id('a', 1),
@@ -52,7 +57,13 @@ const key = (provider: string) => ({
 const keys = ok([key('openai'), key('wavespeed')]);
 const page = (rows: unknown[]) => ({
   ...fixtureMeta,
-  pagination: { type: 'cursor', limit: 10, returnedCount: rows.length, hasNextPage: false, nextCursor: null },
+  pagination: {
+    type: 'cursor',
+    limit: 10,
+    returnedCount: rows.length,
+    hasNextPage: false,
+    nextCursor: null,
+  },
 });
 const camp = (n: number, over: Record<string, unknown> = {}) => ({
   id: id('c', n),
@@ -68,10 +79,24 @@ const camp = (n: number, over: Record<string, unknown> = {}) => ({
 });
 const ROWS = [
   camp(1, { productName: 'Morning Focus Blend' }),
-  camp(2, { productName: 'Evening Calm Gummies', progress: 'completed', finalAvailable: true, segmentCount: 4 }),
-  camp(3, { productName: 'Cordyceps Trail Mix, spring launch with the long working title the team keeps', progress: 'failed', segmentCount: 2 }),
+  camp(2, {
+    productName: 'Evening Calm Gummies',
+    progress: 'completed',
+    finalAvailable: true,
+    segmentCount: 4,
+  }),
+  camp(3, {
+    productName: 'Cordyceps Trail Mix, spring launch with the long working title the team keeps',
+    progress: 'failed',
+    segmentCount: 2,
+  }),
   camp(4, { productName: 'Reishi Night Tincture', progress: 'in_progress', briefState: 'draft' }),
-  camp(5, { productName: 'Daily Greens + Chaga', progress: 'completed', finalAvailable: true, segmentCount: 1 }),
+  camp(5, {
+    productName: 'Daily Greens + Chaga',
+    progress: 'completed',
+    finalAvailable: true,
+    segmentCount: 1,
+  }),
 ];
 const shell = (method: string, path: string) => {
   if (method === 'GET' && path === '/me') return linked;
@@ -86,10 +111,17 @@ const draft = (over: Record<string, unknown> = {}) => ({
   adStyle: 'ugc',
   intakeMode: 'description',
   productName: 'Morning Focus Blend',
-  productDescription: "Lion's Mane and Cordyceps capsules for a steady start to the day. 60 capsules, vegan, third-party tested.",
-  audience: { ageMin: 35, ageMax: 52, gender: 'all', interests: ['morning routines', 'nootropics', 'trail running'] },
+  productDescription:
+    "Lion's Mane and Cordyceps capsules for a steady start to the day. 60 capsules, vegan, third-party tested.",
+  audience: {
+    ageMin: 35,
+    ageMax: 52,
+    gender: 'all',
+    interests: ['morning routines', 'nootropics', 'trail running'],
+  },
   direction: { goal: 'conversion', tone: 'Calm and grounded', segmentCount: 3 },
-  concept: 'A calm morning routine: she takes the capsules with breakfast, then heads out for a trail run.',
+  concept:
+    'A calm morning routine: she takes the capsules with breakfast, then heads out for a trail run.',
   script: null,
   productMediaId: null,
   campaignId: null,
@@ -100,13 +132,18 @@ const draft = (over: Record<string, unknown> = {}) => ({
 });
 const draftAnswer = (over: Record<string, unknown> = {}) => {
   const data = draft(over);
-  return { status: 200, headers: { etag: `"${String(data.version)}"` }, body: { success: true, data, metaData: fixtureMeta } };
+  return {
+    status: 200,
+    headers: { etag: `"${String(data.version)}"` },
+    body: { success: true, data, metaData: fixtureMeta },
+  };
 };
 
 const stage: Script = (method, path) => {
   const base = shell(method, path);
   if (base) return base;
-  if (method === 'GET' && /^\/media\/[0-9a-f-]{36}\/url$/.test(path)) return ok({ url: 'about:blank' });
+  if (method === 'GET' && /^\/media\/[0-9a-f-]{36}\/url$/.test(path))
+    return ok({ url: 'about:blank' });
   if (!path.startsWith('/campaigns/')) return;
   if (method === 'GET' && path === `/campaigns/${CAMPAIGN_ID}`) return ok(campaignFixture());
   if (method === 'GET' && path === `/campaigns/${CAMPAIGN_ID}/brief`) return ok(briefFixture());
@@ -114,8 +151,22 @@ const stage: Script = (method, path) => {
 };
 
 export const GROUPS: Group[] = [
-  { id: 'auth-sign-in', screens: ['SCREEN-001'], path: '/sign-in', session: false, ready: 'Email address', script: () => undefined },
-  { id: 'auth-mfa', screens: ['SCREEN-003'], path: '/mfa?step=enrol', session: true, ready: 'Set up two-step verification', script: () => undefined },
+  {
+    id: 'auth-sign-in',
+    screens: ['SCREEN-001'],
+    path: '/sign-in',
+    session: false,
+    ready: 'Email address',
+    script: () => undefined,
+  },
+  {
+    id: 'auth-mfa',
+    screens: ['SCREEN-003'],
+    path: '/mfa?step=enrol',
+    session: true,
+    ready: 'Set up two-step verification',
+    script: () => undefined,
+  },
   {
     id: 'access',
     screens: ['SCREEN-002'],
@@ -123,10 +174,18 @@ export const GROUPS: Group[] = [
     session: true,
     ready: 'This account has no access yet',
     script: (method, path) => {
-      if (method === 'GET' && path === '/me') return ok({ linkState: 'not_linked', accessRequest: { formEnabled: true, state: 'none' } });
+      if (method === 'GET' && path === '/me')
+        return ok({ linkState: 'not_linked', accessRequest: { formEnabled: true, state: 'none' } });
     },
   },
-  { id: 'not-found', screens: ['SCREEN-004'], path: '/no/such/page', session: true, ready: 'Page not found', script: () => undefined },
+  {
+    id: 'not-found',
+    screens: ['SCREEN-004'],
+    path: '/no/such/page',
+    session: true,
+    ready: 'Page not found',
+    script: () => undefined,
+  },
   {
     id: 'campaigns',
     screens: ['SCREEN-005'],
@@ -136,10 +195,16 @@ export const GROUPS: Group[] = [
     script: (method, path) => {
       const base = shell(method, path);
       if (base) return base;
-      if (method === 'GET' && path === '/campaigns') return { status: 200, body: { success: true, data: ROWS, metaData: page(ROWS) } };
-      if (method === 'GET' && path === '/drafts') return { status: 200, body: { success: true, data: [], metaData: page([]) } };
+      if (method === 'GET' && path === '/campaigns')
+        return { status: 200, body: { success: true, data: ROWS, metaData: page(ROWS) } };
+      if (method === 'GET' && path === '/drafts')
+        return { status: 200, body: { success: true, data: [], metaData: page([]) } };
     },
-    dialog: { trigger: 'Delete Cordyceps Trail Mix, spring launch with the long working title the team keeps', dialog: 'dialog' },
+    dialog: {
+      trigger:
+        'Delete Cordyceps Trail Mix, spring launch with the long working title the team keeps',
+      dialog: 'dialog',
+    },
   },
   {
     id: 'wizard',
@@ -162,7 +227,14 @@ export const GROUPS: Group[] = [
     ready: 'Script line for segment 1.',
     script: stage,
   },
-  { id: 'clips', screens: ['SCREEN-008'], path: `/campaigns/${CAMPAIGN_ID}/clips`, session: true, ready: 'Script line for segment 1.', script: stage },
+  {
+    id: 'clips',
+    screens: ['SCREEN-008'],
+    path: `/campaigns/${CAMPAIGN_ID}/clips`,
+    session: true,
+    ready: 'Script line for segment 1.',
+    script: stage,
+  },
   {
     id: 'final',
     screens: ['SCREEN-009'],
@@ -173,8 +245,10 @@ export const GROUPS: Group[] = [
       const base = shell(method, path);
       if (base) return base;
       if (method === 'GET' && path === `/campaigns/${FINAL_CAMPAIGN}`) return ok(finalCampaign());
-      if (method === 'GET' && path === `/campaigns/${FINAL_CAMPAIGN}/video-jobs`) return ok(passedList());
-      if (method === 'GET' && path === `/campaigns/${FINAL_CAMPAIGN}/brief`) return ok(briefFixture());
+      if (method === 'GET' && path === `/campaigns/${FINAL_CAMPAIGN}/video-jobs`)
+        return ok(passedList());
+      if (method === 'GET' && path === `/campaigns/${FINAL_CAMPAIGN}/brief`)
+        return ok(briefFixture());
     },
   },
   {
@@ -186,7 +260,8 @@ export const GROUPS: Group[] = [
     script: (method, path) => {
       const base = shell(method, path);
       if (base) return base;
-      if (method === 'GET' && path === '/me/key-events') return { status: 200, body: { success: true, data: [], metaData: page([]) } };
+      if (method === 'GET' && path === '/me/key-events')
+        return { status: 200, body: { success: true, data: [], metaData: page([]) } };
     },
   },
   {
@@ -202,7 +277,12 @@ export const GROUPS: Group[] = [
           accessRequestFormEnabled: false,
           mfaRequiredFor: 'all',
           inviteEmailDomains: [],
-          openModePrerequisites: { emailVerificationRequired: false, signupRateLimitEnabled: false, abuseLimitsEnabled: false, verificationRecordId: null },
+          openModePrerequisites: {
+            emailVerificationRequired: false,
+            signupRateLimitEnabled: false,
+            abuseLimitsEnabled: false,
+            verificationRecordId: null,
+          },
         });
       }
     },

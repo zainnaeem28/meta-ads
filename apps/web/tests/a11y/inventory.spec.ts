@@ -11,11 +11,19 @@ import { GROUPS } from './groups';
  */
 const repo = resolve(__dirname, '../../../..');
 
-test('@a11y @TASK-118 inventory: every screen, state and viewport has an axe result and an approved baseline', async ({ browserName }) => {
+test('@a11y @TASK-118 inventory: every screen, state and viewport has an axe result and an approved baseline', async ({
+  browserName,
+}) => {
   test.skip(browserName !== 'chromium');
-  const out = execFileSync('node', ['scripts/ci/screen-coverage.mjs', '--out', resolve(__dirname, '../../reports/a11y')], { cwd: repo, encoding: 'utf8' });
+  const out = execFileSync(
+    'node',
+    ['scripts/ci/screen-coverage.mjs', '--out', resolve(__dirname, '../../reports/a11y')],
+    { cwd: repo, encoding: 'utf8' },
+  );
   expect(out).toMatch(/0 failure\(s\)/);
-  const report = JSON.parse(readFileSync(resolve(__dirname, '../../reports/a11y/screen-coverage.json'), 'utf8'));
+  const report = JSON.parse(
+    readFileSync(resolve(__dirname, '../../reports/a11y/screen-coverage.json'), 'utf8'),
+  );
   expect(report.summary.statesCovered).toBe(report.summary.statesXViewports);
   // The groups this suite drives are the groups the generated list demands.
   const map = JSON.parse(readFileSync(resolve(__dirname, 'screen-map.json'), 'utf8'));
