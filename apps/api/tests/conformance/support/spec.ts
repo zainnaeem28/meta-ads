@@ -39,6 +39,9 @@ interface RawSpec {
   components: { schemas: { ErrorCode: { enum: string[] } } };
 }
 
+/** The parsed file (paths and components). */
+export const openApiSpec = (): RawSpec => load().spec;
+
 let cached: { spec: RawSpec; operations: Operation[] } | undefined;
 
 function load(): { spec: RawSpec; operations: Operation[] } {

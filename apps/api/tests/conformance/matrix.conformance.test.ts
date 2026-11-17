@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { allowedCodes, genericProbe, readsInput } from './support/cells.js';
 import type { Probe } from './support/cells.js';
+import { conformance } from './support/envelope.js';
 import { SPECIFIC, WAIVED } from './support/scenarios.js';
 import { cellName, operations } from './support/spec.js';
 import { bootWorld } from './support/world.js';
@@ -33,6 +34,7 @@ for (const op of operations()) {
         for (const seen of replies) {
           const expected = waiver?.instead ?? (unread ? 200 : status);
           expect(seen.status, `${cellName(op, status)} answered ${String(seen.status)} ${seen.text.slice(0, 200)}`).toBe(expected);
+          expect(conformance(op, seen.status, seen), `${cellName(op, status)} envelope`).toEqual([]);
           if (status >= 400 && expected === status) {
             expect(seen.body.success).toBe(false);
             expect(allowedCodes(op, status), `code ${String(seen.code)}`).toContain(seen.code);
