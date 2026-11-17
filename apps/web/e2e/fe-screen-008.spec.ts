@@ -4,14 +4,15 @@ import { expectNoAxeViolations } from '../tests/support/axe';
 import { LOCAL_SESSION_COOKIE, signLocalSession } from '../src/lib/auth/local-session';
 import {
   CAMPAIGN_ID,
+  briefFixture,
   campaignFixture,
+  failuresList,
   emptyList,
   jobId,
   meta,
   mixedList,
   outOfDateList,
   qcList,
-  unknownOutcomeList,
   videoJob,
 } from '../src/features/fe-screen-008/fixtures';
 
@@ -146,6 +147,10 @@ const world = (w: World = {}): Handler => {
       await ok(route, campaignFixture({ briefState: w.briefState ?? 'accepted' }));
       return true;
     }
+    if (method === 'GET' && path === `/campaigns/${CAMPAIGN_ID}/brief`) {
+      await ok(route, briefFixture());
+      return true;
+    }
     if (method === 'GET' && path === `/campaigns/${CAMPAIGN_ID}/video-jobs`) {
       await ok(route, list);
       return true;
@@ -181,6 +186,9 @@ async function capture(
     `${evidence}/axe/${info.project.name}-${state}-${size.name}.json`,
   );
   // The committed evidence images are refreshed on request (EVIDENCE=1), so a check run leaves the tree clean.
+  // The fixed bottom navigation of the phone layout would be drawn mid-page in a full-page capture and hide
+  // content, so it is hidden for the picture only (it stays in the axe run above).
+  await page.addStyleTag({ content: '.fixed { visibility: hidden !important; }' });
   if (process.env['EVIDENCE'] === '1') {
     mkdirSync(`${evidence}/screenshots`, { recursive: true });
     await page.screenshot({
@@ -218,14 +226,15 @@ const STATES: { state: string; world: () => World; arrange: Arrange }[] = [
   },
   {
     state: 'failures',
-    world: () => ({ list: unknownOutcomeList() }),
+    world: () => ({ list: failuresList() }),
     arrange: async (page) => {
       await page.goto(URL_PATH);
-      await expect(card(page, 1)).toHaveAttribute('data-cause', 'unknown');
-      await expect(
-        page.getByText(/Check your provider account before retrying/).first(),
-      ).toBeVisible();
-      await expect(page.getByRole('button', { name: /Retry segment 1/ })).toHaveCount(0);
+      await expect(card(page, 2)).toHaveAttribute('data-cause', 'temporary');
+      await expect(card(page, 3)).toHaveAttribute('data-cause', 'unknown');
+      await expect(card(page, 4)).toHaveAttribute('data-cause', 'configuration');
+      await expect(page.getByText(/Check your WaveSpeed account/)).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Retry segment 3' })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Check provider keys' })).toBeVisible();
     },
   },
   {
@@ -233,8 +242,12 @@ const STATES: { state: string; world: () => World; arrange: Arrange }[] = [
     world: () => ({ list: qcList() }),
     arrange: async (page) => {
       await page.goto(URL_PATH);
-      await expect(page.getByText('Check failed')).toBeVisible();
-      await expect(page.getByText('Check skipped')).toBeVisible();
+      await expect(page.getByText('Audio check: failed')).toBeVisible();
+      await expect(page.getByText('Audio check: skipped')).toBeVisible();
+      await page
+        .getByRole('button', { name: /Earlier check results/ })
+        .first()
+        .click();
     },
   },
   {
@@ -374,6 +387,7 @@ test.describe('@TASK-095 SCREEN-008 clips through the built web app', () => {
     expect(shapes).toEqual(
       new Set([
         'GET /campaigns/:id',
+        'GET /campaigns/:id/brief',
         'GET /campaigns/:id/video-jobs',
         'GET /me/provider-keys',
         'GET /media/:id/url',

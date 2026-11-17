@@ -7,9 +7,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { installApiClient } from '../../lib/api/client';
 import { server } from '../../lib/api/msw.setup';
 import { createQueryClient } from '../../lib/query/query-client';
-import { ClipsScreen, cardState } from './ClipsScreen';
+import { ClipsScreen } from './ClipsScreen';
+import { rowState } from './ClipRow';
 import {
   CAMPAIGN_ID,
+  briefFixture,
   campaignFixture,
   emptyList,
   item,
@@ -51,6 +53,7 @@ beforeEach(() => {
   uninstall = installApiClient({ origin: ORIGIN, getToken: () => Promise.resolve(null) });
   server.use(
     http.get(`${BASE}/campaigns/${CAMPAIGN_ID}`, () => ok(campaignFixture())),
+    http.get(`${BASE}/campaigns/${CAMPAIGN_ID}/brief`, () => ok(briefFixture())),
     http.get(`${BASE}/me/provider-keys`, () => ok([keyRow('openai'), keyRow('wavespeed')])),
     http.get(`${BASE}/media/:id/url`, () => ok({ url: 'http://media.test/clip.mp4' })),
   );
@@ -94,6 +97,9 @@ describe('SCREEN-008 clips (TASK-095)', () => {
     show();
     expect(await screen.findByRole('article', { name: 'Segment 1 clip' })).toBeInTheDocument();
     expect(screen.getAllByRole('article')).toHaveLength(3);
+    expect(await screen.findByText(/Script line for segment 2/)).toBeInTheDocument();
+    expect(screen.getByText('Segment 2 · 0:15 to 0:30')).toBeInTheDocument();
+    expect(screen.getByText('1 of 3 clips ready.'.replace('1', '0'))).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Generate segment 2' })).toBeEnabled();
     const tabs = within(screen.getByRole('tablist', { name: 'Campaign stages' })).getAllByRole(
       'tab',
@@ -131,7 +137,7 @@ describe('SCREEN-008 clips (TASK-095)', () => {
     serve(mixedList());
     show();
     const one = await screen.findByRole('article', { name: 'Segment 1 clip' });
-    expect(within(one).getByText('Check passed')).toBeInTheDocument();
+    expect(within(one).getByText('Audio check: passed')).toBeInTheDocument();
     expect(within(one).getByRole('button', { name: 'Re-run check segment 1' })).toBeEnabled();
     expect(await within(one).findByLabelText('Clip for segment 1')).toHaveAttribute(
       'src',
@@ -161,20 +167,21 @@ describe('SCREEN-008 clips (TASK-095)', () => {
     show();
     const one = await screen.findByRole('article', { name: 'Segment 1 clip' });
     expect(one).toHaveAttribute('data-cause', 'unknown');
+    expect(within(one).getByText(/Check your WaveSpeed account/)).toBeInTheDocument();
+    expect(within(one).queryByRole('button', { name: 'Retry segment 1' })).toBeNull();
     expect(
-      within(one).getByText(/Check your provider account before retrying/),
-    ).toBeInTheDocument();
-    expect(within(one).queryByRole('button', { name: /Retry/ })).toBeNull();
+      within(one).getByRole('button', { name: 'Retry segment 1 as a new clip' }),
+    ).toBeEnabled();
   });
 
   it('qc-review: failed and skipped checks show their reason', async () => {
     serve(qcList());
     show();
     const one = await screen.findByRole('article', { name: 'Segment 1 clip' });
-    expect(within(one).getByText('Check failed')).toBeInTheDocument();
+    expect(within(one).getByText('Audio check: failed')).toBeInTheDocument();
     expect(within(one).getByText(/Spoken words differ/)).toBeInTheDocument();
     const two = screen.getByRole('article', { name: 'Segment 2 clip' });
-    expect(within(two).getByText('Check skipped')).toBeInTheDocument();
+    expect(within(two).getByText('Audio check: skipped')).toBeInTheDocument();
     expect(within(two).getByText(/transcription service was unavailable/)).toBeInTheDocument();
   });
 
@@ -190,9 +197,12 @@ describe('SCREEN-008 clips (TASK-095)', () => {
     serve(outOfDateList());
     show();
     const mark = await screen.findByTestId('out-of-date-1');
-    expect(within(mark).getByText('Out of date')).toBeInTheDocument();
+    expect(within(mark).getByText(/brief text for this segment changed/)).toBeInTheDocument();
+    expect(
+      await screen.findByText('Segment 1 changed after its clip was made'),
+    ).toBeInTheDocument();
     record('post', '/campaigns/:id/segments/:pos/jobs', () => ok(videoJob(1), 202));
-    fireEvent.click(within(mark).getByRole('button', { name: 'Generate again, segment 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate again, segment 1' }));
     await waitFor(() => expect(calls[0]?.path).toMatch(/segments\/1\/jobs$/));
   });
 
@@ -292,13 +302,13 @@ describe('SCREEN-008 clips (TASK-095)', () => {
 
   it('maps API states to job states and failure classes', () => {
     const f = (causeClass: string) =>
-      cardState(videoJob(1, { state: 'failed', label: 'failed', causeClass: causeClass as never }));
+      rowState(videoJob(1, { state: 'failed', label: 'failed', causeClass: causeClass as never }));
     expect(f('credit')).toEqual({ state: 'failed', cause: 'configuration' });
     expect(f('provider_timeout')).toEqual({ state: 'failed', cause: 'temporary' });
     expect(f('outcome_unknown')).toEqual({ state: 'failed', cause: 'unknown' });
-    expect(cardState(null)).toEqual({ state: 'pending' });
-    expect(cardState(videoJob(1, { state: 'submitting', label: 'queued' }))).toEqual({
-      state: 'created',
+    expect(rowState(null)).toEqual({ state: 'none' });
+    expect(rowState(videoJob(1, { state: 'submitting', label: 'queued' }))).toEqual({
+      state: 'queued',
     });
     expect(item(1, null).latestJob).toBeNull();
   });

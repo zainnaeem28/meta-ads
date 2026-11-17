@@ -2,7 +2,9 @@
 
 import {
   generateSegment,
+  getBrief,
   getCampaign,
+  getGetBriefQueryKey,
   getGetCampaignQueryKey,
   getListCampaignVideoJobsQueryKey,
   getListMyProviderKeysQueryKey,
@@ -11,20 +13,19 @@ import {
   listMyProviderKeys,
   rerunQc,
   retryVideoJob,
+  type BriefResponse,
   type CampaignResponse,
   type ProviderKeyListResponse,
   type SegmentJobsResponse,
   type SegmentJobsResponseDataItem,
-  type VideoJob,
 } from '@shroomap/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge } from '@shroomap/ui/cmp-007';
 import { Button } from '@shroomap/ui/cmp-003';
 import { Alert } from '@shroomap/ui/cmp-011';
 import { Tabs } from '@shroomap/ui/cmp-014';
 import { Card } from '@shroomap/ui/cmp-018';
 import { EmptyState } from '@shroomap/ui/cmp-019';
-import { JobCard, type FailureCause, type JobState, type QcState } from '@shroomap/ui/cmp-022';
+import { Icon } from '@shroomap/ui/icons';
 import { OperatorShell, deriveKeyState } from '@shroomap/ui/cmp-030';
 import { PageHeader } from '@shroomap/ui/cmp-033';
 import { useRef, useState } from 'react';
@@ -34,35 +35,18 @@ import { IdempotencyKeys, idempotencyHeaders } from '../../lib/api/idempotency';
 import { resolveError } from '../../lib/errors';
 import { ROUTES } from '../../lib/errors/routes';
 import { useJobPolling } from '../../lib/query/job-polling';
+import { ClipRow, type ClipRowProps } from './ClipRow';
 import { SCREEN_008_COPY as COPY } from './copy';
 
 type Action =
   | { kind: 'generate'; position: number }
+  | { kind: 'remaining'; position: number; positions: number[] }
   | { kind: 'retry'; position: number; jobId: string }
   | { kind: 'rerun'; position: number; jobId: string };
 type Latched = 'key_missing' | 'key_disabled' | 'spend_cap_reached';
 
 const ACTIVE_JOB = new Set(['pending', 'submitting', 'submitted', 'processing']);
 const LATCH_CODES: readonly string[] = ['key_missing', 'key_disabled', 'spend_cap_reached'];
-
-/** The API label and cause class mapped to the CMP-022 job state and failure class. */
-export function cardState(job: VideoJob | null): { state: JobState; cause?: FailureCause } {
-  if (!job) return { state: 'pending' };
-  if (job.state === 'completed') return { state: 'completed' };
-  if (job.state === 'processing') return { state: 'processing' };
-  if (job.state === 'failed' || job.state === 'cancelled') {
-    const c = job.causeClass;
-    const cause: FailureCause =
-      c === 'outcome_unknown'
-        ? 'unknown'
-        : c === 'configuration' || c === 'credit' || c === 'key_replaced' || c === 'key_deleted'
-          ? 'configuration'
-          : 'temporary';
-    return { state: 'failed', cause };
-  }
-  // pending, submitting and submitted: the job exists and nothing more can be done on it yet.
-  return { state: 'created' };
-}
 
 const hasActiveWork = (list: SegmentJobsResponseDataItem[]) =>
   list.some(
@@ -71,79 +55,26 @@ const hasActiveWork = (list: SegmentJobsResponseDataItem[]) =>
       i.latestJob?.latestQc?.qcState === 'pending',
   );
 
-interface ClipCardProps {
-  item: SegmentJobsResponseDataItem;
-  busy: boolean;
-  canStart: boolean;
-  onGenerate: (position: number) => void;
-  onRetry: (position: number, jobId: string) => void;
-  onRerun: (position: number, jobId: string) => void;
-}
-
-function ClipCard({ item, busy, canStart, onGenerate, onRetry, onRerun }: ClipCardProps) {
-  const job = item.latestJob;
-  const { state, cause } = cardState(job);
-  const qc = job?.latestQc?.qcState;
-  const playable = state === 'completed' && job?.outputMediaId;
+function ClipItem(props: Omit<ClipRowProps, 'src'>) {
+  const job = props.item.latestJob;
   const media = useQuery({
     queryKey: ['media-url', job?.outputMediaId],
     queryFn: async ({ signal }) => (await getMediaUrl(job!.outputMediaId!, { signal })).data,
-    enabled: Boolean(playable),
+    enabled: job?.state === 'completed' && Boolean(job.outputMediaId),
     staleTime: 4 * 60_000,
     retry: false,
   });
   const src = (media.data as { data?: { url?: string } } | undefined)?.data?.url;
-  const safe = job?.state === 'failed' || job?.state === 'cancelled' ? job.causeMessage : null;
-  const p = item.position;
-  return (
-    <li
-      className="flex flex-col gap-2"
-      data-segment={p}
-      data-out-of-date={job?.outOfDate || undefined}
-    >
-      <JobCard
-        segment={p}
-        state={state}
-        cause={cause}
-        src={src}
-        qc={qc && qc !== 'pending' ? (qc as QcState) : undefined}
-        qcReason={job?.latestQc?.reason ?? undefined}
-        busy={busy}
-        onGenerate={canStart ? () => onGenerate(p) : undefined}
-        onRetry={canStart && job ? () => onRetry(p, job.id) : undefined}
-        onRerunCheck={canStart && job ? () => onRerun(p, job.id) : undefined}
-      />
-      {safe ? <p className="text-caption text-muted-foreground">{safe}</p> : null}
-      {job?.state === 'pending' ? (
-        <p className="text-caption text-muted-foreground">{COPY.queued}</p>
-      ) : null}
-      {qc === 'pending' ? (
-        <p role="status" className="text-caption text-muted-foreground">
-          {COPY.qcRunning}
-        </p>
-      ) : null}
-      {job?.outOfDate ? (
-        <div className="flex flex-col items-start gap-2" data-testid={`out-of-date-${p}`}>
-          <Badge variant="warning" icon="triangle-alert">
-            {COPY.outOfDate}
-          </Badge>
-          <p className="text-caption text-muted-foreground">{COPY.outOfDateNote}</p>
-          {state === 'completed' ? (
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label={COPY.generateOutOfDate(p)}
-              disabled={busy || !canStart}
-              onClick={() => onGenerate(p)}
-            >
-              {COPY.generate}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-    </li>
-  );
+  return <ClipRow {...props} src={src} />;
 }
+
+const formatCreated = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
 /**
  * SCREEN-008 at `/campaigns/[id]/clips` (Operator): one job card per segment with its status, failure cause class and
@@ -164,6 +95,11 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
     queryKey: campaignKey,
     queryFn: async ({ signal }) =>
       (await getCampaign(campaignId, { signal })).data as CampaignResponse,
+  });
+  const brief = useQuery({
+    queryKey: getGetBriefQueryKey(campaignId),
+    queryFn: async ({ signal }) => (await getBrief(campaignId, { signal })).data as BriefResponse,
+    retry: false,
   });
   const keys = useQuery({
     queryKey: getListMyProviderKeysQueryKey(),
@@ -215,21 +151,33 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
 
   const act = useMutation({
     mutationFn: async (a: Action) => {
-      const id = `${a.kind}:${a.kind === 'generate' ? a.position : a.jobId}`;
+      const send = async (position: number) => {
+        const id = `generate:${position}`;
+        const keysFor = idem.current.get(id) ?? new IdempotencyKeys();
+        idem.current.set(id, keysFor);
+        const res = await generateSegment(
+          campaignId,
+          position,
+          { useProductImage: camp?.productMediaId != null },
+          idempotencyHeaders(keysFor.keyFor({})),
+        );
+        keysFor.succeeded();
+        return res;
+      };
+      if (a.kind === 'generate') return send(a.position);
+      if (a.kind === 'remaining') {
+        let last;
+        for (const position of a.positions) last = await send(position);
+        return last;
+      }
+      const id = `${a.kind}:${a.jobId}`;
       const keysFor = idem.current.get(id) ?? new IdempotencyKeys();
       idem.current.set(id, keysFor);
       const options = idempotencyHeaders(keysFor.keyFor({}));
       const res =
-        a.kind === 'generate'
-          ? await generateSegment(
-              campaignId,
-              a.position,
-              { useProductImage: camp?.productMediaId != null },
-              options,
-            )
-          : a.kind === 'retry'
-            ? await retryVideoJob(a.jobId, options)
-            : await rerunQc(a.jobId, options);
+        a.kind === 'retry'
+          ? await retryVideoJob(a.jobId, options)
+          : await rerunQc(a.jobId, options);
       keysFor.succeeded();
       return res;
     },
@@ -244,7 +192,9 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
           message:
             a.kind === 'rerun'
               ? `Check started for segment ${a.position}.`
-              : `Segment ${a.position} clip started.`,
+              : a.kind === 'remaining'
+                ? 'Remaining clips started.'
+                : `Segment ${a.position} clip started.`,
         },
       ]);
     },
@@ -266,7 +216,15 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
     act.mutate(a);
   };
 
-  const anyDone = items.some((i) => i.latestJob?.state === 'completed');
+  const readyCount = items.filter((i) => i.latestJob?.state === 'completed').length;
+  const anyDone = readyCount > 0;
+  const missing = items.filter((i) => i.latestJob === null).map((i) => i.position);
+  const outOfDate = items.filter((i) => i.latestJob?.outOfDate).map((i) => i.position);
+  const scripts = new Map(
+    (brief.data?.data.segments ?? [])
+      .filter((g) => g.state === 'active')
+      .map((g) => [g.position, g.dialogue] as const),
+  );
   const goTo = (id: string) => {
     if (id === 'brief') window.location.assign(`/campaigns/${campaignId}/brief`);
     if (id === 'final' && anyDone) window.location.assign(`/campaigns/${campaignId}/final`);
@@ -294,14 +252,12 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
     body = <EmptyState title={COPY.empty} headingLevel={2} />;
   } else {
     body = (
-      <ul
-        aria-label={COPY.segmentsLabel}
-        className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-      >
+      <ul aria-label={COPY.segmentsLabel} className="flex flex-col gap-4">
         {items.map((item) => (
-          <ClipCard
+          <ClipItem
             key={item.position}
             item={item}
+            script={scripts.get(item.position)}
             busy={act.isPending}
             canStart={canStart}
             onGenerate={(position) => start({ kind: 'generate', position })}
@@ -335,16 +291,21 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
           title={name}
           description={
             camp
-              ? `UGC ad · ${camp.segmentCount} segments · ${camp.segmentCount * 15} s`
+              ? `UGC ad · ${camp.segmentCount} segments · ${camp.segmentCount * 15} s · Created ${formatCreated(camp.createdAt)}`
               : undefined
           }
           breadcrumb={[{ label: 'Campaigns', href: ROUTES.campaigns }, { label: name }]}
           actions={
-            anyDone ? (
-              <Button asChild>
-                <a href={`/campaigns/${campaignId}/final`}>{COPY.continueFinal}</a>
-              </Button>
-            ) : undefined
+            <Button
+              variant="outline"
+              disabled={act.isPending || !canStart || missing.length === 0}
+              onClick={() =>
+                start({ kind: 'remaining', position: missing[0] ?? 1, positions: missing })
+              }
+            >
+              <Icon name="rotate-ccw" size={16} />
+              {COPY.generateRemaining}
+            </Button>
           }
         />
         <Tabs
@@ -353,7 +314,7 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
           onValueChange={goTo}
           tabs={[
             { id: 'brief', label: COPY.tabBrief },
-            { id: 'clips', label: COPY.tabClips },
+            { id: 'clips', label: COPY.tabClips, count: readyCount > 0 ? readyCount : undefined },
             { id: 'final', label: COPY.tabFinal, disabled: !anyDone },
           ]}
         >
@@ -394,10 +355,38 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
                 onAction={() => void jobs.refetch()}
               />
             ) : null}
+            {outOfDate.length > 0 ? (
+              <Alert variant="warning" role="status" title={COPY.outOfDateTitle(outOfDate)}>
+                {COPY.outOfDateBanner}
+              </Alert>
+            ) : null}
             <p role="status" className="min-h-5 text-caption text-muted-foreground">
               {jobs.isFetching && jobs.data && !jobs.isError ? COPY.updating : ''}
             </p>
             {body}
+            {items.length > 0 ? (
+              <Card>
+                <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+                  <p className="text-ui">
+                    <strong>{`${readyCount} of ${items.length} clips ready.`}</strong>{' '}
+                    <span className="text-muted-foreground">{COPY.footerHint}</span>
+                  </p>
+                  {anyDone ? (
+                    <Button asChild>
+                      <a href={`/campaigns/${campaignId}/final`}>
+                        {COPY.continueFinal}
+                        <Icon name="arrow-right" size={16} />
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button disabled>
+                      {COPY.continueFinal}
+                      <Icon name="arrow-right" size={16} />
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            ) : null}
           </div>
         </Tabs>
       </div>

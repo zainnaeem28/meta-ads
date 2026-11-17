@@ -1,4 +1,4 @@
-import type { Campaign, QcRun, VideoJob } from '@shroomap/contracts';
+import type { Brief, Campaign, QcRun, VideoJob } from '@shroomap/contracts';
 
 /** Contract-shaped fixtures (OpenAPI VideoJob, QcRun, SegmentJobsResponse item, Campaign) for the tests and the e2e script. */
 export const CAMPAIGN_ID = '7c1d4a52-0b53-4f6e-9a4e-3f2d1c0b9a88';
@@ -100,6 +100,17 @@ export const qcList = () => [
         qcState: 'failed',
         reason: 'Spoken words differ from the script in the second sentence.',
       }),
+      qcHistory: [
+        qcRun(1, {
+          id: '00000000-0000-4000-a000-0000000000f1',
+          qcState: 'skipped',
+          reason: 'First attempt could not run.',
+        }),
+        qcRun(1, {
+          qcState: 'failed',
+          reason: 'Spoken words differ from the script in the second sentence.',
+        }),
+      ],
     }),
   ),
   item(
@@ -138,3 +149,61 @@ export const campaignFixture = (over: Partial<Campaign> = {}): Campaign => ({
   thumbstopperJobId: null,
   ...over,
 });
+
+/** The brief read for the segment script quotes (a disclosed read beside the ticket's API list). */
+export const briefFixture = (): Brief => ({
+  id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  campaignId: CAMPAIGN_ID,
+  state: 'accepted',
+  version: 1,
+  acceptedAt: T,
+  generationJob: null,
+  segments: [1, 2, 3].map((position) => ({
+    position,
+    state: 'active' as const,
+    revision: 1,
+    dialogue: `Script line for segment ${position}.`,
+    prompt: `Prompt ${position}`,
+    wordCount: 6,
+  })),
+  issues: [],
+  updatedAt: T,
+});
+
+/** The failure classes in one list: completed, temporary, outcome unknown, configuration or credit. */
+export const failuresList = () => [
+  item(1, videoJob(1)),
+  item(
+    2,
+    videoJob(2, {
+      state: 'failed',
+      label: 'failed',
+      causeClass: 'temporary',
+      causeMessage: null,
+      outputMediaId: null,
+      latestQc: null,
+    }),
+  ),
+  item(
+    3,
+    videoJob(3, {
+      state: 'failed',
+      label: 'failed',
+      causeClass: 'outcome_unknown',
+      causeMessage: null,
+      outputMediaId: null,
+      latestQc: null,
+    }),
+  ),
+  item(
+    4,
+    videoJob(4, {
+      state: 'failed',
+      label: 'failed',
+      causeClass: 'credit',
+      causeMessage: null,
+      outputMediaId: null,
+      latestQc: null,
+    }),
+  ),
+];
