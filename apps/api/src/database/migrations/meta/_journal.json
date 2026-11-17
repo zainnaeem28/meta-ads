@@ -57,6 +57,13 @@
       "when": 1794873499608,
       "tag": "0080_task-048-brief",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794880406884,
+      "tag": "0090_task-052-production-video",
+      "breakpoints": true
     }
   ]
 }

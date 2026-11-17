@@ -29,6 +29,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/brief-ai/junit.xml' }],
       ['junit', { outputFile: 'reports/brief-api/junit.xml' }],
       ['junit', { outputFile: 'reports/brief-jobs/junit.xml' }],
+      ['junit', { outputFile: 'reports/prod-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/limits/junit.xml' }],
       ['junit', { outputFile: 'reports/observability/junit.xml' }],
@@ -49,6 +50,7 @@ export default defineConfig({
         'src/modules/usage/**/*.ts',
         'src/modules/campaigns/**/*.ts',
         'src/modules/brief/**/*.ts',
+        'src/modules/production/**/*.ts',
         'src/platform/jobs/**/*.ts',
         'src/platform/rate-limit/**/*.ts',
         'src/platform/idempotency/**/*.ts',
@@ -142,6 +144,14 @@ export default defineConfig({
         'src/modules/brief/transport/analysis.controller.ts',
         'src/modules/brief/transport/regenerate.service.ts',
         'src/modules/brief/transport/regenerate.controller.ts',
+        // The video jobs service and its Drizzle reads, the progress reader, the controller and the module wiring are proven on
+        // real PostgreSQL through the api composition root by production.integration.test.ts (API-060 to API-063); the reuse
+        // hash, the labels, the out-of-date rule and the progress derivation are pure and unit tested (video-job.test.ts).
+        'src/modules/production/production.module.ts',
+        'src/modules/production/application/video-ports.ts',
+        'src/modules/production/application/video-jobs.service.ts',
+        'src/modules/production/infrastructure/video-progress.reader.ts',
+        'src/modules/production/transport/video.controller.ts',
       ],
       reporter: ['text', 'lcovonly'],
       reportsDirectory: 'reports/http',

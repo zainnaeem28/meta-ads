@@ -23,6 +23,7 @@ import { MediaModule } from '../modules/media/media.module.js';
 import { CampaignsModule } from '../modules/campaigns/campaigns.module.js';
 import { UsageModule } from '../modules/usage/usage.module.js';
 import { BriefModule } from '../modules/brief/brief.module.js';
+import { ProductionModule, progressBridge } from '../modules/production/production.module.js';
 import { ProviderKeysModule } from '../modules/provider-keys/provider-keys.module.js';
 import { JobsModule } from '../platform/jobs/boss.js';
 import { HealthModule, healthOptionsFrom } from '../platform/health/index.js';
@@ -80,6 +81,8 @@ function apiModule(
       ? undefined
       : MediaModule.register(process.env);
   const usage = config.DATABASE_URL === undefined ? undefined : UsageModule.register(process.env);
+  // Campaigns (layer 4) reads job progress through a port that production (layer 6) fills once the database is open.
+  const progress = progressBridge();
   @Module({
     imports: [
       logging.module(),
@@ -104,7 +107,7 @@ function apiModule(
       // Object storage and quota (REQ-020); needs the database and the bucket settings.
       ...(media === undefined ? [] : [media]),
       // Drafts CRUD (API-020 to API-023, API-025); needs the database and media (the product image).
-      ...(media === undefined ? [] : [CampaignsModule.register(process.env, { audit, media })]),
+      ...(media === undefined ? [] : [CampaignsModule.register(process.env, { audit, media, progress: progress.reader })]),
       // Spend caps, reservations, usage events and the start-up price check (REQ-019, TD-D39); needs the database.
       ...(usage === undefined ? [] : [usage]),
       // The claim-check rules (REQ-007, REQ-008): the rules file is checked at start-up; the rules are read from the database.
@@ -112,6 +115,8 @@ function apiModule(
       ...(config.DATABASE_URL === undefined
         ? []
         : [BriefModule.register(process.env, media === undefined || usage === undefined ? undefined : { media, usage })]),
+      // Segment clips (API-060 to API-063) and the campaign progress reader; need the database, the job queue and usage.
+      ...(usage === undefined ? [] : [ProductionModule.register(process.env, { usage }, progress.bind)]),
       HealthModule.register(healthOptionsFrom(process.env, config)),
       MetricsModule.register(config),
     ],
