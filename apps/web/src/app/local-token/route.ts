@@ -31,12 +31,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       cache: 'no-store',
     });
     if (!res.ok) return NextResponse.json({ token: null }, { status: 502 });
-    const body = (await res.json()) as { token?: unknown; expiresInSeconds?: unknown };
-    if (typeof body.token !== 'string') return NextResponse.json({ token: null }, { status: 502 });
+    // The api answers its standard envelope: { success, data: { token, sub, expiresInSeconds }, metaData }.
+    const body = (await res.json()) as {
+      data?: { token?: unknown; sub?: unknown; expiresInSeconds?: unknown };
+    };
+    const data = body.data;
+    if (typeof data?.token !== 'string') return NextResponse.json({ token: null }, { status: 502 });
     const expiresInSeconds =
-      typeof body.expiresInSeconds === 'number' ? body.expiresInSeconds : 3600;
+      typeof data.expiresInSeconds === 'number' ? data.expiresInSeconds : 3600;
     return NextResponse.json(
-      { token: body.token, expiresInSeconds },
+      { token: data.token, sub: typeof data.sub === 'string' ? data.sub : null, expiresInSeconds },
       { headers: { 'cache-control': 'no-store' } },
     );
   } catch {

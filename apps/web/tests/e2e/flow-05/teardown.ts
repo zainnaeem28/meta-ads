@@ -4,5 +4,10 @@ import { resolve } from 'node:path';
 /** Drops the run's database. */
 export default function teardown() {
   const url = process.env.FLOW05_DATABASE_URL;
-  if (url) execFileSync('node', [resolve(__dirname, 'database.mjs'), 'drop', new URL(url).pathname.slice(1)]);
+  if (url)
+    execFileSync('node', [
+      resolve(__dirname, 'database.mjs'),
+      'drop',
+      new URL(url).pathname.slice(1),
+    ]);
 }

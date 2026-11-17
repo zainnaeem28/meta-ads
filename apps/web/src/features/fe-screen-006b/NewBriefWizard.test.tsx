@@ -112,6 +112,24 @@ describe('SCREEN-006 step 2 product image', () => {
     saving();
   });
 
+  it('F4: an edit made inside the 0.8s debounce window is written when the wizard unmounts', async () => {
+    resume();
+    const seen: unknown[] = [];
+    server.use(
+      http.patch(`${BASE}/drafts/${ID}`, async ({ request }) => {
+        seen.push(await request.json());
+        return ok(draft({ version: 2 }));
+      }),
+    );
+    const view = show({ draftId: ID });
+    await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
+    fireEvent.change(screen.getByLabelText(/Product name/), { target: { value: 'Evening Calm' } });
+    expect(seen).toHaveLength(0);
+    view.unmount();
+    await waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toMatchObject({ productName: 'Evening Calm' });
+  });
+
   it('shows the likeness consent text and the file limits', async () => {
     resume();
     show({ draftId: ID });

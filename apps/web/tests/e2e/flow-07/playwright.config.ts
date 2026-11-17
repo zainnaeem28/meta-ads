@@ -16,7 +16,9 @@ export default defineConfig({
   reporter: [['junit', { outputFile: `${reports}/e2e-junit.xml` }]],
   // The base servers are started from apps/web (their commands are relative to it).
   // The last server waits for the first one's build, so every server gets the build's time.
-  webServer: [base.webServer].flat().map((server) => ({ ...server!, cwd: webDir, timeout: 360_000 })),
+  webServer: [base.webServer]
+    .flat()
+    .map((server) => ({ ...server!, cwd: webDir, timeout: 360_000 })),
   // The shared build host is loaded by other runs; a stalled browser call (axe, screenshot) is retried once.
   retries: 1,
   expect: { ...base.expect, timeout: 15_000 },
