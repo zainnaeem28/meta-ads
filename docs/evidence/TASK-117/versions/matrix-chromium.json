@@ -1,0 +1,11 @@
+{
+  "project": "matrix-chromium",
+  "browser": "chromium",
+  "version": "159.0.8154.6",
+  "channel": null,
+  "device": {
+    "isMobile": false
+  },
+  "playwright": "1.65.1",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Safari/537.36"
+}

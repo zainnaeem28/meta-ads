@@ -1,0 +1,39 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { resolve } from 'node:path';
+import type { FullConfig } from '@playwright/test';
+import { JOURNEYS, RAN } from './support';
+
+/**
+ * Zero-test rule: a project that is configured but ran fewer than one passing test per journey fails the run
+ * (a project missing from the run, or one whose browser did not start, must never pass silently). Then drops the database.
+ */
+export default function teardown(config: FullConfig) {
+  try {
+    // MATRIX_PARTIAL=1 is for a developer's run of some projects; the check that is submitted runs all of them.
+    const missing: string[] = [];
+    if (process.env.MATRIX_PARTIAL === '1') return;
+    for (const project of config.projects) {
+      const file = `${RAN}/${project.name}.jsonl`;
+      const ran = existsSync(file)
+        ? readFileSync(file, 'utf8')
+            .split('\n')
+            .filter(Boolean)
+            .map((l) => JSON.parse(l) as { journey: string; ok: boolean })
+        : [];
+      const passed = new Set(ran.filter((r) => r.ok).map((r) => r.journey));
+      for (const j of JOURNEYS)
+        if (!passed.has(j.flow)) missing.push(`${project.name}: ${j.flow} did not pass`);
+    }
+    if (missing.length) throw new Error(`Browser matrix incomplete:\n${missing.join('\n')}`);
+    rmSync(RAN, { recursive: true, force: true });
+  } finally {
+    const url = process.env.MATRIX_DATABASE_URL;
+    if (url)
+      execFileSync('node', [
+        resolve(__dirname, '../e2e/flow-11/database.mjs'),
+        'drop',
+        new URL(url).pathname.slice(1),
+      ]);
+  }
+}
