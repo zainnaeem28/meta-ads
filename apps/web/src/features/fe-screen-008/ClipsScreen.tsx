@@ -296,16 +296,18 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
           }
           breadcrumb={[{ label: 'Campaigns', href: ROUTES.campaigns }, { label: name }]}
           actions={
-            <Button
-              variant="outline"
-              disabled={act.isPending || !canStart || missing.length === 0}
-              onClick={() =>
-                start({ kind: 'remaining', position: missing[0] ?? 1, positions: missing })
-              }
-            >
-              <Icon name="rotate-ccw" size={16} />
-              {COPY.generateRemaining}
-            </Button>
+            <span className="flex">
+              <Button
+                variant="outline"
+                disabled={act.isPending || !canStart || missing.length === 0}
+                onClick={() =>
+                  start({ kind: 'remaining', position: missing[0] ?? 1, positions: missing })
+                }
+              >
+                <Icon name="rotate-ccw" size={16} />
+                {COPY.generateRemaining}
+              </Button>
+            </span>
           }
         />
         <Tabs
@@ -313,9 +315,19 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
           value="clips"
           onValueChange={goTo}
           tabs={[
-            { id: 'brief', label: COPY.tabBrief },
-            { id: 'clips', label: COPY.tabClips, count: readyCount > 0 ? readyCount : undefined },
-            { id: 'final', label: COPY.tabFinal, disabled: !anyDone },
+            { id: 'brief', label: COPY.tabBrief, icon: 'file-text' },
+            {
+              id: 'clips',
+              label: COPY.tabClips,
+              icon: 'film',
+              chip:
+                items.length > 0 ? (
+                  <span className="rounded-full border border-border-strong bg-muted px-2 text-caption font-semibold text-foreground">
+                    {`${readyCount} of ${items.length}`}
+                  </span>
+                ) : undefined,
+            },
+            { id: 'final', label: COPY.tabFinal, icon: 'video', disabled: !anyDone },
           ]}
         >
           <div className="flex flex-col gap-4">
