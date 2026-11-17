@@ -1,0 +1,15 @@
+[WebServer] ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+[WebServer] 
+[WebServer]   To migrate automatically, run:
+[WebServer]   npx @next/codemod@canary middleware-to-proxy .
+[WebServer] 
+[WebServer]   Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+[WebServer] ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+
+
+Running 2 tests using 1 worker
+
+[1/2] [chromium] › tests/e2e/local-token/local-token.spec.ts:19:1 › a signed-in local user reaches the real api with a bearer (owner email becomes the first administrator)
+[2/2] [chromium] › tests/e2e/local-token/local-token.spec.ts:55:1 › without a session no bearer is sent
+  2 passed (22.5s)
