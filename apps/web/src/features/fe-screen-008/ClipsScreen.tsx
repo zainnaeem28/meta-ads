@@ -28,7 +28,7 @@ import { EmptyState } from '@shroomap/ui/cmp-019';
 import { Icon } from '@shroomap/ui/icons';
 import { OperatorShell, deriveKeyState } from '@shroomap/ui/cmp-030';
 import { PageHeader } from '@shroomap/ui/cmp-033';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ErrorNotice } from '../../components/errors';
 import { ApiClientError } from '../../lib/api/errors';
 import { IdempotencyKeys, idempotencyHeaders } from '../../lib/api/idempotency';
@@ -116,6 +116,15 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
     getState: (d) => (d ? (hasActiveWork(d.data) ? 'processing' : 'completed') : undefined),
     errorShown: actionError !== null,
   });
+
+  // A missing, deleted or not-yours campaign is SCREEN-004 (UI-UX §7 FLOW-06, §9.1), not an in-page state.
+  const unavailable = [campaign.error, jobs.error].some(
+    (e) =>
+      e !== null && e !== undefined && resolveError(e, { surface: 'page' }).code === 'not_found',
+  );
+  useEffect(() => {
+    if (unavailable) window.location.replace('/not-found?state=unavailable');
+  }, [unavailable]);
 
   const camp = campaign.data?.data;
   const name = camp?.productName ?? COPY.fallbackName;
