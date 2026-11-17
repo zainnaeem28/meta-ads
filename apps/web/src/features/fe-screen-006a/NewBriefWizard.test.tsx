@@ -106,7 +106,9 @@ describe('SCREEN-006 steps 1 to 3', () => {
     });
     expect(window.location.search).toBe(`?draft=${ID}`);
     expect(screen.getByTestId('save-status')).toHaveTextContent('Draft saved just now');
-    expect(screen.getByRole('heading', { level: 2, name: COPY.step2.title })).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 2, name: COPY.step2.title })).toHaveFocus(),
+    );
   });
 
   it('autosaves an edit with the version in If-Match and shows Saving then Saved', async () => {
@@ -132,17 +134,35 @@ describe('SCREEN-006 steps 1 to 3', () => {
     );
   });
 
+  it('F4: an edit made inside the 0.8s debounce window is written when the wizard unmounts', async () => {
+    resume();
+    const seen: unknown[] = [];
+    server.use(
+      http.patch(`${BASE}/drafts/${ID}`, async ({ request }) => {
+        seen.push(await request.json());
+        return ok(draft({ version: 2 }));
+      }),
+    );
+    const view = show({ draftId: ID });
+    await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
+    type(/Product name/, 'Evening Calm');
+    expect(seen).toHaveLength(0);
+    view.unmount();
+    await waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toMatchObject({ productName: 'Evening Calm' });
+  });
+
   it('validation-error: a summary lists both fields, takes focus, links focus the field, input is kept', async () => {
     resume({ productName: null, productDescription: null });
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
     next(/Next: Audience/);
     const summary = await screen.findByRole('group', { name: 'Fix 2 things to continue' });
-    expect(summary).toHaveFocus();
+    await waitFor(() => expect(summary).toHaveFocus());
     expect(screen.getByText('Enter the product name.', { selector: 'p span' })).toBeInTheDocument();
     expect(screen.getByLabelText(/Product name/)).toHaveAttribute('aria-invalid', 'true');
     fireEvent.click(screen.getByRole('link', { name: 'Product description' }));
-    expect(screen.getByLabelText(/Product description/)).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText(/Product description/)).toHaveFocus());
     type(/Product name/, 'Calm');
     expect(screen.queryByText('Enter the product name.', { selector: 'p span' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Fix 1 thing to continue' })).toBeInTheDocument();
@@ -160,7 +180,8 @@ describe('SCREEN-006 steps 1 to 3', () => {
     show({ draftId: ID });
     await screen.findByRole('heading', { level: 2, name: COPY.step2.title });
     next(/Next: Audience/);
-    expect(await screen.findByRole('group', { name: 'Fix 1 thing to continue' })).toHaveFocus();
+    const fixGroup = await screen.findByRole('group', { name: 'Fix 1 thing to continue' });
+    await waitFor(() => expect(fixGroup).toHaveFocus());
     expect(screen.getAllByText('Shorten the product name.').length).toBeGreaterThan(0);
     expect(screen.getByLabelText(/Product name/)).toHaveValue('Morning Focus Blend');
     expect(screen.getByRole('heading', { level: 2, name: COPY.step2.title })).toBeInTheDocument();
@@ -271,7 +292,9 @@ describe('SCREEN-006 steps 1 to 3', () => {
     next(/Next: Audience/);
     const dialog = await screen.findByRole('alertdialog', { name: COPY.sessionTitle });
     expect(dialog).toHaveTextContent('you will return to step 2 of this draft');
-    expect(screen.getByRole('button', { name: COPY.signInAgain })).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: COPY.signInAgain })).toHaveFocus(),
+    );
     fireEvent.click(screen.getByRole('button', { name: COPY.signInAgain }));
     expect(assign).toHaveBeenCalledWith(
       `/sign-in?reason=session-expired&return=${encodeURIComponent(`/campaigns/new?draft=${ID}`)}`,

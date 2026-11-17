@@ -7,6 +7,7 @@ import {
   ApiMalformedResponseError,
   ApiNetworkError,
   clearEtags,
+  createApiFetch,
   getLastRequestId,
   ifMatch,
   installApiClient,
@@ -36,6 +37,21 @@ const errorBody = (code: string, requestId = 'req-1') => ({
 });
 
 describe('api client', () => {
+  it('never sends credentials (the api is bearer-only, CORS has no credentials mode)', async () => {
+    const calls: RequestInit[] = [];
+    const apiFetch = createApiFetch({
+      origin: ORIGIN,
+      getToken: () => Promise.resolve('tok-1'),
+      fetchImpl: ((_url: unknown, init: RequestInit) => {
+        calls.push(init);
+        return Promise.resolve(
+          new Response(JSON.stringify({ success: true, data: {} }), { status: 200 }),
+        );
+      }) as unknown as typeof fetch,
+    });
+    await apiFetch('/api/v1/me', { credentials: 'include' });
+    expect(calls[0]?.credentials).toBe('omit');
+  });
   it('sends the Clerk bearer and captures X-Request-ID', async () => {
     let auth: string | null = null;
     server.use(
