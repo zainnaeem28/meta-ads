@@ -1,7 +1,14 @@
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
 import { DATABASE } from '../../platform/db/index.js';
-import type { Database } from '../../platform/db/index.js';
+import type { Database, DbTx } from '../../platform/db/index.js';
+import { QcKeySession } from './application/qc-key-session.js';
+import { AUDIO_EXTRACTOR, QC_CONFIG, QC_KEY_AUTH_REPORTER, QC_REPOSITORY, TRANSCRIBE_PORT } from './application/qc-ports.js';
+import type { QcConfig } from './application/qc-ports.js';
+import { QcRecovery } from './application/qc-recovery.js';
+import { QC_RUN_QUEUE, QcRunJob } from './application/qc-run.job.js';
+import { QcRunsService } from './application/qc-runs.service.js';
+import { startFirstQc } from './application/qc-start.js';
 import { VideoJobsService } from './application/video-jobs.service.js';
 import { VIDEO_CONFIG } from './application/video-ports.js';
 import type { VideoConfig } from './application/video-ports.js';
@@ -23,16 +30,22 @@ import { ProductionRecovery } from './application/worker/recovery.js';
 import { COPY_QUEUE, VideoCopyJob } from './application/worker/video-copy.job.js';
 import { POLL_QUEUE, VideoPollJob } from './application/worker/video-poll.job.js';
 import { VIDEO_SUBMIT_QUEUE, VideoSubmitJob } from './application/worker/video-submit.job.js';
+import { FfmpegAudio } from './infrastructure/openai-transcribe/ffmpeg-audio.js';
+import { OpenAiKeyAuthReporter } from './infrastructure/openai-transcribe/key-auth.reporter.js';
+import { OpenAiTranscribe } from './infrastructure/openai-transcribe/openai-transcribe.js';
+import { SqlQcRepository } from './infrastructure/openai-transcribe/qc.repository.js';
 import { WaveSpeedKeyAuthReporter } from './infrastructure/wavespeed/key-auth.reporter.js';
 import { SqlVideoWorkerRepository } from './infrastructure/wavespeed/video-worker.repository.js';
 import { WaveSpeedVideoGen } from './infrastructure/wavespeed/wavespeed-video-gen.js';
 import { VideoProgressReader } from './infrastructure/video-progress.reader.js';
 import type { ProgressSnapshotShape } from './infrastructure/video-progress.reader.js';
+import { QcController } from './transport/qc.controller.js';
 import { VideoController } from './transport/video.controller.js';
 import type { MediaService, StoragePort } from '../media/index.js';
+import { BOSS } from '../../platform/jobs/boss.js';
 import type { SweepRegistry } from '../../platform/jobs/sweep-registry.js';
 
-export { ProviderCopyCleanup, VideoCopyJob, VideoPollJob, VideoSubmitJob };
+export { ProviderCopyCleanup, QcRunJob, VideoCopyJob, VideoPollJob, VideoSubmitJob };
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -91,7 +104,7 @@ export function videoConfigFrom(env: Env): VideoConfig {
 }
 
 /**
- * Production: the M0010 video and QC tables (TASK-052), the segment clip operations API-060 to API-063 and the campaign
+ * Production: the M0010 video and QC tables (TASK-052), the segment clip operations API-060 to API-064 and the campaign
  * progress reader. Needs the database, the job queue and the usage module.
  */
 @Module({})
@@ -103,6 +116,7 @@ export class ProductionModule {
       providers: [
         { provide: VIDEO_CONFIG, useValue: videoConfigFrom(env) },
         VideoJobsService,
+        QcRunsService,
         {
           provide: VideoProgressReader,
           useFactory: (database: Database) => {
@@ -113,8 +127,8 @@ export class ProductionModule {
           inject: [DATABASE],
         },
       ],
-      controllers: [VideoController],
-      exports: [VideoJobsService, VideoProgressReader],
+      controllers: [VideoController, QcController],
+      exports: [VideoJobsService, QcRunsService, VideoProgressReader],
     };
   }
 }
@@ -133,12 +147,16 @@ export interface ProductionWorkerEdge {
   readonly storage: () => StoragePort;
   readonly media: () => Pick<MediaService, 'signedUrl' | 'registerObject'>;
   readonly registry: SweepRegistry;
-  /** Test seam: a local stand-in for `https://api.wavespeed.ai` (the host stays allow-listed). The product never sets it. */
+  /** Test seam: the origin of a local stand-in for the provider APIs (`https://api.wavespeed.ai`, and `https://api.openai.com` for the QC transcription); the hosts stay allow-listed. The product never sets it. */
   readonly baseUrl?: string;
 }
 
 /** The media operations the worker needs, over the media module's public service. */
-export function productionMediaOf(resolve: () => Pick<MediaService, 'signedUrl' | 'registerObject'>): ProductionMedia {
+export function productionMediaOf(
+  resolve: () => Pick<MediaService, 'signedUrl' | 'registerObject'>,
+  /** Runs in the transaction that completes the clip, after its object is registered: the clip's first QC (ARCHITECTURE §5.6). */
+  afterClip?: (tx: DbTx, clip: { readonly ownerId: string; readonly videoJobId: string }) => Promise<void>,
+): ProductionMedia {
   return {
     referenceUrl: async (ownerId, mediaId) => (await resolve().signedUrl('provider-fetch', { ownerId, mediaId })).url,
     registerClip: async (tx, input) => {
@@ -151,6 +169,7 @@ export function productionMediaOf(resolve: () => Pick<MediaService, 'signedUrl' 
         contentType: 'video/mp4',
         campaignId: input.campaignId,
       });
+      await afterClip?.(tx, { ownerId: input.ownerId, videoJobId: input.id });
     },
   };
 }
@@ -173,6 +192,23 @@ export function videoWorkerConfigFrom(env: Env): VideoWorkerConfig {
   };
 }
 
+/** The QC settings, checked at start-up: `QC_MAX_WORD_ERROR_RATE` (0 to 1, 0.20 by default) and the clip's transcribe model. */
+export function qcConfigFrom(env: Env, baseUrl?: string): QcConfig {
+  const text = optional(env, 'QC_MAX_WORD_ERROR_RATE');
+  const maxWordErrorRate = text === undefined ? 0.2 : Number(text);
+  if (!Number.isFinite(maxWordErrorRate) || maxWordErrorRate < 0 || maxWordErrorRate > 1) throw new Error('QC_MAX_WORD_ERROR_RATE must be a number from 0 to 1');
+  const video = videoConfigFrom(env);
+  return {
+    transcribeModel: video.transcribeModel,
+    maxWordErrorRate,
+    deadlineMinutes: 10,
+    idempotencyTtlHours: video.idempotencyTtlHours,
+    orphanAfterSec: videoWorkerConfigFrom(env).submitOrphanAfterSec,
+    requeueAfterSec: 120,
+    ...(baseUrl === undefined ? {} : { transcribeUrl: `${baseUrl}/v1/audio/transcriptions` }),
+  };
+}
+
 /** Object storage resolved on first use: the media module that owns it is built beside this one. */
 function lazyStorage(resolve: () => StoragePort): StoragePort {
   return {
@@ -185,8 +221,8 @@ function lazyStorage(resolve: () => StoragePort): StoragePort {
   };
 }
 
-/** The worker side of production (TASK-053): the WaveSpeed adapter, the submit, poll and copy handlers, the hourly
- * provider-copy cleanup and the recovery-sweep hooks. Fails at construction, so the process does not start, when a
+/** The worker side of production (TASK-053, TASK-054): the WaveSpeed adapter, the submit, poll and copy handlers, the hourly
+ * provider-copy cleanup, the OpenAI transcription adapter with the QC run and the recovery-sweep hooks. Fails at construction, so the process does not start, when a
  * setting is out of range. */
 @Module({})
 export class ProductionWorkerModule {
@@ -203,7 +239,16 @@ export class ProductionWorkerModule {
         { provide: KEY_AUTH_REPORTER, useClass: WaveSpeedKeyAuthReporter },
         { provide: VIDEO_GEN_PORT, useClass: WaveSpeedVideoGen },
         { provide: PRODUCTION_STORAGE, useValue: lazyStorage(edge.storage) },
-        { provide: PRODUCTION_MEDIA, useValue: productionMediaOf(edge.media) },
+        {
+          provide: PRODUCTION_MEDIA,
+          useFactory: (boss: Parameters<typeof startFirstQc>[0]) => productionMediaOf(edge.media, (tx, clip) => startFirstQc(boss, tx, clip).then(() => undefined)),
+          inject: [BOSS],
+        },
+        { provide: QC_CONFIG, useValue: qcConfigFrom(env, edge.baseUrl) },
+        { provide: QC_REPOSITORY, useClass: SqlQcRepository },
+        { provide: QC_KEY_AUTH_REPORTER, useClass: OpenAiKeyAuthReporter },
+        { provide: TRANSCRIBE_PORT, useClass: OpenAiTranscribe },
+        { provide: AUDIO_EXTRACTOR, useValue: new FfmpegAudio() },
         { provide: SWEEP_REGISTRY, useValue: edge.registry },
         KeySession,
         VideoSubmitJob,
@@ -211,8 +256,11 @@ export class ProductionWorkerModule {
         VideoCopyJob,
         ProviderCopyCleanup,
         ProductionRecovery,
+        QcKeySession,
+        QcRunJob,
+        QcRecovery,
       ],
-      exports: [VideoSubmitJob, VideoPollJob, VideoCopyJob, ProviderCopyCleanup],
+      exports: [VideoSubmitJob, VideoPollJob, VideoCopyJob, ProviderCopyCleanup, QcRunJob],
     };
   }
 }
@@ -223,6 +271,7 @@ export function productionJobHandlers(resolve: {
   readonly poll: () => VideoPollJob;
   readonly copy: () => VideoCopyJob;
   readonly cleanup: () => ProviderCopyCleanup;
+  readonly qc: () => QcRunJob;
 }): Readonly<Record<string, (job: { id: string; data: unknown }, log: JobLog) => Promise<void>>> {
   return {
     [VIDEO_SUBMIT_QUEUE]: async (job, log) => {
@@ -233,6 +282,9 @@ export function productionJobHandlers(resolve: {
     },
     [COPY_QUEUE]: async (job, log) => {
       await resolve.copy().handle(job, log);
+    },
+    [QC_RUN_QUEUE]: async (job, log) => {
+      await resolve.qc().handle(job, log);
     },
     [PROVIDER_COPY_CLEANUP_QUEUE]: async (_job, log) => {
       const outcome = await resolve.cleanup().run(log);

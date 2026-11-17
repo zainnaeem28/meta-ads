@@ -31,6 +31,7 @@ export default defineConfig({
       ['junit', { outputFile: 'reports/brief-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-jobs/junit.xml' }],
       ['junit', { outputFile: 'reports/prod-worker/junit.xml' }],
+      ['junit', { outputFile: 'reports/prod-qc/junit.xml' }],
       ['junit', { outputFile: 'reports/lifecycle-del/junit.xml' }],
       ['junit', { outputFile: 'reports/erasure/junit.xml' }],
       ['junit', { outputFile: 'reports/opscli/junit.xml' }],
@@ -187,6 +188,17 @@ export default defineConfig({
         'src/modules/production/application/worker/provider-copy-cleanup.job.ts',
         'src/modules/production/infrastructure/wavespeed/video-worker.repository.ts',
         'src/modules/production/infrastructure/wavespeed/key-auth.reporter.ts',
+        // The QC re-run service (API-064), the first-QC start, the sweep hooks, the SQL repository, the OpenAI key-auth reporter, the
+        // controller and the port file are proven on real PostgreSQL through the api and worker composition roots by
+        // qc-api.integration.test.ts and qc-worker.integration.test.ts (TC-QC-01 to 04); the job, the word error rate, the adapter
+        // and the audio extractor are unit tested.
+        'src/modules/production/application/qc-ports.ts',
+        'src/modules/production/application/qc-runs.service.ts',
+        'src/modules/production/application/qc-start.ts',
+        'src/modules/production/application/qc-recovery.ts',
+        'src/modules/production/infrastructure/openai-transcribe/qc.repository.ts',
+        'src/modules/production/infrastructure/openai-transcribe/key-auth.reporter.ts',
+        'src/modules/production/transport/qc.controller.ts',
         // The ops-cli SQL of the four commands, their production binding and the barrel are proven on real PostgreSQL through
         // `runOps` with the production `executeCommand`, the real worker composition root and the compiled `dist/bin/ops.js` by
         // ops-cli.integration.test.ts; the argument rules, the runner and the key cryptography are unit tested here.
