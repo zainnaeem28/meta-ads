@@ -1,0 +1,25 @@
+/** SCREEN-008 copy (UI-UX §8 and the frame `SCREEN-008`; error rows come from UI-UX §9.1 through `lib/errors`). */
+export const SCREEN_008_COPY = {
+  title: 'Clips',
+  fallbackName: 'Campaign',
+  stageTabs: 'Campaign stages',
+  tabBrief: '1 Brief',
+  tabClips: '2 Clips',
+  tabFinal: '3 Final',
+  loading: 'Loading the clips',
+  updating: 'Updating status',
+  segmentsLabel: 'Segment clips',
+  empty: 'This campaign has no active segments.',
+  generate: 'Generate',
+  generateOutOfDate: (n: number) => `Generate again, segment ${n}`,
+  outOfDate: 'Out of date',
+  outOfDateNote:
+    'The brief changed after this clip was made. Generate it again to match the brief.',
+  queued: 'Waiting for a free slot. It starts on its own when a running clip ends.',
+  qcRunning: 'Check running',
+  keyMissingBanner: 'Add your provider key to continue. Your work is saved.',
+  stalenessTitle: 'These clips may have changed',
+  retiredSegment: (n: number) => `Segment ${n} was removed from the brief.`,
+  continueFinal: 'Continue to the final ad',
+  openBrief: 'Open the brief',
+} as const;
