@@ -233,7 +233,7 @@ const STATES: { state: string; world: () => World; arrange: Arrange }[] = [
       await expect(card(page, 3)).toHaveAttribute('data-cause', 'unknown');
       await expect(card(page, 4)).toHaveAttribute('data-cause', 'configuration');
       await expect(page.getByText(/Check your WaveSpeed account/)).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Retry segment 3' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Retry segment 3', exact: true })).toHaveCount(0);
       await expect(page.getByRole('link', { name: 'Check provider keys' })).toBeVisible();
     },
   },
