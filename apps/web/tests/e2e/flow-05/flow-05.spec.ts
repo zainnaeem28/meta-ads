@@ -251,12 +251,15 @@ test.describe('@TASK-108 @TC-FLW-05 FLOW-05 keyboard only', () => {
   test('sign in, the second step and the campaigns by keys only', async ({ page }) => {
     await api(page);
     await page.goto(`/sign-in?return=${encodeURIComponent(MFA_CHAIN)}`);
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled();
     await page.getByLabel('Email address').focus();
     await page.keyboard.type(EMAIL);
     await page.keyboard.press('Tab');
     await page.keyboard.type(LOCAL_DEV_PASSWORD);
     await page.keyboard.press('Enter');
     await page.waitForURL('**/mfa?**');
+    await page.waitForLoadState('networkidle');
     await page.getByLabel('6-digit code').focus();
     await page.keyboard.type(LOCAL_DEV_CODE);
     await page.keyboard.press('Enter');
