@@ -101,6 +101,7 @@ function apiModule(
       IdentityModule.register(
         identityConfigFrom(process.env, config.APP_ENV, config.WEB_ORIGIN),
         auth,
+        config.APP_ENV,
       ),
       ...database,
       // The seal side of the key custody (REQ-015) whenever the KEK public keys are configured; with a database it also
