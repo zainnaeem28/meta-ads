@@ -1,8 +1,17 @@
-[
-  {
-    "match": "CVE-2026-112366",
-    "reason": "picomatch@4.0.7 (ReDoS on attacker-supplied extglob patterns) is reached only through development tooling (dependency-cruiser, typescript-eslint, vite via tinyglobby) and is not in the web or api runtime bundle. No untrusted glob reaches it. Published after the TASK-089 check passed; verified with pnpm why (devDependencies only); the lockfile is shared and unchanged by this ticket, so the upgrade belongs to the dependency owner. Not a change of this ticket.",
-    "owner": "Frontend Engineer",
-    "expires": "2026-12-16"
-  }
-]
+{
+  "dispositions": [
+    {
+      "match": "CVE-2026-112366",
+      "reason": "picomatch@4.0.7 (ReDoS on attacker-supplied extglob patterns) is reached only through development tooling (dependency-cruiser, typescript-eslint, vite via tinyglobby) and is not in the web or api runtime bundle. No untrusted glob reaches it. Published after the TASK-089 check passed; verified with pnpm why (devDependencies only); the lockfile is shared and unchanged by this ticket, so the upgrade belongs to the dependency owner. Not a change of this ticket.",
+      "owner": "Frontend Engineer",
+      "expires": "2026-12-16"
+    },
+    {
+      "match": "openai-key-shaped",
+      "reason": "False positive: gitleaks reads 'sk-109-flow-...' inside the branch name 'feature/AIU-174-task-109-flow-...' ('ta' + 'sk-109...') written in the earlier committed submit-check.md report (commits 6d6578c, removed again in 97b57f1). It is a Git branch name, not a credential; no key exists. The report is not recommitted with that line.",
+      "owner": "Frontend Engineer",
+      "expires": "2026-12-16",
+      "path": "docs/evidence/TASK-109/submit-check.md"
+    }
+  ]
+}
