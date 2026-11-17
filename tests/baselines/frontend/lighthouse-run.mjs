@@ -74,7 +74,11 @@ const worker = async (slot) => {
     for (;;) {
       const task = tasks.shift();
       if (!task) return;
-      result.samples.push(await runAsync(task, port, slot));
+      // A run the tool could not complete (protocol timeout, nothing painted on a busy shared host) is repeated up to
+      // twice; only a sample that never completes is recorded with its error and counted as not valid.
+      let record = await runAsync(task, port, slot);
+      for (let retry = 1; record.error && retry <= 2; retry += 1) record = await runAsync(task, port, slot);
+      result.samples.push(record);
     }
   } finally {
     chromeProc.kill('SIGKILL');
