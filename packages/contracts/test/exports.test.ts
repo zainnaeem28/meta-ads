@@ -56,4 +56,19 @@ describe('httpClient mutator', () => {
       globalThis.fetch = original;
     }
   });
+
+  it('sends no credentials, matching the API CORS policy (credentials: false)', async () => {
+    const original = globalThis.fetch;
+    let seen: RequestInit | undefined;
+    globalThis.fetch = (async (_url: string, init?: RequestInit) => {
+      seen = init;
+      return new Response('{}', { status: 200 });
+    }) as typeof fetch;
+    try {
+      await httpClient('/x');
+      expect(seen?.credentials).toBe('omit');
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
 });
