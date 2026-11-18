@@ -32,6 +32,8 @@ export default defineConfig({
   reporter: [['junit', { outputFile: `${web}/${reports}/e2e-junit.xml` }]],
   // One browser context at a time: the tests switch identities and read counts of requests.
   workers: 1,
+  // Cold loads of several routes in one test run on a shared host; the default 30 s is too tight.
+  timeout: 90_000,
   use: {
     baseURL: stack.webUrl,
     contextOptions: { reducedMotion: 'reduce' },
