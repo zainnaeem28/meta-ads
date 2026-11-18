@@ -141,4 +141,13 @@ describe('CMP-017 URL state', () => {
       page: 1,
     });
   });
+
+  it('draws the selected chip as dark ink fill (SCREEN-005 frame)', async () => {
+    render(<Bar />);
+    const chip = screen.getByRole('button', { name: /^Failed/ });
+    expect(chip.className).not.toMatch(/bg-foreground/);
+    await userEvent.click(chip);
+    expect(chip.className).toMatch(/bg-foreground/);
+    expect(chip.className).toMatch(/text-card/);
+  });
 });

@@ -133,7 +133,7 @@ export function FilterBar({
               onClick={() => onStatusChange(pressed ? '' : chip.id)}
               className={`${CHIP_CLASS} ${
                 pressed
-                  ? 'border-primary bg-primary-subtle text-primary-active'
+                  ? 'border-foreground bg-foreground text-card'
                   : 'border-input bg-card text-foreground hover:bg-accent'
               }`}
             >
@@ -149,7 +149,7 @@ export function FilterBar({
               ) : (
                 <span
                   data-count-slot="loaded"
-                  className={`text-center text-caption tabular-nums text-muted-foreground ${SLOT_WIDTH[chip.count > MAX_COUNT ? 4 : reserve]}`}
+                  className={`text-center text-caption tabular-nums ${pressed ? '' : 'text-muted-foreground'} ${SLOT_WIDTH[chip.count > MAX_COUNT ? 4 : reserve]}`}
                 >
                   {chip.count > MAX_COUNT ? `${MAX_COUNT}+` : chip.count}
                 </span>

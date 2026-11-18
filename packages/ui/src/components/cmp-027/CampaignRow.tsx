@@ -67,7 +67,7 @@ export function CampaignRow({
       data-state={deleting ? 'deleting' : 'default'}
       aria-busy={deleting ? true : undefined}
       className={[
-        'relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-card p-3',
+        'relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-card p-3 md:grid md:grid-cols-[3.5rem_minmax(0,1fr)_auto] md:gap-x-4',
         'transition-colors duration-(--duration-fast) ease-standard hover:bg-accent focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring',
         deleting ? 'bg-muted' : '',
         className,
@@ -78,7 +78,7 @@ export function CampaignRow({
     >
       <div
         aria-hidden="true"
-        className="flex aspect-9/16 w-11 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-media-placeholder text-foreground md:w-14"
+        className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-media-placeholder text-foreground md:size-14"
       >
         {posterSrc ? (
           <img src={posterSrc} alt="" className="size-full object-cover" />
@@ -95,53 +95,58 @@ export function CampaignRow({
         </a>
         <p className="text-ui text-muted-foreground">{meta.join(' · ')}</p>
       </div>
-      <Badge
-        variant={status.variant ?? (variant === 'draft' ? 'neutral' : 'success')}
-        icon={status.icon}
-      >
-        {status.label}
-      </Badge>
-      {deleting ? (
-        <p role="status" className="relative z-10 flex w-full items-center gap-2 text-ui md:w-auto">
-          <Icon
-            name="loader-circle"
-            size={16}
-            className="animate-spin motion-reduce:animate-none"
-          />
-          Deleting
-        </p>
-      ) : actions.length > 0 ? (
-        <div className="relative z-10 flex flex-wrap gap-2">
-          {actions.map((a) =>
-            a.icon ? (
-              <Button
-                key={a.id}
-                size="sm"
-                variant="icon-only"
-                aria-label={a.label}
-                title={a.label}
-                onClick={a.onClick}
-                className={
-                  a.destructive
-                    ? 'hover:bg-destructive-subtle hover:text-destructive focus-visible:outline-destructive'
-                    : undefined
-                }
-              >
-                <Icon name={a.icon} size={16} />
-              </Button>
-            ) : (
-              <Button
-                key={a.id}
-                size="sm"
-                variant={a.destructive ? 'destructive-outline' : 'outline'}
-                onClick={a.onClick}
-              >
-                {a.label}
-              </Button>
-            ),
-          )}
-        </div>
-      ) : null}
+      <div className="contents md:flex md:items-center md:justify-end md:gap-2">
+        <Badge
+          variant={status.variant ?? (variant === 'draft' ? 'neutral' : 'success')}
+          icon={status.icon}
+        >
+          {status.label}
+        </Badge>
+        {deleting ? (
+          <p
+            role="status"
+            className="relative z-10 flex w-full items-center gap-2 text-ui md:w-auto"
+          >
+            <Icon
+              name="loader-circle"
+              size={16}
+              className="animate-spin motion-reduce:animate-none"
+            />
+            Deleting
+          </p>
+        ) : actions.length > 0 ? (
+          <div className="relative z-10 flex flex-wrap gap-2">
+            {actions.map((a) =>
+              a.icon ? (
+                <Button
+                  key={a.id}
+                  size="sm"
+                  variant="icon-only"
+                  aria-label={a.label}
+                  title={a.label}
+                  onClick={a.onClick}
+                  className={
+                    a.destructive
+                      ? 'hover:bg-destructive-subtle hover:text-destructive focus-visible:outline-destructive'
+                      : undefined
+                  }
+                >
+                  <Icon name={a.icon} size={16} />
+                </Button>
+              ) : (
+                <Button
+                  key={a.id}
+                  size="sm"
+                  variant={a.destructive ? 'destructive-outline' : 'outline'}
+                  onClick={a.onClick}
+                >
+                  {a.label}
+                </Button>
+              ),
+            )}
+          </div>
+        ) : null}
+      </div>
     </li>
   );
 }

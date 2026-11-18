@@ -124,4 +124,11 @@ describe('CMP-027 gallery demo', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
     expect(await axeViolations(container)).toEqual([]);
   });
+
+  it('keeps the wrap row at 390 px and the three-column grid from md up', () => {
+    renderRow();
+    const row = screen.getByRole('listitem');
+    expect(row.className).toMatch(/\bflex-wrap\b/);
+    expect(row.className).toMatch(/md:grid-cols-\[3\.5rem_minmax\(0,1fr\)_auto\]/);
+  });
 });
