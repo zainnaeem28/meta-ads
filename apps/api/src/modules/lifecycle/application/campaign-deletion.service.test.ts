@@ -25,6 +25,7 @@ function setup(
     }),
   };
   const video = { cancelForCampaign: vi.fn(() => Promise.resolve(1)) };
+  const thumbs = { cancel: vi.fn(() => Promise.resolve(1)) };
   const usage = {
     convertUnconfirmed: vi.fn(() => Promise.resolve({ recorded: true, costUsd: '0' })),
     release: vi.fn(() => Promise.resolve(true)),
@@ -35,11 +36,12 @@ function setup(
     repository,
     queue,
     video as never,
+    thumbs as never,
     usage as never,
     audit as never,
     'text-model',
   );
-  return { service, repository, queue, video, usage, audit, calls };
+  return { service, repository, queue, video, thumbs, usage, audit, calls };
 }
 
 describe('API-042 request', () => {
@@ -53,6 +55,12 @@ describe('API-042 request', () => {
     const accepted = await s.service.request('own-1', 'camp-1', 'req-1');
     expect(accepted.state).toBe('running');
     expect(s.video.cancelForCampaign).toHaveBeenCalledWith(tx, 'own-1', 'camp-1');
+    expect(s.thumbs.cancel).toHaveBeenCalledWith(
+      tx,
+      'own-1',
+      'cancelled_campaign_deleted',
+      'camp-1',
+    );
     // A pending brief call is released; one that may already have been sent is converted first, then released.
     expect(s.usage.release).toHaveBeenCalledTimes(2);
     expect(s.usage.convertUnconfirmed).toHaveBeenCalledOnce();
@@ -85,6 +93,7 @@ describe('API-042 request', () => {
     });
     await expect(s.service.request('own-1', 'camp-1', null)).rejects.toBeInstanceOf(DomainError);
     expect(s.video.cancelForCampaign).not.toHaveBeenCalled();
+    expect(s.thumbs.cancel).not.toHaveBeenCalled();
     expect(s.queue.send).not.toHaveBeenCalled();
     expect(s.audit.record).toHaveBeenCalledWith(
       tx,

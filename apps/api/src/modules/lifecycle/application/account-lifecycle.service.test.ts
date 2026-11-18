@@ -78,6 +78,7 @@ function setup(
     }),
   };
   const video = { cancelForOwner: vi.fn(() => Promise.resolve(1)) };
+  const thumbs = { cancel: vi.fn(() => Promise.resolve(1)) };
   const usage = {
     convertUnconfirmed: vi.fn(() => Promise.resolve({ recorded: true, costUsd: '0' })),
     release: vi.fn(() => Promise.resolve(true)),
@@ -89,13 +90,14 @@ function setup(
     admin,
     queue,
     video as never,
+    thumbs as never,
     usage as never,
     audit as never,
     'text-model',
     over.hold ?? 0,
     'key' in over ? over.key : 'k'.repeat(40),
   );
-  return { service, repository, admin, queue, video, usage, audit, calls };
+  return { service, repository, admin, queue, video, thumbs, usage, audit, calls };
 }
 
 describe('API-101 suspend', () => {
@@ -119,6 +121,7 @@ describe('API-101 suspend', () => {
       'user-1',
       'cancelled_account_suspended',
     );
+    expect(s.thumbs.cancel).toHaveBeenCalledWith(tx, 'user-1', 'cancelled_account_suspended');
     expect(s.usage.release).toHaveBeenCalledTimes(2);
     expect(s.usage.convertUnconfirmed).toHaveBeenCalledOnce();
     expect(s.audit.record).toHaveBeenCalledWith(
@@ -137,6 +140,7 @@ describe('API-101 suspend', () => {
     const s = setup({ target: subject({ status: 'suspended' }) });
     expect((await s.service.suspend('admin-1', 'user-1', null)).status).toBe('suspended');
     expect(s.video.cancelForOwner).not.toHaveBeenCalled();
+    expect(s.thumbs.cancel).not.toHaveBeenCalled();
     expect(s.audit.record).not.toHaveBeenCalled();
   });
 
@@ -177,6 +181,7 @@ describe('API-103 remove', () => {
       `send:${accepted.deletionRunId}:{}`,
     ]);
     expect(s.video.cancelForOwner).toHaveBeenCalledWith(tx, 'user-1', 'cancelled_account_removed');
+    expect(s.thumbs.cancel).toHaveBeenCalledWith(tx, 'user-1', 'cancelled_account_removed');
     expect(s.audit.record).toHaveBeenCalledWith(
       tx,
       expect.objectContaining({ action: 'account.removed', objectId: 'user-1' }),

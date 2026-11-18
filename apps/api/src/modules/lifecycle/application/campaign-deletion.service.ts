@@ -4,7 +4,7 @@ import type { Database } from '../../../platform/db/index.js';
 import { DomainError } from '../../../platform/http/index.js';
 import { newId } from '../../../platform/shared-kernel/index.js';
 import { AuditService } from '../../audit/index.js';
-import { VideoJobsService } from '../../production/index.js';
+import { ThumbService, VideoJobsService } from '../../production/index.js';
 import { UsageService } from '../../usage/index.js';
 import {
   CAMPAIGN_BRIEF_TEXT_MODEL,
@@ -33,6 +33,7 @@ export class CampaignDeletionService {
     @Inject(CAMPAIGN_DELETION_REPOSITORY) private readonly repository: CampaignDeletionRepository,
     @Inject(CAMPAIGN_DELETION_QUEUEING) private readonly queue: CampaignDeletionQueueing,
     @Inject(VideoJobsService) private readonly video: VideoJobsService,
+    @Inject(ThumbService) private readonly thumbs: ThumbService,
     @Inject(UsageService) private readonly usage: UsageService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(CAMPAIGN_BRIEF_TEXT_MODEL) private readonly textModel: string,
@@ -46,6 +47,7 @@ export class CampaignDeletionService {
     const accepted = await this.database.uow.run(async (tx): Promise<DeletionAccepted | null> => {
       if (!(await this.repository.markDeleting(tx, ownerId, campaignId))) return null;
       await this.video.cancelForCampaign(tx, ownerId, campaignId);
+      await this.thumbs.cancel(tx, ownerId, 'cancelled_campaign_deleted', campaignId);
       for (const job of await this.repository.cancelBriefJobs(tx, ownerId, campaignId)) {
         // A call that may already have been sent has an unknown outcome and keeps its estimate counted (SB-D9).
         if (job.state === 'submitting' && job.callCount >= 1) {

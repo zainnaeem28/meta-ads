@@ -6,7 +6,7 @@ import { DomainError } from '../../../platform/http/domain-error.js';
 import { PageResult } from '../../../platform/http/response.js';
 import { newId } from '../../../platform/shared-kernel/index.js';
 import { AuditService } from '../../audit/index.js';
-import { VideoJobsService } from '../../production/index.js';
+import { ThumbService, VideoJobsService } from '../../production/index.js';
 import { UsageService } from '../../usage/index.js';
 import { holdMs } from './account-erasure-steps.js';
 import {
@@ -69,6 +69,7 @@ export class AccountLifecycleService {
     @Inject(ACCOUNT_ADMIN) private readonly admin: AccountAdmin,
     @Inject(ACCOUNT_ERASURE_QUEUEING) private readonly queue: AccountErasureQueueing,
     @Inject(VideoJobsService) private readonly video: VideoJobsService,
+    @Inject(ThumbService) private readonly thumbs: ThumbService,
     @Inject(UsageService) private readonly usage: UsageService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(CAMPAIGN_BRIEF_TEXT_MODEL) private readonly textModel: string,
@@ -214,6 +215,7 @@ export class AccountLifecycleService {
   /** Every unfinished job of the owner, with its reservation, in the caller's transaction (SB-D16). */
   private async cancelJobs(tx: DbTx, ownerId: string, cause: Cause): Promise<void> {
     await this.video.cancelForOwner(tx, ownerId, cause);
+    await this.thumbs.cancel(tx, ownerId, cause);
     for (const job of await this.repository.cancelBriefJobs(tx, ownerId, cause)) {
       // A call that may already have been sent has an unknown outcome and keeps its estimate counted (SB-D9).
       if (job.state === 'submitting' && job.callCount >= 1) {
