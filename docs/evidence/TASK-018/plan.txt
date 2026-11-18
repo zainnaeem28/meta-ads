@@ -1,0 +1,51 @@
+PASS render blueprints: lint and currency (staging, production)
+     staging: 6 services, 1 database, 54 variable names, 36 left to the owner
+     production: 6 services, 1 database, 54 variable names, 36 left to the owner
+PASS render blueprints: every injected defect is caught
+     15 of 15 defects caught
+PASS connection capacity: the peak is 47 and fits 80% of a plan's max_connections
+     steady state 22, rolling-deploy peak 47; a plan needs max_connections of at least 59
+PASS roles: first apply creates four roles and reads them back
+     ok role app_migrator_<sfx> exists, login, no elevated attribute, CONNECT on prov_<sfx>
+     ok role app_api_<sfx> exists, login, no elevated attribute, CONNECT on prov_<sfx>
+     ok role app_worker_<sfx> exists, login, no elevated attribute, CONNECT on prov_<sfx>
+     ok role app_backup_<sfx> exists, login, no elevated attribute, CONNECT on prov_<sfx>
+     ok app_backup_<sfx> connection limit 2, NOINHERIT, read-only default, member of no role, no member inherits or SETs it
+     ok runtime and migrator roles default search_path to public
+     ok max_connections = 100 covers the 47 connection peak within 80 percent (limit 80)
+     roles: apply complete
+PASS roles: second apply changes nothing (idempotent) and still reads back
+     4 roles unchanged
+PASS roles: app_backup attributes, session default, membership and CONNECT read back from the catalogue
+     app_backup: LOGIN NOINHERIT, CONNECTION LIMIT 2, default_transaction_read_only = on, member of no role
+     creator grant (PostgreSQL 16+): host_admin_<sfx> ADMIN OPTION, INHERIT FALSE, SET FALSE, left as created
+     CONNECT: app database granted to all four roles; the other database refused through PUBLIC
+PASS roles: app_backup can read but never write, create or become another role
+PASS roles: drift is repaired (connection limit, inherit); passwords change only on --rotate
+PASS roles: an elevated existing role is refused, not repaired
+PASS roles: a connection peak the plan cannot hold fails the read-back
+PASS roles: a missing password for a missing role stops before creating anything
+PASS roles: nothing is left on the test server
+PASS roles: hosted target without a G3 record is refused; without a connection it is deployment-ready, not deployed
+PASS buckets: the plan names three private buckets per environment and the lock and lifecycle rules (SB v6 7.1 C)
+     lock: ledger/ indefinite, whole bucket age = BACKUP_RETENTION_DAYS; lifecycle: db/, manifests/, media-deleted/ after retention + 1 d; none on media/ or ledger/
+     names (staging): shroomap-staging-app, shroomap-staging-erasure-ledger, shroomap-staging-backup; production likewise, never shared
+PASS buckets: apply creates the buckets and rules, reads them back, and a second apply creates nothing
+     created bucket shroomap-staging-app
+     ok shroomap-staging-app lifecycle: 0 rule(s) read back equal
+     ok shroomap-staging-app lock: 0 rule(s) read back equal
+     created bucket shroomap-staging-erasure-ledger
+     ok shroomap-staging-erasure-ledger lifecycle: 0 rule(s) read back equal
+     ok shroomap-staging-erasure-ledger lock: 0 rule(s) read back equal
+     created bucket shroomap-staging-backup
+     ok shroomap-staging-backup lifecycle: 3 rule(s) read back equal
+     ok shroomap-staging-backup lock: 2 rule(s) read back equal
+     buckets: apply complete
+     second apply: no bucket created, 6 read-backs equal
+PASS buckets: verify never writes, finds a missing bucket and a drifted rule
+PASS buckets: a host that stores fewer rules than asked, or refuses them, fails the run
+PASS buckets: hosted apply needs the environment's G3 record; a local flag cannot reach a real host
+PASS buckets: without an account it calls nothing and lists what the owner adds (deployment-ready, not deployed)
+
+provision plan check: 19 of 19 checks passed
+no credential was used, no account was contacted and no cloud resource was created; the shared test PostgreSQL held a disposable database and four roles, all dropped

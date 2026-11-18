@@ -1,0 +1,14 @@
+{
+  "owner": "DEVOPS-PLAN 10.2 (every pool counted); checked by scripts/provision/plan-check.mjs, read back by sql/verify.sql",
+  "pools": {
+    "api": { "drizzle": 8, "pgboss": 2 },
+    "worker": { "drizzle": 6, "pgboss": 6 },
+    "migrate": 2,
+    "backup": 1,
+    "operator": 2
+  },
+  "rollingDeploy": { "api": 2, "worker": 2, "migrate": 0 },
+  "peak": 47,
+  "headroomPercent": 80,
+  "note": "peak = 2 x api (10) + 2 x worker (12) + migrate 0 (finishes before the deploys) + backup 1 + operator 2. If the host plan's max_connections is below ceil(peak / 0.8) = 59, the pools shrink (api 5+2, worker 4+4) before G3. app_backup adds 2 only while the backup cron runs (its connection limit); the plan counts its one connection."
+}
