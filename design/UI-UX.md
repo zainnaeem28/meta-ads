@@ -35,6 +35,35 @@ States of a nav item (sidebar, rail and tab bar): default (`--sidebar-foreground
 
 Inter variable (OFL 1.1), self-hosted latin and latin-ext files, weights 400/500/600, `font-display: swap`; fallback stack and licence as in BRAND-BRIEF.md §5. Lucide 1.73.0 (ISC) at 16, 20 and 24 px, 2 px stroke, one SVG per icon (list in `design/mockups/assets/icons/`). Mockups load the same files; no CDN.
 
+### 5.1 Layout stability (CLS <= 0.1; decision AIU-295, NFR-02)
+
+Nothing that arrives after first paint may change the size or position of anything already drawn. Three rules; the Frontend implements them in `packages/ui` only, no product scope changes.
+
+**Inter fallback (size-adjusted, local).** Keep `font-display: swap` and add a metric-matched fallback face in `theme.css`, listed right after Inter in `--font-sans`:
+
+```css
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('Liberation Sans'), local('Arimo'), local('Helvetica');
+  font-weight: 400 600;
+  size-adjust: 107.4%;
+  ascent-override: 90.2%;
+  descent-override: 22.48%;
+  line-gap-override: 0%;
+}
+/* tokens.css */ --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+```
+The two real faces and their `unicode-range` stay as they are. Preloading is a second step, only if the measured font-swap CLS stays above 0.01: `<link rel="preload" as="font" type="font/woff2" crossorigin>` for the latin file in the app root layout (not latin-ext).
+
+**Count slots (CMP-014 tab count, CMP-017 chip count).** A count is always drawn in a slot of fixed minimum width, in `tabular-nums`, centred. While the count is unknown (`count === null`, new state) the slot shows a muted placeholder of the same size (`--muted` pill, no animation under `prefers-reduced-motion`, `aria-hidden`, the control's accessible name has no number). `undefined` still means "this chip or tab has no count".
+| Component | Slot | Loading | Loaded |
+| --- | --- | --- | --- |
+| CMP-014 tab count pill | `min-w-6` (24 px), height unchanged, `px-2`, `tabular-nums text-center` | pill with no text, 24 px wide | number; widths above 99 grow only inside the 24 px minimum up to 3 digits (`min-w-7` 28 px when the list can exceed 99) |
+| CMP-017 chip count | `min-w-[2ch]` inside the chip, `tabular-nums text-center` | invisible text node `00` width, `bg-muted` 2 ch pill | number |
+The chip group on phone is a single row that scrolls horizontally (`flex-nowrap overflow-x-auto`, no wrap) so a chip never moves to another line. A chip's label never changes after first paint. Screens pass `count: null` until the list query answers; they never mount counts one by one.
+
+**Key-state slot (CMP-030).** The header key badge sits in a slot that exists in every state, including `ok` (empty). Slot size: 44 x 44 px under 768 px (icon only, as now); 8.5 rem x 24 px (136 px) from 768 px, content right-aligned. `KeyState` gains `unknown` (before API-010 answers): the slot draws a muted pill of the slot size (`aria-hidden`), then the real badge (`missing`, `disabled`) or nothing (`ok`) replaces it without changing the slot size. The badge text truncates (`truncate`) inside the slot; it never widens it. The account menu and nav do not move.
+
 ## 6. Component inventory and anatomy
 
 All components take their values from tokens and live in `components.css` (class names in parentheses). Screens use components only by ID. Gallery frames: `CMP-SHEET-01` foundations and form controls, `-02` feedback, navigation and data, `-03` dialogs, upload and domain composites, `-04` brand and tokens (all at 1440 and 390).
