@@ -22,14 +22,21 @@ interface Seeded {
   dialogue: string[];
 }
 const post = async <T = unknown>(path: string, body: unknown = {}): Promise<T> =>
-  (await fetch(`${control}${path}`, { method: 'POST', body: JSON.stringify(body) })).json() as Promise<T>;
+  (
+    await fetch(`${control}${path}`, { method: 'POST', body: JSON.stringify(body) })
+  ).json() as Promise<T>;
 const seed = (email: string, options: Record<string, unknown> = {}) =>
   post<Seeded>('/seed', { email, ...options });
 const steer = (body: { failOnce?: number[]; qcMismatch?: number[]; submit?: string }) =>
   post('/behaviour', body);
 const stateOf = async (campaign: string) =>
   (await (await fetch(`${control}/state?campaign=${campaign}`)).json()) as {
-    jobs: { position: number; state: string; cause_class: string | null; qc_state: string | null }[];
+    jobs: {
+      position: number;
+      state: string;
+      cause_class: string | null;
+      qc_state: string | null;
+    }[];
   };
 /** Submits that reached the WaveSpeed stand-in (a clip is only ever sent by an explicit action). */
 const submits = async () =>
@@ -48,7 +55,12 @@ const sessionCookie = async (email: string, expiresIn: number) =>
     email,
     exp: Math.floor(Date.now() / 1000) + expiresIn,
   });
-const signedIn = async (context: BrowserContext, baseURL: string, email: string, expiresIn = 3000) =>
+const signedIn = async (
+  context: BrowserContext,
+  baseURL: string,
+  email: string,
+  expiresIn = 3000,
+) =>
   context.addCookies([
     { name: LOCAL_SESSION_COOKIE, value: await sessionCookie(email, expiresIn), url: baseURL },
   ]);
@@ -80,7 +92,8 @@ const press = async (page: Page, target: Locator, key = 'Enter') => {
   await page.keyboard.press(key);
 };
 const row = (page: Page, position: number) => page.locator(`li[data-segment="${position}"]`);
-const rows = (page: Page) => page.getByRole('list', { name: 'Segment clips' }).getByRole('listitem');
+const rows = (page: Page) =>
+  page.getByRole('list', { name: 'Segment clips' }).getByRole('listitem');
 
 test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to end', () => {
   test.use({ timezoneId: 'UTC', viewport: { width: 1440, height: 900 } });
@@ -100,7 +113,9 @@ test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to
 
     // 1. SCREEN-007, accepted: the way on is "Continue to clips".
     await page.goto(`/campaigns/${s.campaign}/brief`);
-    await expect(page.getByRole('heading', { level: 2, name: 'Brief accepted · all checks closed' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Brief accepted · all checks closed' }),
+    ).toBeVisible();
     await expect(page.getByText('Accepted', { exact: true }).first()).toBeVisible();
     await capture(page, '1-brief-accepted');
     await press(page, page.getByRole('link', { name: 'Continue to clips' }).first());
@@ -110,9 +125,13 @@ test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to
     await expect(page.getByRole('heading', { level: 1, name: 'Calm Morning Drink' })).toBeVisible();
     await expect(rows(page)).toHaveCount(4);
     await expect(page.getByText('Not generated')).toHaveCount(4);
-    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute('data-clips-state', 'ready');
+    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute(
+      'data-clips-state',
+      'ready',
+    );
     await expect(page.getByRole('tab', { name: '3 Final' })).toBeDisabled();
-    for (let p = 1; p <= 4; p += 1) await expect(row(page, p)).toContainText(s.dialogue[p - 1]!.slice(0, 30));
+    for (let p = 1; p <= 4; p += 1)
+      await expect(row(page, p)).toContainText(s.dialogue[p - 1]!.slice(0, 30));
     await capture(page, '2-clips-not-generated');
 
     // 3. Generate the remaining clips: four jobs start, one provider task per clip.
@@ -122,7 +141,9 @@ test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to
     await capture(page, '3-generating');
 
     // 4. Segment 2 fails: its cause class and Retry show, nothing is retried automatically.
-    await expect(row(page, 2)).toContainText('Failed: temporary provider problem', { timeout: SLOW });
+    await expect(row(page, 2)).toContainText('Failed: temporary provider problem', {
+      timeout: SLOW,
+    });
     await expect(row(page, 2).getByRole('button', { name: 'Retry segment 2' })).toBeVisible();
     await expect(row(page, 2)).toContainText('Nothing is retried automatically');
     await capture(page, '4-failed-with-retry');
@@ -163,7 +184,9 @@ test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to
     await press(page, page.getByRole('link', { name: 'Choose clips for the final ad' }));
     await page.waitForURL(`**/campaigns/${s.campaign}/final`);
     await expect(page.getByRole('heading', { name: 'Choose and order clips' })).toBeVisible();
-    await expect(page.getByRole('list', { name: 'Clips for the final ad' }).getByRole('listitem')).toHaveCount(4);
+    await expect(
+      page.getByRole('list', { name: 'Clips for the final ad' }).getByRole('listitem'),
+    ).toHaveCount(4);
     await expect(page.getByRole('button', { name: 'Assemble final ad' })).toBeEnabled();
     await capture(page, '7-final-arrival');
 
@@ -192,7 +215,9 @@ test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to
     await capture(page, '8-outcome-unknown');
     await page.waitForTimeout(12_000);
     expect(await submits(), 'the clip was sent once and is never sent again by itself').toBe(1);
-    expect((await stateOf(s.campaign)).jobs).toMatchObject([{ position: 1, state: 'failed', cause_class: 'outcome_unknown' }]);
+    expect((await stateOf(s.campaign)).jobs).toMatchObject([
+      { position: 1, state: 'failed', cause_class: 'outcome_unknown' },
+    ]);
 
     // Only an explicit action starts another clip.
     await steer({ submit: 'ok' });
@@ -213,7 +238,10 @@ test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to
     await signedIn(context, baseURL!, email);
     await page.goto(`/campaigns/${s.campaign}/clips`);
     await press(page, page.getByRole('button', { name: 'Generate segment 1' }));
-    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute('data-clips-state', 'spend_cap_reached');
+    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute(
+      'data-clips-state',
+      'spend_cap_reached',
+    );
     await expect(page.getByRole('button', { name: 'Generate segment 1' })).toBeDisabled();
     await capture(page, '9-cap-reached');
     expect((await stateOf(s.campaign)).jobs).toEqual([]);
@@ -229,22 +257,41 @@ test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to
     const s = await seed(email, { keys: { wavespeed: 'disabled' } });
     await signedIn(context, baseURL!, email);
     await page.goto(`/campaigns/${s.campaign}/clips`);
-    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute('data-clips-state', 'key_disabled');
-    await expect(page.getByText('Your provider key was disabled after repeated failures. Replace it to continue.')).toBeVisible();
-    for (let p = 1; p <= 4; p += 1) await expect(page.getByRole('button', { name: `Generate segment ${p}` })).toBeDisabled();
+    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute(
+      'data-clips-state',
+      'key_disabled',
+    );
+    await expect(
+      page.getByText(
+        'Your provider key was disabled after repeated failures. Replace it to continue.',
+      ),
+    ).toBeVisible();
+    for (let p = 1; p <= 4; p += 1)
+      await expect(page.getByRole('button', { name: `Generate segment ${p}` })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Generate remaining clips' })).toBeDisabled();
     await capture(page, '10-key-disabled');
-    await page.getByRole('link', { name: /Replace key/ }).first().click();
+    await page
+      .getByRole('link', { name: /Replace key/ })
+      .first()
+      .click();
     await page.waitForURL('**/settings/provider-keys');
     await page.goBack();
-    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute('data-clips-state', 'key_disabled');
+    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute(
+      'data-clips-state',
+      'key_disabled',
+    );
 
     const missingEmail = 'flow03-nokey@example.com';
     const m = await seed(missingEmail, { keys: { wavespeed: 'none' } });
     await signedIn(context, baseURL!, missingEmail);
     await page.goto(`/campaigns/${m.campaign}/clips`);
-    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute('data-clips-state', 'key_missing');
-    await expect(page.getByText('Add your provider key to continue. Your work is saved.')).toBeVisible();
+    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute(
+      'data-clips-state',
+      'key_missing',
+    );
+    await expect(
+      page.getByText('Add your provider key to continue. Your work is saved.'),
+    ).toBeVisible();
     await capture(page, '11-key-missing');
   });
 
@@ -257,14 +304,23 @@ test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to
     const s = await seed(email, { briefState: 'draft' });
     await signedIn(context, baseURL!, email);
     await page.goto(`/campaigns/${s.campaign}/clips`);
-    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute('data-clips-state', 'brief_not_accepted');
+    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute(
+      'data-clips-state',
+      'brief_not_accepted',
+    );
     await expect(page.getByRole('button', { name: 'Generate segment 1' })).toBeDisabled();
     await expect(page.getByRole('tab', { name: '3 Final' })).toBeDisabled();
     await capture(page, '12-brief-not-accepted');
-    await page.getByRole('link', { name: /Open the brief/ }).first().click();
+    await page
+      .getByRole('link', { name: /Open the brief/ })
+      .first()
+      .click();
     await page.waitForURL(`**/campaigns/${s.campaign}/brief`);
     await page.goBack();
-    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute('data-clips-state', 'brief_not_accepted');
+    await expect(page.locator('[data-screen="SCREEN-008"]')).toHaveAttribute(
+      'data-clips-state',
+      'brief_not_accepted',
+    );
   });
 
   test('leaving while clips run keeps them running; coming back shows them, none is sent twice (back and cancel path)', async ({
@@ -333,13 +389,17 @@ test.describe('@TASK-106 @TC-FLW-03 @FLOW-03 generate clips, QC and retry end to
     await signedIn(context, baseURL!, 'flow03-stranger@example.com');
     const calls: number[] = [];
     page.on('response', (r) => {
-      if (/\/api\/v1\/campaigns\/[^/]+(\/video-jobs|\/brief)?$/.test(new URL(r.url()).pathname)) calls.push(r.status());
+      if (/\/api\/v1\/campaigns\/[^/]+(\/video-jobs|\/brief)?$/.test(new URL(r.url()).pathname))
+        calls.push(r.status());
     });
     await page.goto(`/campaigns/${owner.campaign}/clips`);
     await expect(page.getByText(owner.dialogue[0]!.slice(0, 30))).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Generate segment/ })).toHaveCount(0);
     await expect.poll(() => calls.length).toBeGreaterThan(0);
-    expect(calls.every((c) => c === 404), 'the api answers not found, never forbidden or the data').toBe(true);
+    expect(
+      calls.every((c) => c === 404),
+      'the api answers not found, never forbidden or the data',
+    ).toBe(true);
     await capture(page, '15-foreign-campaign');
   });
 });

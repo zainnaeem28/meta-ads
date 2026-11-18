@@ -4,7 +4,7 @@
 # (not applicable), never 0.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-export PATH="${CI_TOOLS_DIR:-$HOME/.cache/shroomap-ci-tools}/bin:$PATH"
+export PATH="${CI_TOOLS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/shroomap-ci-tools}/bin:$PATH"
 dir="${1:-$ROOT/apps/web/.next}"
 report="${2:-$ROOT/reports/bundle-secrets.sarif}"
 if [ ! -d "$dir" ]; then echo "bundle-scan: no built bundle at $dir" >&2; exit 3; fi

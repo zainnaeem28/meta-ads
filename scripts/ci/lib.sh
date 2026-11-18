@@ -6,7 +6,7 @@ set -euo pipefail
 
 CI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CI_DIR="$CI_ROOT/scripts/ci"
-export CI_TOOLS_DIR="${CI_TOOLS_DIR:-$HOME/.cache/shroomap-ci-tools}"
+export CI_TOOLS_DIR="${CI_TOOLS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/shroomap-ci-tools}"
 export PATH="$CI_TOOLS_DIR/bin:$CI_TOOLS_DIR/venv/bin:$PATH"
 REPORTS="${CI_REPORTS_DIR:-$CI_ROOT/reports}"
 POLICY="${CI_POLICY:-$CI_ROOT/config/quality-policy.json}"
