@@ -2,6 +2,7 @@
 
 import {
   adminUsageReport,
+  adminUsageReportCsv,
   getAdminUsageReportQueryKey,
   type ProviderUsage,
   type UsageReport,
@@ -10,6 +11,7 @@ import {
 } from '@shroomap/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@shroomap/ui/cmp-003';
+import { Icon } from '@shroomap/ui/icons';
 import { Input } from '@shroomap/ui/cmp-004';
 import { Select } from '@shroomap/ui/cmp-005';
 import { Alert } from '@shroomap/ui/cmp-011';
@@ -81,14 +83,17 @@ function Section({
   );
 }
 
-function CostShare({ percent }: { percent: number }) {
+function CostShare({ percent, accent }: { percent: number; accent?: boolean }) {
   return (
     <span className="flex items-center gap-2">
       <span
         aria-hidden="true"
         className="h-2 w-24 overflow-hidden rounded-full border border-border-strong bg-muted"
       >
-        <span className="block h-full bg-chart-1" style={{ width: `${percent}%` }} />
+        <span
+          className={`block h-full ${accent ? 'bg-chart-2' : 'bg-chart-1'}`}
+          style={{ width: `${percent}%` }}
+        />
       </span>
       <span className="tabular-nums">{percent}%</span>
     </span>
@@ -114,7 +119,12 @@ const usageColumns = (cost: bigint): TableColumn<ProviderUsage>[] => [
   {
     id: 'share',
     header: 'Share of cost',
-    cell: (u) => <CostShare percent={share(microUsd(u.estimatedCostUsd), cost)} />,
+    cell: (u) => (
+      <CostShare
+        percent={share(microUsd(u.estimatedCostUsd), cost)}
+        accent={u.provider === 'wavespeed'}
+      />
+    ),
   },
   { id: 'p95', header: 'p95 latency', cell: (u) => <Num>{formatLatency(u.latencyP95Ms)}</Num> },
 ];
@@ -125,7 +135,7 @@ const accountColumns = (cost: bigint): TableColumn<AccountRow>[] => {
     {
       id: 'user',
       header: 'User ID',
-      cell: (r) => <span className="font-mono">{shortUserId(r.userId)}</span>,
+      cell: (r) => <span className="whitespace-nowrap font-mono">{shortUserId(r.userId)}</span>,
     },
     { id: 'provider', header: 'Provider', cell: (r) => providerName(r.usage.provider) },
     ...rest.map((c) => ({ ...c, cell: (r: AccountRow) => c.cell(r.usage) })),
@@ -152,11 +162,6 @@ const claimColumns: TableColumn<UsageReportClaimChecksItem>[] = [
       </Num>
     ),
   },
-];
-
-const jobColumns: TableColumn<[string, number]>[] = [
-  { id: 'state', header: 'State', cell: ([state]) => state.replace(/_/g, ' ') },
-  { id: 'jobs', header: 'Jobs', cell: ([, n]) => <Num>{formatCount(n)}</Num> },
 ];
 
 function Metrics({ report, loading }: { report?: UsageReport; loading?: boolean }) {
@@ -191,7 +196,6 @@ function Metrics({ report, loading }: { report?: UsageReport; loading?: boolean 
 function Tables({ report }: { report: UsageReport }) {
   const t = totalsOf(report);
   const rows = accountRows(report);
-  const jobs = Object.entries(report.jobStates);
   return (
     <>
       <Section id="by-account" title={COPY.accountsTitle} note={COPY.accountsNote}>
@@ -202,19 +206,6 @@ function Tables({ report }: { report: UsageReport }) {
           rowKey={(r) => r.key}
         />
       </Section>
-      <Section id="by-provider" title={COPY.providersTitle} note={COPY.accountsNote}>
-        <Table
-          label={COPY.providersTitle}
-          columns={usageColumns(t.cost)}
-          rows={report.providers}
-          rowKey={(u) => u.provider}
-        />
-      </Section>
-      {jobs.length > 0 ? (
-        <Section id="job-states" title={COPY.jobsTitle} note={COPY.jobsNote}>
-          <Table label={COPY.jobsTitle} columns={jobColumns} rows={jobs} rowKey={([s]) => s} />
-        </Section>
-      ) : null}
       <Section id="claim-checks" title={COPY.claimsTitle} note={COPY.claimsNote}>
         <Table
           label={COPY.claimsTitle}
@@ -242,15 +233,16 @@ function writeUrl(window: ReportWindow | null) {
 
 /**
  * SCREEN-015 at `/admin/usage` (Administrator): the window selector (default 30 days, at most 366), the "as of" time,
- * metric tiles, per-account and per-provider tables with cost labelled an estimate, job states and claim-check
- * counts (API-130). Accounts are user IDs only. The optional CSV (API-131) is not offered here: the shared api client
- * parses every body as JSON, so it cannot return the `text/csv` body (change request on the ticket).
+ * metric tiles, per-account and per-provider tables with cost labelled an estimate, claim-check
+ * counts (API-130). Accounts are user IDs only. The header's Export CSV (API-131) downloads the same window as `text/csv`.
  */
 export function UsageScreen({ initialWindow = null }: { initialWindow?: ReportWindow | null }) {
   const [applied, setApplied] = useState<ReportWindow | null>(initialWindow);
   const [choice, setChoice] = useState<WindowChoice>(() => choiceOf(initialWindow));
   const [draft, setDraft] = useState<ReportWindow>(initialWindow ?? EMPTY_WINDOW);
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
 
   const params = applied ? windowParams(applied) : null;
   const query = useQuery<UsageReportResponse>({
@@ -266,6 +258,26 @@ export function UsageScreen({ initialWindow = null }: { initialWindow?: ReportWi
   const unreachable = code === 'service_unavailable';
   const report = query.data?.data;
   const retry = () => void query.refetch();
+
+  const exportCsv = async () => {
+    setExporting(true);
+    setExportError(false);
+    try {
+      const { data } = await adminUsageReportCsv(params ?? undefined);
+      const url = URL.createObjectURL(new Blob([String(data)], { type: 'text/csv' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'usage-report.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError(true);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const choose = (next: WindowChoice) => {
     setChoice(next);
@@ -357,10 +369,21 @@ export function UsageScreen({ initialWindow = null }: { initialWindow?: ReportWi
       >
         {forbidden ? null : (
           <>
-            <header className="flex flex-col gap-1">
-              <h1 className="text-section font-semibold">{COPY.title}</h1>
-              <p className="text-ui text-muted-foreground">{COPY.description}</p>
+            <header className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <h1 className="text-section font-semibold">{COPY.title}</h1>
+                <p className="text-ui text-muted-foreground">{COPY.description}</p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => void exportCsv()}
+                disabled={exporting || !report}
+              >
+                <Icon name="download" size={16} />
+                {COPY.exportCsv}
+              </Button>
             </header>
+            {exportError ? <Alert variant="destructive">{COPY.exportError}</Alert> : null}
             <div className="flex flex-wrap items-end gap-4">
               <FormField
                 label={COPY.windowLabel}

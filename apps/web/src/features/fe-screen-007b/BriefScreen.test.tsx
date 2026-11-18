@@ -98,7 +98,7 @@ describe('SCREEN-007 brief (TASK-093 behaviour)', () => {
       'tab',
     );
     expect(tabs.map((t) => [t.textContent?.trim(), t.getAttribute('aria-disabled')])).toEqual([
-      ['1 Brief', null],
+      ['1 Brief Needs review', null],
       ['2 Clips', 'true'],
       ['3 Final', 'true'],
     ]);
@@ -106,6 +106,8 @@ describe('SCREEN-007 brief (TASK-093 behaviour)', () => {
     expect(screen.getByText('1 high risk')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Segment 2 · 0:15 to 0:30' })).toBeInTheDocument();
     expect(screen.getAllByText(/words, (below|within|above)/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/\d+ words? · target 32 to 42/).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('segment-highlight').querySelector('mark')).not.toBeNull();
     expect(accept()).toHaveAttribute('aria-disabled', 'true');
     expect(accept()).toHaveAccessibleDescription(
       '2 issues are still open, including 1 that must be fixed by editing the text. Resolve them, then accept.',
@@ -201,7 +203,7 @@ describe('SCREEN-007 brief (TASK-093 behaviour)', () => {
       `/campaigns/${CAMPAIGN_ID}/clips`,
     );
     expect(screen.getByRole('tab', { name: /2 Clips/ })).not.toHaveAttribute('aria-disabled');
-    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(screen.getAllByText('Accepted').length).toBe(2);
   });
 
   it('accepted: editing reopens the brief for acceptance (Save and Accept are offered, not Continue)', async () => {
