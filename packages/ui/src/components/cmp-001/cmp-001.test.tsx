@@ -82,6 +82,7 @@ describe('CMP-001 LogoLink', () => {
     expect(html).toContain('href="/"');
     expect(html).toContain('aria-label="ShrooMap home"');
     expect(html).toContain('h-6.5 sm:h-7.5');
+    expect(html).toContain('min-h-11 min-w-11');
     expect(html).toContain('aria-hidden="true"');
   });
 
