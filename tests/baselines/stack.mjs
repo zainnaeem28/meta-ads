@@ -357,6 +357,14 @@ async function up(stateDir) {
     }),
   );
   const pk = createPrivateKey(privateKey.export({ type: 'pkcs8', format: 'pem' }));
+  // The api preload signs the web's local-session token requests with this throwaway key (clerk-stub-preload.mjs).
+  writeFileSync(
+    join(stateDir, 'signing-key.pem'),
+    privateKey.export({ type: 'pkcs8', format: 'pem' }),
+    {
+      mode: 0o600,
+    },
+  );
 
   // 5. the api
   const apiEnv = {
@@ -370,6 +378,8 @@ async function up(stateDir) {
     CLERK_JWT_ISSUER: ISSUER,
     CLERK_SECRET_KEY: 'sk_test_baseline_synthetic',
     BASELINE_JWKS_FILE: jwksFile,
+    BASELINE_SIGNING_KEY_FILE: join(stateDir, 'signing-key.pem'),
+    BASELINE_SESSIONS_FILE: join(stateDir, 'sessions.json'),
     NODE_OPTIONS: `--import=${pathToFileURL(join(here, 'support', 'clerk-stub-preload.mjs')).href}`,
     LOG_LEVEL: 'warn',
   };
@@ -435,6 +445,10 @@ async function up(stateDir) {
     },
     ready: true,
   });
+  writeFileSync(
+    join(stateDir, 'sessions.json'),
+    JSON.stringify([...subjects, admin].map((x) => ({ sub: x.sub, email: x.email, kid }))),
+  );
   save();
   rmSync(envDir, { recursive: true, force: true });
   process.stdout.write(
