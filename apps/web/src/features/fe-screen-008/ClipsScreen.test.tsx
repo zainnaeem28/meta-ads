@@ -91,7 +91,10 @@ describe('SCREEN-008 clips (TASK-095)', () => {
     expect(await screen.findByText('Loading the clips')).toBeInTheDocument();
     expect(document.querySelector('[data-screen=SCREEN-008]')).toHaveAttribute('aria-busy', 'true');
     // The "N of M" chip has its slot reserved while loading, so the number arriving moves nothing (CLS).
-    expect(document.querySelector('[data-chip-slot=loading]')).toHaveAttribute('aria-hidden', 'true');
+    expect(document.querySelector('[data-chip-slot=loading]')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
   });
 
   it('default: a card per segment with Generate named by segment; stage tabs mark Clips', async () => {
