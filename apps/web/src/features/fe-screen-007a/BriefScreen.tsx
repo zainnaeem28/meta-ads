@@ -538,7 +538,7 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
       role="user"
       path={path}
       pageName={`${COPY.title} · ${name}`}
-      keyState={deriveKeyState(keys.data?.data)}
+      keyState={deriveKeyState(keys.data?.data, keys.isError)}
       toasts={toasts}
       onDismissToast={() => setToasts([])}
       onSignOut={() => window.location.assign(ROUTES.signIn)}

@@ -1,21 +1,6 @@
 'use client';
 
-import {
-  deleteCampaign,
-  deleteDraft,
-  getGetMeQueryKey,
-  getListMyProviderKeysQueryKey,
-  getMe,
-  listCampaigns,
-  listDrafts,
-  listMyProviderKeys,
-  type CampaignPage,
-  type CampaignSummary,
-  type Draft,
-  type DraftPage,
-  type MeResponse,
-  type ProviderKeyListResponse,
-} from '@shroomap/contracts';
+import { deleteCampaign, deleteDraft } from '@shroomap/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@shroomap/ui/cmp-003';
 import { Skeleton, SkeletonRegion } from '@shroomap/ui/cmp-008';
@@ -33,9 +18,10 @@ import { ErrorNotice } from '../../components/errors';
 import { resolveError } from '../../lib/errors';
 import { ROUTES } from '../../lib/errors/routes';
 import { signInUrl } from '../../lib/errors/session';
+import { keysQuery, meQuery } from '../../lib/query/queries';
+import { useHydrated } from '../../lib/use-hydrated';
 import { SCREEN_005_COPY as COPY } from './copy';
 import {
-  COUNT_LIMIT,
   PAGE_SIZE,
   apiQuery,
   buildUrl,
@@ -51,19 +37,10 @@ import {
   type Tab,
   type UrlState,
 } from './model';
+import { DRAFTS_KEY, countQuery, draftsQuery, historyQuery } from './queries';
 
 const PATH = ROUTES.campaigns;
 const DEBOUNCE_MS = 300;
-const STALE_MS = 30_000;
-const DRAFT_PAGES_MAX = 6;
-
-interface HistoryPage {
-  rows: CampaignSummary[];
-  hasNext: boolean;
-  nextCursor: string | null;
-  /** Every id on this page and the pages before it: a campaign that moved during traversal is not repeated. */
-  seen: string[];
-}
 
 interface Target {
   kind: 'campaign' | 'draft';
@@ -77,36 +54,26 @@ interface Toast {
   message: string;
 }
 
-const historyKey = (filter: Filter | '', q: string | undefined, page: number) =>
-  ['campaigns-page', filter, q ?? '', page] as const;
-const countKey = (filter: Filter | '', q: string | undefined) =>
-  ['campaigns-count', filter, q ?? ''] as const;
-const DRAFTS_KEY = ['drafts-all'] as const;
-
-const params = (
-  filter: Filter | '',
-  q: string | undefined,
-  limit: number,
-  cursor?: string | null,
-) => ({
-  limit,
-  ...(cursor ? { cursor } : {}),
-  ...(q ? { q } : {}),
-  ...(filter ? { filter } : {}),
-});
-
 /** The current search string; the server passes the first one so the first paint matches. */
 const readSearch = () => (typeof window === 'undefined' ? '' : window.location.search);
 
 /** SCREEN-005 at `/campaigns`: history and drafts with search, status chips, paging and delete (API-040, 020, 042, 025). */
-export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string }) {
+export function CampaignsScreen({
+  initialSearch = '',
+  now: serverNow,
+}: {
+  initialSearch?: string;
+  /** The server's clock (epoch ms) for the first render, so the labels in the server's HTML are the browser's first render too. */
+  now?: number;
+}) {
   const client = useQueryClient();
   const [url, setUrl] = useState<UrlState>(() => parseUrl(initialSearch));
   const [input, setInput] = useState(url.q);
   const [target, setTarget] = useState<Target | null>(null);
   const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => serverNow ?? Date.now());
+  const hydrated = useHydrated();
 
   useEffect(() => setNow(Date.now()), []);
 
@@ -138,88 +105,18 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
   const q = apiQuery(url.q);
   const drafts = url.tab === 'drafts';
 
-  const me = useQuery({
-    queryKey: getGetMeQueryKey(),
-    queryFn: async ({ signal }) => (await getMe({ signal })).data as MeResponse,
-    retry: false,
-  });
-  const keys = useQuery({
-    queryKey: getListMyProviderKeysQueryKey(),
-    queryFn: async ({ signal }) =>
-      (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
-    retry: false,
-  });
-
-  const loadHistory = useCallback(
-    async (page: number, signal?: AbortSignal): Promise<HistoryPage> => {
-      let cursor: string | null = null;
-      let before: string[] = [];
-      if (page > 1) {
-        const previous = await client.fetchQuery({
-          queryKey: historyKey(url.status, q, page - 1),
-          queryFn: ({ signal: s }) => loadHistory(page - 1, s),
-          staleTime: STALE_MS,
-        });
-        cursor = previous.nextCursor;
-        before = previous.seen;
-        if (!previous.hasNext || !cursor)
-          return { rows: [], hasNext: false, nextCursor: null, seen: before };
-      }
-      const body = (await listCampaigns(params(url.status, q, PAGE_SIZE, cursor), { signal }))
-        .data as CampaignPage;
-      const seen = new Set(before);
-      const rows = body.data.filter((c) => !seen.has(c.id));
-      rows.forEach((c) => seen.add(c.id));
-      const { hasNextPage, nextCursor } = body.metaData.pagination;
-      return { rows, hasNext: hasNextPage, nextCursor, seen: [...seen] };
-    },
-    [client, url.status, q],
-  );
-
+  const me = useQuery({ ...meQuery(), retry: false });
+  const keys = useQuery({ ...keysQuery(), retry: false });
   const history = useQuery({
-    queryKey: historyKey(url.status, q, url.page),
-    queryFn: ({ signal }) => loadHistory(url.page, signal),
+    ...historyQuery(client, url.status, q, url.page),
     enabled: !drafts,
-    staleTime: STALE_MS,
   });
-
-  const count = (filter: Filter | '', search: string | undefined) => ({
-    queryKey: countKey(filter, search),
-    queryFn: async ({ signal }: { signal: AbortSignal }) => {
-      const body = (await listCampaigns(params(filter, search, COUNT_LIMIT), { signal }))
-        .data as CampaignPage;
-      return {
-        count: body.metaData.pagination.returnedCount,
-        more: body.metaData.pagination.hasNextPage,
-      };
-    },
-    staleTime: STALE_MS,
-    retry: false,
-  });
-  const total = useQuery(count('', undefined));
-  const chipAll = useQuery(count('', q));
-  const chipProcessing = useQuery(count('processing', q));
-  const chipCompleted = useQuery(count('completed', q));
-  const chipFailed = useQuery(count('failed', q));
-
-  const draftList = useQuery({
-    queryKey: DRAFTS_KEY,
-    queryFn: async ({ signal }) => {
-      const all: Draft[] = [];
-      let cursor: string | null = null;
-      for (let i = 0; i < DRAFT_PAGES_MAX; i += 1) {
-        const body = (
-          await listDrafts({ limit: COUNT_LIMIT, ...(cursor ? { cursor } : {}) }, { signal })
-        ).data as DraftPage;
-        all.push(...body.data);
-        const { hasNextPage, nextCursor } = body.metaData.pagination;
-        if (!hasNextPage || !nextCursor) break;
-        cursor = nextCursor;
-      }
-      return all;
-    },
-    staleTime: STALE_MS,
-  });
+  const total = useQuery({ ...countQuery('', undefined), retry: false });
+  const chipAll = useQuery({ ...countQuery('', q), retry: false });
+  const chipProcessing = useQuery({ ...countQuery('processing', q), retry: false });
+  const chipCompleted = useQuery({ ...countQuery('completed', q), retry: false });
+  const chipFailed = useQuery({ ...countQuery('failed', q), retry: false });
+  const draftList = useQuery(draftsQuery());
 
   const refreshed = () => {
     void client.invalidateQueries({ queryKey: ['campaigns-page'] });
@@ -291,18 +188,27 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
 
   const num = (r: { data?: { count: number; more: boolean } }) =>
     r.data && !r.data.more ? r.data.count : undefined;
+  // Counts are drawn in fixed-size slots and filled in together once the group's queries have answered (null: still loading).
+  const settled = (r: { isPending: boolean }) => !r.isPending;
+  const chipsKnown = [chipAll, chipProcessing, chipCompleted, chipFailed].every(settled);
+  const tabsKnown = settled(total) && settled(draftList);
+  const chipCount = (r: Parameters<typeof num>[0]) => (chipsKnown ? num(r) : null);
   const chips: FilterChip[] = [
-    { id: '', label: COPY.chips.all, count: num(chipAll) },
-    { id: 'processing', label: COPY.chips.processing, count: num(chipProcessing) },
-    { id: 'completed', label: COPY.chips.completed, count: num(chipCompleted) },
-    { id: 'failed', label: COPY.chips.failed, count: num(chipFailed) },
+    { id: '', label: COPY.chips.all, count: chipCount(chipAll) },
+    { id: 'processing', label: COPY.chips.processing, count: chipCount(chipProcessing) },
+    { id: 'completed', label: COPY.chips.completed, count: chipCount(chipCompleted) },
+    { id: 'failed', label: COPY.chips.failed, count: chipCount(chipFailed) },
   ];
   const tabs = [
-    { id: 'history', label: COPY.historyTab, count: num(total) },
+    { id: 'history', label: COPY.historyTab, count: tabsKnown ? num(total) : null },
     {
       id: 'drafts',
       label: COPY.draftsTab,
-      count: draftList.data ? draftList.data.filter((d) => !gone.has(d.id)).length : undefined,
+      count: !tabsKnown
+        ? null
+        : draftList.data
+          ? draftList.data.filter((d) => !gone.has(d.id)).length
+          : undefined,
     },
   ];
 
@@ -414,7 +320,7 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
                 href={campaignHref(c)}
                 segments={c.segmentCount}
                 duration={`${c.segmentCount * 15} s`}
-                date={updatedLabel(c.updatedAt, now)}
+                date={updatedLabel(c.updatedAt, now, 'Updated', hydrated)}
                 status={campaignStatus(c)}
                 deleting={remove.isPending && target?.id === c.id}
                 actions={[
@@ -467,7 +373,7 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
                 variant="draft"
                 name={name}
                 href={draftHref(d)}
-                date={`${draftStepLabel(d.step)} · ${updatedLabel(d.updatedAt, now, 'Saved')}`}
+                date={`${draftStepLabel(d.step)} · ${updatedLabel(d.updatedAt, now, 'Saved', hydrated)}`}
                 status={{ label: COPY.draftStatus, variant: 'neutral' }}
                 deleting={remove.isPending && target?.id === d.id}
                 actions={[
@@ -491,7 +397,7 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
   }
 
   const role = me.data && me.data.data.linkState === 'linked' ? me.data.data.role : 'user';
-  const keyState = deriveKeyState(keys.data?.data);
+  const keyState = deriveKeyState(keys.data?.data, keys.isError);
   const deleteError = remove.error
     ? resolveError(remove.error, { surface: 'context' }).message
     : undefined;

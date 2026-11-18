@@ -42,6 +42,12 @@ export default function FeShellOperatorSection() {
       >
         <ShellDemo role="admin" menuOpen userName="Sam Okafor" />
       </Cell>
+      <Cell
+        id="shell-key-unknown"
+        label="CMP-030 key slot unknown (before API-010 answers): same-size placeholder"
+      >
+        <ShellDemo keyState="unknown" />
+      </Cell>
       <Cell id="shell-key-missing" label="CMP-030 key badge: Add provider keys (warning)">
         <ShellDemo keyState="missing" />
       </Cell>

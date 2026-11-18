@@ -12,17 +12,24 @@ const CLERK_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const localToken = createLocalTokenGetter();
 
 /** Root providers. Without a Clerk key (self-contained builds, e2e) the bearer is the api's local-mode token (the `/local-token` route answers only in AUTH_MODE=local; elsewhere none). */
-export function AppProviders({ children }: { children: ReactNode }) {
+export function AppProviders({
+  initialIdentity = null,
+  children,
+}: {
+  /** The user id the server resolved for this request (never a token); null when nobody is signed in. */
+  initialIdentity?: string | null;
+  children: ReactNode;
+}) {
   if (!CLERK_KEY) {
     return (
-      <LocalApiProvider origin={ORIGIN} localToken={localToken}>
+      <LocalApiProvider origin={ORIGIN} localToken={localToken} initialIdentity={initialIdentity}>
         {children}
       </LocalApiProvider>
     );
   }
   return (
     <ClerkProvider publishableKey={CLERK_KEY}>
-      <ClerkApiProvider>{children}</ClerkApiProvider>
+      <ClerkApiProvider initialIdentity={initialIdentity}>{children}</ClerkApiProvider>
     </ClerkProvider>
   );
 }

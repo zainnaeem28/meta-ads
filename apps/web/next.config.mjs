@@ -12,6 +12,8 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ['@shroomap/ui'],
+  // The client router cache must never replay one identity's page for another (ADR-014, T-20): dynamic pages are not kept.
+  experimental: { staleTimes: { dynamic: 0 } },
   // Responses the middleware answers carry the full set (policy with a per-request nonce included); these do not pass it.
   async headers() {
     return [

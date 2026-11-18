@@ -3,11 +3,14 @@
    --shadow-*, --breakpoint-*, --spacing) are the Tailwind theme names, so utilities resolve to the token. */
 @import './tokens.css';
 
+/* Font display "optional" (TASK-119): a swap after first paint re-lays out the text, which is a later, larger LCP candidate
+   (0.9 s or 3 s on the same cold load, depending on whether the font beat the first paint) and a small shift. With optional the
+   page keeps the size-adjusted fallback when the font is late, and uses Inter from the next view on. UI/UX to confirm. */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 400 600;
-  font-display: swap;
+  font-display: optional;
   src: url('./fonts/inter-latin-wght-normal.woff2') format('woff2');
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
@@ -17,12 +20,37 @@
   font-family: 'Inter';
   font-style: normal;
   font-weight: 400 600;
-  font-display: swap;
+  font-display: optional;
   src: url('./fonts/inter-latin-ext-wght-normal.woff2') format('woff2');
   unicode-range:
     U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
     U+A720-A7FF;
+}
+
+/* Size-adjusted local fallback for Inter (swap shows text at once, and the swap moves nothing: UI-UX §5.1, AIU-295). The
+   figures are the published Inter-over-Arial metrics (next/font, Fontaine); the build measures the swap shift. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('Liberation Sans'), local('Arimo'), local('Helvetica');
+  font-weight: 400 600;
+  size-adjust: 107.4%;
+  ascent-override: 90.2%;
+  descent-override: 22.48%;
+  line-gap-override: 0%;
+}
+
+/* The font stack with the fallback after Inter. design/mockups/tokens.css (the verbatim source of tokens.css) still lists the
+   stack without it; UI/UX takes this line into the token file at its next sync, and this override then goes. */
+:root {
+  /* Reserved digits of a count (1 digit = 1ch in tabular figures) and the edge fade of the phone chip row (UI-UX §5.1). */
+  --count-slot-2: 2ch;
+  --count-slot-3: 3ch;
+  --count-slot-4: 4ch;
+  --edge-fade: calc(var(--spacing) * 6);
+  --font-sans:
+    'Inter', 'Inter Fallback', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
 }
 
 @theme inline {

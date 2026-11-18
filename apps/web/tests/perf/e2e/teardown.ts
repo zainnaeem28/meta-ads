@@ -1,13 +1,18 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-/** Drops the run's database. */
+/** Stops the baseline stack of the run and drops its database and roles. */
 export default function teardown() {
-  const url = process.env.PERF_DATABASE_URL;
-  if (url)
-    execFileSync('node', [
-      resolve(__dirname, '../../e2e/local-token/database.mjs'),
-      'drop',
-      new URL(url).pathname.slice(1),
-    ]);
+  const state = process.env.PERF_STACK_STATE;
+  if (!state) return;
+  execFileSync(
+    'node',
+    [
+      resolve(__dirname, '../../../../../tests/baselines/stack.mjs'),
+      'down',
+      '--state',
+      resolve(state, '..'),
+    ],
+    { stdio: ['ignore', 'inherit', 'inherit'] },
+  );
 }

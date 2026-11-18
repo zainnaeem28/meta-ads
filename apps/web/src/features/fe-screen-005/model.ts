@@ -52,8 +52,20 @@ export const apiQuery = (q: string): string | undefined => {
 
 const MIN = 60_000;
 
-/** "Updated 12 min ago", "Updated yesterday", otherwise the calendar date. */
-export function updatedLabel(iso: string, now: number, prefix = 'Updated'): string {
+/** Same-width stand-in for a calendar date (figure spaces) until the browser's own time zone and locale can be used. */
+const DATE_SLOT = '\u2007'.repeat(11);
+
+/**
+ * "Updated 12 min ago", "Updated yesterday", otherwise the calendar date. The calendar date depends on the visitor's time
+ * zone and locale, which the server does not have: until `hydrated` it is a same-width placeholder, so the server's HTML and
+ * the first client render are the same (ADR-014). The relative forms depend only on `now` and render at once.
+ */
+export function updatedLabel(
+  iso: string,
+  now: number,
+  prefix = 'Updated',
+  hydrated = true,
+): string {
   const diff = Math.max(0, now - new Date(iso).getTime());
   if (diff < MIN) return `${prefix} just now`;
   if (diff < 60 * MIN) return `${prefix} ${Math.floor(diff / MIN)} min ago`;
@@ -61,6 +73,7 @@ export function updatedLabel(iso: string, now: number, prefix = 'Updated'): stri
   const days = Math.floor(diff / (24 * 60 * MIN));
   if (days === 1) return `${prefix} yesterday`;
   if (days < 7) return `${prefix} ${days} days ago`;
+  if (!hydrated) return `${prefix} ${DATE_SLOT}`;
   return `${prefix} ${new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
 

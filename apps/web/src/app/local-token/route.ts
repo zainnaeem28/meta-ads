@@ -1,15 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { LOCAL_SESSION_COOKIE, readLocalSession } from '../../lib/auth/local-session';
+import { LOCAL_SESSION_COOKIE } from '../../lib/auth/local-session';
 import { resolveAuthMode } from '../../lib/auth/mode';
+import { issueLocalToken } from '../../lib/auth/server-token';
 
 export const dynamic = 'force-dynamic';
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || 'http://localhost:4000';
-
 /**
  * Local mode only (AUTH_MODE=local, refused in staging and production; 404 in any other mode). Turns the signed local
- * session cookie (httpOnly, so the page cannot read the email) into a bearer from the api's local token route
- * (`POST /api/v1/dev/token`), so the signed-in screens call the real api. The api still verifies the token fully.
+ * session cookie into a bearer from the api's local token route, so the signed-in screens call the real api (the exchange
+ * is shared with the server prefetch in `server-token.ts`). The api still verifies the token fully.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const local = (() => {
@@ -20,30 +19,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
   })();
   if (!local) return new NextResponse(null, { status: 404 });
-  const state = await readLocalSession(request.cookies.get(LOCAL_SESSION_COOKIE)?.value);
-  if (state.status !== 'active') return NextResponse.json({ token: null }, { status: 401 });
-  try {
-    // eslint-disable-next-line no-restricted-globals -- the api's local token route is not part of the generated client
-    const res = await fetch(`${API_ORIGIN}/api/v1/dev/token`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: state.session.email }),
-      cache: 'no-store',
-    });
-    if (!res.ok) return NextResponse.json({ token: null }, { status: 502 });
-    // The api answers its standard envelope: { success, data: { token, sub, expiresInSeconds }, metaData }.
-    const body = (await res.json()) as {
-      data?: { token?: unknown; sub?: unknown; expiresInSeconds?: unknown };
-    };
-    const data = body.data;
-    if (typeof data?.token !== 'string') return NextResponse.json({ token: null }, { status: 502 });
-    const expiresInSeconds =
-      typeof data.expiresInSeconds === 'number' ? data.expiresInSeconds : 3600;
+  const result = await issueLocalToken(request.cookies.get(LOCAL_SESSION_COOKIE)?.value);
+  if (!result.ok) {
     return NextResponse.json(
-      { token: data.token, sub: typeof data.sub === 'string' ? data.sub : null, expiresInSeconds },
-      { headers: { 'cache-control': 'no-store' } },
+      { token: null },
+      { status: result.reason === 'no-session' ? 401 : 502 },
     );
-  } catch {
-    return NextResponse.json({ token: null }, { status: 502 });
   }
+  return NextResponse.json(
+    { token: result.token, sub: result.sub, expiresInSeconds: result.expiresInSeconds },
+    { headers: { 'cache-control': 'no-store' } },
+  );
 }

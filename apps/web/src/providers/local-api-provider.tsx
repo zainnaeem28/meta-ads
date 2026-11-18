@@ -8,13 +8,16 @@ import { ApiProvider } from './api-provider';
 export function LocalApiProvider({
   origin,
   localToken,
+  initialIdentity = null,
   children,
 }: {
   origin: string;
   localToken: FetchLocalToken;
+  /** The user the server rendered this request for; seeds the identity so the first token for the same user is no change. */
+  initialIdentity?: string | null;
   children: ReactNode;
 }) {
-  const [identity, setIdentity] = useState<string | null>(null);
+  const [identity, setIdentity] = useState<string | null>(initialIdentity);
   const getToken = useCallback(async () => {
     const token = await localToken();
     setIdentity(localToken.userId());
@@ -25,6 +28,7 @@ export function LocalApiProvider({
       origin={origin}
       getToken={getToken}
       identity={identity}
+      initialIdentity={initialIdentity}
       clearOnFirstIdentity={false}
     >
       {children}

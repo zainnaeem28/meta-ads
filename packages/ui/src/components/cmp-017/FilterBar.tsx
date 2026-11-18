@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Icon } from '../../icons';
 import { Button } from '../cmp-003/Button';
 import { Input } from '../cmp-004/Input';
@@ -8,7 +8,8 @@ import { Input } from '../cmp-004/Input';
 export interface FilterChip {
   id: string;
   label: string;
-  count?: number;
+  /** `null`: not known yet (a same-size placeholder is drawn); `undefined`: this chip has no count. */
+  count?: number | null;
 }
 
 export interface FilterBarProps {
@@ -22,11 +23,25 @@ export interface FilterBarProps {
   onStatusChange: (status: string) => void;
   /** Resets the query and the chip. Shown only while a filter is active. */
   onClearAll: () => void;
+  /** Digits the count slot reserves (default 3: up to 999, then `999+`). */
+  reserve?: 2 | 3;
   className?: string;
 }
 
+const MAX_COUNT = 999;
+const SLOT_WIDTH = {
+  2: 'min-w-(--count-slot-2)',
+  3: 'min-w-(--count-slot-3)',
+  4: 'min-w-(--count-slot-4)',
+} as const;
+/** Edge fade on the side of the phone chip row that has more chips (UI-UX §5.1). */
+const FADE_END = 'linear-gradient(to right, black calc(100% - var(--edge-fade)), transparent)';
+const FADE_START = 'linear-gradient(to left, black calc(100% - var(--edge-fade)), transparent)';
+const FADE_BOTH =
+  'linear-gradient(to right, transparent, black var(--edge-fade), black calc(100% - var(--edge-fade)), transparent)';
+
 const CHIP_CLASS =
-  'inline-flex items-center gap-1 rounded-full border px-3 min-h-control-sm max-md:min-h-control-touch ' +
+  'inline-flex shrink-0 items-center gap-1 rounded-full border px-3 min-h-control-sm max-md:min-h-control-touch ' +
   'text-ui font-medium transition-colors duration-(--duration-fast) ease-standard ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
@@ -39,10 +54,45 @@ export function FilterBar({
   status,
   onStatusChange,
   onClearAll,
+  reserve = 3,
   className,
 }: FilterBarProps) {
   const searchId = useId();
   const active = query !== '' || status !== '';
+  const row = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState({ start: false, end: false });
+
+  // On a phone the chips are one scrolling row: show a fade on the side that has more chips.
+  useEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const measure = () => {
+      const start = el.scrollLeft > 1;
+      const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      setMore((old) => (old.start === start && old.end === end ? old : { start, end }));
+    };
+    measure();
+    el.addEventListener('scroll', measure, { passive: true });
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(el);
+    return () => {
+      el.removeEventListener('scroll', measure);
+      observer?.disconnect();
+    };
+  }, [chips.length]);
+
+  const onRowKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button')];
+    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    if (at < 0) return;
+    const next = buttons[at + (event.key === 'ArrowRight' ? 1 : -1)];
+    if (!next) return;
+    event.preventDefault();
+    next.focus();
+  };
+  const mask =
+    more.start && more.end ? FADE_BOTH : more.end ? FADE_END : more.start ? FADE_START : undefined;
   return (
     <div className={['flex flex-wrap items-center gap-3', className].filter(Boolean).join(' ')}>
       <div className="relative min-w-0 flex-1 basis-64">
@@ -63,7 +113,15 @@ export function FilterBar({
           onChange={(e) => onQueryChange(e.target.value)}
         />
       </div>
-      <div role="group" aria-label="Filter by status" className="inline-flex flex-wrap gap-2">
+      <div
+        ref={row}
+        role="group"
+        aria-label="Filter by status"
+        tabIndex={0}
+        onKeyDown={onRowKeyDown}
+        style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
+        className="inline-flex scroll-px-4 gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring max-md:w-full max-md:flex-nowrap max-md:overflow-x-auto md:flex-wrap"
+      >
         {chips.map((chip) => {
           const pressed = chip.id === status;
           return (
@@ -80,9 +138,22 @@ export function FilterBar({
               }`}
             >
               {chip.label}{' '}
-              {chip.count !== undefined ? (
-                <span className="text-caption text-muted-foreground">{chip.count}</span>
-              ) : null}
+              {chip.count === undefined ? null : chip.count === null ? (
+                <span
+                  aria-hidden="true"
+                  data-count-slot="loading"
+                  className={`rounded-full bg-muted text-center text-caption tabular-nums text-transparent ${SLOT_WIDTH[reserve]}`}
+                >
+                  {'0'.repeat(reserve)}
+                </span>
+              ) : (
+                <span
+                  data-count-slot="loaded"
+                  className={`text-center text-caption tabular-nums text-muted-foreground ${SLOT_WIDTH[chip.count > MAX_COUNT ? 4 : reserve]}`}
+                >
+                  {chip.count > MAX_COUNT ? `${MAX_COUNT}+` : chip.count}
+                </span>
+              )}
             </button>
           );
         })}

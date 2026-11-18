@@ -337,7 +337,7 @@ export function ProviderKeysScreen() {
       role={role}
       path={PATH}
       pageName={COPY.title}
-      keyState={deriveKeyState(keys.data?.data)}
+      keyState={deriveKeyState(keys.data?.data, keys.isError)}
       toasts={toasts}
       onDismissToast={() => setToasts([])}
       onSignOut={() => window.location.assign(ROUTES.signIn)}

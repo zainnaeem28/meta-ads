@@ -3,19 +3,11 @@
 import {
   createAssembly,
   getAssembly,
-  getCampaign,
   getGetAssemblyQueryKey,
   getGetCampaignQueryKey,
-  getListCampaignVideoJobsQueryKey,
-  getListMyProviderKeysQueryKey,
   getMediaUrl,
-  listCampaignVideoJobs,
-  listMyProviderKeys,
   type Assembly,
   type AssemblyResponse,
-  type CampaignResponse,
-  type ProviderKeyListResponse,
-  type SegmentJobsResponse,
   type SegmentJobsResponseDataItem,
 } from '@shroomap/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -39,6 +31,7 @@ import { IdempotencyKeys, idempotencyHeaders } from '../../lib/api/idempotency';
 import { resolveError } from '../../lib/errors';
 import { ROUTES } from '../../lib/errors/routes';
 import { useJobPolling } from '../../lib/query/job-polling';
+import { campaignQuery, jobsQuery, keysQuery } from '../../lib/query/queries';
 import { SCREEN_009_COPY as COPY } from './copy';
 
 const CLIP_SECONDS = 15;
@@ -122,7 +115,6 @@ export function FinalScreen({
 }) {
   const client = useQueryClient();
   const path = `/campaigns/${campaignId}/final`;
-  const listKey = getListCampaignVideoJobsQueryKey(campaignId);
   const campaignKey = getGetCampaignQueryKey(campaignId);
   const [order, setOrder] = useState<number[]>([]);
   const [unchecked, setUnchecked] = useState<ReadonlySet<number>>(new Set());
@@ -139,22 +131,9 @@ export function FinalScreen({
   const idem = useRef(new IdempotencyKeys());
   const listRef = useRef<HTMLOListElement>(null);
 
-  const campaign = useQuery({
-    queryKey: campaignKey,
-    queryFn: async ({ signal }) =>
-      (await getCampaign(campaignId, { signal })).data as CampaignResponse,
-  });
-  const keys = useQuery({
-    queryKey: getListMyProviderKeysQueryKey(),
-    queryFn: async ({ signal }) =>
-      (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
-    retry: false,
-  });
-  const jobs = useQuery({
-    queryKey: listKey,
-    queryFn: async ({ signal }) =>
-      (await listCampaignVideoJobs(campaignId, { signal })).data as SegmentJobsResponse,
-  });
+  const campaign = useQuery(campaignQuery(campaignId));
+  const keys = useQuery({ ...keysQuery(), retry: false });
+  const jobs = useQuery(jobsQuery(campaignId));
 
   const camp = campaign.data?.data;
   const name = camp?.productName ?? COPY.fallbackName;
@@ -347,7 +326,7 @@ export function FinalScreen({
       role="user"
       path={path}
       pageName={`${COPY.title} · ${name}`}
-      keyState={deriveKeyState(keys.data?.data)}
+      keyState={deriveKeyState(keys.data?.data, keys.isError)}
       onSignOut={() => window.location.assign(ROUTES.signIn)}
     >
       <div

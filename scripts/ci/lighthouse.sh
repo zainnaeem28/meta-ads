@@ -21,16 +21,15 @@ for arg in "$@"; do
 done
 out="$REPORTS/baselines"; state="$out/state-frontend"
 mkdir -p "$out"
-if [ "$budgets" = 1 ]; then
-  web="$CI_ROOT/apps/web"
-  [ -f "$web/.next/diagnostics/route-bundle-stats.json" ] || pnpm --filter @shroomap/web build >&2
-  node "$web/tests/perf/bundle-budgets.mjs" --out "$out/bundle-budgets.json" --junit "$out/bundle-budgets-junit.xml"
-fi
 [ -x "$CI_TOOLS_DIR/lighthouse/node_modules/.bin/lighthouse" ] || "$BL/install-tools.sh" lighthouse >&2
 "$BL/install-tools.sh" chromium >&2
 cleanup() { node "$BL/stack.mjs" down --state "$state" >&2 || true; }
 trap cleanup EXIT
 node "$BL/stack.mjs" up --state "$state"
+if [ "$budgets" = 1 ]; then
+  # The artifact the stack just built or reused is the one measured (no Clerk key, so no Clerk client code in the bundles).
+  node "$CI_ROOT/apps/web/tests/perf/bundle-budgets.mjs" --out "$out/bundle-budgets.json" --junit "$out/bundle-budgets-junit.xml"
+fi
 if [ "$invalid" = 1 ]; then
   python3 -I -c "
 import json, sys

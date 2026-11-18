@@ -18,6 +18,11 @@ export interface ApiClientConfig {
   origin: string;
   getToken: GetToken;
   fetchImpl?: typeof fetch;
+  /**
+   * Request-scoped use on the server: the response ETag goes to this sink instead of the process-wide store, and the
+   * process-wide last request id is left alone, so nothing of one user is held in memory shared with the next request.
+   */
+  isolated?: { onEtag: (path: string, etag: string) => void };
 }
 
 const API_PREFIX = '/api/v1';
@@ -66,7 +71,7 @@ export const createApiFetch = (config: ApiClientConfig): typeof fetch => {
     }
 
     const requestId = response.headers.get('X-Request-ID');
-    if (requestId) lastRequestId = requestId;
+    if (requestId && !config.isolated) lastRequestId = requestId;
 
     let body: unknown;
     try {
@@ -92,7 +97,10 @@ export const createApiFetch = (config: ApiClientConfig): typeof fetch => {
       });
     }
 
-    rememberEtag(path, response.headers.get('ETag'));
+    const etag = response.headers.get('ETag');
+    if (config.isolated) {
+      if (etag) config.isolated.onEtag(path, etag);
+    } else rememberEtag(path, etag);
     return response;
   };
 };
