@@ -43,7 +43,7 @@ export function PageHeader({
                   {item.href && !last ? (
                     <a
                       href={item.href}
-                      className="rounded-sm underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      className="inline-flex min-h-11 min-w-11 items-center rounded-sm underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
                       {item.label}
                     </a>

@@ -11,6 +11,25 @@ process.env.E2E_PROD_URL = `http://127.0.0.1:${prodPort}`;
 // Report folder of the ticket whose check is running (its submit_check flags name it).
 const reports = process.env.REPORT_DIR ?? 'reports/api-client';
 
+/** One project per row of TC-NFR-06 (desktop at the design's 1440 px width; the phones keep their device profile). */
+export const MATRIX_PROJECTS = [
+  {
+    name: 'chromium',
+    use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+  },
+  {
+    name: 'edge',
+    use: { ...devices['Desktop Edge'], channel: 'msedge', viewport: { width: 1440, height: 900 } },
+  },
+  {
+    name: 'firefox',
+    use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } },
+  },
+  { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } } },
+  { name: 'ios-safari', use: { ...devices['iPhone 15'] } },
+  { name: 'android-chrome', use: { ...devices['Pixel 7'] } },
+];
+
 const next = (p: number) => `pnpm exec next start --hostname 127.0.0.1 --port ${p}`;
 
 // The built artifacts: `next start` for the web and the compiled api (pnpm build first).
@@ -34,6 +53,14 @@ export default defineConfig({
     // Home-screen device profiles (TASK-068): iOS Safari and Android Chrome emulation.
     { name: 'ios-safari', use: { ...devices['iPhone 15'] }, grep: /@brand-device/ },
     { name: 'android-chrome', use: { ...devices['Pixel 7'] }, grep: /@brand-device/ },
+    // Browser and device matrix (TASK-117): the @matrix suite in tests/matrix runs on every engine and both phone profiles.
+    // The names carry the `matrix-` prefix so each project has its own baselines; the Edge project uses the installed Edge channel.
+    ...MATRIX_PROJECTS.map(({ name, use }) => ({
+      name: `matrix-${name}`,
+      testDir: 'tests/matrix',
+      grep: /@matrix/,
+      use,
+    })),
   ],
   webServer: [
     {

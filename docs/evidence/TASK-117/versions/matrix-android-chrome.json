@@ -1,0 +1,11 @@
+{
+  "project": "matrix-android-chrome",
+  "browser": "chromium",
+  "version": "159.0.8154.6",
+  "channel": null,
+  "device": {
+    "isMobile": true
+  },
+  "playwright": "1.65.1",
+  "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Mobile Safari/537.36"
+}

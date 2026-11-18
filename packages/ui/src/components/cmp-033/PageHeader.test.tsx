@@ -37,6 +37,7 @@ describe('CMP-033 PageHeader', () => {
     );
     const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(screen.getByRole('link', { name: 'Campaigns' })).toHaveAttribute('href', '/campaigns');
+    expect(screen.getByRole('link', { name: 'Campaigns' })).toHaveClass('min-h-11', 'min-w-11');
     expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent('Morning Focus');
     expect(screen.getByRole('tablist', { name: 'Stages' })).toBeInTheDocument();
     expect((await axe.run(container)).violations).toEqual([]);
