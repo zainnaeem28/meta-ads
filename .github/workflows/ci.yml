@@ -220,8 +220,28 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
           git diff --exit-code
-      - name: Image scan (not applicable until a Dockerfile exists)
-        run: scripts/ci/container.sh
+      - name: Install pinned Trivy
+        run: scripts/ci/install-tools.sh trivy
+      - name: Image build, smoke and Trivy scan
+        run: scripts/ci/container-scan.sh
+      - name: Compose smoke (dev stack and two isolated CI stacks)
+        run: |
+          set -euo pipefail
+          mkdir -p reports/container
+          docker compose -f docker/compose.dev.yml -p smoke-dev up -d --build --wait --wait-timeout 240
+          docker compose -f docker/compose.dev.yml -p smoke-dev ps | tee reports/container/compose-dev-ps.txt
+          docker compose -f docker/compose.dev.yml -p smoke-dev down -v
+          docker run -d --name ci-pg -e POSTGRES_HOST_AUTH_METHOD=trust -p 172.17.0.1:5432:5432 postgres:17-alpine
+          for i in $(seq 30); do docker exec ci-pg pg_isready -U postgres && break; sleep 2; done
+          for n in a b; do
+            docker exec ci-pg createdb -U postgres "smoke_$n"
+            dir="$RUNNER_TEMP/ci-env-$n"
+            bash docker/smoke/make-env.sh "$dir" "172.17.0.1:5432/smoke_$n"
+            CI_IMAGE_API=shroomap-api:smoke CI_IMAGE_WORKER=shroomap-worker:smoke CI_IMAGE_WEB=shroomap-web:smoke CI_ENV_DIR="$dir" docker compose -f docker/compose.ci.yml -p "smoke-ci-$n" up -d --wait --wait-timeout 240
+            CI_IMAGE_API=shroomap-api:smoke CI_IMAGE_WORKER=shroomap-worker:smoke CI_IMAGE_WEB=shroomap-web:smoke CI_ENV_DIR="$dir" docker compose -f docker/compose.ci.yml -p "smoke-ci-$n" ps | tee "reports/container/compose-ci-$n-ps.txt"
+          done
+          for n in a b; do CI_IMAGE_API=shroomap-api:smoke CI_IMAGE_WORKER=shroomap-worker:smoke CI_IMAGE_WEB=shroomap-web:smoke CI_ENV_DIR="$RUNNER_TEMP/ci-env-$n" docker compose -f docker/compose.ci.yml -p "smoke-ci-$n" down -v; done
+          docker rm -f ci-pg
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

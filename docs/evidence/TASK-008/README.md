@@ -24,3 +24,9 @@ and fails (exit 1, never a pass) without a daemon.
 3. `.env.example` does not exist (outside this ticket's paths); `compose.dev.yml` carries local-only defaults inline
    (`${VAR:-default}`), so it starts with nothing supplied.
 4. MinIO and mc images are pinned by tag (quay.io digests could not be read from the sandbox); postgres, mailpit and node are pinned by digest.
+
+## Hosted CI run (AIU-216)
+`ci.yml` job `container-scan` now runs `scripts/ci/container-scan.sh` plus a compose smoke (dev stack, two `compose.ci.yml`
+stacks `-p smoke-ci-a/b`). Dispatched with `gh workflow run ci --ref <branch>` (run 43761972457): every job was refused by
+GitHub before starting ("recent account payments have failed or your spending limit needs to be increased"). Nothing
+ran; the Docker build, smoke and Trivy checks are still NOT run. Owner item: fix GitHub billing for zainnaeem28, then rerun.
