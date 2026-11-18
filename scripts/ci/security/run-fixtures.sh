@@ -9,7 +9,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../../.." && pwd)"
 cd "$ROOT"
 export CI="${CI:-1}"
-export PATH="${CI_TOOLS_DIR:-$HOME/.cache/shroomap-ci-tools}/bin:${CI_TOOLS_DIR:-$HOME/.cache/shroomap-ci-tools}/venv/bin:$PATH"
+export PATH="${CI_TOOLS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/shroomap-ci-tools}/bin:${CI_TOOLS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/shroomap-ci-tools}/venv/bin:$PATH"
 "$ROOT/scripts/ci/install-tools.sh" semgrep gitleaks >/dev/null || { echo "cannot install semgrep and gitleaks" >&2; exit 2; }
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

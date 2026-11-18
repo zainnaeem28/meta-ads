@@ -14,7 +14,7 @@ How to run ShrooMap from a clean clone: install, local stack, database, seed, th
 | git, curl              | any                                                          | clone, health checks                            |
 | Python 3               | 3.11 or newer                                                | the `scripts/ci` wrappers                       |
 
-The CI wrappers install their pinned scanners (semgrep, gitleaks, osv-scanner, trivy, actionlint) into `~/.cache/shroomap-ci-tools` on first use, with checksums verified. Set `CI_AUTO_INSTALL=0` to refuse that.
+The CI wrappers install their pinned scanners (semgrep, gitleaks, osv-scanner, trivy, actionlint) into `$XDG_CACHE_HOME/shroomap-ci-tools` (`~/.cache/shroomap-ci-tools` when unset) on first use, with checksums verified. Set `CI_AUTO_INSTALL=0` to refuse that.
 
 ## 1. Clone and install
 

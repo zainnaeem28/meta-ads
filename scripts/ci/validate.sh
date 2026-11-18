@@ -18,7 +18,8 @@ install_actionlint() {
   echo "$(awk -v f="$file" '$2==f {print $1}' "$tmp/sums")  $tmp/$file" | sha256sum --check --status \
     || { echo "checksum mismatch for $file" >&2; return 1; }
   mkdir -p "$CI_TOOLS_DIR/bin"
-  tar -xzf "$tmp/$file" -C "$CI_TOOLS_DIR/bin" actionlint
+  tar -xzf "$tmp/$file" -C "$tmp" actionlint
+  install -m 0755 "$tmp/actionlint" "$CI_TOOLS_DIR/bin/actionlint.tmp.$$" && mv -f "$CI_TOOLS_DIR/bin/actionlint.tmp.$$" "$CI_TOOLS_DIR/bin/actionlint"
   rm -rf "$tmp"
 }
 
@@ -31,7 +32,8 @@ install_yq() {
   echo "$YQ_SHA256  $tmp/yq.tgz" | sha256sum --check --status || { echo "checksum mismatch for yq" >&2; return 1; }
   mkdir -p "$CI_TOOLS_DIR/bin"
   tar -xzf "$tmp/yq.tgz" -C "$tmp" ./yq_linux_amd64
-  install -m 0755 "$tmp/yq_linux_amd64" "$CI_TOOLS_DIR/bin/yq-$YQ_VERSION"
+  install -m 0755 "$tmp/yq_linux_amd64" "$CI_TOOLS_DIR/bin/yq-$YQ_VERSION.tmp.$$" \
+    && mv -f "$CI_TOOLS_DIR/bin/yq-$YQ_VERSION.tmp.$$" "$CI_TOOLS_DIR/bin/yq-$YQ_VERSION"
   rm -rf "$tmp"
 }
 
