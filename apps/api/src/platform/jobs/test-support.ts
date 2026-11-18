@@ -27,7 +27,9 @@ export async function stopPeriodicSweep(databaseUrl: string): Promise<void> {
   await client.connect();
   try {
     await client.query(`delete from pgboss.schedule where name = $1`, [SWEEP_QUEUE]);
-    await client.query(`delete from pgboss.job where name = $1 and state in ('created', 'retry')`, [SWEEP_QUEUE]);
+    await client.query(`delete from pgboss.job where name = $1 and state in ('created', 'retry')`, [
+      SWEEP_QUEUE,
+    ]);
   } finally {
     await client.end();
   }
