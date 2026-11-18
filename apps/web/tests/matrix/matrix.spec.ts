@@ -61,7 +61,7 @@ test.describe('@matrix @TASK-117 browser and device matrix', () => {
   test.use({ timezoneId: 'UTC' });
 
   // A browser that cannot start here skips with its launch error; a browser that starts is never skipped.
-  test.beforeEach(({}, info) => {
+  test.beforeEach((_fixtures, info) => {
     const reason = unavailable()[info.project.name];
     test.skip(reason !== undefined, `NOT EXECUTED, browser cannot launch here: ${reason}`);
   });
