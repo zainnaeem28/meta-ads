@@ -1,4 +1,3 @@
-/* global process */
 // Route-group JS and CSS transfer budgets (TASK-119, NFR-02). Reads baselines.frontend.bundleBudgets of
 // config/quality-policy.json, measures the gzip size of the first-load chunks and linked stylesheets of every route of the
 // built web app (.next), and fails when a route group exceeds its budget or a built route belongs to no budgeted group.
@@ -14,7 +13,8 @@ export const POLICY_FILE = resolve(WEB_DIR, '..', '..', 'config', 'quality-polic
 
 export const loadBudgets = (file = process.env.CI_POLICY ?? POLICY_FILE) => {
   const budgets = JSON.parse(readFileSync(file, 'utf8')).baselines?.frontend?.bundleBudgets;
-  if (!budgets?.groups) throw new Error(`${file}: baselines.frontend.bundleBudgets.groups is not set`);
+  if (!budgets?.groups)
+    throw new Error(`${file}: baselines.frontend.bundleBudgets.groups is not set`);
   return budgets;
 };
 
@@ -25,17 +25,26 @@ export const groupOf = (pageKey) => /^\/\(([^)]+)\)\//.exec(pageKey)?.[1] ?? 'ro
 
 /** Stylesheets a page links, read from its client reference manifest. */
 const cssOf = (webDir, pageKey) => {
-  const manifest = join(webDir, '.next', 'server', 'app', `${pageKey}_client-reference-manifest.js`);
+  const manifest = join(
+    webDir,
+    '.next',
+    'server',
+    'app',
+    `${pageKey}_client-reference-manifest.js`,
+  );
   if (!existsSync(manifest)) return [];
   const paths = new Set();
-  for (const m of readFileSync(manifest, 'utf8').matchAll(/"path":"(static\/[^"]+\.css)"/g)) paths.add(m[1]);
+  for (const m of readFileSync(manifest, 'utf8').matchAll(/"path":"(static\/[^"]+\.css)"/g))
+    paths.add(m[1]);
   return [...paths].map((p) => join(webDir, '.next', p));
 };
 
 /** One row per built route: its group and the transfer size (gzip bytes) of its first-load JS and CSS. */
 export const measureRoutes = (webDir = WEB_DIR) => {
   const next = join(webDir, '.next');
-  const stats = JSON.parse(readFileSync(join(next, 'diagnostics', 'route-bundle-stats.json'), 'utf8'));
+  const stats = JSON.parse(
+    readFileSync(join(next, 'diagnostics', 'route-bundle-stats.json'), 'utf8'),
+  );
   const pages = JSON.parse(readFileSync(join(next, 'app-path-routes-manifest.json'), 'utf8'));
   const pageOf = Object.fromEntries(Object.entries(pages).map(([key, route]) => [route, key]));
   return stats.map((entry) => {
@@ -58,11 +67,16 @@ export const evaluateBudgets = (routes, budgets) => {
     const worst = (key) => own.reduce((a, r) => (r[key] > (a?.[key] ?? -1) ? r : a), undefined);
     const js = worst('jsBytes');
     const css = worst('cssBytes');
-    if (own.length === 0) problems.push(`group ${name}: no built route (policy lists a group the app does not have)`);
+    if (own.length === 0)
+      problems.push(`group ${name}: no built route (policy lists a group the app does not have)`);
     if (js && js.jsBytes > limit.jsKB * 1024)
-      problems.push(`group ${name}: ${js.route} JS ${(js.jsBytes / 1024).toFixed(1)} KB gzip > ${limit.jsKB} KB`);
+      problems.push(
+        `group ${name}: ${js.route} JS ${(js.jsBytes / 1024).toFixed(1)} KB gzip > ${limit.jsKB} KB`,
+      );
     if (css && css.cssBytes > limit.cssKB * 1024)
-      problems.push(`group ${name}: ${css.route} CSS ${(css.cssBytes / 1024).toFixed(1)} KB gzip > ${limit.cssKB} KB`);
+      problems.push(
+        `group ${name}: ${css.route} CSS ${(css.cssBytes / 1024).toFixed(1)} KB gzip > ${limit.cssKB} KB`,
+      );
     return { group: name, limit, routes: own.map((r) => r.route), worstJs: js, worstCss: css };
   });
   for (const r of routes)
@@ -80,11 +94,19 @@ export const main = (argv, write = (text) => process.stdout.write(text)) => {
   const routes = measureRoutes(resolve(flag('web') ?? WEB_DIR));
   if (argv.includes('--print')) {
     for (const r of routes)
-      write(`${r.group}\t${r.route}\tjs ${(r.jsBytes / 1024).toFixed(1)} KB\tcss ${(r.cssBytes / 1024).toFixed(1)} KB\n`);
+      write(
+        `${r.group}\t${r.route}\tjs ${(r.jsBytes / 1024).toFixed(1)} KB\tcss ${(r.cssBytes / 1024).toFixed(1)} KB\n`,
+      );
     return 0;
   }
   const { groups, problems } = evaluateBudgets(routes, loadBudgets());
-  const report = { tool: 'route-group transfer budgets (gzip)', routes, groups, problems, result: problems.length ? 'fail' : 'pass' };
+  const report = {
+    tool: 'route-group transfer budgets (gzip)',
+    routes,
+    groups,
+    problems,
+    result: problems.length ? 'fail' : 'pass',
+  };
   const out = flag('out');
   if (out) {
     mkdirSync(dirname(resolve(out)), { recursive: true });
@@ -98,7 +120,10 @@ export const main = (argv, write = (text) => process.stdout.write(text)) => {
       const bad = problems.filter((p) => p.startsWith(`group ${g.group}:`));
       return `<testcase classname="TC-NFR-02 bundle budgets" name="group ${g.group}">${bad.map((b) => `<failure message="${esc(b)}"/>`).join('')}</testcase>`;
     });
-    writeFileSync(junit, `<?xml version="1.0"?><testsuite name="bundle-budgets" tests="${cases.length}" failures="${problems.length}">${cases.join('')}</testsuite>`);
+    writeFileSync(
+      junit,
+      `<?xml version="1.0"?><testsuite name="bundle-budgets" tests="${cases.length}" failures="${problems.length}">${cases.join('')}</testsuite>`,
+    );
   }
   for (const g of groups)
     write(

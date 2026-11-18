@@ -20,13 +20,20 @@ const row = (route: string, group: string, jsKB: number, cssKB = 0.5) => ({
 
 describe('route-group budgets (TC-NFR-02)', () => {
   it('passes routes at or under their group limits', () => {
-    const { problems } = evaluateBudgets([row('/', 'root', 10), row('/campaigns', 'operator', 19)], budgets);
+    const { problems } = evaluateBudgets(
+      [row('/', 'root', 10), row('/campaigns', 'operator', 19)],
+      budgets,
+    );
     expect(problems).toEqual([]);
   });
 
   it('fails the group whose route exceeds its JS or CSS limit, naming the route', () => {
     const { problems } = evaluateBudgets(
-      [row('/', 'root', 9), row('/campaigns', 'operator', 21), row('/campaigns/new', 'operator', 5, 1.5)],
+      [
+        row('/', 'root', 9),
+        row('/campaigns', 'operator', 21),
+        row('/campaigns/new', 'operator', 5, 1.5),
+      ],
       budgets,
     );
     expect(problems).toHaveLength(2);
@@ -100,17 +107,24 @@ describe('the command', () => {
     mkdirSync(join(web, '.next/static/chunks'), { recursive: true });
     // Incompressible content so the gzip size follows the length.
     let seed = 7;
-    const noise = Array.from({ length: jsRepeat }, () => ((seed = (seed * 48271) % 2147483647) % 36).toString(36)).join('');
+    const noise = Array.from({ length: jsRepeat }, () =>
+      ((seed = (seed * 48271) % 2147483647) % 36).toString(36),
+    ).join('');
     writeFileSync(join(web, '.next/static/chunks/a.js'), noise);
     writeFileSync(
       join(web, '.next/diagnostics/route-bundle-stats.json'),
       JSON.stringify([{ route: '/', firstLoadChunkPaths: ['.next/static/chunks/a.js'] }]),
     );
-    writeFileSync(join(web, '.next/app-path-routes-manifest.json'), JSON.stringify({ '/page': '/' }));
+    writeFileSync(
+      join(web, '.next/app-path-routes-manifest.json'),
+      JSON.stringify({ '/page': '/' }),
+    );
     const policy = join(root, 'policy.json');
     writeFileSync(
       policy,
-      JSON.stringify({ baselines: { frontend: { bundleBudgets: { groups: { root: { jsKB: 4, cssKB: 1 } } } } } }),
+      JSON.stringify({
+        baselines: { frontend: { bundleBudgets: { groups: { root: { jsKB: 4, cssKB: 1 } } } } },
+      }),
     );
     return { root, web, policy };
   };
@@ -121,7 +135,9 @@ describe('the command', () => {
     process.env.CI_POLICY = ok.policy;
     const out = join(ok.root, 'r', 'budgets.json');
     const junit = join(ok.root, 'r', 'junit.xml');
-    expect(main(['--web', ok.web, '--out', out, '--junit', junit], (t: string) => lines.push(t))).toBe(0);
+    expect(
+      main(['--web', ok.web, '--out', out, '--junit', junit], (t: string) => lines.push(t)),
+    ).toBe(0);
     expect(lines.join('')).toContain('PASS root');
     expect(readFileSync(out, 'utf8')).toContain('"result": "pass"');
     expect(readFileSync(junit, 'utf8')).toContain('failures="0"');
@@ -129,7 +145,9 @@ describe('the command', () => {
     const big = build(12000);
     process.env.CI_POLICY = big.policy;
     lines.length = 0;
-    expect(main(['--web', big.web, '--junit', join(big.root, 'j.xml')], (t: string) => lines.push(t))).toBe(1);
+    expect(
+      main(['--web', big.web, '--junit', join(big.root, 'j.xml')], (t: string) => lines.push(t)),
+    ).toBe(1);
     expect(lines.join('')).toContain('FAIL root');
     expect(readFileSync(join(big.root, 'j.xml'), 'utf8')).toContain('<failure');
     delete process.env.CI_POLICY;
@@ -152,7 +170,12 @@ describe('the recorded policy', () => {
   });
 
   it('budgets every route group of the app with positive limits, five samples in both profiles', () => {
-    expect(Object.keys(policy.bundleBudgets.groups).sort()).toEqual(['admin', 'auth', 'operator', 'root']);
+    expect(Object.keys(policy.bundleBudgets.groups).sort()).toEqual([
+      'admin',
+      'auth',
+      'operator',
+      'root',
+    ]);
     for (const limit of Object.values(policy.bundleBudgets.groups)) {
       expect(limit.jsKB).toBeGreaterThan(0);
       expect(limit.cssKB).toBeGreaterThan(0);

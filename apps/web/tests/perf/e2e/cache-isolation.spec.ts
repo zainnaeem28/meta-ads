@@ -38,11 +38,19 @@ test.describe('@fe-perf-budgets cache isolation (TC-ZT-07)', () => {
       expect(res.headers()['cache-control'], path).toContain('no-store');
     }
     await signIn(context, baseURL!, 'user_perf_a', 'owner@example.com');
-    for (const path of ['/campaigns', '/campaigns/new', '/settings/provider-keys', '/admin/usage']) {
+    for (const path of [
+      '/campaigns',
+      '/campaigns/new',
+      '/settings/provider-keys',
+      '/admin/usage',
+    ]) {
       const res = await context.request.get(path);
       expect(res.status(), path).toBe(200);
       expect(res.headers()['cache-control'], path).toContain('no-store');
-      expect(res.headers()['etag'], `${path} carries no validator a cache could revalidate`).toBeUndefined();
+      expect(
+        res.headers()['etag'],
+        `${path} carries no validator a cache could revalidate`,
+      ).toBeUndefined();
     }
     const token = await context.request.get('/local-token');
     expect(token.headers()['cache-control']).toContain('no-store');
@@ -76,7 +84,8 @@ test.describe('@fe-perf-budgets cache isolation (TC-ZT-07)', () => {
     expect(response!.fromServiceWorker()).toBe(false);
     expect(response!.headers()['cache-control']).toContain('no-store');
     await expect.poll(() => bearers.length, { timeout: 20_000 }).toBeGreaterThan(0);
-    for (const bearer of new Set(bearers)) expect(first.has(bearer), 'the first identity’s bearer is gone').toBe(false);
+    for (const bearer of new Set(bearers))
+      expect(first.has(bearer), 'the first identity’s bearer is gone').toBe(false);
 
     // Back to the first identity: the page asks the server again and sends that identity's credential, not a stored one.
     await page.waitForURL(/\/(access|campaigns)/);
@@ -97,7 +106,9 @@ test.describe('@fe-perf-budgets cache isolation (TC-ZT-07)', () => {
     await context.clearCookies();
     const res = await page.goto('/campaigns');
     expect(new URL(res!.url()).pathname).toBe('/sign-in');
-    const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
+    const stored = await page.evaluate(
+      () => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }),
+    );
     expect(stored).not.toMatch(/user_perf_a|owner@example\.com|Bearer/);
   });
 });

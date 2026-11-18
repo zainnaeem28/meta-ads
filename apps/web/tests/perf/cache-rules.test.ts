@@ -36,7 +36,9 @@ describe('cache rules (TC-ZT-07)', () => {
   });
 
   it('pauses polling on a hidden tab, a terminal job and an error on screen, and polls every 3 s otherwise', () => {
-    expect(pollInterval({ state: 'running', hidden: false, errorShown: false })).toBe(POLL_INTERVAL_MS);
+    expect(pollInterval({ state: 'running', hidden: false, errorShown: false })).toBe(
+      POLL_INTERVAL_MS,
+    );
     expect(POLL_INTERVAL_MS).toBe(3000);
     expect(pollInterval({ state: 'running', hidden: true, errorShown: false })).toBe(false);
     expect(pollInterval({ state: 'completed', hidden: false, errorShown: false })).toBe(false);
@@ -46,16 +48,25 @@ describe('cache rules (TC-ZT-07)', () => {
   it('never polls in a background tab, persists the query cache, or opts a fetch into a shared cache', () => {
     for (const { path, text } of sources) {
       expect(text, path).not.toMatch(/refetchIntervalInBackground:\s*true/);
-      expect(text, path).not.toMatch(/persistQueryClient|createSyncStoragePersister|createAsyncStoragePersister/);
-      expect(text, path).not.toMatch(/cache:\s*['"]force-cache['"]|next:\s*\{\s*revalidate|unstable_cache/);
-      expect(text, path).not.toMatch(/(local|session)Storage\.setItem\([^)]*(token|campaign|query)/i);
+      expect(text, path).not.toMatch(
+        /persistQueryClient|createSyncStoragePersister|createAsyncStoragePersister/,
+      );
+      expect(text, path).not.toMatch(
+        /cache:\s*['"]force-cache['"]|next:\s*\{\s*revalidate|unstable_cache/,
+      );
+      expect(text, path).not.toMatch(
+        /(local|session)Storage\.setItem\([^)]*(token|campaign|query)/i,
+      );
     }
   });
 
   it('refetches a screen after its mutation (invalidation after a write)', () => {
-    const screens = sources.filter(({ path }) => /features\/fe-screen-[^/]+\/[A-Za-z]+Screen\.tsx$/.test(path));
+    const screens = sources.filter(({ path }) =>
+      /features\/fe-screen-[^/]+\/[A-Za-z]+Screen\.tsx$/.test(path),
+    );
     const writers = screens.filter(({ text }) => /useMutation\(/.test(text));
     expect(writers.length).toBeGreaterThan(0);
-    for (const { path, text } of writers) expect(text, path).toMatch(/invalidateQueries|setQueryData/);
+    for (const { path, text } of writers)
+      expect(text, path).toMatch(/invalidateQueries|setQueryData/);
   });
 });
