@@ -98,6 +98,7 @@ beforeAll(async () => {
     '0080_task-048-brief.sql',
     '0090_task-052-production-video.sql',
     '0100_task-055-production-assembly.sql',
+    '0110_task-057-production-thumbstopper.sql',
   ];
   for (const file of files) for (const statement of statements(file)) await pool.query(statement);
   await installJobs(testDb.url);
@@ -433,7 +434,7 @@ describe('API-070 create an assembly, API-071 read it', () => {
     expect(await count('idempotency_records', 'owner_id = $1', [a.id])).toBe(0);
   });
 
-  it('answers 404 for a missing, foreign or deleting campaign, and for a thumbstopper that cannot exist yet', async () => {
+  it('answers 404 for a missing, foreign or deleting campaign, ', async () => {
     const a = await account();
     const b = await account();
     const c = await campaign(a.id);
@@ -448,6 +449,49 @@ describe('API-070 create an assembly, API-071 read it', () => {
     await pool.query(`update campaigns set state = 'deleting' where id = $1`, [c.campaign]);
     expect((await postAsm(c.campaign, a.token, 'nf-4', { clips: [good] })).status).toBe(404);
     expect(await count('assembly_jobs', 'owner_id = $1', [a.id])).toBe(0);
+  });
+
+  it('accepts a completed own thumbstopper and answers 404 for a foreign, missing or unfinished one', async () => {
+    const a = await account();
+    const b = await account();
+    const c = await campaign(a.id);
+    const other = await campaign(b.id);
+    const good = await clip(a.id, c, 0);
+    const thumb = async (owner: string, campaignId: string, state: string): Promise<string> => {
+      const id = randomUUID();
+      const media = state === 'completed' ? randomUUID() : null;
+      if (media !== null) {
+        await pool.query(
+          `insert into media_objects (id, owner_id, kind, state, storage_key, bytes, content_type, campaign_id) values ($1, $2, 'thumbstopper', 'ready', $3, 10, 'image/png', $4)`,
+          [media, owner, `u/${owner}/c/${campaignId}/thumbstopper/${media}.png`, campaignId],
+        );
+      }
+      await pool.query(
+        `insert into thumbstopper_jobs (id, owner_id, campaign_id, callout_text, provider_model, output_media_id, state, reuse_hash, deadline_at) values ($1, $2, $3, 'Fresh', 'local-stub-image', $4, $5, $6, now() + interval '10 minutes')`,
+        [id, owner, campaignId, media, state, randomUUID().replace(/-/g, '').padEnd(64, '0')],
+      );
+      return id;
+    };
+    for (const [name, id] of [
+      ['foreign', await thumb(b.id, other.campaign, 'completed')],
+      ['missing', randomUUID()],
+      ['pending', await thumb(a.id, c.campaign, 'pending')],
+      ['failed', await thumb(a.id, c.campaign, 'failed')],
+    ] as const) {
+      const res = await postAsm(c.campaign, a.token, `th-${name}`, {
+        clips: [good],
+        thumbstopperJobId: id,
+      });
+      expect([name, res.status, res.body.error?.code]).toEqual([name, 404, 'not_found']);
+    }
+    expect(await count('assembly_jobs', 'owner_id = $1', [a.id])).toBe(0);
+    const own = await thumb(a.id, c.campaign, 'completed');
+    const ok = await postAsm(c.campaign, a.token, 'th-own', {
+      clips: [good],
+      thumbstopperJobId: own,
+    });
+    expect(ok.status).toBe(202);
+    expect(ok.body.data.thumbstopperJobId).toBe(own);
   });
 
   describe('QC confirmation (REQ-010)', () => {

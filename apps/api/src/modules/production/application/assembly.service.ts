@@ -4,6 +4,7 @@ import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { assemblyClips, assemblyJobs } from '../../../database/schema/production-assembly.js';
 import { briefSegments } from '../../../database/schema/brief.js';
 import { campaigns } from '../../../database/schema/campaigns.js';
+import { thumbstopperJobs } from '../../../database/schema/production-thumb.js';
 import { qcRuns, videoJobs } from '../../../database/schema/production.js';
 import { DATABASE, isUniqueViolation, lockXact } from '../../../platform/db/index.js';
 import type { Database, DbTx } from '../../../platform/db/index.js';
@@ -152,8 +153,22 @@ export class AssemblyService {
       }
       return { assembly: await this.record(tx, ownerId, recorded.resourceId), reused: true };
     }
-    // No thumbstopper job can exist before M0012 creates the table that holds it.
-    if (input.thumbstopperJobId !== null) throw notFound('thumbstopper');
+    if (input.thumbstopperJobId !== null) {
+      // Own, this campaign's and completed with its image; a foreign, missing or unfinished one is `not_found`.
+      const [thumb] = await tx
+        .select({ id: thumbstopperJobs.id })
+        .from(thumbstopperJobs)
+        .where(
+          and(
+            eq(thumbstopperJobs.id, input.thumbstopperJobId),
+            eq(thumbstopperJobs.ownerId, ownerId),
+            eq(thumbstopperJobs.campaignId, campaignId),
+            eq(thumbstopperJobs.state, 'completed'),
+            sql`${thumbstopperJobs.outputMediaId} is not null`,
+          ),
+        );
+      if (thumb === undefined) throw notFound('thumbstopper');
+    }
     await lockXact(tx, 'render-day', ownerId);
     const confirmed = await this.checkClips(tx, ownerId, campaignId, input);
     const reuseHash = assemblyReuseHash(input.clips, input.thumbstopperJobId);
