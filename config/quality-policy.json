@@ -93,6 +93,15 @@
       "profiles": ["ticket", "release"]
     },
     {
+      "id": "unit-backup",
+      "kind": "junit",
+      "report": "backup/junit.xml",
+      "coverage": "backup/lcov.info",
+      "coverageClass": "overall",
+      "minTests": 1,
+      "profiles": ["release"]
+    },
+    {
       "id": "contract",
       "kind": "summary",
       "report": "contract/summary.json",

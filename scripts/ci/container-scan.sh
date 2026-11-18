@@ -3,7 +3,7 @@
 # (vulnerabilities and secrets; Critical or High block, per config/quality-policy.json). Writes
 # reports/container/junit.xml, reports/container.sarif and docs/evidence/TASK-008/digests.txt.
 # Needs a Docker daemon: without one it fails (a scan that did not run is never a pass).
-# Usage: container-scan.sh   (env: CONTAINER_TARGETS=api,worker,web, SMOKE_DB=host:port/database)
+# Usage: container-scan.sh   (env: CONTAINER_TARGETS=api,worker,web,backup, SMOKE_DB=host:port/database)
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 [ -f docker/Dockerfile ] || { not_applicable container findings "no docker/Dockerfile yet"; exit 0; }
 if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
@@ -11,7 +11,7 @@ if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
   echo "container-scan.sh: a running Docker daemon is required to build and scan the images" >&2; exit 1
 fi
 need_tool trivy
-targets="${CONTAINER_TARGETS:-api,worker,web}"
+targets="${CONTAINER_TARGETS:-api,worker,web,backup}"
 mkdir -p "$REPORTS/container"
 
 smoke_rc=0

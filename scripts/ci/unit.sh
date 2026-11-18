@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Unit suites with JUnit and lcov coverage. One suite per call (default: ci, the CI tooling's own tests).
-# Usage: unit.sh [suite]. Later tickets register their workspace suites in the case below and in the policy.
+# Usage: unit.sh [ci|backup]. Later tickets register their workspace suites in the case below and in the policy.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 suite="${1:-ci}"
 case "$suite" in
@@ -17,6 +17,17 @@ case "$suite" in
     COVERAGE_FILE="$out/.coverage" python3 -I -m coverage report --omit='*/tests/*,*/probes/*' || true
     if [ "$rc" -eq 0 ]; then record unit-ci junit pass "pytest+coverage" 0 ci/junit.xml
     else record unit-ci junit fail "pytest+coverage" "$rc" ci/junit.xml "unit suite exited $rc"; fi
+    exit "$rc"
+    ;;
+  backup)
+    # DO-07a: the backup service's suite (real pg_dump 17 and the shared test PostgreSQL, age, an in-process S3 emulator).
+    out="$REPORTS/backup"
+    mkdir -p "$out"
+    rm -f "$out/junit.xml" "$out/lcov.info"
+    rc=0
+    CI_REPORTS_DIR="$REPORTS" pnpm --filter backup test || rc=$?
+    if [ "$rc" -eq 0 ]; then record unit-backup junit pass "vitest+coverage" 0 backup/junit.xml
+    else record unit-backup junit fail "vitest+coverage" "$rc" backup/junit.xml "backup suite exited $rc"; fi
     exit "$rc"
     ;;
   *)

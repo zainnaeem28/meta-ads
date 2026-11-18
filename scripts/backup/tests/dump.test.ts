@@ -79,15 +79,29 @@ describe('the dump (TC-BKP-01, TC-BKP-23, TC-BKP-24)', () => {
     try {
       const url = db.env.urlFor('superuser', target);
       await withClient(url, (c) => c.query('DROP SCHEMA public')); // the archive carries its own CREATE SCHEMA public
-      const restore = spawnSync(
-        pgRestore,
-        ['--no-owner', '--no-privileges', '--exit-on-error', '--dbname', url],
-        {
-          input: decryptDump(rig, encrypted),
-          encoding: 'utf8',
-          env: process.env,
-        },
-      );
+      // The dump is of --schema=public and --schema=pgboss, which does not carry pg_trgm (finding F-DR-2): restore in sections,
+      // the extension between pre-data and data, as docs/ops/ROLLBACK-RUNBOOK.md does.
+      const dumpBytes = decryptDump(rig, encrypted);
+      const restoreSection = (section: string) =>
+        spawnSync(
+          pgRestore,
+          [
+            '--no-owner',
+            '--no-privileges',
+            '--exit-on-error',
+            `--section=${section}`,
+            '--dbname',
+            url,
+          ],
+          { input: dumpBytes, encoding: 'utf8', env: process.env },
+        );
+      let restore = restoreSection('pre-data');
+      expect(restore.status, restore.stderr).toBe(0);
+      await withClient(url, (c) => c.query('CREATE EXTENSION IF NOT EXISTS pg_trgm SCHEMA public'));
+      for (const section of ['data', 'post-data']) {
+        restore = restoreSection(section);
+        expect(restore.status, restore.stderr).toBe(0);
+      }
       expect(restore.status, restore.stderr).toBe(0);
       const rows = await tryQuery(
         url,

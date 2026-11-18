@@ -2,12 +2,13 @@
 
 Per target it checks: built once with a recorded image ID; runs as non-root; no secret-named variable baked into
 the image config; starts read-only (tmpfs for /tmp only) and answers its health probe (api: /health/live, web: /;
-worker: its binaries and, once its entry exists, that the process stays up). The web target is also built twice with
+worker: its binaries and, once its entry exists, that the process stays up; backup: pg_dump 17, age, and exit 78
+without configuration). The web target is also built twice with
 different public values to prove the build takes public values only. A second build of the api target from the same
 commit is compared with the first.
 
 Writes reports/container/junit.xml and docs/evidence/TASK-008/digests.txt (or --evidence). Exit 1 on any failure.
-Usage: container_smoke.py [--targets api,worker,web] [--junit PATH] [--evidence PATH] [--ids PATH]
+Usage: container_smoke.py [--targets api,worker,web,backup] [--junit PATH] [--evidence PATH] [--ids PATH]
 """
 
 import argparse
@@ -130,6 +131,17 @@ def smoke_worker(ref, envdir):
         remove(name)
 
 
+def smoke_backup(ref, _envdir):
+    """The backup image is a cron job with no listener: its client matches the server major version, age is present, and
+    the entry point (run read-only with no configuration) refuses to start with exit 78 instead of running."""
+    assert sh(["docker", "run", "--rm", "--entrypoint", "pg_dump", ref, "--version"]).stdout.split()[2].startswith("17"), \
+        "pg_dump is not PostgreSQL 17"
+    sh(["docker", "run", "--rm", "--entrypoint", "age", ref, "--version"])
+    run = sh(["docker", "run", "--rm", "--read-only", "--tmpfs", "/tmp", "--cap-drop", "ALL",
+              "--security-opt", "no-new-privileges:true", ref], check=False)
+    assert run.returncode == 78, f"entry point without configuration exited {run.returncode}, expected 78"
+
+
 class Skip(Exception):
     pass
 
@@ -161,7 +173,7 @@ def public_config_proof():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--targets", default="api,worker,web")
+    ap.add_argument("--targets", default="api,worker,web,backup")
     ap.add_argument("--junit", default="reports/container/junit.xml")
     ap.add_argument("--evidence", default="docs/evidence/TASK-008/digests.txt")
     ap.add_argument("--ids", default="reports/container/image-ids.json")
@@ -197,7 +209,7 @@ def main():
         cases.append((f"{t}: build", "pass", "", 0))
         case(f"{t}: runs as non-root", lambda: check_non_root(tag))
         case(f"{t}: no secrets baked into the image", lambda: check_no_baked_secrets(tag))
-        probe = {"api": smoke_api, "web": smoke_web, "worker": smoke_worker}[t]
+        probe = {"api": smoke_api, "web": smoke_web, "worker": smoke_worker, "backup": smoke_backup}[t]
         case(f"{t}: starts read-only and answers its probe", lambda p=probe: p(tag, envdir))
 
     if "api" in ids:
