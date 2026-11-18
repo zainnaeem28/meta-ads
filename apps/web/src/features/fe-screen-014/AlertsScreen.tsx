@@ -196,7 +196,7 @@ export function AlertsScreen() {
       workspaceHref={ROUTES.campaigns}
     >
       <div
-        className="mx-auto flex max-w-5xl flex-col gap-4"
+        className="mx-auto flex w-full max-w-wide flex-col gap-4"
         data-screen="SCREEN-014"
         aria-busy={list.isPending || undefined}
       >

@@ -73,6 +73,12 @@ export const createApiFetch = (config: ApiClientConfig): typeof fetch => {
     const requestId = response.headers.get('X-Request-ID');
     if (requestId && !config.isolated) lastRequestId = requestId;
 
+    // A successful CSV export is not JSON: hand it on unparsed (API-131).
+    if (response.ok && response.headers.get('Content-Type')?.startsWith('text/csv')) {
+      rememberEtag(path, response.headers.get('ETag'));
+      return response;
+    }
+
     let body: unknown;
     try {
       body = parseBody(await response.clone().text());
