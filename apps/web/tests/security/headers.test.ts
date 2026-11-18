@@ -84,7 +84,7 @@ describe('key page (REQ-019)', () => {
     const res = await call('/settings/provider-keys', true);
     expect(res.headers.get('cache-control')).toBe('no-store');
     const other = await call('/campaigns', true);
-    expect(other.headers.get('cache-control')).toBeNull();
+    expect(other.headers.get('cache-control')).toBe('no-store');
   });
 
   const key = `pk_test_${btoa('clerk.shroomap.example$')}`;

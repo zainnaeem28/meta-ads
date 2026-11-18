@@ -453,9 +453,12 @@ export function ProviderKeysScreen() {
           </section>
         ) : null}
 
-        <Alert variant="info" role="status" title={COPY.protectedTitle}>
-          {COPY.protectedBody}
-        </Alert>
+        {/* Below content that changes height when the keys arrive: shown with it, so it never moves (CLS). */}
+        {keys.isPending ? null : (
+          <Alert variant="info" role="status" title={COPY.protectedTitle}>
+            {COPY.protectedBody}
+          </Alert>
+        )}
       </div>
 
       {flow?.kind === 'put' && dialogProvider ? (

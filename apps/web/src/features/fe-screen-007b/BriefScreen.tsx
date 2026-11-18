@@ -753,18 +753,23 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
           breadcrumb={[{ label: 'Campaigns', href: ROUTES.campaigns }, { label: name }]}
           actions={actions}
         />
-        <Tabs
-          label={COPY.stageTabs}
-          value="brief"
-          onValueChange={goTo}
-          tabs={[
-            { id: 'brief', label: COPY.tabBrief },
-            { id: 'clips', label: COPY.tabClips, disabled: !accepted },
-            { id: 'final', label: COPY.tabFinal, disabled: true },
-          ]}
-        >
-          {panel}
-        </Tabs>
+        {campaign.isPending ? (
+          // The header grows once the campaign is known (breadcrumb, description, actions): nothing persistent below it until then (CLS).
+          panel
+        ) : (
+          <Tabs
+            label={COPY.stageTabs}
+            value="brief"
+            onValueChange={goTo}
+            tabs={[
+              { id: 'brief', label: COPY.tabBrief },
+              { id: 'clips', label: COPY.tabClips, disabled: !accepted },
+              { id: 'final', label: COPY.tabFinal, disabled: true },
+            ]}
+          >
+            {panel}
+          </Tabs>
+        )}
       </div>
       {dialog}
     </OperatorShell>

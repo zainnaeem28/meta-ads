@@ -6,19 +6,26 @@
 # Usage: lighthouse.sh            the first baseline: a budget breach is recorded and filed as a product defect, the run
 #                                 still succeeds; an invalid run (too few samples, redirected to sign-in) fails
 #        lighthouse.sh --enforce  gate mode (QA on the final candidate): any budget breach fails
+#        lighthouse.sh --budgets  gate for the web app (TASK-119): the route-group JS and CSS transfer budgets of the built app
+#                                 (apps/web/tests/perf/bundle-budgets.mjs) and the medians in --enforce mode
 #        lighthouse.sh --smoke   one sample per route, recorded, not a baseline
 #        lighthouse.sh --invalid-session   negative test: the signed-in routes redirect to sign-in and the run must fail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 BL="$CI_ROOT/tests/baselines"
-smoke=0; invalid=0; enforce=()
+smoke=0; invalid=0; budgets=0; enforce=()
 for arg in "$@"; do
   case "$arg" in
-    --enforce) enforce=(--enforce) ;; --smoke) smoke=1 ;; --invalid-session) invalid=1 ;;
+    --enforce) enforce=(--enforce) ;; --budgets) budgets=1; enforce=(--enforce) ;; --smoke) smoke=1 ;; --invalid-session) invalid=1 ;;
     *) echo "lighthouse.sh: unknown argument $arg" >&2; exit 2 ;;
   esac
 done
 out="$REPORTS/baselines"; state="$out/state-frontend"
 mkdir -p "$out"
+if [ "$budgets" = 1 ]; then
+  web="$CI_ROOT/apps/web"
+  [ -f "$web/.next/diagnostics/route-bundle-stats.json" ] || pnpm --filter @shroomap/web build >&2
+  node "$web/tests/perf/bundle-budgets.mjs" --out "$out/bundle-budgets.json" --junit "$out/bundle-budgets-junit.xml"
+fi
 [ -x "$CI_TOOLS_DIR/lighthouse/node_modules/.bin/lighthouse" ] || "$BL/install-tools.sh" lighthouse >&2
 "$BL/install-tools.sh" chromium >&2
 cleanup() { node "$BL/stack.mjs" down --state "$state" >&2 || true; }

@@ -514,54 +514,61 @@ export function CampaignsScreen({ initialSearch = '' }: { initialSearch?: string
       >
         <PageHeader title={COPY.title} description={COPY.description} actions={newBrief} />
 
-        {keyState === 'missing' ? (
-          <Alert
-            variant="warning"
-            role="status"
-            title={COPY.keyMissing.title}
-            action={
-              <Button variant="outline" size="sm" asChild>
-                <a href={ROUTES.providerKeys}>{COPY.keyMissing.action}</a>
-              </Button>
-            }
-          >
-            {COPY.keyMissing.body}
-          </Alert>
-        ) : null}
-
-        <Tabs
-          label={COPY.tabsLabel}
-          tabs={tabs}
-          value={url.tab}
-          onValueChange={(id) => go({ tab: id as Tab, q: url.q, status: '', page: 1 })}
-        >
-          <div className="flex flex-col gap-4 pt-4">
-            {drafts ? (
-              <FilterBar
-                searchLabel={COPY.searchLabel}
-                query={input}
-                onQueryChange={setInput}
-                chips={[]}
-                status=""
-                onStatusChange={() => undefined}
-                onClearAll={clearAll}
-              />
-            ) : (
-              <FilterBar
-                searchLabel={COPY.searchLabel}
-                query={input}
-                onQueryChange={setInput}
-                chips={chips}
-                status={url.status}
-                onStatusChange={(status) =>
-                  go({ ...url, q: input, status: status as Filter | '', page: 1 })
+        {keys.isPending ? (
+          // The key banner decides how far the list sits below the header: nothing visible until it is known, so nothing moves (CLS).
+          loadingList
+        ) : (
+          <>
+            {keyState === 'missing' ? (
+              <Alert
+                variant="warning"
+                role="status"
+                title={COPY.keyMissing.title}
+                action={
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={ROUTES.providerKeys}>{COPY.keyMissing.action}</a>
+                  </Button>
                 }
-                onClearAll={clearAll}
-              />
-            )}
-            {body}
-          </div>
-        </Tabs>
+              >
+                {COPY.keyMissing.body}
+              </Alert>
+            ) : null}
+
+            <Tabs
+              label={COPY.tabsLabel}
+              tabs={tabs}
+              value={url.tab}
+              onValueChange={(id) => go({ tab: id as Tab, q: url.q, status: '', page: 1 })}
+            >
+              <div className="flex flex-col gap-4 pt-4">
+                {drafts ? (
+                  <FilterBar
+                    searchLabel={COPY.searchLabel}
+                    query={input}
+                    onQueryChange={setInput}
+                    chips={[]}
+                    status=""
+                    onStatusChange={() => undefined}
+                    onClearAll={clearAll}
+                  />
+                ) : (
+                  <FilterBar
+                    searchLabel={COPY.searchLabel}
+                    query={input}
+                    onQueryChange={setInput}
+                    chips={chips}
+                    status={url.status}
+                    onStatusChange={(status) =>
+                      go({ ...url, q: input, status: status as Filter | '', page: 1 })
+                    }
+                    onClearAll={clearAll}
+                  />
+                )}
+                {body}
+              </div>
+            </Tabs>
+          </>
+        )}
       </div>
 
       {target ? (
