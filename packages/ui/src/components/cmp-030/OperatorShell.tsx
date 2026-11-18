@@ -190,22 +190,32 @@ export function OperatorShell({
           className="shrink-0 @xs:hidden"
         />
         <div className="flex min-w-0 items-center gap-2 md:gap-3">
-          {keyState !== 'ok' ? (
-            <a
-              href={PROVIDER_KEYS_HREF}
-              data-key-badge={keyState}
-              className={`inline-flex min-h-control-touch min-w-control-touch items-center justify-center rounded-full md:min-h-0 md:min-w-0 ${FOCUS}${previewFocus === 'key-badge' ? ` ${FOCUS_SHOWN}` : ''}`}
-            >
-              <Badge
-                variant={keyState === 'missing' ? 'warning' : 'destructive'}
-                icon={keyState === 'missing' ? 'key-round' : 'triangle-alert'}
+          {/* The key slot exists in every state (CMP-030, UI-UX §5.1): 44 x 44 px on a phone, 136 x 24 px from 768 px,
+              content right-aligned, so the account menu never moves when the key state arrives. */}
+          <div
+            data-key-slot={keyState}
+            className="flex h-11 w-11 shrink-0 items-center justify-end md:h-6 md:w-34"
+          >
+            {keyState === 'unknown' ? (
+              <span aria-hidden="true" className="block size-full rounded-full bg-muted" />
+            ) : null}
+            {keyState === 'missing' || keyState === 'disabled' ? (
+              <a
+                href={PROVIDER_KEYS_HREF}
+                data-key-badge={keyState}
+                className={`inline-flex min-h-control-touch min-w-control-touch max-w-full items-center justify-center rounded-full md:min-h-0 md:min-w-0 ${FOCUS}${previewFocus === 'key-badge' ? ` ${FOCUS_SHOWN}` : ''}`}
               >
-                <span className="max-md:sr-only">
-                  {keyState === 'missing' ? 'Add provider keys' : 'Key disabled'}
-                </span>
-              </Badge>
-            </a>
-          ) : null}
+                <Badge
+                  variant={keyState === 'missing' ? 'warning' : 'destructive'}
+                  icon={keyState === 'missing' ? 'key-round' : 'triangle-alert'}
+                >
+                  <span className="truncate max-md:sr-only">
+                    {keyState === 'missing' ? 'Add provider keys' : 'Key disabled'}
+                  </span>
+                </Badge>
+              </a>
+            ) : null}
+          </div>
           <Menu
             label={`${roleLabel} account menu`}
             triggerClassName="h-control gap-2 rounded-full border border-border-strong bg-card py-0 pl-1 pr-2 max-md:h-control-touch"

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { BRAND, pageTitle } from '@shroomap/ui/brand';
+import { getServerIdentity } from '../lib/auth/server-token';
 import { AppProviders } from '../providers/app-providers';
 import './globals.css';
 
@@ -47,11 +48,26 @@ export function generateMetadata(): Metadata {
 
 export const viewport: Viewport = { themeColor: BRAND.themeColor };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+// The api origin the browser calls: warmed up early for the later reads and the polling (ADR-014). The api is called
+// with credentials omitted (anonymous CORS), so the connection is warmed for that mode too.
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN;
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // The user id the server resolved (never a token): the browser providers seed their identity with it, so first data
+  // read for this user is not mistaken for a change (ADR-014, constraint 6).
+  const initialIdentity = await getServerIdentity();
   return (
     <html lang="en">
+      <head>
+        {API_ORIGIN ? (
+          <>
+            <link rel="preconnect" href={API_ORIGIN} />
+            <link rel="preconnect" href={API_ORIGIN} crossOrigin="anonymous" />
+          </>
+        ) : null}
+      </head>
       <body>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders initialIdentity={initialIdentity}>{children}</AppProviders>
       </body>
     </html>
   );

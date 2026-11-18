@@ -5,8 +5,11 @@ import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 export interface TabItem {
   id: string;
   label: string;
-  /** Count badge, shown for stage tabs. */
-  count?: number;
+  /**
+   * Count badge, shown for stage tabs. `null` means "not known yet": a muted placeholder of the same size is drawn, so the
+   * number arriving moves nothing. `undefined` means this tab has no count.
+   */
+  count?: number | null;
   /** Not reachable yet: stays in the list, is skipped by arrow keys and cannot be selected. */
   disabled?: boolean;
 }
@@ -19,8 +22,17 @@ export interface TabsProps {
   label: string;
   /** Content of the selected tab; rendered in a `tabpanel` labelled by its tab. */
   children?: ReactNode;
+  /** Digits the count slot reserves (default 3: up to 999, then `999+`). A list that cannot pass 99 may reserve 2. */
+  reserve?: 2 | 3;
   className?: string;
 }
+
+const MAX_COUNT = 999;
+const SLOT_WIDTH = {
+  2: 'min-w-(--count-slot-2)',
+  3: 'min-w-(--count-slot-3)',
+  4: 'min-w-(--count-slot-4)',
+} as const;
 
 const TAB_CLASS =
   'inline-flex items-center gap-2 whitespace-nowrap border-b-2 -mb-px px-4 min-h-control max-md:min-h-control-touch ' +
@@ -28,7 +40,15 @@ const TAB_CLASS =
   'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring';
 
 /** CMP-014 tabs: underline tab list with roving focus; arrow keys move and select, Home and End jump. */
-export function Tabs({ tabs, value, onValueChange, label, children, className }: TabsProps) {
+export function Tabs({
+  tabs,
+  value,
+  onValueChange,
+  label,
+  children,
+  reserve = 3,
+  className,
+}: TabsProps) {
   const base = useId();
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const enabled = tabs.filter((t) => !t.disabled);
@@ -90,11 +110,22 @@ export function Tabs({ tabs, value, onValueChange, label, children, className }:
               className={`${TAB_CLASS} ${state}`}
             >
               {tab.label}{' '}
-              {tab.count !== undefined ? (
-                <span className="rounded-full border border-border-strong bg-muted px-2 text-caption font-semibold text-foreground">
-                  {tab.count}
+              {tab.count === undefined ? null : tab.count === null ? (
+                <span
+                  aria-hidden="true"
+                  data-count-slot="loading"
+                  className={`box-content rounded-full border border-border-strong bg-muted px-2 text-center text-caption font-semibold tabular-nums text-transparent ${SLOT_WIDTH[reserve]}`}
+                >
+                  {'0'.repeat(reserve)}
                 </span>
-              ) : null}
+              ) : (
+                <span
+                  data-count-slot="loaded"
+                  className={`box-content rounded-full border border-border-strong bg-muted px-2 text-center text-caption font-semibold tabular-nums text-foreground ${SLOT_WIDTH[tab.count > MAX_COUNT ? 4 : reserve]}`}
+                >
+                  {tab.count > MAX_COUNT ? `${MAX_COUNT}+` : tab.count}
+                </span>
+              )}
             </button>
           );
         })}

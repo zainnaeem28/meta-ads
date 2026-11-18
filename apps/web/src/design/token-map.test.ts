@@ -3,7 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { colourMappings, declarations } from './token-map.js';
 
-const ui = (path: string) => fileURLToPath(new URL(`../../../../packages/ui/${path}`, import.meta.url));
+const ui = (path: string) =>
+  fileURLToPath(new URL(`../../../../packages/ui/${path}`, import.meta.url));
 const tokensCss = readFileSync(ui('src/tokens.css'), 'utf8');
 const themeCss = readFileSync(ui('src/theme.css'), 'utf8');
 const tokens = declarations(tokensCss);
@@ -39,8 +40,8 @@ describe('design tokens (TASK-066)', () => {
     expect(tokensCss).toContain('[data-portal="admin"]');
   });
 
-  it('self-hosts Inter latin and latin-ext with swap and a licence file', () => {
-    expect(themeCss.match(/font-display:\s*swap/g)).toHaveLength(2);
+  it('self-hosts Inter latin and latin-ext with optional (no late swap) and a licence file', () => {
+    expect(themeCss.match(/font-display:\s*optional/g)).toHaveLength(2);
     expect(themeCss).not.toMatch(/url\(\s*["']?https?:/);
     for (const file of ['inter-latin-wght-normal.woff2', 'inter-latin-ext-wght-normal.woff2']) {
       expect(statSync(ui(`src/fonts/${file}`)).size).toBeGreaterThan(10_000);

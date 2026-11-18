@@ -200,13 +200,51 @@ describe('CMP-030 OperatorShell', () => {
   });
 });
 
+describe('key slot (UI-UX §5.1)', () => {
+  const slotOf = (state: 'unknown' | 'ok' | 'missing' | 'disabled') => {
+    const { container, unmount } = render(
+      <OperatorShell role="user" path="/campaigns" pageName="Campaigns" keyState={state}>
+        <p>x</p>
+      </OperatorShell>,
+    );
+    const slot = container.querySelector('[data-key-slot]') as HTMLElement;
+    return { slot, unmount };
+  };
+
+  it('is the same fixed box in every state, so the account menu never moves', () => {
+    const classes = (['unknown', 'ok', 'missing', 'disabled'] as const).map((state) => {
+      const { slot, unmount } = slotOf(state);
+      const value = slot.className;
+      expect(slot.dataset.keySlot).toBe(state);
+      unmount();
+      return value;
+    });
+    expect(new Set(classes).size).toBe(1);
+    expect(classes[0]).toContain('w-11');
+    expect(classes[0]).toContain('md:w-34');
+  });
+
+  it('holds a hidden placeholder while unknown, and nothing focusable or named when ok', () => {
+    const unknown = slotOf('unknown');
+    expect(unknown.slot.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    expect(unknown.slot.querySelector('a')).toBeNull();
+    unknown.unmount();
+    const ok = slotOf('ok');
+    expect(ok.slot.children).toHaveLength(0);
+    ok.unmount();
+    const missing = slotOf('missing');
+    expect(missing.slot.querySelector('a')).not.toBeNull();
+  });
+});
+
 describe('deriveKeyState and currentItem', () => {
   const k = (configured: boolean, status: 'active' | 'untested' | 'disabled' | null) => ({
     configured,
     status,
   });
   it('maps the API-010 list', () => {
-    expect(deriveKeyState(undefined)).toBe('ok');
+    expect(deriveKeyState(undefined)).toBe('unknown');
+    expect(deriveKeyState(undefined, true)).toBe('ok');
     expect(deriveKeyState([])).toBe('ok');
     expect(deriveKeyState([k(true, 'active'), k(true, 'untested')])).toBe('ok');
     expect(deriveKeyState([k(false, null), k(true, 'active')])).toBe('missing');

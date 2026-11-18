@@ -5,20 +5,14 @@ import {
   clearClaimIssue,
   regenerateBrief,
   editBrief,
-  getBrief,
-  getCampaign,
   getGetBriefQueryKey,
   getGetBriefUrl,
   getGetCampaignQueryKey,
-  listMyProviderKeys,
-  getListMyProviderKeysQueryKey,
   type Brief,
   type BriefPatchSegmentsItem,
   type BriefResponse,
   type Campaign,
-  type CampaignResponse,
   type ClaimIssue,
-  type ProviderKeyListResponse,
   type Segment,
 } from '@shroomap/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -41,6 +35,7 @@ import { resolveError } from '../../lib/errors';
 import { ROUTES } from '../../lib/errors/routes';
 import { ifMatch } from '../../lib/api/etag-store';
 import { POLL_INTERVAL_MS } from '../../lib/query/job-polling';
+import { briefQuery, campaignQuery, keysQuery } from '../../lib/query/queries';
 import { SCREEN_007_COPY as COPY, issueHeading, promptsText } from './copy';
 
 type Edits = Record<number, { dialogue?: string; prompt?: string }>;
@@ -79,21 +74,11 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
   const [copyFailed, setCopyFailed] = useState(false);
 
   const brief = useQuery({
-    queryKey: briefKey,
-    queryFn: async ({ signal }) => (await getBrief(campaignId, { signal })).data as BriefResponse,
+    ...briefQuery(campaignId),
     refetchInterval: (q) => (q.state.data?.data.state === 'generating' ? POLL_INTERVAL_MS : false),
   });
-  const campaign = useQuery({
-    queryKey: getGetCampaignQueryKey(campaignId),
-    queryFn: async ({ signal }) =>
-      (await getCampaign(campaignId, { signal })).data as CampaignResponse,
-  });
-  const keys = useQuery({
-    queryKey: getListMyProviderKeysQueryKey(),
-    queryFn: async ({ signal }) =>
-      (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
-    retry: false,
-  });
+  const campaign = useQuery(campaignQuery(campaignId));
+  const keys = useQuery({ ...keysQuery(), retry: false });
 
   const data: Brief | undefined = brief.data?.data;
   const camp: Campaign | undefined = campaign.data?.data;
@@ -732,7 +717,7 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
       role="user"
       path={path}
       pageName={`${COPY.title} · ${name}`}
-      keyState={deriveKeyState(keys.data?.data)}
+      keyState={deriveKeyState(keys.data?.data, keys.isError)}
       toasts={toasts}
       onDismissToast={() => setToasts([])}
       onSignOut={() => window.location.assign(ROUTES.signIn)}
@@ -753,18 +738,23 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
           breadcrumb={[{ label: 'Campaigns', href: ROUTES.campaigns }, { label: name }]}
           actions={actions}
         />
-        <Tabs
-          label={COPY.stageTabs}
-          value="brief"
-          onValueChange={goTo}
-          tabs={[
-            { id: 'brief', label: COPY.tabBrief },
-            { id: 'clips', label: COPY.tabClips, disabled: !accepted },
-            { id: 'final', label: COPY.tabFinal, disabled: true },
-          ]}
-        >
-          {panel}
-        </Tabs>
+        {campaign.isPending ? (
+          // The header grows once the campaign is known (breadcrumb, description, actions): nothing persistent below it until then (CLS).
+          panel
+        ) : (
+          <Tabs
+            label={COPY.stageTabs}
+            value="brief"
+            onValueChange={goTo}
+            tabs={[
+              { id: 'brief', label: COPY.tabBrief },
+              { id: 'clips', label: COPY.tabClips, disabled: !accepted },
+              { id: 'final', label: COPY.tabFinal, disabled: true },
+            ]}
+          >
+            {panel}
+          </Tabs>
+        )}
       </div>
       {dialog}
     </OperatorShell>

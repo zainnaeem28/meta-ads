@@ -1,4 +1,4 @@
-import { Cell, FilterDemo, TabsDemo } from '@shroomap/ui/cmp-014/gallery-demos';
+import { Cell, CountSlotsDemo, FilterDemo, TabsDemo } from '@shroomap/ui/cmp-014/gallery-demos';
 import { Stepper } from '@shroomap/ui/cmp-015';
 import { parseListState } from '@shroomap/ui/cmp-017';
 import type { SectionMeta } from '../registry';
@@ -24,6 +24,17 @@ export default function FeCompNavSection() {
         >
           <TabsDemo initial="all" />
         </Cell>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {[null, 7, 128, 1500].map((count) => (
+          <Cell
+            key={String(count)}
+            id={`count-slots-${count === null ? 'loading' : count}`}
+            label={`CMP-014 and CMP-017 count slot: ${count === null ? 'loading (placeholder, same size)' : count > 999 ? '1,500 shown as 999+' : `${count}`}`}
+          >
+            <CountSlotsDemo count={count} />
+          </Cell>
+        ))}
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {[0, 1, 3].map((current) => (

@@ -75,3 +75,35 @@ export function FilterDemo({ initial, rows }: { initial: ListState; rows: number
     </div>
   );
 }
+
+const noop = () => undefined;
+
+/** Gallery-only: the count slots of tabs and chips while loading (placeholder), with 2 and 3 digits, and at 999+ (UI-UX §5.1). */
+export function CountSlotsDemo({ count }: { count: number | null }) {
+  const label = count === null ? 'loading' : String(count);
+  return (
+    <div className="flex flex-col gap-3" data-count-demo={label}>
+      <Tabs
+        tabs={[
+          { id: 'history', label: 'History', count },
+          { id: 'drafts', label: 'Drafts', count },
+        ]}
+        value="history"
+        onValueChange={noop}
+        label={`Stages, count ${label}`}
+      />
+      <FilterBar
+        searchLabel="Search campaigns"
+        query=""
+        onQueryChange={noop}
+        chips={[
+          { id: 'all', label: 'All', count },
+          { id: 'failed', label: 'Failed', count },
+        ]}
+        status=""
+        onStatusChange={noop}
+        onClearAll={noop}
+      />
+    </div>
+  );
+}

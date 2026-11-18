@@ -226,3 +226,25 @@ describe('createApiFetch inputs', () => {
     expect(res).toMatchObject({ status: 204, data: undefined });
   });
 });
+
+describe('createApiFetch isolated (server use, ADR-014 SEC-M1)', () => {
+  it('sends ETags to its own sink and leaves the process-wide stores alone', async () => {
+    server.use(
+      http.get(`${ORIGIN}/api/v1/campaigns/c1/brief`, () =>
+        HttpResponse.json({ ok: true }, { headers: { ETag: '"b1"', 'X-Request-ID': 'srv-req' } }),
+      ),
+    );
+    uninstall(); // the server never has the browser's installed client
+    const seen: [string, string][] = [];
+    const before = getLastRequestId();
+    const f = createApiFetch({
+      origin: ORIGIN,
+      getToken: () => Promise.resolve('tok-server'),
+      isolated: { onEtag: (path, etag) => seen.push([path, etag]) },
+    });
+    await f('/campaigns/c1/brief');
+    expect(seen).toEqual([['/campaigns/c1/brief', '"b1"']]);
+    expect(storedEtag('/campaigns/c1/brief')).toBeUndefined();
+    expect(getLastRequestId()).toBe(before);
+  });
+});

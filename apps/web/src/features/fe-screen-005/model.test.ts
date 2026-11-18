@@ -96,3 +96,18 @@ describe('SCREEN-005 rows', () => {
     expect(draftMatches({ productName: 'Chai', productDescription: null }, ' ')).toBe(true);
   });
 });
+
+describe('updatedLabel while the browser is not hydrated yet (ADR-014)', () => {
+  const now = Date.parse('2026-11-18T12:00:00Z');
+  it('is the same in any time zone and locale: relative forms from `now`, the calendar date as a same-width placeholder', () => {
+    expect(updatedLabel('2026-11-18T11:55:00Z', now, 'Updated', false)).toBe('Updated 5 min ago');
+    const slot = updatedLabel('2026-01-02T00:00:00Z', now, 'Updated', false);
+    expect(slot).toBe(`Updated ${'\u2007'.repeat(11)}`);
+    expect(slot).not.toMatch(/\d/);
+  });
+  it('fills in the date in the browser’s own locale once hydrated', () => {
+    expect(updatedLabel('2026-01-02T12:00:00Z', now, 'Saved', true)).toMatch(
+      /^Saved \d{1,2} \w{3} 2026$/,
+    );
+  });
+});

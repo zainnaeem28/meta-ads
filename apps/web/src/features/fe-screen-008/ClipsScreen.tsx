@@ -2,21 +2,11 @@
 
 import {
   generateSegment,
-  getBrief,
-  getCampaign,
-  getGetBriefQueryKey,
   getGetCampaignQueryKey,
   getListCampaignVideoJobsQueryKey,
-  getListMyProviderKeysQueryKey,
   getMediaUrl,
-  listCampaignVideoJobs,
-  listMyProviderKeys,
   rerunQc,
   retryVideoJob,
-  type BriefResponse,
-  type CampaignResponse,
-  type ProviderKeyListResponse,
-  type SegmentJobsResponse,
   type SegmentJobsResponseDataItem,
 } from '@shroomap/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -35,6 +25,7 @@ import { IdempotencyKeys, idempotencyHeaders } from '../../lib/api/idempotency';
 import { resolveError } from '../../lib/errors';
 import { ROUTES } from '../../lib/errors/routes';
 import { useJobPolling } from '../../lib/query/job-polling';
+import { briefQuery, campaignQuery, jobsQuery, keysQuery } from '../../lib/query/queries';
 import { ClipRow, type ClipRowProps } from './ClipRow';
 import { SCREEN_008_COPY as COPY } from './copy';
 
@@ -91,28 +82,11 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
   const [toasts, setToasts] = useState<{ id: string; variant: 'success'; message: string }[]>([]);
   const idem = useRef(new Map<string, IdempotencyKeys>());
 
-  const campaign = useQuery({
-    queryKey: campaignKey,
-    queryFn: async ({ signal }) =>
-      (await getCampaign(campaignId, { signal })).data as CampaignResponse,
-  });
-  const brief = useQuery({
-    queryKey: getGetBriefQueryKey(campaignId),
-    queryFn: async ({ signal }) => (await getBrief(campaignId, { signal })).data as BriefResponse,
-    retry: false,
-  });
-  const keys = useQuery({
-    queryKey: getListMyProviderKeysQueryKey(),
-    queryFn: async ({ signal }) =>
-      (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
-    retry: false,
-  });
+  const campaign = useQuery(campaignQuery(campaignId));
+  const brief = useQuery({ ...briefQuery(campaignId), retry: false });
+  const keys = useQuery({ ...keysQuery(), retry: false });
   const jobs = useJobPolling({
-    query: {
-      queryKey: listKey,
-      queryFn: async ({ signal }) =>
-        (await listCampaignVideoJobs(campaignId, { signal })).data as SegmentJobsResponse,
-    },
+    query: jobsQuery(campaignId),
     getState: (d) => (d ? (hasActiveWork(d.data) ? 'processing' : 'completed') : undefined),
     errorShown: actionError !== null,
   });
@@ -276,7 +250,7 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
       role="user"
       path={path}
       pageName={`${COPY.title} · ${name}`}
-      keyState={deriveKeyState(keys.data?.data)}
+      keyState={deriveKeyState(keys.data?.data, keys.isError)}
       toasts={toasts}
       onDismissToast={() => setToasts([])}
       onSignOut={() => window.location.assign(ROUTES.signIn)}

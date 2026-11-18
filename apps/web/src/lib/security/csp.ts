@@ -126,7 +126,8 @@ export function dynamicHeaders(input: {
   };
   if (isHosted(input.env))
     headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains';
-  // The key page must never be stored by the browser or a shared cache.
-  if (isKeyPage(input.pathname)) headers['Cache-Control'] = 'no-store';
+  // Every response the middleware answers is per identity (a page, a redirect to sign-in): none may be stored by the
+  // browser or a shared cache (TC-ZT-07). Build output and brand files do not pass here and stay cacheable.
+  headers['Cache-Control'] = 'no-store';
   return headers;
 }
