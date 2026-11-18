@@ -49,6 +49,18 @@ const failure = (status: number, code: string, details: unknown[] = []) =>
 
 let uninstall: () => void;
 beforeEach(() => {
+  server.use(
+    http.get(`${BASE}/me/provider-keys`, () =>
+      HttpResponse.json({
+        success: true,
+        data: [
+          { provider: 'openai', configured: true, status: 'active' },
+          { provider: 'wavespeed', configured: false, status: null },
+        ],
+        metaData: meta,
+      }),
+    ),
+  );
   uninstall = installApiClient({ origin: ORIGIN, getToken: () => Promise.resolve(null) });
   window.history.replaceState(null, '', '/campaigns/new');
 });
@@ -81,6 +93,15 @@ describe('SCREEN-006 steps 1 to 3', () => {
     expect(screen.getByRole('radio', { name: /Describe the idea/ })).toBeChecked();
     expect(screen.getByRole('list', { name: 'Progress' })).toBeInTheDocument();
     expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
+  });
+
+  it('side panel lists the operator provider keys as Ready or Missing', async () => {
+    show();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Your provider keys' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Ready')).toBeInTheDocument();
+    expect(screen.getByText('Missing')).toBeInTheDocument();
   });
 
   it('first Next creates the draft (API-021) and puts its id in the URL; the header says Saved', async () => {

@@ -106,7 +106,7 @@ describe('SCREEN-008 clips (TASK-095)', () => {
     );
     expect(tabs.map((t) => [t.textContent?.trim(), t.getAttribute('aria-selected')])).toEqual([
       ['1 Brief', 'false'],
-      ['2 Clips', 'true'],
+      ['2 Clips 0 of 3', 'true'],
       ['3 Final', 'false'],
     ]);
     expect(tabs[2]).toHaveAttribute('aria-disabled', 'true');
