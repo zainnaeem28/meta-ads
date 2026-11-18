@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installApiClient } from '../../lib/api/client';
 import { server } from '../../lib/api/msw.setup';
 import { createQueryClient } from '../../lib/query/query-client';
@@ -312,11 +312,19 @@ describe('SCREEN-007 brief (TASK-093 behaviour)', () => {
     ).toBeInTheDocument();
   });
 
-  it('not_found: one unavailable message with Go Home', async () => {
-    server.use(http.get(`${BASE}/campaigns/${CAMPAIGN_ID}/brief`, () => failure(404, 'not_found')));
-    show();
-    expect(await screen.findByText('This page or item is not available.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Go Home' })).toBeInTheDocument();
+  it('not_found: goes to SCREEN-004 (unavailable)', async () => {
+    const replace = vi.fn();
+    vi.stubGlobal('location', { ...window.location, replace });
+    try {
+      server.use(
+        http.get(`${BASE}/campaigns/${CAMPAIGN_ID}/brief`, () => failure(404, 'not_found')),
+        http.get(`${BASE}/campaigns/${CAMPAIGN_ID}`, () => failure(404, 'not_found')),
+      );
+      show();
+      await waitFor(() => expect(replace).toHaveBeenCalledWith('/not-found?state=unavailable'));
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

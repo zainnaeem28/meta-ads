@@ -29,7 +29,7 @@ import { OperatorShell, deriveKeyState } from '@shroomap/ui/cmp-030';
 import { PageHeader } from '@shroomap/ui/cmp-033';
 import { GridCol, PageGrid } from '@shroomap/ui/cmp-034';
 import { Icon } from '@shroomap/ui/icons';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ErrorNotice } from '../../components/errors';
 import { resolveError } from '../../lib/errors';
 import { ROUTES } from '../../lib/errors/routes';
@@ -78,6 +78,13 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
     refetchInterval: (q) => (q.state.data?.data.state === 'generating' ? POLL_INTERVAL_MS : false),
   });
   const campaign = useQuery(campaignQuery(campaignId));
+  // A missing, deleted or not-yours campaign goes to SCREEN-004 (UI-UX §7 FLOW-06, §9.1).
+  const unavailable = [campaign.error, brief.error].some(
+    (e) => e != null && resolveError(e, { surface: 'context' }).code === 'not_found',
+  );
+  useEffect(() => {
+    if (unavailable) window.location.replace(ROUTES.unavailable);
+  }, [unavailable]);
   const keys = useQuery({ ...keysQuery(), retry: false });
 
   const data: Brief | undefined = brief.data?.data;
