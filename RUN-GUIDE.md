@@ -261,7 +261,7 @@ These fail on an untouched clone of `dev`; they are recorded for their owners (s
 | `drizzle-kit migrate` prints only `applying migrations...` and exits 1 | Run with `CI=1` to see the error.                                                                                             |
 | `config error (release): DATABASE_URL is forbidden`                    | `DATABASE_URL` is set in your shell: `unset DATABASE_URL`.                                                                    |
 | `config error: price_table has no row effective now for ...`           | The price table is empty: run the CR-017-1 command in step 6.                                                                 |
-| `/health/ready` answers 503 with `schema_head` in the api log          | The migrations were not applied (`db:migrate` includes the ledger grant, migration `0120`).                                                         |
+| `/health/ready` answers 503 with `schema_head` in the api log          | The migrations were not applied (`db:migrate` includes the ledger grant, migration `0120`).                                   |
 | `listen EADDRINUSE`                                                    | Another process holds port 4000, 3000 or 5432. Set `API_PORT` in `api.env`, `-p` for the web, or `POSTGRES_PORT` for compose. |
 | A process exits 78                                                     | Startup validation: the log names the key (never a value). Fix that key in the process's own env file.                        |
 | The worker cannot reach storage                                        | Check `docker compose -f docker/compose.dev.yml ps` and that `minio-init` created the `app` and `ledger` buckets.             |

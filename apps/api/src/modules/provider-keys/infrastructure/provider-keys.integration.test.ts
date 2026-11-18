@@ -294,6 +294,7 @@ describe('column grants (TC-KEY grants, T-20)', () => {
       'SELECT ciphertext FROM provider_keys',
       'SELECT nonce FROM provider_keys',
       'SELECT wrapped_dek FROM provider_keys',
+      // lint-db-allow: a negative probe that app_api cannot read every column.
       'SELECT * FROM provider_keys',
       'SELECT id FROM provider_keys WHERE ciphertext IS NOT NULL',
       'SELECT id FROM provider_keys ORDER BY nonce',

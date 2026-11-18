@@ -62,6 +62,19 @@ export const providerKeys = pgTable(
   ],
 );
 
+/** The columns the worker role reads to unseal a key (M0004): an explicit projection, never every column. */
+export const sealedKeyColumns = {
+  id: providerKeys.id,
+  ownerId: providerKeys.ownerId,
+  provider: providerKeys.provider,
+  status: providerKeys.status,
+  version: providerKeys.version,
+  ciphertext: providerKeys.ciphertext,
+  nonce: providerKeys.nonce,
+  wrappedDek: providerKeys.wrappedDek,
+  kekVersion: providerKeys.kekVersion,
+};
+
 /** The owner's key trail (REQ-019). History: no foreign keys, IDs only, never a value. */
 export const keyEvents = pgTable(
   'key_events',

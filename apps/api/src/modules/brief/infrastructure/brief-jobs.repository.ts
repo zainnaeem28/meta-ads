@@ -8,7 +8,7 @@ import {
 } from '../../../database/schema/brief.js';
 import { campaigns, drafts } from '../../../database/schema/campaigns.js';
 import { mediaObjects } from '../../../database/schema/media.js';
-import { providerKeys } from '../../../database/schema/provider-keys.js';
+import { providerKeys, sealedKeyColumns } from '../../../database/schema/provider-keys.js';
 import type { DbTx } from '../../../platform/db/index.js';
 import { claimWithUserLimit, jobTable } from '../../../platform/jobs/claim.js';
 import { newId } from '../../../platform/shared-kernel/index.js';
@@ -52,7 +52,10 @@ export class DrizzleBriefJobs implements BriefJobRepository {
 
   /** Reads the sealed columns: the worker role is the only one granted them (M0004). */
   async findKey(tx: DbTx, keyId: string): Promise<SealedKeyRow | null> {
-    const rows = await tx.select().from(providerKeys).where(eq(providerKeys.id, keyId));
+    const rows = await tx
+      .select(sealedKeyColumns)
+      .from(providerKeys)
+      .where(eq(providerKeys.id, keyId));
     const row = rows[0];
     if (row === undefined) return null;
     return {

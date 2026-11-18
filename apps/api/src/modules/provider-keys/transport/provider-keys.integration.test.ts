@@ -255,10 +255,10 @@ const put = (token: string, provider: string, apiKey: unknown) =>
   call('PUT', `/me/provider-keys/${provider}`, token, { apiKey });
 const row = async (owner: string, provider: string) =>
   (
-    await pool.query(`select * from provider_keys where owner_id = $1 and provider = $2`, [
-      owner,
-      provider,
-    ])
+    await pool.query(
+      `select id, owner_id, provider, status, version, ciphertext, nonce, wrapped_dek, kek_version, last4, fingerprint, fingerprint_pepper_version, consecutive_auth_failures, last_validated_at, disabled_at, created_at, updated_at from provider_keys where owner_id = $1 and provider = $2`,
+      [owner, provider],
+    )
   ).rows[0] as Record<string, any> | undefined;
 const kinds = async (owner: string, provider?: string) =>
   (
@@ -343,8 +343,12 @@ describe('API-010 to API-013 through the api composition root', () => {
     expect(await kinds(a.id)).toEqual(['test_passed', 'added']);
     expect(await audits(a.id)).toEqual(['key.added']);
     // Sealed for real: the stored bytes are not the key, and only the worker-side unsealer opens them, bound to the row.
-    const stored1 = (await pool.query(`select * from provider_keys where owner_id = $1`, [a.id]))
-      .rows[0];
+    const stored1 = (
+      await pool.query(
+        `select id, owner_id, provider, status, version, ciphertext, nonce, wrapped_dek, kek_version, last4, fingerprint, fingerprint_pepper_version, consecutive_auth_failures, last_validated_at, disabled_at, created_at, updated_at from provider_keys where owner_id = $1`,
+        [a.id],
+      )
+    ).rows[0];
     expect(stored1.ciphertext.toString('latin1')).not.toContain(OPENAI_KEY);
     expect(stored1.fingerprint).toHaveLength(64);
     const sealed: Sealed = {

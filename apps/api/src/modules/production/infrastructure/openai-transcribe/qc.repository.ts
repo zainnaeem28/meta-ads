@@ -1,5 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm';
-import { providerKeys } from '../../../../database/schema/provider-keys.js';
+import { providerKeys, sealedKeyColumns } from '../../../../database/schema/provider-keys.js';
 import type { DbTx } from '../../../../platform/db/index.js';
 import type { QcRepository, QcRunContext, QcSettlement } from '../../application/qc-ports.js';
 import type { SealedKeyRow } from '../../application/worker/ports.js';
@@ -25,7 +25,9 @@ interface RunSqlRow {
   dialogue: string | null;
 }
 
-function sealedOf(row: typeof providerKeys.$inferSelect): SealedKeyRow {
+function sealedOf(row: {
+  [K in keyof typeof sealedKeyColumns]: (typeof sealedKeyColumns)[K]['_']['data'];
+}): SealedKeyRow {
   return {
     id: row.id,
     ownerId: row.ownerId,
@@ -78,14 +80,17 @@ export class SqlQcRepository implements QcRepository {
   /** Reads the sealed columns: the worker role is the only one granted them (M0004). */
   async findOwnerKey(tx: DbTx, ownerId: string): Promise<SealedKeyRow | null> {
     const rows = await tx
-      .select()
+      .select(sealedKeyColumns)
       .from(providerKeys)
       .where(and(eq(providerKeys.ownerId, ownerId), eq(providerKeys.provider, 'openai')));
     return rows[0] === undefined ? null : sealedOf(rows[0]);
   }
 
   async findKey(tx: DbTx, keyId: string): Promise<SealedKeyRow | null> {
-    const rows = await tx.select().from(providerKeys).where(eq(providerKeys.id, keyId));
+    const rows = await tx
+      .select(sealedKeyColumns)
+      .from(providerKeys)
+      .where(eq(providerKeys.id, keyId));
     return rows[0] === undefined ? null : sealedOf(rows[0]);
   }
 

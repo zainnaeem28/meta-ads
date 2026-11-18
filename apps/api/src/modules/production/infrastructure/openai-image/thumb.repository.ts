@@ -1,5 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm';
-import { providerKeys } from '../../../../database/schema/provider-keys.js';
+import { providerKeys, sealedKeyColumns } from '../../../../database/schema/provider-keys.js';
 import type { DbTx } from '../../../../platform/db/index.js';
 import type {
   ThumbCause,
@@ -54,7 +54,7 @@ export class SqlThumbRepository implements ThumbRepository {
   /** Reads the sealed columns: the worker role is the only one granted them (M0004). */
   async findKey(tx: DbTx, keyId: string): Promise<SealedKeyRow | null> {
     const rows = await tx
-      .select()
+      .select(sealedKeyColumns)
       .from(providerKeys)
       .where(and(eq(providerKeys.id, keyId)));
     const row = rows[0];
