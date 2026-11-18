@@ -20,7 +20,7 @@ import type { TestDatabase } from '../../platform/db/test-database.js';
 import { EGRESS, Egress } from '../../platform/egress/index.js';
 import { startServer } from '../../platform/egress/test-support.js';
 import { createRuntimeBoss, startRuntimeBoss } from '../../platform/jobs/boss.js';
-import { installJobs } from '../../platform/jobs/test-support.js';
+import { installJobs, stopPeriodicSweep } from '../../platform/jobs/test-support.js';
 import { buildLogger } from '../../platform/logging/index.js';
 import { STORAGE_PORT } from '../media/index.js';
 import type { StoragePort } from '../media/index.js';
@@ -366,6 +366,10 @@ beforeAll(async () => {
     env: baseEnv(),
     exit: () => undefined,
   });
+  // The every-minute cron sweep and the start-up sweep would re-arm polls and read the provider during a test that
+  // counts reads: stop the schedule and let the start-up sweep finish, then only `sweepNow()` sweeps.
+  await stopPeriodicSweep(testDb.url);
+  await sweepNow();
   storage = worker.context.get<StoragePort>(STORAGE_PORT, { strict: false });
   wrap = worker.context.get<KeyWrapPort>(KEY_WRAP_PORT, { strict: false });
   apiBoss = createRuntimeBoss({ DATABASE_URL: testDb.url, role: 'api' });
@@ -577,6 +581,9 @@ const eventually = async (
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
 };
+/** A failed submit turns the row first; its usage event and the release of the reservation commit in the next transaction. */
+const bookkept = (job: string): Promise<void> =>
+  eventually(() => reservations(job), 0, `the reservation of ${job} was not released`);
 const send = (queue: string, job: string, options: Record<string, unknown> = {}) =>
   apiBoss.send(queue, { jobId: job }, options);
 const copyJobs = async (job: string) =>
@@ -588,7 +595,7 @@ const copyJobs = async (job: string) =>
   ).rowCount;
 const mediaRows = async (campaign: string) =>
   (await pool.query(`select * from media_objects where campaign_id = $1`, [campaign]))
-    .rows as Record<string, any>[];
+    .rows as Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 describe('production.video-submit and the clip, through the worker process', () => {
   it('submits once with the key and a signed reference URL, polls, copies the clip to storage and deletes the provider task', async () => {
@@ -680,7 +687,9 @@ describe('production.video-submit and the clip, through the worker process', () 
     const f = await clip();
     behaviour.submit = () => ({ hang: true });
     await send('production.video-submit', f.job);
-    const job = await settled(f.job);
+    await settled(f.job);
+    await bookkept(f.job);
+    const job = await rowOf(f.job);
     expect(job['state']).toBe('failed');
     expect(job['cause_class']).toBe('outcome_unknown');
     expect(job['provider_task_id']).toBeNull();
@@ -694,7 +703,7 @@ describe('production.video-submit and the clip, through the worker process', () 
         operation: MODEL,
       },
     ]);
-    expect(await reservations(f.job)).toBe(0);
+    await bookkept(f.job);
     // a later delivery of the same message changes nothing
     await send('production.video-submit', f.job);
     await sweepNow();
@@ -716,7 +725,7 @@ describe('production.video-submit and the clip, through the worker process', () 
         operation: MODEL,
       },
     ]);
-    expect(await reservations(f.job)).toBe(0);
+    await bookkept(f.job);
     await send('production.video-submit', f.job);
     await sweepNow();
     expect(calls).toHaveLength(0);
@@ -735,7 +744,7 @@ describe('production.video-submit and the clip, through the worker process', () 
       expect(await events(c.job)).toEqual([
         expect.objectContaining({ outcome: 'unconfirmed', cost_basis: 'unconfirmed_estimate' }),
       ]);
-      expect(await reservations(c.job)).toBe(0);
+      await bookkept(c.job);
     }
     expect(calls).toHaveLength(0);
   });
@@ -773,8 +782,14 @@ describe('production.video-submit and the clip, through the worker process', () 
       const f = await clip();
       behaviour.submit = () => ({ status, body });
       await send('production.video-submit', f.job);
-      const job = await settled(f.job);
-      return { f, job, events: await events(f.job), reserved: await reservations(f.job) };
+      await settled(f.job);
+      await bookkept(f.job);
+      return {
+        f,
+        job: await rowOf(f.job),
+        events: await events(f.job),
+        reserved: await reservations(f.job),
+      };
     };
     const unauthorized = await run(401, { code: 401, message: `Invalid API key ${KEY}` });
     expect(unauthorized.job['cause_class']).toBe('configuration');
@@ -809,7 +824,7 @@ describe('production.video-submit and the clip, through the worker process', () 
     expect((await settled(replaced.job))['cause_class']).toBe('key_replaced');
     expect((await settled(disabled.job))['cause_class']).toBe('configuration');
     for (const f of [replaced, disabled]) {
-      expect(await reservations(f.job)).toBe(0);
+      await bookkept(f.job);
       expect(await events(f.job)).toEqual([]);
     }
     expect(calls).toHaveLength(0);
@@ -822,7 +837,7 @@ describe('production.video-submit and the clip, through the worker process', () 
     const job = await settled(f.job);
     expect(job['cause_class']).toBe('reference_unreachable');
     expect(calls).toHaveLength(0);
-    expect(await reservations(f.job)).toBe(0);
+    await bookkept(f.job);
   });
 });
 
@@ -864,9 +879,27 @@ describe('production.poll and the deadline', () => {
     expect(job['next_poll_at']).toBeNull();
     expect(await copyJobs(f.job)).toBe(1);
     // a second completion report changes nothing and enqueues nothing more
+    // the copy job reads the task once to find the output; wait for it so the count below is settled, not a race
+    await until(
+      f.job,
+      () => calls.some((c) => c.url === '/files/clip.mp4'),
+      'the output was not requested',
+    );
+    const readsBefore = statusReads(taskId);
+    expect(readsBefore).toBe(2);
     await send('production.poll', f.job);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    expect(statusReads(taskId)).toBe(1);
+    await eventually(
+      async () =>
+        (
+          await pool.query(
+            `select 1 from pgboss.job where name = 'production.poll' and data->>'jobId' = $1 and state = 'completed'`,
+            [f.job],
+          )
+        ).rowCount,
+      2,
+      'the second poll was not handled',
+    );
+    expect(statusReads(taskId)).toBe(readsBefore);
     expect(await copyJobs(f.job)).toBe(1);
     await until(f.job, (row) => row['state'] === 'completed', 'did not complete');
   });
@@ -916,7 +949,7 @@ describe('production.poll and the deadline', () => {
     expect(job).toMatchObject({ state: 'failed', cause_class: 'provider_timeout' });
     expect(job['provider_task_id']).toBe(taskId);
     expect(statusReads(taskId)).toBe(0);
-    expect(await reservations(late.job)).toBe(0);
+    await bookkept(late.job);
     await send('production.poll', late.job);
     await sweepNow();
     expect((await rowOf(late.job))['state']).toBe('failed');
@@ -930,7 +963,7 @@ describe('production.poll and the deadline', () => {
     const job = await settled(f.job);
     expect(job['cause_class']).toBe('temporary');
     expect(JSON.stringify(job)).not.toContain('content policy');
-    expect(await reservations(f.job)).toBe(0);
+    await bookkept(f.job);
     expect((await events(f.job)).length).toBe(0);
   });
 });
@@ -998,7 +1031,7 @@ describe('video.copy-output', () => {
       expect(job['cause_message'], c.name).toMatch(c.message);
       expect(JSON.stringify(job), c.name).not.toContain(CDN_HOST);
       expect(await mediaRows(f.campaign), c.name).toHaveLength(0);
-      expect(await reservations(f.job), c.name).toBe(0);
+      await bookkept(f.job);
       expect(deletes(), c.name).toHaveLength(0);
     }
     // the private host was never connected to: only the status reads and the stub's own hosts were seen
