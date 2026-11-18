@@ -33,7 +33,9 @@ const BUCKET_PORT = Number(process.env.FLOW03_BUCKET_PORT);
 const FFMPEG = process.env.FFMPEG_PATH;
 const FFPROBE = process.env.FFPROBE_PATH;
 if (!DATABASE_URL || !CONTROL_PORT || !BUCKET_PORT || !FFMPEG || !FFPROBE)
-  throw new Error('FLOW03_DATABASE_URL, FLOW03_CONTROL_PORT, FLOW03_BUCKET_PORT, FFMPEG_PATH and FFPROBE_PATH are required');
+  throw new Error(
+    'FLOW03_DATABASE_URL, FLOW03_CONTROL_PORT, FLOW03_BUCKET_PORT, FFMPEG_PATH and FFPROBE_PATH are required',
+  );
 
 const WAVESPEED_KEY = 'flow03-wavespeed-secret-0123456789abcdef';
 const OPENAI_KEY = 'flow03-openai-secret-0123456789abcdef';
@@ -55,10 +57,28 @@ const clips = new Map();
 for (const position of [1, 2, 3, 4]) {
   const file = join(clipDir, `clip-${position}.mp4`);
   execFileSync(FFMPEG, [
-    '-hide_banner', '-loglevel', 'error', '-y',
-    '-f', 'lavfi', '-i', 'testsrc=duration=1:size=160x284:rate=10',
-    '-f', 'lavfi', '-i', `sine=frequency=${400 * position}:sample_rate=16000:duration=1`,
-    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', '-movflags', '+faststart', file,
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    'testsrc=duration=1:size=160x284:rate=10',
+    '-f',
+    'lavfi',
+    '-i',
+    `sine=frequency=${400 * position}:sample_rate=16000:duration=1`,
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    '-shortest',
+    '-movflags',
+    '+faststart',
+    file,
   ]);
   clips.set(position, readFileSync(file));
 }
@@ -73,7 +93,8 @@ const xml = (res, status, body) => {
   res.setHeader('content-type', 'application/xml');
   res.end(`<?xml version="1.0" encoding="UTF-8"?>${body}`);
 };
-const s3error = (res, status, code) => xml(res, status, `<Error><Code>${code}</Code><Message>${code}</Message></Error>`);
+const s3error = (res, status, code) =>
+  xml(res, status, `<Error><Code>${code}</Code><Message>${code}</Message></Error>`);
 const bucketServer = createHttpServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://local');
   const key = decodeURIComponent(url.pathname.split('/').slice(2).join('/'));
@@ -84,18 +105,28 @@ const bucketServer = createHttpServer((req, res) => {
     res.setHeader('access-control-allow-origin', '*');
     if (key === '' && req.method === 'GET') {
       const prefix = url.searchParams.get('prefix') ?? '';
-      const listed = [...objects.entries()].filter(([n]) => n.startsWith(prefix)).sort(([a], [b]) => a.localeCompare(b));
+      const listed = [...objects.entries()]
+        .filter(([n]) => n.startsWith(prefix))
+        .sort(([a], [b]) => a.localeCompare(b));
       const contents = listed
-        .map(([n, o]) => `<Contents><Key>${n}</Key><Size>${o.body.length}</Size><LastModified>${o.at.toISOString()}</LastModified></Contents>`)
+        .map(
+          ([n, o]) =>
+            `<Contents><Key>${n}</Key><Size>${o.body.length}</Size><LastModified>${o.at.toISOString()}</LastModified></Contents>`,
+        )
         .join('');
-      return xml(res, 200, `<ListBucketResult><Name>app</Name><Prefix>${prefix}</Prefix><KeyCount>${listed.length}</KeyCount><IsTruncated>false</IsTruncated>${contents}</ListBucketResult>`);
+      return xml(
+        res,
+        200,
+        `<ListBucketResult><Name>app</Name><Prefix>${prefix}</Prefix><KeyCount>${listed.length}</KeyCount><IsTruncated>false</IsTruncated>${contents}</ListBucketResult>`,
+      );
     }
     if (key === '' && req.method === 'POST' && url.searchParams.has('delete')) {
       for (const m of body.toString().matchAll(/<Key>([^<]+)<\/Key>/g)) objects.delete(m[1]);
       return xml(res, 200, '<DeleteResult></DeleteResult>');
     }
     if (req.method === 'PUT') {
-      if (req.headers['if-none-match'] === '*' && objects.has(key)) return s3error(res, 412, 'PreconditionFailed');
+      if (req.headers['if-none-match'] === '*' && objects.has(key))
+        return s3error(res, 412, 'PreconditionFailed');
       objects.set(key, { body, type: String(req.headers['content-type'] ?? ''), at: new Date() });
       res.setHeader('etag', '"stub"');
       res.statusCode = 200;
@@ -157,13 +188,19 @@ const stub = await startServer((req, res) => {
     };
     if (req.method === 'POST' && url === '/v1/audio/transcriptions') {
       const position = positionOfAudio(body);
-      return json(200, { text: behaviour.qcMismatch.has(position) ? MISMATCH : DIALOGUE[position] });
+      return json(200, {
+        text: behaviour.qcMismatch.has(position) ? MISMATCH : DIALOGUE[position],
+      });
     }
-    if (req.method === 'POST' && url.startsWith('/api/v3/predictions/delete')) return json(200, { code: 200, message: 'success' });
+    if (req.method === 'POST' && url.startsWith('/api/v3/predictions/delete'))
+      return json(200, { code: 200, message: 'success' });
     if (req.method === 'POST' && url.startsWith('/api/v3/')) {
       if (behaviour.submit === 'hang') return; // the answer never comes: the client gives up, the outcome is unknown
-      if (behaviour.submit === 'credit') return json(402, { code: 402, message: 'insufficient credit' });
-      const position = Number(/Segment (\d)/.exec(JSON.parse(body.toString()).prompt ?? '')?.[1] ?? 1);
+      if (behaviour.submit === 'credit')
+        return json(402, { code: 402, message: 'insufficient credit' });
+      const position = Number(
+        /Segment (\d)/.exec(JSON.parse(body.toString()).prompt ?? '')?.[1] ?? 1,
+      );
       const fail = behaviour.failOnce.delete(position);
       taskCounter += 1;
       const id = `task-${taskCounter}-seg${position}`;
@@ -174,10 +211,24 @@ const stub = await startServer((req, res) => {
     if (req.method === 'GET' && read !== null) {
       const task = tasks.get(read[1]);
       if (task === undefined) return json(404, { code: 404, message: 'no such task' });
-      if (task.fail) return json(200, { code: 200, data: { id: read[1], status: 'failed', outputs: [], error: 'The provider could not render this clip.' } });
+      if (task.fail)
+        return json(200, {
+          code: 200,
+          data: {
+            id: read[1],
+            status: 'failed',
+            outputs: [],
+            error: 'The provider could not render this clip.',
+          },
+        });
       return json(200, {
         code: 200,
-        data: { id: read[1], status: 'completed', outputs: [`https://${CDN_HOST}:${stub.port}/files/clip-${task.position}.mp4`], error: '' },
+        data: {
+          id: read[1],
+          status: 'completed',
+          outputs: [`https://${CDN_HOST}:${stub.port}/files/clip-${task.position}.mp4`],
+          error: '',
+        },
       });
     }
     const file = /^\/files\/clip-(\d)\.mp4$/.exec(url);
@@ -203,8 +254,12 @@ const kek = generateKeyPairSync('rsa', { modulusLength: 3072, publicExponent: 0x
 const workerEnv = {
   APP_ENV: 'test',
   DATABASE_URL,
-  KEK_PUBLIC_KEYS: JSON.stringify({ 1: kek.publicKey.export({ type: 'spki', format: 'pem' }).toString() }),
-  KEK_PRIVATE_KEYS: JSON.stringify({ 1: kek.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString() }),
+  KEK_PUBLIC_KEYS: JSON.stringify({
+    1: kek.publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+  }),
+  KEK_PRIVATE_KEYS: JSON.stringify({
+    1: kek.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+  }),
   KEK_ACTIVE_VERSION: '1',
   R2_ENDPOINT: `http://127.0.0.1:${BUCKET_PORT}`,
   R2_BUCKET: 'app',
@@ -220,7 +275,10 @@ const workerEnv = {
   KEY_AUTO_DISABLE_THRESHOLD: '5',
 };
 const validated = validateConfig('worker', workerEnv);
-if (!validated.ok) throw new Error(`worker config refused: ${validated.issues.map((i) => `${i.key} ${i.fault}`).join(', ')}`);
+if (!validated.ok)
+  throw new Error(
+    `worker config refused: ${validated.issues.map((i) => `${i.key} ${i.fault}`).join(', ')}`,
+  );
 
 class StubEgress {}
 Module({})(StubEgress);
@@ -234,7 +292,11 @@ const egressModule = () => ({
         timeoutMs: 2500,
         maxBytes: 20_000_000,
         resolver: async () => ['127.0.0.1'],
-        testing: { isBlockedAddress: (address) => address !== '127.0.0.1', tls: { ca: stub.ca }, port: stub.port },
+        testing: {
+          isBlockedAddress: (address) => address !== '127.0.0.1',
+          tls: { ca: stub.ca },
+          port: stub.port,
+        },
       }),
     },
   ],
@@ -267,16 +329,19 @@ await startRuntimeBoss(apiBoss);
 const pool = new pg.Pool({ connectionString: DATABASE_URL, max: 4 });
 
 // ---- seeding: an account (as the api's local identity names it), its keys, and a campaign with an accepted brief -------------
-const subjectOf = (email) => `user_local_${createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 24)}`;
+const subjectOf = (email) =>
+  `user_local_${createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 24)}`;
 
 async function seed({ email, keys = {}, reservedUsd, segments = 4, briefState = 'accepted' }) {
   const owner = randomUUID();
-  await pool.query(`insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`, [
-    owner,
-    subjectOf(email),
-    email.toLowerCase(),
-  ]);
-  for (const [provider, secret] of [['wavespeed', WAVESPEED_KEY], ['openai', OPENAI_KEY]]) {
+  await pool.query(
+    `insert into users (id, idp_subject, email, linked_via) values ($1, $2, $3, 'first_admin')`,
+    [owner, subjectOf(email), email.toLowerCase()],
+  );
+  for (const [provider, secret] of [
+    ['wavespeed', WAVESPEED_KEY],
+    ['openai', OPENAI_KEY],
+  ]) {
     const status = keys[provider] ?? 'active';
     if (status === 'none') continue;
     const keyId = randomUUID();
@@ -284,7 +349,17 @@ async function seed({ email, keys = {}, reservedUsd, segments = 4, briefState = 
     await pool.query(
       `insert into provider_keys (id, owner_id, provider, status, version, ciphertext, nonce, wrapped_dek, kek_version, last4, fingerprint, fingerprint_pepper_version)
        values ($1, $2, $3, $4, 1, $5, $6, $7, $8, 'cdef', $9, 1)`,
-      [keyId, owner, provider, status, sealed.ciphertext, sealed.nonce, sealed.wrappedDek, sealed.kekVersion, randomBytes(32).toString('hex')],
+      [
+        keyId,
+        owner,
+        provider,
+        status,
+        sealed.ciphertext,
+        sealed.nonce,
+        sealed.wrappedDek,
+        sealed.kekVersion,
+        randomBytes(32).toString('hex'),
+      ],
     );
   }
   const campaign = randomUUID();
@@ -304,7 +379,14 @@ async function seed({ email, keys = {}, reservedUsd, segments = 4, briefState = 
   for (let position = 1; position <= segments; position += 1) {
     await pool.query(
       `insert into brief_segments (id, brief_id, position, dialogue, prompt, word_count) values ($1, $2, $3, $4, $5, $6)`,
-      [randomUUID(), brief, position, DIALOGUE[position], `Segment ${position}: a bright kitchen at dawn, the drink poured slowly`, DIALOGUE[position].split(' ').length],
+      [
+        randomUUID(),
+        brief,
+        position,
+        DIALOGUE[position],
+        `Segment ${position}: a bright kitchen at dawn, the drink poured slowly`,
+        DIALOGUE[position].split(' ').length,
+      ],
     );
   }
   if (reservedUsd !== undefined) {
@@ -334,7 +416,9 @@ const readJson = (req) =>
   new Promise((resolveBody) => {
     const parts = [];
     req.on('data', (c) => parts.push(c));
-    req.on('end', () => resolveBody(parts.length === 0 ? {} : JSON.parse(Buffer.concat(parts).toString())));
+    req.on('end', () =>
+      resolveBody(parts.length === 0 ? {} : JSON.parse(Buffer.concat(parts).toString())),
+    );
   });
 
 const control = createHttpServer(async (req, res) => {
@@ -346,7 +430,8 @@ const control = createHttpServer(async (req, res) => {
   };
   try {
     if (req.method === 'GET' && url.pathname === '/ready') return send(200, { ready: true });
-    if (req.method === 'POST' && url.pathname === '/seed') return send(200, await seed(await readJson(req)));
+    if (req.method === 'POST' && url.pathname === '/seed')
+      return send(200, await seed(await readJson(req)));
     if (req.method === 'POST' && url.pathname === '/behaviour') {
       const b = await readJson(req);
       if (b.failOnce) behaviour.failOnce = new Set(b.failOnce);
@@ -359,7 +444,8 @@ const control = createHttpServer(async (req, res) => {
       return send(200, { ok: true });
     }
     if (req.method === 'GET' && url.pathname === '/calls') return send(200, { calls });
-    if (req.method === 'GET' && url.pathname === '/state') return send(200, await stateOf(url.searchParams.get('campaign')));
+    if (req.method === 'GET' && url.pathname === '/state')
+      return send(200, await stateOf(url.searchParams.get('campaign')));
     if (req.method === 'GET' && url.pathname === '/logs') return send(200, { lines });
     return send(404, { error: 'not found' });
   } catch (error) {

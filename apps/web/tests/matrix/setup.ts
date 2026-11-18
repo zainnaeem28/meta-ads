@@ -21,7 +21,8 @@ export default async function setup(config: FullConfig) {
       const browser = await engine.launch({ channel: use.channel });
       await browser.close();
     } catch (error) {
-      unavailable[project.name] = String((error as Error).message).split('\n')[0] ?? 'cannot launch';
+      unavailable[project.name] =
+        String((error as Error).message).split('\n')[0] ?? 'cannot launch';
     }
   }
   writeFileSync(UNAVAILABLE, `${JSON.stringify(unavailable, null, 2)}\n`);
