@@ -451,7 +451,7 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
                       <li
                         key={issue.id}
                         data-class={issue.class}
-                        className={`flex items-start gap-3 rounded-md border p-3 ${high ? 'border-destructive-border bg-destructive-subtle' : 'border-warning-border bg-warning-subtle'}`}
+                        className={`flex items-start gap-3 rounded-md border border-l-[3px] p-3 ${high ? 'border-destructive-border border-l-destructive bg-destructive-subtle' : 'border-warning-border border-l-warning bg-warning-subtle'}`}
                       >
                         <span className={high ? 'text-destructive' : 'text-warning'}>
                           <Icon name={high ? 'shield-alert' : 'triangle-alert'} size={20} />
@@ -576,73 +576,92 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
                 key={s.position}
                 id={`segment-${s.position}`}
                 aria-labelledby={`segment-${s.position}-title`}
-                className="flex scroll-mt-20 flex-col gap-3 rounded-md border border-border bg-card p-4"
+                className="flex scroll-mt-20 flex-col overflow-hidden rounded-md border border-border bg-card"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted px-4 py-3">
                   <h3 id={`segment-${s.position}-title`} className="text-body font-semibold">
                     {COPY.segmentHeading(s.position)}
                   </h3>
-                  {mine.length > 0 ? (
-                    mineHigh ? (
-                      <Badge variant="destructive" icon="shield-alert">
-                        {COPY.highRisk}
-                      </Badge>
-                    ) : (
-                      <Badge variant="warning" icon="triangle-alert">
-                        {COPY.segmentIssues(mine.length)}
-                      </Badge>
-                    )
+                  <div className="flex flex-wrap items-center gap-2">
+                    {mine.length > 0 ? (
+                      mineHigh ? (
+                        <Badge variant="destructive" icon="shield-alert">
+                          {COPY.highRisk}
+                        </Badge>
+                      ) : (
+                        <Badge variant="warning" icon="triangle-alert">
+                          {COPY.segmentIssues(mine.length)}
+                        </Badge>
+                      )
+                    ) : null}
+                    <span className="text-caption text-muted-foreground">
+                      {COPY.wordsTarget(countWords(valueOf(s, 'dialogue')))}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3 p-4">
+                  <SegmentEditor
+                    segment={s.position}
+                    hideCount
+                    highlights={
+                      edited?.dialogue !== undefined
+                        ? []
+                        : mine.flatMap((i) =>
+                            i.field === 'dialogue' &&
+                            i.span?.start !== undefined &&
+                            i.span.end !== undefined
+                              ? [{ start: i.span.start, end: i.span.end }]
+                              : [],
+                          )
+                    }
+                    value={valueOf(s, 'dialogue')}
+                    onChange={(v) => setField(s, 'dialogue', v)}
+                    saveState={save.isPending && edited ? 'saving' : 'idle'}
+                  />
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor={promptId} className="text-ui font-semibold">
+                      {COPY.visualPrompt} · Segment {s.position}
+                    </label>
+                    <Textarea
+                      id={promptId}
+                      rows={4}
+                      maxLength={2000}
+                      value={valueOf(s, 'prompt')}
+                      onChange={(e) => setField(s, 'prompt', e.target.value)}
+                    />
+                  </div>
+                  {showLatest && edited ? (
+                    <div
+                      className="flex flex-col gap-2 rounded-md border border-warning-border bg-warning-subtle p-3"
+                      data-testid={`latest-${s.position}`}
+                    >
+                      <h4 className="text-ui font-semibold">
+                        {COPY.latestTitle} · Segment {s.position}
+                      </h4>
+                      <p className="text-caption text-muted-foreground">{COPY.latestNote}</p>
+                      <p className="whitespace-pre-wrap break-words text-ui">{first(s.dialogue)}</p>
+                      <p className="whitespace-pre-wrap break-words text-ui text-muted-foreground">
+                        {first(s.prompt)}
+                      </p>
+                      <div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setEdits((old) => {
+                              const next = { ...old };
+                              delete next[s.position];
+                              if (Object.keys(next).length === 0) setSaveError(null);
+                              return next;
+                            })
+                          }
+                        >
+                          {COPY.useLatest}
+                        </Button>
+                      </div>
+                    </div>
                   ) : null}
                 </div>
-                <SegmentEditor
-                  segment={s.position}
-                  value={valueOf(s, 'dialogue')}
-                  onChange={(v) => setField(s, 'dialogue', v)}
-                  saveState={save.isPending && edited ? 'saving' : 'idle'}
-                />
-                <div className="flex flex-col gap-2">
-                  <label htmlFor={promptId} className="text-ui font-semibold">
-                    {COPY.visualPrompt} · Segment {s.position}
-                  </label>
-                  <Textarea
-                    id={promptId}
-                    rows={4}
-                    maxLength={2000}
-                    value={valueOf(s, 'prompt')}
-                    onChange={(e) => setField(s, 'prompt', e.target.value)}
-                  />
-                </div>
-                {showLatest && edited ? (
-                  <div
-                    className="flex flex-col gap-2 rounded-md border border-warning-border bg-warning-subtle p-3"
-                    data-testid={`latest-${s.position}`}
-                  >
-                    <h4 className="text-ui font-semibold">
-                      {COPY.latestTitle} · Segment {s.position}
-                    </h4>
-                    <p className="text-caption text-muted-foreground">{COPY.latestNote}</p>
-                    <p className="whitespace-pre-wrap break-words text-ui">{first(s.dialogue)}</p>
-                    <p className="whitespace-pre-wrap break-words text-ui text-muted-foreground">
-                      {first(s.prompt)}
-                    </p>
-                    <div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setEdits((old) => {
-                            const next = { ...old };
-                            delete next[s.position];
-                            if (Object.keys(next).length === 0) setSaveError(null);
-                            return next;
-                          })
-                        }
-                      >
-                        {COPY.useLatest}
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
               </section>
             );
           })}
@@ -686,6 +705,13 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
       </PageGrid>
     );
   }
+
+  const briefChip =
+    data?.state === 'accepted' ? (
+      <Badge variant="success">{COPY.chipAccepted}</Badge>
+    ) : data?.state === 'draft' && openIssues.length > 0 ? (
+      <Badge variant="warning">{COPY.chipNeedsReview}</Badge>
+    ) : undefined;
 
   const panel = (
     <div className="flex flex-col gap-4">
@@ -754,9 +780,9 @@ export function BriefScreen({ campaignId }: { campaignId: string }) {
             value="brief"
             onValueChange={goTo}
             tabs={[
-              { id: 'brief', label: COPY.tabBrief },
-              { id: 'clips', label: COPY.tabClips, disabled: !accepted },
-              { id: 'final', label: COPY.tabFinal, disabled: true },
+              { id: 'brief', label: COPY.tabBrief, icon: 'file-text', chip: briefChip },
+              { id: 'clips', label: COPY.tabClips, icon: 'clapperboard', disabled: !accepted },
+              { id: 'final', label: COPY.tabFinal, icon: 'film', disabled: true },
             ]}
           >
             {panel}

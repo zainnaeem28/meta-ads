@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { Icon, type IconName } from '../../icons';
 
 export interface TabItem {
   id: string;
@@ -10,6 +11,10 @@ export interface TabItem {
    * number arriving moves nothing. `undefined` means this tab has no count.
    */
   count?: number | null;
+  /** Leading icon. */
+  icon?: IconName;
+  /** Status chip after the label, e.g. "Needs review". */
+  chip?: ReactNode;
   /** Not reachable yet: stays in the list, is skipped by arrow keys and cannot be selected. */
   disabled?: boolean;
 }
@@ -109,7 +114,8 @@ export function Tabs({
               onKeyDown={(e) => onKeyDown(e, tab.id)}
               className={`${TAB_CLASS} ${state}`}
             >
-              {tab.label}{' '}
+              {tab.icon ? <Icon name={tab.icon} size={16} /> : null}
+              {tab.label} {tab.chip ?? null}
               {tab.count === undefined ? null : tab.count === null ? (
                 <span
                   aria-hidden="true"
