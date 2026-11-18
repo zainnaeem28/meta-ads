@@ -316,6 +316,7 @@ export function CampaignsScreen({
               <CampaignRow
                 key={c.id}
                 variant="history"
+                format="UGC ad"
                 name={c.productName}
                 href={campaignHref(c)}
                 segments={c.segmentCount}
