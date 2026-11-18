@@ -234,7 +234,15 @@ export function AdminShell({
               {userName ? <span className="block font-semibold">{userName}</span> : null}
             </>
           }
-          trigger={<Icon name="circle-user" size={20} />}
+          trigger={
+            <>
+              <Icon name="circle-user" size={20} />
+              <span aria-hidden="true" className="font-semibold max-md:hidden">
+                Administrator
+              </span>
+              <Icon name="chevron-down" size={16} />
+            </>
+          }
           items={items}
         />
       </header>
