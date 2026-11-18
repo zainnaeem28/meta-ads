@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installApiClient } from '../../lib/api/client';
 import { server } from '../../lib/api/msw.setup';
 import { createQueryClient } from '../../lib/query/query-client';
@@ -92,6 +92,25 @@ describe('SCREEN-009 final ad: select, order, confirm, assemble (TASK-096)', () 
     show();
     expect(await screen.findByText('Loading the final ad')).toBeInTheDocument();
     expect(document.querySelector('[data-screen=SCREEN-009]')).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('not_found on the campaign read goes to SCREEN-004 (unavailable)', async () => {
+    const replace = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...original, replace },
+    });
+    try {
+      server.use(
+        http.get(`${BASE}/campaigns/${CAMPAIGN_ID}`, () => failure(404, 'not_found')),
+        http.get(`${BASE}/campaigns/${CAMPAIGN_ID}/video-jobs`, () => failure(404, 'not_found')),
+      );
+      show();
+      await waitFor(() => expect(replace).toHaveBeenCalledWith('/not-found?state=unavailable'));
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
   });
 
   it('no-clips: honest explanation with the way to the clips', async () => {

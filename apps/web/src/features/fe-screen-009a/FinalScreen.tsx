@@ -135,6 +135,15 @@ export function FinalScreen({
   const keys = useQuery({ ...keysQuery(), retry: false });
   const jobs = useQuery(jobsQuery(campaignId));
 
+  // A missing, deleted or not-yours campaign is SCREEN-004 (UI-UX §7 FLOW-06, §9.1), not an in-page state.
+  const unavailable = [campaign.error, jobs.error].some(
+    (e) =>
+      e !== null && e !== undefined && resolveError(e, { surface: 'page' }).code === 'not_found',
+  );
+  useEffect(() => {
+    if (unavailable) window.location.replace('/not-found?state=unavailable');
+  }, [unavailable]);
+
   const camp = campaign.data?.data;
   const name = camp?.productName ?? COPY.fallbackName;
   const currentAssemblyId = assemblyId ?? camp?.latestAssemblyId ?? null;
