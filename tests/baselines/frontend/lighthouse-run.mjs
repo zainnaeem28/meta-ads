@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process, fetch, setTimeout, clearTimeout */
+/* global fetch, setTimeout, clearTimeout */
 // Lighthouse CI on the built web app: mobile and desktop presets, SAMPLES cold runs per route, performance category only.
 //   lighthouse-run.mjs --state STATE.json --out FILE [--samples N]
 import { spawn } from 'node:child_process';
@@ -78,7 +78,8 @@ const worker = async (slot) => {
       // A run the tool could not complete (protocol timeout, nothing painted on a busy shared host) is repeated up to
       // twice; only a sample that never completes is recorded with its error and counted as not valid.
       let record = await runAsync(task, port, slot);
-      for (let retry = 1; record.error && retry <= 2; retry += 1) record = await runAsync(task, port, slot);
+      for (let retry = 1; record.error && retry <= 2; retry += 1)
+        record = await runAsync(task, port, slot);
       result.samples.push(record);
     }
   } finally {

@@ -595,7 +595,7 @@ const copyJobs = async (job: string) =>
   ).rowCount;
 const mediaRows = async (campaign: string) =>
   (await pool.query(`select * from media_objects where campaign_id = $1`, [campaign]))
-    .rows as Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    .rows as Record<string, any>[];
 
 describe('production.video-submit and the clip, through the worker process', () => {
   it('submits once with the key and a signed reference URL, polls, copies the clip to storage and deletes the provider task', async () => {

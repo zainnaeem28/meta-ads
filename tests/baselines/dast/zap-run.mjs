@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process, setTimeout, fetch */
+/* global setTimeout, fetch */
 // One ZAP baseline run (spider and passive scan, no active attack) for one context against the baseline stack.
 //   zap-run.mjs --context anonymous|user|admin --state STATE.json --out DIR [--smoke]
 // Writes DIR/<context>.json (ZAP traditional JSON) and DIR/<context>.summary.json (what was reached). The session of

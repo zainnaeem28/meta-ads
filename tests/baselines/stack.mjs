@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global Buffer, fetch, setTimeout, process */
+/* global fetch, setTimeout */
 // The stack the baselines run against (QUALITY-RELEASE-PLAN section 6): the built api and the built web on this host,
 // a uniquely named database with per-run roles on the shared test PostgreSQL, the real migrations, the reference and
 // development seeds, and the baseline dataset (25 accounts, 5 running stub jobs each). Nothing here is a real

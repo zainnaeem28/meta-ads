@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process */
+
 // Judges a k6 run against baselines.load of config/quality-policy.json and writes the report the gate reads.
 // Usage: evaluate.mjs SUMMARY_JSON POOL_JSON OUT_JSON [--smoke]
 // A run answered mostly by 401s, or with too few requests, is rejected whatever its latency says (QUALITY-RELEASE-PLAN 6).

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process */
+
 // Builds docs/evidence/TASK-016/baseline.md from the reports of the last baseline runs (tool, version, scope, target, result).
 // Usage: evidence.mjs [OUT_FILE]
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';

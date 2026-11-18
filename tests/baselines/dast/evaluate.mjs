@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process */
+
 // Merges the per-context ZAP reports into reports/zap.json (the findings report the gate reads) and checks that each
 // context really exercised the stack: an authenticated context answered mostly by 401 is not a baseline.
 // Usage: evaluate.mjs DIR OUT_ZAP_JSON

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process */
+
 // Compares the medians of the Lighthouse and Playwright samples with baselines.frontend of config/quality-policy.json
 // and writes the report the gate reads (reports/baselines/frontend.json) and the junit cases.
 // Usage: evaluate.mjs LIGHTHOUSE_JSON WEBVITALS_JSON OUT_JSON [--enforce]

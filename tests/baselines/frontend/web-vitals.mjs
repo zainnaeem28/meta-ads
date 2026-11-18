@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process, fetch, window */
+/* global fetch, window */
 // Playwright web-vitals of the built web app (QUALITY-RELEASE-PLAN sections 6 and 7): LCP, CLS and INP per route and
 // profile, SAMPLES cold loads each, with the conditions fixed and recorded. INP is the longest interaction after load
 // (two key presses and a click on the page body). The Event Timing API reports only interactions of 16 ms or more, so a

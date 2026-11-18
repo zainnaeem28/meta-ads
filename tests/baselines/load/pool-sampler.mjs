@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process, setTimeout */
+/* global setTimeout */
 // Samples the api's database connections during the load run (DB pool saturation, TC-NFR-01). Runs until killed.
 // Usage: pool-sampler.mjs STATE_FILE OUT_FILE
 import { readFileSync, writeFileSync } from 'node:fs';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process */
+
 // The one place the baseline wrappers record test cases. Every case lands in reports/baselines/results.json, and
 // reports/baselines/junit.xml (the file `submit_check.py --junit` reads) is rebuilt from all suites after each change.
 //

@@ -442,7 +442,7 @@ async function campaign(
 }
 
 const one = async <T = any>(text: string, params: unknown[] = []): Promise<T> =>
-  (await pool.query(text, params)).rows[0] as T; // eslint-disable-line @typescript-eslint/no-explicit-any
+  (await pool.query(text, params)).rows[0] as T;
 const count = async (table: string, where: string, params: unknown[]) =>
   (await one<{ n: number }>(`select count(*)::int as n from ${table} where ${where}`, params)).n;
 const appObjects = (prefix: string) =>
