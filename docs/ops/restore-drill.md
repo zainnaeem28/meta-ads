@@ -37,3 +37,5 @@ The record lists each step with seconds and notes. Restore time of an empty-ish 
 ## Real-environment drill (go-live evidence, TC-H-08)
 
 Same steps against a scratch environment: the managed database backup and the logical dump from the real backup bucket, the real age identity (two custodians present, KC-3), the real KEK custody copy unsealed under the two-person rule to open the restored canary row through the worker (KC-6 evidence: date, version, copy ID, custodians, tool and version, fingerprint match, canary pass, hash match, wipe confirmation, sign-off; no key material), the smoke journeys, and the measured restore time and data lost against the 8 h and 24 h objectives. Record in `OPERATIONS-HANDOFF.md`.
+
+> F-DR-3 resolved (AIU-314): migration `0120_task-017-ledger-grant` grants `app_api` the ledger, so a clean `db:migrate` gives `/health/ready` 200. The drill's own grant is now only needed for the rebuilt ledger of the restored copy.

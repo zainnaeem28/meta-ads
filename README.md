@@ -119,16 +119,13 @@ echo 'MIGRATION_DATABASE_URL=postgres://app_migrator:shroomap-local@localhost:54
 echo 'BACKUP_DATABASE_URL=postgres://app_backup:shroomap-local@localhost:5432/shroomap_dev'      > .env.local.d/db-backup.env
 # 4. build (the web build inlines NEXT_PUBLIC_* from web.env)
 ( set -a; . .env.local.d/web.env; set +a; pnpm build )
-# 5. migrate, queues, seed, and the two steps a clean database still needs (RUN-GUIDE.md section 6)
+# 5. migrate, queues, seed, and the one step a clean database still needs (RUN-GUIDE.md section 6)
 ( set -a; . .env.local.d/db-release.env; set +a; CI=1 pnpm --filter @shroomap/api db:migrate )
 ( cd apps/api && node --env-file=../../.env.local.d/release.env --env-file=../../.env.local.d/db-release.env dist/database/jobs-migrate.js )
 ( cd apps/api && node --env-file=../../.env.local.d/release.env --env-file=../../.env.local.d/db-release.env dist/database/seed.js --dataset=reference )
 # CR-017-1: load config/price-table.json into price_table (the worker refuses to start with no price row)
 node -e "const r=require('./config/price-table.json').rows; console.log(r.map(x=>\`INSERT INTO price_table VALUES ('\${x.provider}','\${x.operation}','\${x.effectiveFrom}','\${x.unit}',\${x.unitPriceUsd},\${x.unitsPerCall}) ON CONFLICT DO NOTHING;\`).join('\n'))" \
   | docker compose -f docker/compose.dev.yml exec -T postgres psql -U app_migrator -d shroomap_dev -v ON_ERROR_STOP=1
-# CR-017-2: /health/ready reads the migration ledger, which app_api cannot see until it is granted (drill finding F-DR-3)
-docker compose -f docker/compose.dev.yml exec -T postgres psql -U app_migrator -d shroomap_dev -v ON_ERROR_STOP=1 \
-  -c 'GRANT USAGE ON SCHEMA drizzle TO app_api' -c 'GRANT SELECT ON drizzle.__drizzle_migrations TO app_api'
 ```
 
 Then run the three processes, one terminal each, and check them (`/health/ready` must answer 200):

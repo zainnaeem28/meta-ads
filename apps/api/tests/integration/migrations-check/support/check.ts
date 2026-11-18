@@ -197,6 +197,13 @@ export async function checkGrants(env: Env): Promise<string[]> {
       if ((create.rows[0] as { h: boolean }).h)
         findings.push(`app_${key} can create objects in public`);
     }
+    // CR-017-2: /health/ready counts the migration ledger as app_api
+    const ledger = await c.query(
+      `SELECT has_schema_privilege($1, 'drizzle', 'USAGE') AS u, has_table_privilege($1, 'drizzle.__drizzle_migrations', 'SELECT') AS s`,
+      [env.roles.api],
+    );
+    const row = ledger.rows[0] as { u: boolean; s: boolean };
+    if (!row.u || !row.s) findings.push('app_api cannot read drizzle.__drizzle_migrations');
     return findings;
   });
 }
