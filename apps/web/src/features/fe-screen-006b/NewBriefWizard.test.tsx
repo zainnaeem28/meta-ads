@@ -76,6 +76,18 @@ const job = (state: string, over: Record<string, unknown> = {}) => ({
 
 let uninstall: () => void;
 beforeEach(() => {
+  server.use(
+    http.get(`${BASE}/me/provider-keys`, () =>
+      HttpResponse.json({
+        success: true,
+        data: [
+          { provider: 'openai', configured: true, status: 'active' },
+          { provider: 'wavespeed', configured: false, status: null },
+        ],
+        metaData: meta,
+      }),
+    ),
+  );
   uninstall = installApiClient({ origin: ORIGIN, getToken: () => Promise.resolve(null) });
   window.history.replaceState(null, '', '/campaigns/new');
 });

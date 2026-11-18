@@ -115,7 +115,7 @@ export function Tabs({
               className={`${TAB_CLASS} ${state}`}
             >
               {tab.icon ? <Icon name={tab.icon} size={16} /> : null}
-              {tab.label} {tab.chip ?? null}
+              {tab.label} {tab.chip ?? null}{' '}
               {tab.count === undefined ? null : tab.count === null ? (
                 <span
                   aria-hidden="true"
