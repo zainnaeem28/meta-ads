@@ -104,6 +104,17 @@ describe('SCREEN-006 steps 1 to 3', () => {
     expect(screen.getByText('Missing')).toBeInTheDocument();
   });
 
+  it('a malformed or refused key list leaves the side card empty and the wizard standing', async () => {
+    server.use(
+      http.get(`${BASE}/me/provider-keys`, () =>
+        HttpResponse.json({ success: true, data: { id: 'not-a-list' }, metaData: meta }),
+      ),
+    );
+    show();
+    expect(await screen.findByRole('heading', { name: 'Your provider keys' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'New brief' })).toBeInTheDocument();
+  });
+
   it('first Next creates the draft (API-021) and puts its id in the URL; the header says Saved', async () => {
     const bodies: unknown[] = [];
     server.use(

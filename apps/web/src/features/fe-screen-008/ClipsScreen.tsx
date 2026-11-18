@@ -308,6 +308,14 @@ export function ClipsScreen({ campaignId }: { campaignId: string }) {
                   <span className="rounded-full border border-border-strong bg-muted px-2 text-caption font-semibold text-foreground">
                     {`${readyCount} of ${items.length}`}
                   </span>
+                ) : loadingFirst ? (
+                  <span
+                    aria-hidden="true"
+                    data-chip-slot="loading"
+                    className="rounded-full border border-border-strong bg-muted px-2 text-caption font-semibold text-transparent"
+                  >
+                    {'00 of 00'}
+                  </span>
                 ) : undefined,
             },
             { id: 'final', label: COPY.tabFinal, icon: 'video', disabled: !anyDone },

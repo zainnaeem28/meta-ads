@@ -59,6 +59,8 @@ export function Tabs({
   const enabled = tabs.filter((t) => !t.disabled);
   const selected = enabled.some((t) => t.id === value) ? value : enabled[0]?.id;
 
+  const hasPanel = children !== undefined && selected !== undefined;
+
   const move = (to: TabItem | undefined) => {
     if (!to) return;
     refs.current.get(to.id)?.focus();
@@ -104,7 +106,7 @@ export function Tabs({
               role="tab"
               id={`${base}-tab-${tab.id}`}
               aria-selected={isSelected}
-              aria-controls={isSelected ? `${base}-panel` : undefined}
+              aria-controls={isSelected && hasPanel ? `${base}-panel` : undefined}
               aria-disabled={tab.disabled ? true : undefined}
               tabIndex={isSelected ? 0 : -1}
               data-state={tab.disabled ? 'disabled' : isSelected ? 'selected' : 'default'}
@@ -136,7 +138,7 @@ export function Tabs({
           );
         })}
       </div>
-      {children !== undefined && selected ? (
+      {hasPanel ? (
         <div
           role="tabpanel"
           id={`${base}-panel`}

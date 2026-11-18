@@ -89,6 +89,22 @@ async function mockApi(page: Page, api: Api) {
       });
     }
     const url = new URL(request.url());
+    if (request.method() === 'GET' && url.pathname.endsWith('/me/provider-keys')) {
+      // The side card's own read (not a draft operation): answered here so the draft answer is not mistaken for a key list.
+      return route.fulfill({
+        status: 200,
+        headers: cors,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: [
+            { provider: 'openai', configured: true, status: 'active' },
+            { provider: 'wavespeed', configured: true, status: 'active' },
+          ],
+          metaData: meta,
+        }),
+      });
+    }
     calls.push(`${request.method()} ${url.pathname}`);
     if (request.method() === 'PATCH') headers.push(await request.headerValue('if-match'));
     const answer: Answer =

@@ -96,5 +96,13 @@ describe('CMP-014 Tabs', () => {
   it('renders no panel without content', () => {
     render(<Tabs tabs={TABS} label="Stages" value="brief" onValueChange={() => {}} />);
     expect(screen.queryByRole('tabpanel')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Brief' })).not.toHaveAttribute('aria-controls');
+  });
+
+  it('points aria-controls at the rendered panel', () => {
+    render(<Harness />);
+    const id = screen.getByRole('tab', { selected: true }).getAttribute('aria-controls');
+    expect(id).toBeTruthy();
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', id);
   });
 });

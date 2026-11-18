@@ -20,7 +20,8 @@ export function ProviderKeysCard() {
     queryFn: async ({ signal }) =>
       (await listMyProviderKeys({ signal })).data as ProviderKeyListResponse,
   });
-  const list = keys.data?.data ?? [];
+  // A refused or malformed answer leaves the card empty; it must never take the wizard down.
+  const list = Array.isArray(keys.data?.data) ? keys.data.data : [];
   return (
     <Card variant="section" headingLevel={2}>
       <h2 className="text-body font-semibold">{COPY.title}</h2>
