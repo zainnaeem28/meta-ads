@@ -1,6 +1,6 @@
 # UI and UX specification — ShrooMap AI UGC Ad Director
 
-Status: **PROPOSED** (no independent review yet). Mockups are design evidence rendered from HTML frames, never screenshots of the running product.
+Status: **REVIEWED and APPROVED at G2**. Reviewed revision: UI-UX rev 1 (`f7be241e`, commit `48ebc1a`, AIU-14); later revisions (rev 2, §5.1 layout-stability changes) were reviewed on their own tickets (AIU-295, AIU-302). Independent reviews, all PASS on 2026-11-14: UI/UX visual and accessibility (Frontend Reviewer), contract feasibility (Solution Architect), journey coverage (Product Manager). Approving gate: G2, AIU-20 (completed 2026-11-15). Mockups are design evidence rendered from HTML frames, never screenshots of the running product.
 
 ## 1. Inputs and revisions
 

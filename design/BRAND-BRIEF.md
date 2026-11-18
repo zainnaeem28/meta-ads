@@ -4,7 +4,7 @@
 - Existing identity: **owner-supplied**, three files attached to AIU-14 and kept in `design/brand/source/`: `shroomap-icon.png` (64×64), `shroomap-logo-light-background.png`, `shroomap-logo-dark-background.png` (1000×250). Owner decision "brand assets": **answered with these files**. No logo is invented.
 - Scope: extend an existing identity into a complete system (tokens, type, icons, components)
 - Brief revision: 1 (this document). Mockup frame manifest: `design/mockups/png/manifest.json`, repository commit `94f30b1` on `feature/AIU-14-sdlc-ux-design-design-brand-responsive-screens-and-mockups`
-- Status: **PROPOSED**. No independent review yet; the next permitted step is the review in G2 preparation (PM/BA journey coverage, Architect contract feasibility, UI/UX Reviewer).
+- Status: **REVIEWED and APPROVED at G2**. Reviewed revision: brief rev 1 (`bc352148`, commit `48ebc1a`, AIU-14). Independent reviews, all PASS on 2026-11-14: UI/UX visual and accessibility (Frontend Reviewer), contract feasibility (Solution Architect), journey coverage (Product Manager). Approving gate: G2, AIU-20 (completed 2026-11-15), which carries this brief as its `brand-brief` document. Later edits to `design/` follow the normal ticket review.
 
 ## 1. Product understanding
 
