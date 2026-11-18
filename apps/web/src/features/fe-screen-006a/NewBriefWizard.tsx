@@ -28,6 +28,7 @@ import { mapErrorDetails, type ControlMap } from '../../lib/errors/details';
 import { ROUTES } from '../../lib/errors/routes';
 import { signInUrl } from '../../lib/errors/session';
 import { SCREEN_006_COPY as COPY, SEGMENT_SECONDS } from './copy';
+import { ProviderKeysCard } from './ProviderKeysCard';
 import {
   CONTROL_ID,
   EMPTY_VALUES,
@@ -833,7 +834,7 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
         <Stepper steps={[...COPY.steps]} current={step - 1} />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="min-w-0 lg:col-span-8">{body}</div>
-          <aside aria-label="Summary" className="hidden lg:col-span-4 lg:block">
+          <aside aria-label="Summary" className="hidden flex-col gap-4 lg:col-span-4 lg:flex">
             <Card variant="section" headingLevel={2}>
               <h2 className="text-body font-semibold">{COPY.next4Title}</h2>
               <ol className="flex flex-col gap-2 text-ui">
@@ -851,6 +852,7 @@ export function NewBriefWizard({ draftId: initialId, initialBlock }: NewBriefWiz
               </ol>
               <p className="text-ui text-muted-foreground">{COPY.next4Note}</p>
             </Card>
+            <ProviderKeysCard />
           </aside>
         </div>
       </div>

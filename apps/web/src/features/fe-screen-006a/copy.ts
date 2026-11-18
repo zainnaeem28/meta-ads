@@ -112,3 +112,9 @@ export const SCREEN_006_COPY = {
 } as const;
 
 export const SEGMENT_SECONDS = 15;
+
+export const COPY_KEYS_CARD = {
+  title: 'Your provider keys',
+  ready: 'Ready',
+  missing: 'Missing',
+} as const;
