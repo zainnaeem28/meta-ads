@@ -120,13 +120,7 @@ Order is fixed (release order, `docs/ops/release.md`): `db:migrate`, `jobs:migra
 - `jobs:migrate` installs the pg-boss schema and every queue.
 - `db:seed --dataset=reference|development|staging` is idempotent (upserts by natural key); a rerun changes nothing. `development` runs only with `APP_ENV=development`, `staging` only with `APP_ENV=staging`, production accepts `reference` only. Rerun the same command to prove the rerun is a no-op.
 
-One step is still needed on a clean database because its owner has not wired it into the commands above (change request CR-017-1, listed in `docs/evidence/TASK-017/README.md`). The ledger grant for `app_api` (CR-017-2) is migration `0120`, applied by `db:migrate`, so `/health/ready` is 200 after a clean migrate:
-
-```bash
-# CR-017-1: load config/price-table.json into price_table (the worker refuses to start with no price row)
-node -e "const r=require('./config/price-table.json').rows; console.log(r.map(x=>\`INSERT INTO price_table VALUES ('\${x.provider}','\${x.operation}','\${x.effectiveFrom}','\${x.unit}',\${x.unitPriceUsd},\${x.unitsPerCall}) ON CONFLICT DO NOTHING;\`).join('\n'))" \
-  | docker compose -f docker/compose.dev.yml exec -T postgres psql -U app_migrator -d shroomap_dev -v ON_ERROR_STOP=1
-```
+The ledger grant for `app_api` is migration `0120`, applied by `db:migrate`, so `/health/ready` is 200 after a clean migrate. `db:seed --dataset=reference` also loads `config/price-table.json` into `price_table` (the worker refuses to start with no price row); no manual SQL is needed.
 
 ## 7. Run the api, worker and web
 
@@ -260,7 +254,6 @@ These fail on an untouched clone of `dev`; they are recorded for their owners (s
 | `M0001 refused: must run as app_migrator, not postgres`                | `MIGRATION_DATABASE_URL` still names `postgres`; source `db-release.env` (step 6).                                            |
 | `drizzle-kit migrate` prints only `applying migrations...` and exits 1 | Run with `CI=1` to see the error.                                                                                             |
 | `config error (release): DATABASE_URL is forbidden`                    | `DATABASE_URL` is set in your shell: `unset DATABASE_URL`.                                                                    |
-| `config error: price_table has no row effective now for ...`           | The price table is empty: run the CR-017-1 command in step 6.                                                                 |
 | `/health/ready` answers 503 with `schema_head` in the api log          | The migrations were not applied (`db:migrate` includes the ledger grant, migration `0120`).                                   |
 | `listen EADDRINUSE`                                                    | Another process holds port 4000, 3000 or 5432. Set `API_PORT` in `api.env`, `-p` for the web, or `POSTGRES_PORT` for compose. |
 | A process exits 78                                                     | Startup validation: the log names the key (never a value). Fix that key in the process's own env file.                        |

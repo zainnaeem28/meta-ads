@@ -119,13 +119,10 @@ echo 'MIGRATION_DATABASE_URL=postgres://app_migrator:shroomap-local@localhost:54
 echo 'BACKUP_DATABASE_URL=postgres://app_backup:shroomap-local@localhost:5432/shroomap_dev'      > .env.local.d/db-backup.env
 # 4. build (the web build inlines NEXT_PUBLIC_* from web.env)
 ( set -a; . .env.local.d/web.env; set +a; pnpm build )
-# 5. migrate, queues, seed, and the one step a clean database still needs (RUN-GUIDE.md section 6)
+# 5. migrate, queues, seed (RUN-GUIDE.md section 6)
 ( set -a; . .env.local.d/db-release.env; set +a; CI=1 pnpm --filter @shroomap/api db:migrate )
 ( cd apps/api && node --env-file=../../.env.local.d/release.env --env-file=../../.env.local.d/db-release.env dist/database/jobs-migrate.js )
 ( cd apps/api && node --env-file=../../.env.local.d/release.env --env-file=../../.env.local.d/db-release.env dist/database/seed.js --dataset=reference )
-# CR-017-1: load config/price-table.json into price_table (the worker refuses to start with no price row)
-node -e "const r=require('./config/price-table.json').rows; console.log(r.map(x=>\`INSERT INTO price_table VALUES ('\${x.provider}','\${x.operation}','\${x.effectiveFrom}','\${x.unit}',\${x.unitPriceUsd},\${x.unitsPerCall}) ON CONFLICT DO NOTHING;\`).join('\n'))" \
-  | docker compose -f docker/compose.dev.yml exec -T postgres psql -U app_migrator -d shroomap_dev -v ON_ERROR_STOP=1
 ```
 
 Then run the three processes, one terminal each, and check them (`/health/ready` must answer 200):
@@ -411,7 +408,7 @@ Each environment needs its own approval record (G3); a staging approval never au
 
 ## Troubleshooting
 
-The table in [RUN-GUIDE.md](RUN-GUIDE.md) section 12 lists the symptoms seen on a clean clone with their fixes. Most common: the database roles are missing (step 4), `DATABASE_URL` is set in your shell (`unset DATABASE_URL`), the price table is empty so the worker refuses to start, or a port (4000, 3000, 5432) is taken. A process that exits 78 names the configuration key at fault in its log.
+The table in [RUN-GUIDE.md](RUN-GUIDE.md) section 12 lists the symptoms seen on a clean clone with their fixes. Most common: the database roles are missing (step 4), `DATABASE_URL` is set in your shell (`unset DATABASE_URL`), or a port (4000, 3000, 5432) is taken. A process that exits 78 names the configuration key at fault in its log.
 
 ## Contributing
 
